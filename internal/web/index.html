@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RunDesk</title>
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/trace.css" />
+    <script defer src="/app.js"></script>
+    <script defer src="/manage.js"></script>
+    <script defer src="/reliability.js"></script>
+    <script defer src="/trace-model.js"></script>
+    <script defer src="/trace.js"></script>
+  </head>
+  <body>
+    <div id="login" class="login hidden">
+      <form id="login-form" class="card">
+        <span class="brandmark">r.</span>
+        <h1>进入 RunDesk</h1>
+        <p>输入后台的访问令牌。</p>
+        <input
+          id="token"
+          type="password"
+          autocomplete="current-password"
+          placeholder="RUNDESK_TOKEN"
+          required
+        /><button class="primary">连接后台</button>
+        <p id="login-error" class="error"></p>
+      </form>
+    </div>
+    <div class="shell" id="shell">
+      <aside class="sidebar">
+        <a class="brand" href="/"
+          ><span class="brandmark">r.</span><strong>RunDesk</strong
+          ><small>0.5.4</small></a
+        >
+        <div class="workspace">
+          <label for="instance">Codex 实例</label>
+          <div class="row">
+            <select id="instance" aria-label="Codex 实例"></select
+            ><button id="manage-instances" class="icon" title="管理实例">
+              ⚙
+            </button>
+          </div>
+        </div>
+        <div class="workspace">
+          <label for="workspace">工作区</label>
+          <div class="row">
+            <select id="workspace"></select
+            ><button id="add-workspace" class="icon" title="添加工作区">
+              ＋
+            </button>
+          </div>
+        </div>
+        <button id="new-session" class="new-session">
+          ＋ 新对话 <kbd>⌘ K</kbd>
+        </button>
+        <div class="session-filters">
+          <input
+            id="session-search"
+            type="search"
+            placeholder="搜索会话…"
+            aria-label="搜索会话"
+          />
+          <div class="row">
+            <select id="session-scope" aria-label="会话范围">
+              <option value="active">最近的对话</option>
+              <option value="archived">已归档</option></select
+            ><span id="session-count" class="muted"></span>
+          </div>
+        </div>
+        <nav id="session-list"></nav>
+        <div class="sidebar-bottom">
+          <span class="status-dot"></span
+          ><span id="connection">本地运行后台</span
+          ><button id="logout" class="quiet" title="退出">退出</button>
+        </div>
+      </aside>
+      <main>
+        <header>
+          <div class="breadcrumb">
+            工作台 <span>/</span>
+            <strong id="workspace-name">默认工作区</strong>
+          </div>
+          <div class="row">
+            <button id="trace-button" class="quiet">轨迹</button
+            ><span id="mode" class="badge">CODEX</span
+            ><button id="settings-button" class="quiet">配置</button
+            ><button id="debug-button" class="quiet">
+              调试台 <span class="shortcut">⌘ J</span>
+            </button>
+          </div>
+        </header>
+        <div id="demo-banner" class="demo-banner hidden">
+          演示模式 · 使用协议模拟器，不调用真实模型。真实运行请去掉 --demo。
+        </div>
+        <div class="main-row">
+          <section class="conversation">
+            <div class="conversation-header">
+              <h2 id="session-title">新对话</h2>
+              <div class="row">
+                <span id="run-status" class="badge muted">就绪</span>
+                <details id="session-menu" class="session-menu hidden">
+                  <summary aria-label="会话操作">•••</summary>
+                  <div class="menu-items">
+                    <button id="rename-session">重命名</button
+                    ><button id="pin-session">置顶</button
+                    ><button id="archive-session">归档</button
+                    ><button id="export-markdown">导出 Markdown</button
+                    ><button id="delete-session" class="error">删除会话</button>
+                  </div>
+                </details>
+              </div>
+            </div>
+            <div id="runtime-strip" class="runtime-strip hidden"></div>
+            <div id="messages" class="messages">
+              <div class="welcome">
+                <div class="welcome-mark">r.</div>
+                <p class="eyebrow">YOUR CODEX, ONE PLACE.</p>
+                <h1>从一个想法开始。</h1>
+                <p>对话、工具和运行状态，在同一个工作台。</p>
+                <div class="suggestions">
+                  <button
+                    data-prompt="检查当前工作区，说明目录结构和可以改进的地方。"
+                  >
+                    了解我的工作区 <span>↗</span></button
+                  ><button
+                    data-prompt="帮我整理这个项目的下一步计划，先不要修改文件。"
+                  >
+                    整理下一步计划 <span>↗</span></button
+                  ><button data-prompt="演示审批流程。">
+                    查看审批流程 <span>↗</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div id="approvals" class="approvals"></div>
+            <div class="composer-wrap">
+              <div id="attachments" class="attachments"></div>
+              <form id="composer" class="composer">
+                <textarea
+                  id="prompt"
+                  rows="3"
+                  placeholder="给 Codex 一个任务…"
+                  aria-label="消息"
+                ></textarea>
+                <div class="composer-toolbar">
+                  <div class="row">
+                    <button
+                      id="attach"
+                      type="button"
+                      class="icon"
+                      title="上传附件"
+                    >
+                      ＋</button
+                    ><input
+                      id="upload"
+                      class="hidden"
+                      type="file"
+                      multiple
+                    /><button id="skill-picker" type="button" class="quiet">
+                      Skills</button
+                    ><input
+                      id="model"
+                      placeholder="Codex 默认模型"
+                      aria-label="模型"
+                      list="models"
+                    /><datalist id="models"></datalist>
+                  </div>
+                  <div class="row">
+                    <button id="stop" type="button" class="danger hidden">
+                      停止</button
+                    ><button id="send" class="send" title="发送">↑</button>
+                  </div>
+                </div>
+              </form>
+              <p
+                id="send-feedback"
+                class="send-feedback"
+                role="status"
+                aria-live="polite"
+              ></p>
+              <p class="composer-note">
+                Enter 发送 · Shift + Enter 换行 · 长文本自动转附件
+              </p>
+            </div>
+          </section>
+          <aside id="debug" class="debug hidden">
+            <div class="debug-heading">
+              <strong>运行调试台</strong
+              ><button id="close-debug" class="icon" title="关闭调试台">
+                ×
+              </button>
+            </div>
+            <div class="tabs">
+              <button class="selected" data-debug-tab="events">事件</button
+              ><button data-debug-tab="context">上下文</button
+              ><button data-debug-tab="files">产物</button>
+            </div>
+            <div class="debug-info">
+              展示 App Server 实际事件。完整模型请求与内部推理不一定由接口公开。
+            </div>
+            <div id="event-controls" class="event-controls">
+              <div class="row">
+                <input
+                  id="event-query"
+                  type="search"
+                  placeholder="事件内容关键词"
+                  aria-label="事件内容关键词"
+                /><select id="event-category" aria-label="事件分类">
+                  <option value="">全部类型</option>
+                  <option value="tools">工具</option>
+                  <option value="approvals">审批</option>
+                  <option value="errors">错误</option>
+                </select>
+              </div>
+              <div class="row">
+                <select id="event-direction" aria-label="事件方向">
+                  <option value="">所有方向</option>
+                  <option value="in">IN</option>
+                  <option value="out">OUT</option>
+                  <option value="internal">APP</option>
+                  <option value="stderr">STDERR</option></select
+                ><input
+                  id="event-method"
+                  placeholder="方法名，如 turn/"
+                  aria-label="方法名"
+                />
+              </div>
+              <details>
+                <summary>时间范围</summary>
+                <label
+                  >开始
+                  <input
+                    id="event-from"
+                    type="datetime-local"
+                    aria-label="开始时间" /></label
+                ><label
+                  >结束
+                  <input
+                    id="event-to"
+                    type="datetime-local"
+                    aria-label="结束时间"
+                /></label>
+              </details>
+              <div class="row">
+                <button id="event-search">查询历史</button
+                ><button id="event-live" class="quiet">返回实时</button
+                ><button id="event-pause" class="quiet">暂停滚动</button>
+              </div>
+              <p id="event-mode" class="help">实时 · 显示最近 250 条</p>
+            </div>
+            <div id="debug-content"></div>
+            <div class="debug-footer">
+              <span id="event-count">0 条事件</span
+              ><button id="export" class="quiet">导出 JSONL ↓</button>
+            </div>
+          </aside>
+        </div>
+      </main>
+    </div>
+    <dialog id="settings">
+      <div class="dialog-head">
+        <div>
+          <p class="eyebrow">WORKSPACE SETTINGS</p>
+          <h2>配置与能力</h2>
+        </div>
+        <button id="close-settings" class="icon" title="关闭配置">×</button>
+      </div>
+      <div class="settings-tabs tabs">
+        <button data-settings-tab="instances">实例</button
+        ><button class="selected" data-settings-tab="notes">项目记忆</button
+        ><button data-settings-tab="skills">Skills</button
+        ><button data-settings-tab="mcp">MCP</button
+        ><button data-settings-tab="runtime">运行配置</button>
+      </div>
+      <div id="settings-content"></div>
+    </dialog>
+    <dialog id="preview">
+      <div class="dialog-head">
+        <h2 id="preview-title">文件预览</h2>
+        <button id="close-preview" class="icon">×</button>
+      </div>
+      <div id="preview-content"></div>
+    </dialog>
+    <div id="toast" role="status" class="toast hidden"></div>
+    <dialog id="runtime-dialog">
+      <form method="dialog" class="runtime-dialog-heading">
+        <strong>会话运行状态</strong
+        ><button aria-label="关闭运行状态">关闭</button>
+      </form>
+      <div id="runtime-detail"></div>
+    </dialog>
+  </body>
+</html>
