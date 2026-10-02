@@ -40,13 +40,15 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 	s.instanceRoutes(mux)
 	s.runtimeRoutes(mux)
 	s.traceRoutes(mux)
+	s.integrationRoutes(mux)
+	s.messageRoutes(mux)
 	mux.HandleFunc("POST /api/login", s.login)
 	mux.HandleFunc("POST /api/logout", func(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, &http.Cookie{Name: "rundesk", Value: "", Path: "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteStrictMode})
 		writeJSON(w, 200, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("GET /api/meta", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, map[string]any{"name": "RunDesk", "version": "0.5.4", "demo": m.Demo, "protocol": "Codex App Server JSONL", "capabilities": []string{"instances", "sessions", "trace", "events", "approvals", "skills", "mcp", "notes", "files"}})
+		writeJSON(w, 200, map[string]any{"name": "RunDesk", "version": Version, "apiVersions": []string{"v1"}, "demo": m.Demo, "protocol": "Codex App Server JSONL", "capabilities": []string{"instances", "sessions", "trace", "events", "approvals", "skills", "mcp", "notes", "files", "api-v1", "idempotency", "configuration-summary", "application-metadata", "reply-feedback"}})
 	})
 	mux.HandleFunc("GET /api/workspaces", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, m.Workspaces()) })
 	mux.HandleFunc("POST /api/workspaces", func(w http.ResponseWriter, r *http.Request) {
@@ -73,6 +75,14 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 	})
 	mux.HandleFunc("GET /api/sessions", func(w http.ResponseWriter, r *http.Request) {
 		ss := m.Sessions()
+		q := r.URL.Query()
+		filtered := ss[:0]
+		for _, item := range ss {
+			if (q.Get("instanceId") == "" || item.InstanceID == q.Get("instanceId")) && (q.Get("workspaceId") == "" || item.WorkspaceID == q.Get("workspaceId")) && (q.Get("appId") == "" || item.Source.AppID == q.Get("appId")) && (q.Get("taskId") == "" || item.Source.TaskID == q.Get("taskId")) {
+				filtered = append(filtered, item)
+			}
+		}
+		ss = filtered
 		sort.Slice(ss, func(i, j int) bool {
 			if ss[i].Pinned != ss[j].Pinned {
 				return ss[i].Pinned
@@ -87,11 +97,12 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 			InstanceID  string `json:"instanceId"`
 			Title       string
 			Model       string
+			Source      SessionSource `json:"source"`
 		}
 		if !decode(w, r, &v) {
 			return
 		}
-		result, e := m.CreateSession(v.WorkspaceID, v.Title, v.Model, v.InstanceID)
+		result, e := m.CreateSessionWithSource(v.WorkspaceID, v.Title, v.Model, v.InstanceID, v.Source)
 		respond(w, result, e)
 	})
 	mux.HandleFunc("GET /api/sessions/{sid}", func(w http.ResponseWriter, r *http.Request) {
@@ -123,6 +134,20 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 		writeJSON(w, 200, result)
 	})
 	mux.HandleFunc("POST /api/sessions/{sid}/stop", func(w http.ResponseWriter, r *http.Request) {
+		if w.Header().Get("RunDesk-API-Version") == "v1" {
+			var input struct {
+				ExpectedRunID string `json:"expectedRunId"`
+			}
+			if !decode(w, r, &input) {
+				return
+			}
+			if input.ExpectedRunID == "" {
+				writeErr(w, 400, failure(400, "expected_run_required", "停止任务需要 expectedRunId"))
+				return
+			}
+			respond(w, map[string]bool{"ok": true}, m.StopRun(r.PathValue("sid"), input.ExpectedRunID))
+			return
+		}
 		respond(w, map[string]bool{"ok": true}, m.Stop(r.PathValue("sid")))
 	})
 	mux.HandleFunc("GET /api/sessions/{sid}/events", s.events)
@@ -197,8 +222,11 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 	mux.HandleFunc("GET /api/workspaces/{wid}/file", s.file)
 	mux.HandleFunc("GET /api/sessions/{sid}/files", s.files)
 	mux.HandleFunc("GET /api/sessions/{sid}/export", s.export)
+	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
+		writeErr(w, 404, failure(404, "not_found", "API 路径或方法不存在"))
+	})
 	mux.Handle("/", http.FileServerFS(web.Files))
-	return s.guard(mux)
+	return s.apiBoundary(s.guard(s.idempotent(mux)))
 }
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -206,7 +234,7 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 func writeErr(w http.ResponseWriter, status int, e error) {
-	writeJSON(w, status, map[string]string{"error": e.Error()})
+	writeAPIError(w, status, e)
 }
 func respond(w http.ResponseWriter, v any, e error) {
 	if e != nil {

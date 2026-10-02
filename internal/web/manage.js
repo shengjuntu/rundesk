@@ -47,6 +47,7 @@ async function selectFirst() {
   }
 }
 function renderStatus() {
+  renderCapabilityStrip();
   const s = state.session;
   $("#session-title").textContent = s?.title || "新对话";
   $("#run-status").textContent = s?.archived
@@ -667,7 +668,8 @@ async function renderMCP(target) {
   const list = el(
     "div",
     { class: "card" },
-    el("h3", {}, "用户 MCP 配置"),
+    el("h3", {}, "实例 MCP 配置"),
+    el("p", {class:"help"}, `正在编辑 ${current.name}。保存影响此实例的后续任务；其他实例不随之修改。项目层配置可能覆盖这里的值。`),
     el(
       "p",
       {},
@@ -740,14 +742,14 @@ async function renderMCP(target) {
     );
   }
   if (!Object.keys(info.userServers || {}).length)
-    list.append(el("p", { class: "empty" }, "还没有用户层 MCP 配置。"));
+    list.append(el("p", { class: "empty" }, "此实例还没有用户层 MCP 配置。"));
   list.append(
     el(
       "div",
       { class: "actions" },
       button("刷新状态", renderSettings),
       button("导出配置 JSON", () => {
-        location.href = "/api" + cp("/mcp/export");
+        location.href = "/api/v1" + cp("/mcp/export");
       }),
     ),
   );
@@ -1019,7 +1021,7 @@ $("#delete-session").onclick = () =>
 $("#export-markdown").onclick = () => {
   if (state.session)
     location.href =
-      "/api/sessions/" + state.session.id + "/export?format=markdown";
+      "/api/v1/sessions/" + state.session.id + "/export?format=markdown";
   $("#session-menu").open = false;
 };
 $("#event-search").onclick = () => safe(() => searchEvents());
@@ -1063,7 +1065,7 @@ async function switchInstance() {
   await selectFirst();
 }
 $("#instance").onchange = () => safe(switchInstance);
-$("#manage-instances").onclick = () => safe(() => openSettings("instances"));
+$("#manage-instances").onclick = () => safe(() => openSettings("overview"));
 
 async function renderInstances(target) {
   const current = instance(),
@@ -1095,6 +1097,7 @@ async function renderInstances(target) {
     id: "instance-model",
     type: "text",
     value: current.defaultModel,
+    list: "models",
     placeholder: "留空使用 Codex 配置",
   });
   const permissions = permissionEditor(current);
@@ -1131,6 +1134,7 @@ async function renderInstances(target) {
       description,
       el("label", { for: "instance-model" }, "新会话默认模型"),
       model,
+      button("读取可用模型", async()=>{const raw=await api(cp("/models"));$("#models").replaceChildren(...(raw.data||[]).map(m=>el("option",{value:m.id||m.model},m.displayName||m.id||m.model)));toast("已读取模型，选择后保存实例");}),
       permissions.node,
       button(
         "保存实例",

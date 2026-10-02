@@ -1,0 +1,14 @@
+{
+  "passed": 8,
+  "checks": [
+    "new binary reports 0.6.1",
+    "session, thread, instance, workspace and model preserved",
+    "workspace notes preserved",
+    "instance skill preserved",
+    "historical events preserved; shutdown may append lifecycle events",
+    "v1 client resumes existing native thread",
+    "Python client receipt and retry preserve run",
+    "incremental event cursor continues across upgrade"
+  ],
+  "fixture": "Codex demo protocol only"
+}

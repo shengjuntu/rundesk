@@ -77,22 +77,39 @@ async function safe(fn) {
     console.error(e);
   }
 }
+const pendingAPI = new Map();
+try { for(const item of JSON.parse(sessionStorage.getItem("rundesk-pending-api")||"[]")) if(Array.isArray(item)&&item.length===2) pendingAPI.set(...item); } catch {}
+async function submissionSignature(path, body) {
+  const text=path+"\n"+JSON.stringify(body);
+  if(!crypto.subtle) return "memory:"+text;
+  const hash=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,"0")).join("");
+}
+function savePendingAPI() {
+  try {sessionStorage.setItem("rundesk-pending-api",JSON.stringify([...pendingAPI].filter(([k])=>!k.startsWith("memory:"))));} catch {}
+}
+async function hasPendingSubmission(path,body) {return pendingAPI.has(await submissionSignature(path,body));}
 async function api(path, options = {}) {
   const headers = { ...options.headers };
-  if (options.body && !(options.body instanceof FormData)) {
+  const method=options.method||"GET", body=options.body;
+  const deduplicate=method==="POST" && (/^\/(instances|workspaces|sessions)$/.test(path)||/^\/sessions\/[^/]+\/turns$/.test(path));
+  let signature;
+  if(deduplicate) {
+    signature=await submissionSignature(path,body);
+    if(!pendingAPI.has(signature)) pendingAPI.set(signature,Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,"0")).join(""));
+    headers["Idempotency-Key"]=pendingAPI.get(signature);savePendingAPI();
+  }
+  if (body && !(body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
-    options.body = JSON.stringify(options.body);
+    options={...options,body:JSON.stringify(body)};
   }
-  const r = await fetch("/api" + path, { ...options, headers });
+  const r = await fetch("/api/v1" + path, { ...options, headers });
   let data;
-  try {
-    data = await r.json();
-  } catch {
-    throw Error(`HTTP ${r.status}`);
-  }
+  try {data = await r.json();} catch {throw Error(`HTTP ${r.status}`);}
+  if(signature && (r.ok || r.status<500 && !["request_in_progress","request_unconfirmed"].includes(data.code))) {pendingAPI.delete(signature);savePendingAPI();}
   if (!r.ok) {
     if (r.status === 401) $("#login").classList.remove("hidden");
-    throw Error(data.error || `HTTP ${r.status}`);
+    const error=Error(data.error || `HTTP ${r.status}`);error.code=data.code;error.requestId=data.requestId;throw error;
   }
   return data;
 }
@@ -180,6 +197,7 @@ function wireSuggestions() {
   );
 }
 function resetConversation() {
+  resetReplyActions();
   state.historyRequest++;
   $("#send-feedback").textContent = "";
   state.history = null;
@@ -222,6 +240,7 @@ async function selectSession(id) {
   const session = await api("/sessions/" + id);
   if (selection !== state.selection) return;
   state.session = session;
+  safe(() => loadReplyFeedback(id, selection));
   $("#session-scope").value = session.archived ? "archived" : "active";
   $("#workspace").value = session.workspaceId;
   $("#instance").value = session.instanceId;
@@ -230,7 +249,7 @@ async function selectSession(id) {
   localStorage.setItem("rundesk-session", id);
   renderSessions();
   renderStatus();
-  const stream = new EventSource(`/api/sessions/${id}/events?stream=1`);
+  const stream = new EventSource(`/api/v1/sessions/${id}/events?stream=1`);
   state.stream = stream;
   stream.onopen = () => {
     $("#connection").textContent = "后台已连接";
@@ -318,9 +337,9 @@ function markdown(text) {
       const first = part.indexOf("\n");
       const lang = first >= 0 ? part.slice(0, first) : "";
       const code = first >= 0 ? part.slice(first + 1) : part;
-      root.append(
-        el("pre", { "aria-label": lang || "代码" }, el("code", {}, code)),
-      );
+      root.append(el("div", {class:"code-block"},
+        el("div", {class:"code-heading"}, el("span",{},lang.trim() || "代码"), replyButton("copy","复制代码",()=>copyReplyText(code))),
+        el("pre", { "aria-label": lang || "代码" }, el("code", {}, code))));
       return;
     }
     for (const para of part.split(/\n\s*\n/)) {
@@ -379,6 +398,7 @@ function renderMessages() {
         map.set(key, row);
         items.push(row);
       } else Object.assign(row, item);
+      if (ev.method === "item/completed") row._eventId = ev.id;
     } else if (
       ev.direction === "in" &&
       ev.method === "item/agentMessage/delta"
@@ -477,34 +497,10 @@ function renderMessages() {
             : []),
         );
       else if (item.type === "agentMessage")
-        node.replaceChildren(markdown(item.text || "…"));
+        renderAssistant(node, item);
       else if (item.type === "error") node.textContent = item.text;
       else {
-        const title =
-          {
-            commandExecution: "命令执行",
-            fileChange: "文件修改",
-            mcpToolCall: "MCP 工具",
-            reasoning: "推理摘要",
-            contextCompaction: "上下文压缩",
-            plan: "计划",
-            webSearch: "网页搜索",
-          }[item.type] || item.type;
-        const status =
-          {
-            inProgress: "进行中",
-            completed: "已完成",
-            failed: "失败",
-            declined: "已拒绝",
-          }[item.status] ||
-          item.status ||
-          "";
-        const summary = node.firstElementChild;
-        const label =
-          title +
-          (item.command ? " · " + item.command.slice(0, 100) : "") +
-          (status ? " · " + status : "");
-        if (summary.textContent !== label) summary.textContent = label;
+        toolSummary(node.firstElementChild, item);
         const content = node.lastElementChild;
         // Human-readable primary content; retain the full protocol item on demand.
         let text = "";
@@ -560,6 +556,7 @@ function renderMessages() {
         box.insertBefore(node, box.children[index] || null);
     });
   }
+  if (speechReply.node && !speechReply.node.isConnected) stopReplySpeech();
   // Reading an open disclosure must not be pulled back to the streaming tail.
   if (atBottom && !box.querySelector("details[open]"))
     box.scrollTop = box.scrollHeight;
@@ -648,13 +645,14 @@ async function sendMessage() {
     }
     id = state.session.id;
     selection = state.selection;
-    const steering = active(state.session.status);
+    const body = { text, files, skills };
+    const retryStart=await hasPendingSubmission(`/sessions/${id}/turns`,body);
+    const steering = active(state.session.status) && !retryStart;
     if (steering && !state.session.turnId)
       throw Error("正在确认当前任务，请稍后发送");
     $("#send-feedback").textContent = steering
       ? "正在提交补充指令…"
       : "正在发送…";
-    const body = { text, files, skills };
     if (steering) {
       body.expectedTurnId = state.session.turnId;
       const signature = JSON.stringify([id, body]);
@@ -784,7 +782,7 @@ async function loadFiles() {
 }
 function fileURL(path, preview = false) {
   return (
-    "/api" +
+    "/api/v1" +
     wpath("/file") +
     "?path=" +
     encodeURIComponent(path) +
@@ -826,12 +824,13 @@ async function previewFile(file) {
     );
   }
 }
-async function openSettings(tab = "notes") {
+async function openSettings(tab = "overview") {
   state.settingsTab = tab;
   $("#settings").showModal();
   await renderSettings();
 }
 async function renderSettings() {
+  $("#settings-context").textContent = `实例：${instance()?.name || ""} · 工作区：${ws()?.name || ""}`;
   const target = el("div");
   $("#settings-content").replaceChildren(target);
   $$("[data-settings-tab]").forEach((b) =>
@@ -840,7 +839,8 @@ async function renderSettings() {
   setLoading(target);
   const tab = state.settingsTab;
   try {
-    if (tab === "instances") await renderInstances(target);
+    if (tab === "overview") await renderConfigurationOverview(target);
+    else if (tab === "instances") await renderInstances(target);
     else if (tab === "notes") renderNotes(target);
     else if (tab === "skills") await renderSkills(target);
     else if (tab === "mcp") await renderMCP(target);
@@ -963,7 +963,7 @@ $("#prompt").onkeydown = (e) => {
 $("#stop").onclick = () =>
   safe(async () => {
     if (state.session) {
-      await api(`/sessions/${state.session.id}/stop`, { method: "POST" });
+      await api(`/sessions/${state.session.id}/stop`, { method: "POST", body:{expectedRunId:state.session.runId} });
       await refreshSessions();
     }
   });
@@ -1005,7 +1005,7 @@ $$("[data-settings-tab]").forEach(
 );
 $("#export").onclick = () => {
   if (state.session)
-    location.href = "/api/sessions/" + state.session.id + "/export";
+    location.href = "/api/v1/sessions/" + state.session.id + "/export";
   else toast("请先创建会话");
 };
 document.onkeydown = (e) => {

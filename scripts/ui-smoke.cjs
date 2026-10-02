@@ -116,6 +116,7 @@ const assert = require("node:assert/strict");
     await page.screenshot({path:path.join(screenshots,"runtime-status.png"),fullPage:true});
     await page.locator("#runtime-dialog button").click();
     await page.locator("#settings-button").click();
+    await page.locator('[data-settings-tab="notes"]').click();
     const notes = page.locator("#settings-content textarea");
     await notes.fill("UI smoke test notes");
     await page.getByRole("button", { name: "保存笔记", exact: true }).click();
@@ -280,6 +281,7 @@ const assert = require("node:assert/strict");
     );
     // Instance controls: isolate configurations in one workspace and retain binding on reload.
     await page.locator("#manage-instances").click();
+    await page.locator('[data-settings-tab="instances"]').click();
     await page.locator("#new-instance-name").fill("UI 独立助手");
     await page.getByRole("button", { name: "创建并切换", exact: true }).click();
     await page.waitForFunction(
@@ -376,6 +378,7 @@ const assert = require("node:assert/strict");
     await page.locator("#instance").selectOption(iid);
     await page.locator(".message.assistant").waitFor();
     await page.locator("#manage-instances").click();
+    await page.locator('[data-settings-tab="instances"]').click();
     await page
       .getByRole("button", { name: "重新加载空闲连接", exact: true })
       .click();

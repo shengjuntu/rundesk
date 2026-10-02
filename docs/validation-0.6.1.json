@@ -1,0 +1,91 @@
+{
+  "version": "0.6.1",
+  "go": "1.27.1",
+  "browser": "Chromium 154.0.8037.57",
+  "goTests": {
+    "pass": 42,
+    "fail": 0,
+    "skip": 0
+  },
+  "raceDetector": "passed",
+  "goVet": "passed",
+  "openapi": {
+    "version": "3.1.0",
+    "documentVersion": "1.1.0",
+    "paths": 42,
+    "operations": 49,
+    "validator": "openapi-spec-validator 0.9.0",
+    "status": "passed"
+  },
+  "replyActions": {
+    "passed": 18,
+    "checks": [
+      "copy_exact_reply_markdown",
+      "copy_code_literal_and_html_safe",
+      "feedback_persists_after_reload",
+      "downvote_reason_saved",
+      "saved_feedback_reason_can_be_reviewed",
+      "feedback_toggle_clears_comment",
+      "failed_save_does_not_fake_success",
+      "preview_and_download_selected_reply_only",
+      "native_share_receives_only_preview_text_stub",
+      "speech_start_pause_resume_stop_stub",
+      "speech_error_restores_idle",
+      "long_speech_advances_chunks_and_finishes_stub",
+      "clipboard_denied_manual_copy_fallback",
+      "icon_tools_keep_keyboard_disclosure",
+      "mobile_history_drawer_and_escape",
+      "switch_session_stops_speech_and_closes_drawer",
+      "unsupported_speech_disabled",
+      "no_javascript_exceptions"
+    ],
+    "browser": "154.0.8037.57",
+    "fixture": "Codex protocol simulator; OS speech and native share stubbed"
+  },
+  "integration": {
+    "passed": 13,
+    "checks": [
+      "legacy_instance_skill_mcp_contract",
+      "application_source_and_creation_receipt",
+      "session_source_and_model_strip",
+      "session_capabilities_and_scope",
+      "unified_instance_overview",
+      "instance_default_preserves_existing_session_model",
+      "lost_start_response_retries_without_duplicate_or_steer",
+      "stop_targets_expected_run",
+      "historical_runtime_separate_from_current_configuration",
+      "reload_preserves_session_binding",
+      "mobile_capabilities_no_horizontal_overflow",
+      "no_javascript_exceptions",
+      "openapi_served_with_authentication"
+    ],
+    "browser": "154.0.8037.57",
+    "fixture": "Codex protocol simulator; no real model credentials used"
+  },
+  "existingUIRegression": "passed",
+  "streamingDOMRegression": "passed; mounted cards, scroll and disclosure preserved",
+  "traceModelRegression": "passed; trace implementation unchanged",
+  "upgrade": {
+    "passed": 8,
+    "checks": [
+      "new binary reports 0.6.1",
+      "session, thread, instance, workspace and model preserved",
+      "workspace notes preserved",
+      "instance skill preserved",
+      "historical events preserved; shutdown may append lifecycle events",
+      "v1 client resumes existing native thread",
+      "Python client receipt and retry preserve run",
+      "incremental event cursor continues across upgrade"
+    ],
+    "fixture": "Codex demo protocol only"
+  },
+  "builds": {
+    "linuxAMD64": "static build and runtime passed",
+    "windowsAMD64": "crosscompiled; no Windows runtime verification"
+  },
+  "limitations": [
+    "Codex protocol simulator, no real model or external MCP credentials",
+    "Speech synthesis and native share stubbed for browser flow tests; actual OS audio/share targets untested",
+    "Single-user feedback; application-specific authentication and scopes are not added"
+  ]
+}

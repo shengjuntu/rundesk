@@ -1444,3 +1444,25 @@ main > header .breadcrumb {
   max-width: 100%;
   overflow-wrap: anywhere;
 }
+
+/* v0.6: configuration ownership is visible beside the conversation. */
+.capability-strip {display:flex;align-items:center;gap:10px;padding:0 28px 12px;min-height:30px;color:var(--muted);font-size:12px;flex-wrap:wrap}
+.capability-instance {font-weight:600;color:#242630}
+.capability-model {max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.capability-link {font-size:12px;padding:3px 8px;border:1px solid var(--line);background:transparent;border-radius:6px;color:inherit;cursor:pointer}
+.capability-source {padding:3px 7px;background:var(--soft);border-radius:5px;max-width:100%;overflow-wrap:anywhere}
+.configuration-intro {padding:10px 4px 14px}
+.configuration-intro h3 {font-size:23px;margin:8px 0}
+.configuration-grid {display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.configuration-tile {display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:10px;padding:18px;border:1px solid var(--line);border-radius:12px;background:var(--soft);color:#242630;cursor:pointer;min-width:0}
+.configuration-tile:hover {border-color:var(--accent)}
+.configuration-tile strong {font-size:15px}
+.configuration-tile span {font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.configuration-scope {font-size:13px;color:var(--muted);line-height:1.7;margin:18px 0}
+.capability-row {display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);padding:11px 0;font-size:13px;flex-wrap:wrap;overflow-wrap:anywhere}
+.capability-row strong {flex:1;min-width:80px}
+#capabilities-dialog {width:min(780px,calc(100vw - 32px))}
+#capabilities-content {padding:8px 24px 24px}
+#settings-context {margin:8px 0 0;overflow-wrap:anywhere}
+.integration-links {margin-top:18px}
+@media(max-width:640px){.configuration-grid{grid-template-columns:1fr}.capability-strip{padding:0 16px 10px;gap:7px}.capability-model{max-width:160px}#capabilities-content{padding:8px 12px 12px}}

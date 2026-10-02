@@ -26,20 +26,21 @@ type Workspace struct {
 	Revision int    `json:"revision"`
 }
 type Session struct {
-	ID          string `json:"id"`
-	WorkspaceID string `json:"workspaceId"`
-	InstanceID  string `json:"instanceId"`
-	Title       string `json:"title"`
-	ThreadID    string `json:"threadId"`
-	Model       string `json:"model"`
-	Status      string `json:"status"`
-	RunID       string `json:"runId"`
-	TurnID      string `json:"turnId"`
-	Error       string `json:"error,omitempty"`
-	Created     string `json:"created"`
-	Updated     string `json:"updated"`
-	Pinned      bool   `json:"pinned"`
-	Archived    bool   `json:"archived"`
+	ID          string        `json:"id"`
+	WorkspaceID string        `json:"workspaceId"`
+	InstanceID  string        `json:"instanceId"`
+	Title       string        `json:"title"`
+	ThreadID    string        `json:"threadId"`
+	Model       string        `json:"model"`
+	Status      string        `json:"status"`
+	RunID       string        `json:"runId"`
+	TurnID      string        `json:"turnId"`
+	Error       string        `json:"error,omitempty"`
+	Created     string        `json:"created"`
+	Updated     string        `json:"updated"`
+	Pinned      bool          `json:"pinned"`
+	Archived    bool          `json:"archived"`
+	Source      SessionSource `json:"source"`
 }
 type Approval struct {
 	ID         string      `json:"id"`
@@ -65,6 +66,7 @@ type handle struct {
 	instanceID     string
 	permissionsKey string
 	op             sync.Mutex
+	admission      sync.Mutex
 	mu             sync.Mutex
 	client         *rpc.Client
 	thread         string
@@ -73,20 +75,23 @@ type handle struct {
 	requests       map[string]Approval
 }
 type Manager struct {
-	Store      *store.Store
-	Data       string
-	Codex      string
-	Demo       bool
-	mu         sync.Mutex
-	sessions   map[string]*Session
-	handles    map[string]*handle
-	instances  map[string]*Instance
-	workspaces map[string]*Workspace
-	ctx        context.Context
-	cancel     context.CancelFunc
-	wg         sync.WaitGroup
-	loaded     atomic.Int32
-	runtimeMu  sync.Mutex
+	Store           *store.Store
+	Data            string
+	Codex           string
+	Demo            bool
+	mu              sync.Mutex
+	sessions        map[string]*Session
+	handles         map[string]*handle
+	instances       map[string]*Instance
+	workspaces      map[string]*Workspace
+	ctx             context.Context
+	cancel          context.CancelFunc
+	wg              sync.WaitGroup
+	loaded          atomic.Int32
+	runtimeMu       sync.Mutex
+	requestMu       sync.Mutex
+	requestOwner    string
+	pendingRequests map[string]bool
 }
 
 func New(data, codex string, demo bool) (*Manager, error) {
@@ -102,7 +107,7 @@ func New(data, codex string, demo bool) (*Manager, error) {
 		return nil, e
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	m := &Manager{Store: s, Data: data, Codex: codex, Demo: demo, sessions: map[string]*Session{}, handles: map[string]*handle{}, workspaces: map[string]*Workspace{}, instances: map[string]*Instance{}, ctx: ctx, cancel: cancel}
+	m := &Manager{requestOwner: store.ID(), pendingRequests: map[string]bool{}, Store: s, Data: data, Codex: codex, Demo: demo, sessions: map[string]*Session{}, handles: map[string]*handle{}, workspaces: map[string]*Workspace{}, instances: map[string]*Instance{}, ctx: ctx, cancel: cancel}
 	fail := func(e error) (*Manager, error) { cancel(); s.Close(); return nil, e }
 	if e := m.loadInstances(); e != nil {
 		return fail(e)
@@ -199,7 +204,7 @@ func (m *Manager) Workspace(id string) (Workspace, error) {
 	defer m.mu.Unlock()
 	w := m.workspaces[id]
 	if w == nil {
-		return Workspace{}, errors.New("工作区不存在")
+		return Workspace{}, failure(404, "workspace_not_found", "工作区不存在")
 	}
 	return *w, nil
 }
@@ -236,7 +241,7 @@ func (m *Manager) Notes(id, text string, rev int) (Workspace, error) {
 	defer m.mu.Unlock()
 	w := m.workspaces[id]
 	if w == nil {
-		return Workspace{}, errors.New("工作区不存在")
+		return Workspace{}, failure(404, "workspace_not_found", "工作区不存在")
 	}
 	if rev != w.Revision {
 		return *w, errors.New("笔记已被更新，请重新加载")
@@ -267,25 +272,31 @@ func (m *Manager) Session(id string) (Session, error) {
 	defer m.mu.Unlock()
 	s := m.sessions[id]
 	if s == nil {
-		return Session{}, errors.New("会话不存在")
+		return Session{}, failure(404, "session_not_found", "会话不存在")
 	}
 	return *s, nil
 }
 func (m *Manager) CreateSession(wid, title, model string, ids ...string) (Session, error) {
+	return m.CreateSessionWithSource(wid, title, model, instanceID(ids), SessionSource{})
+}
+func (m *Manager) CreateSessionWithSource(wid, title, model, iid string, source SessionSource) (Session, error) {
+	if err := source.validate(); err != nil {
+		return Session{}, err
+	}
 	if _, e := m.Workspace(wid); e != nil {
 		return Session{}, e
 	}
 	if title == "" {
 		title = "新对话"
 	}
-	i, err := m.Instance(ids...)
+	i, err := m.Instance(iid)
 	if err != nil {
 		return Session{}, err
 	}
 	if model == "" {
 		model = i.DefaultModel
 	}
-	s := Session{ID: store.ID(), InstanceID: i.ID, WorkspaceID: wid, Title: title, Model: model, Status: "idle", Created: store.Now(), Updated: store.Now()}
+	s := Session{Source: source, ID: store.ID(), InstanceID: i.ID, WorkspaceID: wid, Title: title, Model: model, Status: "idle", Created: store.Now(), Updated: store.Now()}
 	if e := m.Store.Put("session", s.ID, s); e != nil {
 		return s, e
 	}
@@ -299,7 +310,7 @@ func (m *Manager) update(id string, f func(*Session)) error {
 	defer m.mu.Unlock()
 	s := m.sessions[id]
 	if s == nil {
-		return errors.New("会话不存在")
+		return failure(404, "session_not_found", "会话不存在")
 	}
 	v := *s
 	f(&v)
@@ -583,12 +594,14 @@ func (m *Manager) Start(id string, in Input) (Session, error) {
 	}
 	h.op.Lock()
 	defer h.op.Unlock()
+	h.admission.Lock()
+	defer h.admission.Unlock()
 	s, _ = m.Session(id)
 	if s.Archived {
-		return s, errors.New("请先恢复已归档会话，再提交任务")
+		return s, failure(409, "session_archived", "请先恢复已归档会话，再提交任务")
 	}
 	if active(s.Status) {
-		return s, errors.New("该会话已有任务正在运行")
+		return s, failure(409, "session_busy", "该会话已有任务正在运行")
 	}
 	h.mu.Lock()
 	h.canceled = false
@@ -610,7 +623,8 @@ func (m *Manager) Start(id string, in Input) (Session, error) {
 		return s, e
 	}
 	s, _ = m.Session(id)
-	m.event(id, "internal", "run/input", map[string]any{"runId": s.RunID, "input": in, "notes": w.Notes, "notesRevision": w.Revision, "cwd": w.Path, "instanceId": s.InstanceID, "model": s.Model})
+	instanceAtSubmit, _ := m.Instance(s.InstanceID)
+	m.event(id, "internal", "run/input", map[string]any{"instanceRevision": instanceAtSubmit.Revision, "runId": s.RunID, "input": in, "notes": w.Notes, "notesRevision": w.Revision, "cwd": w.Path, "instanceId": s.InstanceID, "model": s.Model})
 	m.wg.Add(1)
 	go func() { defer m.wg.Done(); h.op.Lock(); defer h.op.Unlock(); m.run(s, w, h, in) }()
 	return s, nil
@@ -771,19 +785,37 @@ func (m *Manager) run(s Session, w Workspace, h *handle, in Input) {
 	canceled = h.canceled
 	h.mu.Unlock()
 	if canceled {
-		go m.interrupt(s.ID, h)
+		go m.interrupt(s.ID, h, s.RunID)
 	}
 }
-func (m *Manager) Stop(id string) error {
+func (m *Manager) Stop(id string) error { return m.StopRun(id, "") }
+func (m *Manager) StopRun(id, expectedRunID string) error {
+	if _, err := m.Session(id); err != nil {
+		return err
+	}
+	h, e := m.getHandle(id)
+	if e != nil {
+		return e
+	}
+	h.admission.Lock()
+	defer h.admission.Unlock()
 	s, e := m.Session(id)
 	if e != nil {
 		return e
 	}
+	if expectedRunID != "" && s.RunID != expectedRunID {
+		return failure(409, "run_conflict", "会话已切换到其他任务；停止请求未执行")
+	}
 	if !active(s.Status) {
+		if expectedRunID != "" {
+			return nil
+		}
 		return errors.New("没有正在运行的任务")
 	}
-	h, e := m.getHandle(id)
-	if e != nil {
+	if s.Status == "stopping" {
+		return nil
+	}
+	if e = m.update(id, func(s *Session) { s.Status = "stopping" }); e != nil {
 		return e
 	}
 	h.mu.Lock()
@@ -792,15 +824,14 @@ func (m *Manager) Stop(id string) error {
 		h.client.Close()
 	}
 	h.mu.Unlock()
-	_ = m.update(id, func(s *Session) { s.Status = "stopping" })
-	go m.interrupt(id, h)
+	go m.interrupt(id, h, s.RunID)
 	return nil
 }
-func (m *Manager) interrupt(id string, h *handle) {
+func (m *Manager) interrupt(id string, h *handle, expectedRunIDs ...string) {
 	h.op.Lock()
 	defer h.op.Unlock()
 	s, e := m.Session(id)
-	if e != nil || !active(s.Status) {
+	if e != nil || !active(s.Status) || (len(expectedRunIDs) > 0 && s.RunID != expectedRunIDs[0]) {
 		return
 	}
 	h.mu.Lock()

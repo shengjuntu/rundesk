@@ -103,7 +103,7 @@ func (m *Manager) Instance(ids ...string) (Instance, error) {
 	defer m.mu.Unlock()
 	v := m.instances[instanceID(ids)]
 	if v == nil {
-		return Instance{}, errors.New("实例不存在")
+		return Instance{}, failure(404, "instance_not_found", "实例不存在")
 	}
 	return *v, nil
 }
@@ -147,10 +147,10 @@ func (m *Manager) PatchInstance(id string, p InstancePatch) (Instance, error) {
 	defer m.mu.Unlock()
 	v := m.instances[id]
 	if v == nil {
-		return Instance{}, errors.New("实例不存在")
+		return Instance{}, failure(404, "instance_not_found", "实例不存在")
 	}
 	if p.Revision != v.Revision {
-		return Instance{}, errors.New("实例配置已更新，请刷新后重试")
+		return Instance{}, failure(409, "revision_conflict", "实例配置已更新，请刷新后重试")
 	}
 	next := *v
 	next.Name = strings.TrimSpace(p.Name)

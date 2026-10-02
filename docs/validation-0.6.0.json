@@ -1,0 +1,55 @@
+{
+  "go_version": "1.27.1",
+  "go_tests_passed": 40,
+  "go_tests_failed": 0,
+  "race_detector": "passed",
+  "go_vet": "passed",
+  "openapi": {
+    "version": "3.1.0",
+    "paths": 39,
+    "operations": 46,
+    "validator": "openapi-spec-validator 0.9.0",
+    "status": "passed"
+  },
+  "browser": {
+    "passed": 13,
+    "checks": [
+      "legacy_instance_skill_mcp_contract",
+      "application_source_and_creation_receipt",
+      "session_source_and_model_strip",
+      "session_capabilities_and_scope",
+      "unified_instance_overview",
+      "instance_default_preserves_existing_session_model",
+      "lost_start_response_retries_without_duplicate_or_steer",
+      "stop_targets_expected_run",
+      "historical_runtime_separate_from_current_configuration",
+      "reload_preserves_session_binding",
+      "mobile_capabilities_no_horizontal_overflow",
+      "no_javascript_exceptions",
+      "openapi_served_with_authentication"
+    ],
+    "browser": "154.0.8037.57",
+    "fixture": "Codex protocol simulator; no real model credentials used"
+  },
+  "upgrade": {
+    "passed": 8,
+    "checks": [
+      "new binary reports 0.6.0",
+      "session, thread, instance, workspace and model preserved",
+      "workspace notes preserved",
+      "instance skill preserved",
+      "historical events preserved; shutdown may append lifecycle events",
+      "v1 client resumes existing native thread",
+      "Python client receipt and retry preserve run",
+      "incremental event cursor continues across upgrade"
+    ],
+    "fixture": "Codex demo protocol only"
+  },
+  "existing_ui_regression": "passed: sessions, approval, notes, Skills/MCP, file previews, history, instance and model binding, responsive layout",
+  "trace_model_regression": "passed; trace UI unchanged",
+  "limitations": [
+    "Codex protocol simulator; no real model credentials or external MCP calls",
+    "Windows amd64 binary cross-compiled; no Windows runtime test",
+    "Application labels are not isolated application credentials"
+  ]
+}

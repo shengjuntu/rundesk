@@ -1,0 +1,20 @@
+{
+  "passed": 13,
+  "checks": [
+    "legacy_instance_skill_mcp_contract",
+    "application_source_and_creation_receipt",
+    "session_source_and_model_strip",
+    "session_capabilities_and_scope",
+    "unified_instance_overview",
+    "instance_default_preserves_existing_session_model",
+    "lost_start_response_retries_without_duplicate_or_steer",
+    "stop_targets_expected_run",
+    "historical_runtime_separate_from_current_configuration",
+    "reload_preserves_session_binding",
+    "mobile_capabilities_no_horizontal_overflow",
+    "no_javascript_exceptions",
+    "openapi_served_with_authentication"
+  ],
+  "browser": "154.0.8037.57",
+  "fixture": "Codex protocol simulator; no real model credentials used"
+}

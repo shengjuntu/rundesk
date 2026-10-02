@@ -1,12 +1,23 @@
+# RunDesk 0.6.1
+
+对话交互升级：工具图标、回复复制与评价、分享预览和浏览器朗读，手机端可打开历史会话抽屉。延续 0.6.0 的应用 API、持久化提交去重、实例配置总览和会话能力面板。旧 `/api` 保持兼容。
+
+- [本版说明](docs/RELEASE-0.6.1.md)
+- [验证记录](docs/VALIDATION-0.6.1.md)
+- [0.6.0 API 与实例配置说明](docs/RELEASE-0.6.0.md)
+- [应用 API v1](docs/API-V1.md)
+- [OpenAPI 定义](internal/app/openapi.json)
+- [Python 应用客户端](examples/application_client.py)
+
 # RunDesk
 
 一个轻量的 Codex 运行后台，使用 Go 编写，内嵌 Web 管理界面。
 
 对话、Skills/MCP 配置、运行审批、调试事件与文件产物使用同一组 HTTP API。ActiveVLM 等业务前台可以通过这层 API 驱动 Codex。项目正式定名 RunDesk；当前尚未绑定 GitHub 仓库。
 
-**状态：v0.5.4 原型。** 单用户、自托管。后端直接启动官方 `codex app-server`，没有复用 Sandbox Agent，也没有实现另一套 agent loop。
+**状态：v0.6.1 原型。** 单用户、自托管。后端直接启动官方 `codex app-server`，没有复用 Sandbox Agent，也没有实现另一套 agent loop。
 
-![RunDesk 工作台](docs/screenshots/workspace.png)
+![RunDesk 工作台](docs/screenshots/v0.6.1/conversation-desktop.png)
 
 ## 开始使用
 

@@ -1,3 +1,7 @@
+# 应用接口入口
+
+新应用请使用 [稳定 API v1](API-V1.md)，OpenAPI 为 `/api/v1/openapi.json`。以下为兼容 `/api` 的历史说明，仍保留原行为。
+
 # HTTP API · v0.3
 
 默认根地址 `http://127.0.0.1:3210/api`。JSON 字段使用 camelCase。配置令牌时，每次请求加入 `Authorization: Bearer $RUNDESK_TOKEN`。同源浏览器可以使用 POST /login 设置的 HttpOnly Cookie。

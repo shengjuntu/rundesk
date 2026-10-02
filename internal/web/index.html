@@ -6,9 +6,12 @@
     <title>RunDesk</title>
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/trace.css" />
+    <link rel="stylesheet" href="/conversation.css" />
+    <script defer src="/conversation.js"></script>
     <script defer src="/app.js"></script>
     <script defer src="/manage.js"></script>
     <script defer src="/reliability.js"></script>
+    <script defer src="/configuration.js"></script>
     <script defer src="/trace-model.js"></script>
     <script defer src="/trace.js"></script>
   </head>
@@ -29,10 +32,11 @@
       </form>
     </div>
     <div class="shell" id="shell">
-      <aside class="sidebar">
+      <aside id="history-sidebar" class="sidebar" aria-label="实例与会话">
+        <button id="sidebar-close" class="quiet sidebar-close" aria-label="关闭会话列表">关闭</button>
         <a class="brand" href="/"
           ><span class="brandmark">r.</span><strong>RunDesk</strong
-          ><small>0.5.4</small></a
+          ><small>0.6.1</small></a
         >
         <div class="workspace">
           <label for="instance">Codex 实例</label>
@@ -76,8 +80,10 @@
           ><button id="logout" class="quiet" title="退出">退出</button>
         </div>
       </aside>
+      <button id="sidebar-backdrop" class="sidebar-backdrop" aria-label="关闭会话列表背景" tabindex="-1"></button>
       <main>
         <header>
+          <button id="sidebar-toggle" class="reply-action sidebar-toggle" title="会话列表" aria-label="会话列表" aria-controls="history-sidebar" aria-expanded="false"></button>
           <div class="breadcrumb">
             工作台 <span>/</span>
             <strong id="workspace-name">默认工作区</strong>
@@ -112,6 +118,7 @@
                 </details>
               </div>
             </div>
+            <div id="capability-strip" class="capability-strip"></div>
             <div id="runtime-strip" class="runtime-strip hidden"></div>
             <div id="messages" class="messages">
               <div class="welcome">
@@ -123,13 +130,13 @@
                   <button
                     data-prompt="检查当前工作区，说明目录结构和可以改进的地方。"
                   >
-                    了解我的工作区 <span>↗</span></button
+                    了解我的工作区</button
                   ><button
                     data-prompt="帮我整理这个项目的下一步计划，先不要修改文件。"
                   >
-                    整理下一步计划 <span>↗</span></button
+                    整理下一步计划</button
                   ><button data-prompt="演示审批流程。">
-                    查看审批流程 <span>↗</span>
+                    查看审批流程
                   </button>
                 </div>
               </div>
@@ -262,13 +269,15 @@
     <dialog id="settings">
       <div class="dialog-head">
         <div>
-          <p class="eyebrow">WORKSPACE SETTINGS</p>
-          <h2>配置与能力</h2>
+          <p class="eyebrow">INSTANCE &amp; WORKSPACE</p>
+          <h2>实例配置</h2>
+          <p id="settings-context" class="help"></p>
         </div>
         <button id="close-settings" class="icon" title="关闭配置">×</button>
       </div>
       <div class="settings-tabs tabs">
-        <button data-settings-tab="instances">实例</button
+        <button data-settings-tab="overview">总览</button
+        ><button data-settings-tab="instances">模型与实例</button
         ><button class="selected" data-settings-tab="notes">项目记忆</button
         ><button data-settings-tab="skills">Skills</button
         ><button data-settings-tab="mcp">MCP</button
@@ -282,6 +291,10 @@
         <button id="close-preview" class="icon">×</button>
       </div>
       <div id="preview-content"></div>
+    </dialog>
+    <dialog id="capabilities-dialog">
+      <div class="dialog-head"><h2>会话能力</h2><button id="close-capabilities" class="icon" aria-label="关闭会话能力">×</button></div>
+      <div id="capabilities-content"></div>
     </dialog>
     <div id="toast" role="status" class="toast hidden"></div>
     <dialog id="runtime-dialog">

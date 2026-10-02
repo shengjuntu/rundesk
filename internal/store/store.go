@@ -162,7 +162,7 @@ func (s *Store) DeleteSession(id string) error {
 		return e
 	}
 	defer tx.Rollback()
-	for _, q := range []string{"DELETE FROM events WHERE session=?", "DELETE FROM objects WHERE kind='steer' AND json_extract(data,'$.sessionId')=?", "DELETE FROM objects WHERE kind='approval' AND json_extract(data,'$.sessionId')=?", "DELETE FROM objects WHERE kind='runtime' AND id=?", "DELETE FROM objects WHERE kind='session' AND id=?"} {
+	for _, q := range []string{"DELETE FROM events WHERE session=?", "DELETE FROM objects WHERE kind='message-feedback' AND json_extract(data,'$.sessionId')=?", "DELETE FROM objects WHERE kind='steer' AND json_extract(data,'$.sessionId')=?", "DELETE FROM objects WHERE kind='approval' AND json_extract(data,'$.sessionId')=?", "DELETE FROM objects WHERE kind='runtime' AND id=?", "DELETE FROM objects WHERE kind='session' AND id=?"} {
 		if _, e = tx.Exec(q, id); e != nil {
 			return e
 		}
@@ -195,4 +195,10 @@ func (f EventFilter) Validate() error {
 		}
 	}
 	return nil
+}
+
+func (s *Store) LatestEvent(session, method string) (Event, error) {
+	v := Event{SessionID: session}
+	e := s.db.QueryRow("SELECT id,time,direction,method,data FROM events WHERE session=? AND method=? ORDER BY id DESC LIMIT 1", session, method).Scan(&v.ID, &v.Time, &v.Direction, &v.Method, &v.Data)
+	return v, e
 }

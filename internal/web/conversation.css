@@ -1,0 +1,83 @@
+/* v0.6.1: quieter tools, readable replies and touch-accessible history. */
+.reply-action {display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:34px;height:34px;padding:7px;border:0;border-radius:7px;background:transparent;color:#747b88;line-height:1}
+.reply-action:hover,.reply-action[aria-pressed="true"] {background:#edf0fb;color:#425aca}
+.reply-action:focus-visible,button:focus-visible {outline:2px solid var(--accent);outline-offset:2px}
+.reply-action[hidden] {display:none}
+.reply-actions {display:flex;align-items:center;gap:3px;margin-top:10px;flex-wrap:wrap}
+.reply-actions .speech-status {font-size:12px;color:#747b88;margin-left:6px}
+.message.assistant {margin-top:24px;margin-bottom:32px}
+.message.assistant .body>:last-child {margin-bottom:0}
+.messages {padding-bottom:16px;scroll-behavior:auto;scrollbar-gutter:stable}
+.tool {padding:7px 10px;border-color:transparent;background:#f9fafc;border-radius:8px;margin:7px 0;font-size:13px}
+.tool>summary {display:flex;align-items:center;gap:10px;min-height:30px;list-style:none}
+.tool>summary::-webkit-details-marker {display:none}
+.tool>summary::marker {content:""}
+.tool-kind,.tool-state {display:inline-flex;flex-shrink:0;align-items:center;justify-content:center}
+.tool-kind {width:24px;height:24px;color:#737f93}
+.tool[open] .tool-kind {color:#425aca;background:#edf0fb;border-radius:5px}
+.tool-label {white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;color:#687181}
+.tool-state {color:#748b80}
+.tool-state[data-status="failed"],.tool-state[data-status="declined"] {color:#b45a51}
+.tool-state[data-status="inProgress"] {color:#7b89b8}
+.tool-content {padding:3px 4px 5px}
+.tool-raw {font-size:12px}
+.code-block {margin:18px 0;border:1px solid #e6e9ef;border-radius:10px;overflow:hidden;background:#f7f8fb}
+.code-heading {display:flex;align-items:center;justify-content:space-between;padding:3px 9px 3px 14px;font-size:12px;color:#757d8d;border-bottom:1px solid #e6e9ef;gap:10px}
+.code-heading>span {overflow-wrap:anywhere;min-width:0}
+.code-block pre {border-radius:0;margin:0;background:transparent;white-space:pre;overflow:auto}
+.reply-dialog {width:min(740px,calc(100vw - 24px));max-height:85dvh;padding:22px;border-radius:14px;border:1px solid var(--line);overflow:auto}
+.reply-dialog .dialog-head {padding:0 0 16px}
+.reply-dialog h2 {margin:0}
+.reply-dialog>textarea {width:100%;font-size:14px}
+.reply-dialog .help {margin:12px 0;color:#687181;font-size:12px}
+.reply-dialog-actions {display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:18px}
+.share-preview {padding:18px;background:#f8f9fc;border:1px solid var(--line);border-radius:8px;max-height:50dvh;overflow:auto;overflow-wrap:anywhere;font-size:15px}
+.share-preview .code-heading .reply-action {display:none}
+.copy-fallback {min-height:260px}
+.conversation-header {padding-top:17px;padding-bottom:11px}
+.conversation-header h2 {font-size:14px;font-weight:550}
+.capability-strip {padding-bottom:12px}
+.welcome-mark {font-size:34px;margin-bottom:16px}
+.welcome .eyebrow {display:none}
+.welcome h1 {font-size:28px}
+.suggestions button {font-size:12px}
+.composer {box-shadow:0 4px 20px #28355d08}
+.composer-note {margin-top:8px}
+.sidebar-toggle,.sidebar-close,.sidebar-backdrop {display:none}
+@media (prefers-reduced-motion:no-preference) {.tool-state[data-status="inProgress"] svg {animation:tool-spin 2s linear infinite}}
+@keyframes tool-spin {to{transform:rotate(360deg)}}
+@media(max-width:600px) {
+  .sidebar {display:none}
+  .sidebar-toggle {display:inline-flex}
+  main>header {height:54px;padding:0 10px;gap:5px}
+  main>header .breadcrumb {flex:1;max-width:none;font-size:11px}
+  main>header .breadcrumb>span {display:none}
+  main>header .breadcrumb>strong {display:none}
+  main>header .badge {display:none}
+  main>header>.row {gap:0}
+  .conversation-header {padding:13px 16px 9px}
+  .messages {padding:0 16px 12px;scrollbar-gutter:auto}
+  .message {font-size:16px}
+  .message.user {margin-left:8%;padding:11px 14px}
+  .reply-action {width:40px;height:40px}
+  .reply-actions {gap:2px}
+  .composer-wrap {padding:8px 12px 10px}
+  .composer-toolbar input {width:105px}
+  .suggestions {flex-direction:column;gap:7px;margin-top:22px}
+  .suggestions button {text-align:center;padding:11px}
+  .welcome {margin:25px auto}
+  .welcome h1 {font-size:25px}
+  .welcome-mark {margin-bottom:10px}
+  .sidebar-open .sidebar {display:flex;position:fixed;left:0;top:0;bottom:0;width:min(300px,86vw);padding:16px;z-index:30;box-shadow:8px 0 30px #15234325}
+  .sidebar-open .brand strong,.sidebar-open .brand small,.sidebar-open .workspace,.sidebar-open .session-filters,.sidebar-open .sidebar nav,.sidebar-open .sidebar-bottom {display:revert}
+  .sidebar-open .sidebar-bottom {display:flex}
+  .sidebar-open .sidebar-close {display:block;position:absolute;right:12px;top:14px}
+  .sidebar-open .brand {padding-bottom:22px}
+  .sidebar-open .brand small {display:none}
+  .sidebar-open .new-session {font-size:14px;padding:10px}
+  .sidebar-open .new-session:before {content:none}
+  .sidebar-open .sidebar-backdrop {display:block;position:fixed;inset:0;z-index:29;border:0;border-radius:0;background:#20293c55;padding:0}
+  .reply-dialog {padding:16px}
+}
+
+#manage-instances {display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:7px;flex-shrink:0;color:#737b8c}
