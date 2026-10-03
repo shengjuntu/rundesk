@@ -1,0 +1,17 @@
+{
+  "passed": 11,
+  "checks": [
+    "new binary reports 0.7.0",
+    "old application source migrates to a one-to-one registry",
+    "application source and unassigned configuration preserved",
+    "existing skill directory and attached reference are readable without conversion",
+    "session, thread, instance, workspace and model preserved",
+    "workspace notes preserved",
+    "instance skill preserved",
+    "historical events preserved; shutdown may append lifecycle events",
+    "v1 client resumes existing native thread",
+    "Python client receipt and retry preserve run",
+    "incremental event cursor continues across upgrade"
+  ],
+  "fixture": "Codex demo protocol only"
+}

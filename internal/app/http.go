@@ -38,6 +38,8 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 	mux := http.NewServeMux()
 	s.extraRoutes(mux)
 	s.instanceRoutes(mux)
+	s.applicationRoutes(mux)
+	s.skillBundleRoutes(mux)
 	s.runtimeRoutes(mux)
 	s.traceRoutes(mux)
 	s.integrationRoutes(mux)
@@ -48,7 +50,7 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 		writeJSON(w, 200, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("GET /api/meta", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, map[string]any{"name": "RunDesk", "version": Version, "apiVersions": []string{"v1"}, "demo": m.Demo, "protocol": "Codex App Server JSONL", "capabilities": []string{"instances", "sessions", "trace", "events", "approvals", "skills", "mcp", "notes", "files", "api-v1", "idempotency", "configuration-summary", "application-metadata", "reply-feedback"}})
+		writeJSON(w, 200, map[string]any{"name": "RunDesk", "version": Version, "apiVersions": []string{"v1"}, "demo": m.Demo, "protocol": "Codex App Server JSONL", "capabilities": []string{"instances", "sessions", "trace", "events", "approvals", "skills", "mcp", "notes", "files", "api-v1", "idempotency", "configuration-summary", "application-metadata", "reply-feedback", "applications", "skill-bundles"}})
 	})
 	mux.HandleFunc("GET /api/workspaces", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, m.Workspaces()) })
 	mux.HandleFunc("POST /api/workspaces", func(w http.ResponseWriter, r *http.Request) {

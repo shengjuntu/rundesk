@@ -45,6 +45,15 @@ class RunDesk:
                 body = {'error': f'HTTP {error.code}'}
             raise RunDeskError(error.code, body) from error
 
+    def register_application(self, app_id, name, instance_id, workspace_id='', description='', entry_url='', revision=None):
+        """Register metadata without creating a task. Binding is immutable."""
+        from urllib.parse import quote
+        body = dict(name=name, instanceId=instance_id, workspaceId=workspace_id,
+                    description=description, entryUrl=entry_url)
+        if revision is not None:
+            body['revision'] = revision
+        return self.call('PUT', '/applications/' + quote(app_id, safe=''), body)
+
     def create_session(self, workspace_id, instance_id, app_id, task_id, key):
         return self.call('POST', '/sessions', {
             'workspaceId': workspace_id, 'instanceId': instance_id,

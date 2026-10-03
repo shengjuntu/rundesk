@@ -747,6 +747,7 @@
       tracks = new Set(TRACKS.map((x) => x[0]));
       restore();
     }
+    sessionStorage.setItem("rundesk-trace-session",state.session.id);
     opened = true;
     restorePosition = true;
     $("#shell").inert = true;
@@ -773,7 +774,7 @@
     busy = false;
     clearInterval(refreshTimer);
     root.classList.add("hidden");
-    history.replaceState(null, "", location.pathname + location.search);
+    history.replaceState(null, "", location.pathname + location.search+"#session/"+encodeURIComponent(state.session.id));
     $("#trace-button").focus();
     save();
     scheduleRender();

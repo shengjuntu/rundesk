@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Read-only baseline preservation check across an actual old/new RunDesk binary.
-Usage: python scripts/upgrade-smoke.py --old /path/to/0.6.0 --new bin/rundesk
+Usage: python scripts/upgrade-smoke.py --old /path/to/0.6.1 --new bin/rundesk
 Both processes run --demo in an isolated temporary data directory.
 """
 import argparse,importlib.util,json,pathlib,socket,subprocess,tempfile,time,urllib.request
-parser=argparse.ArgumentParser();parser.add_argument('--old',required=True);parser.add_argument('--old-version',default='0.6.0');parser.add_argument('--new-version',default='0.6.1');parser.add_argument('--new',default='bin/rundesk');parser.add_argument('--output',default='docs/upgrade-0.6.1.json');args=parser.parse_args()
+parser=argparse.ArgumentParser();parser.add_argument('--old',required=True);parser.add_argument('--old-version',default='0.6.1');parser.add_argument('--new-version',default='0.7.0');parser.add_argument('--new',default='bin/rundesk');parser.add_argument('--output',default='docs/upgrade-0.7.0.json');args=parser.parse_args()
 root=pathlib.Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location('application_client',root/'examples/application_client.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 checks=[]
@@ -38,11 +38,17 @@ with tempfile.TemporaryDirectory(prefix='rundesk-upgrade-') as data:
   session=call('POST','/sessions',{'workspaceId':work['id'],'instanceId':instance['id'],'title':'Existing task'})
   call('POST',f"/sessions/{session['id']}/turns",{'text':'Before upgrade'})
   before=complete(session['id']);events=call('GET',f"/sessions/{session['id']}/events")
+  app_task=call('POST','/sessions',{'workspaceId':work['id'],'instanceId':instance['id'],'title':'Existing app task','source':{'kind':'application','appId':'news2douyin','taskId':'preserve-business-task'}})
+  orphan=call('POST','/instances',{'name':'Unassigned old configuration'})
+  extra=pathlib.Path(instance['codexHome'])/'skills'/'old-guide'/'references';extra.mkdir();(extra/'keep.txt').write_text('Old sibling preserved')
  finally:old.terminate();old.wait(timeout=10)
  new=start(args.new)
  try:
   client=module.RunDesk(base)
   assert client.call('GET','/meta')['version']==args.new_version;checks.append('new binary reports '+args.new_version)
+  apps=client.call('GET','/applications');assert len(apps)==1 and apps[0]['appId']=='news2douyin' and apps[0]['instanceId']==instance['id'] and apps[0]['sessionCount']==2;checks.append('old application source migrates to a one-to-one registry')
+  assert client.session(app_task['id'])==app_task;assert any(i['id']==orphan['id'] for i in client.call('GET','/instances'));checks.append('application source and unassigned configuration preserved')
+  bundle=client.call('GET',cp+f"/skill-bundles/old-guide?instanceId={instance['id']}&scope=instance");assert {f['path'] for f in bundle['files']}=={'SKILL.md','references/keep.txt'};checks.append('existing skill directory and attached reference are readable without conversion')
   after=client.session(session['id']);assert after['threadId']==before['threadId'] and after['instanceId']==instance['id'] and after['workspaceId']==work['id'] and after['model']=='demo-fixture';checks.append('session, thread, instance, workspace and model preserved')
   assert client.call('GET','/workspaces')[0]['notes']=='Keep these project notes';checks.append('workspace notes preserved')
   skill=client.call('GET',cp+f"/skills/old-guide?instanceId={instance['id']}&scope=instance");assert 'Preserve this file.' in skill['content'];checks.append('instance skill preserved')

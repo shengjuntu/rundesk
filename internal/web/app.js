@@ -3,6 +3,7 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const welcome = $("#messages").firstElementChild.cloneNode(true);
 const state = {
+  applications: [], view: "conversation", drafts: new Map(), taskAppID: "", draftContext: null,
   workspaces: [],
   instances: [],
   sessions: [],
@@ -144,9 +145,11 @@ async function boot() {
   $("#mode").textContent = meta.demo ? "DEMO" : "CODEX";
   $("#login").classList.add("hidden");
   state.instances = await api("/instances");
-  renderInstanceOptions(localStorage.getItem("rundesk-instance") || "default");
+  renderInstanceOptions("default");
+  state.applications = await api("/applications");
   state.workspaces = await api("/workspaces");
   const last =
+    localStorage.getItem("rundesk-assistant-workspace") ||
     localStorage.getItem("rundesk-workspace") ||
     localStorage.getItem("codex-base-workspace");
   $("#workspace").replaceChildren(
@@ -155,6 +158,8 @@ async function boot() {
   if (state.workspaces.some((w) => w.id === last)) $("#workspace").value = last;
   updateWorkspaceLabel();
   await refreshSessions();
+  if (await restoreProductRoute()) return;
+  setProductPage("conversation");
   const sid =
     localStorage.getItem("rundesk-session") ||
     localStorage.getItem("codex-base-session");
@@ -162,19 +167,19 @@ async function boot() {
     (s) =>
       s.id === sid &&
       s.workspaceId === ws().id &&
-      s.instanceId === instance()?.id,
+      s.instanceId === instance()?.id && s.source?.kind !== "application",
   );
   if (session) await selectSession(session.id);
   else await selectFirst();
 }
 function updateWorkspaceLabel() {
   const w = ws();
-  $("#workspace-name").textContent = [instance()?.name, w?.name]
-    .filter(Boolean)
-    .join(" / ");
+  $("#workspace-name").textContent = w?.name || "默认项目";
+  updateProductNavigation();
   localStorage.setItem("rundesk-instance", instance()?.id || "default");
   if (!state.session) $("#model").value = instance()?.defaultModel || "";
   localStorage.setItem("rundesk-workspace", w?.id || "");
+  if(instance()?.id==="default"&&!state.taskAppID)localStorage.setItem("rundesk-assistant-workspace",w?.id||"");
 }
 async function refreshSessions() {
   state.sessions = await api("/sessions");
@@ -197,6 +202,8 @@ function wireSuggestions() {
   );
 }
 function resetConversation() {
+  state.loadingSession=false;
+  stashProductDraft(); state.draftContext=null; $("#prompt").value=""; state.taskAppID="";
   resetReplyActions();
   state.historyRequest++;
   $("#send-feedback").textContent = "";
@@ -225,28 +232,38 @@ function resetConversation() {
   renderDebug();
 }
 async function newSession() {
+  if(instance()?.id!=="default"||state.taskAppID)throw Error("请从应用发起新的业务任务");
+  const creationSelection=state.selection;
   const model = $("#model").value.trim();
   const s = await api("/sessions", {
     method: "POST",
     body: { workspaceId: ws().id, instanceId: instance().id, model },
   });
   await refreshSessions();
+  if(state.selection!==creationSelection)throw Error("会话已创建；页面已切换，消息尚未发送");
   await selectSession(s.id);
   $("#prompt").focus();
+  return s;
 }
 async function selectSession(id) {
   resetConversation();
   const selection = state.selection;
-  const session = await api("/sessions/" + id);
+  state.loadingSession=true;renderStatus();
+  let session;
+  try {session=await api("/sessions/"+id);} finally {if(selection===state.selection){state.loadingSession=false;renderStatus();}}
   if (selection !== state.selection) return;
   state.session = session;
+  state.taskAppID=session.source?.kind==="application"?session.source.appId:"";
+  setProductPage("conversation");
+  history.replaceState(null,"","#session/"+encodeURIComponent(session.id));
   safe(() => loadReplyFeedback(id, selection));
   $("#session-scope").value = session.archived ? "archived" : "active";
   $("#workspace").value = session.workspaceId;
   $("#instance").value = session.instanceId;
   updateWorkspaceLabel();
   $("#model").value = session.model || "";
-  localStorage.setItem("rundesk-session", id);
+  if(session.instanceId==="default"&&session.source?.kind!=="application")localStorage.setItem("rundesk-session",id);
+  restoreProductDraft();
   renderSessions();
   renderStatus();
   const stream = new EventSource(`/api/v1/sessions/${id}/events?stream=1`);
@@ -613,7 +630,7 @@ async function sendMessage() {
     skills = [...state.chosenSkills];
   const sourceSelection = state.selection,
     workspaceId = ws().id;
-  const draft = $("#prompt").value;
+  const draft = $("#prompt").value, sourceDraftKey=draftKey();
   state.sending = true;
   renderStatus();
   let id, selection;
@@ -638,7 +655,9 @@ async function sendMessage() {
     if (state.selection !== sourceSelection || ws().id !== workspaceId)
       throw Error("会话已切换，消息未发送");
     if (!state.session) {
-      await newSession();
+      const created=await newSession();
+      if(state.session?.id!==created.id)throw Error("会话已切换，消息尚未发送");
+      $("#prompt").value=draft;
       state.uploads = attachments;
       state.chosenSkills = skills;
       renderAttachments();
@@ -671,6 +690,7 @@ async function sendMessage() {
     } else {
       await api(`/sessions/${id}/turns`, { method: "POST", body });
     }
+    if(state.drafts.get(sourceDraftKey)?.text===draft)state.drafts.delete(sourceDraftKey);
     if (state.session?.id === id && state.selection === selection) {
       // Do not clear a draft typed while the request was in flight.
       if ($("#prompt").value === draft) $("#prompt").value = "";
@@ -826,13 +846,19 @@ async function previewFile(file) {
 }
 async function openSettings(tab = "overview") {
   state.settingsTab = tab;
+  if(["skills","mcp"].includes(tab))return showCapabilityPage(tab);
+  if(state.view==="capability")closeSettings();
   $("#settings").showModal();
   await renderSettings();
 }
 async function renderSettings() {
-  $("#settings-context").textContent = `实例：${instance()?.name || ""} · 工作区：${ws()?.name || ""}`;
+  if(["skills","mcp"].includes(state.settingsTab)&&state.view!=="capability")return showCapabilityPage(state.settingsTab);
+  const shared=instance()?.id==="default"&&!!state.taskAppID;
+  $("#settings-title").textContent=(shared?"通用助手（历史任务共享）":contextTitle())+" · 设置";
+  $("#settings-eyebrow").textContent=instance()?.id==="default"?"ASSISTANT SETTINGS":"APPLICATION SETTINGS";
+  $("#settings-context").textContent=shared?"这条历史应用任务沿用通用助手配置；保存也影响通用助手。":`配置对象：${contextTitle()} · 当前项目：${ws()?.name||""}`;
   const target = el("div");
-  $("#settings-content").replaceChildren(target);
+  $(state.view==="capability"?"#capability-content":"#settings-content").replaceChildren(target);
   $$("[data-settings-tab]").forEach((b) =>
     b.classList.toggle("selected", b.dataset.settingsTab === state.settingsTab),
   );
@@ -840,11 +866,13 @@ async function renderSettings() {
   const tab = state.settingsTab;
   try {
     if (tab === "overview") await renderConfigurationOverview(target);
-    else if (tab === "instances") await renderInstances(target);
+    else if (tab === "instances") await renderAssistantSettings(target);
+    else if (tab === "advanced") await renderInstances(target);
     else if (tab === "notes") renderNotes(target);
     else if (tab === "skills") await renderSkills(target);
     else if (tab === "mcp") await renderMCP(target);
     else await renderRuntime(target);
+    compactConfigurationForms(target,tab);
   } catch (e) {
     target.replaceChildren(
       el("div", { class: "run-error error" }, e.message),
@@ -920,7 +948,9 @@ $("#logout").onclick = () =>
   });
 $("#new-session").onclick = () =>
   safe(async () => {
+    if(instance()?.id!=="default"||state.taskAppID||state.view!=="conversation")await enterAssistant();
     resetConversation();
+    restoreProductDraft();history.replaceState(null,"","#assistant");
     $("#session-scope").value = "active";
     renderSessions();
     $("#model").value = instance()?.defaultModel || "";
@@ -975,7 +1005,7 @@ $("#upload").onchange = () =>
   });
 $("#skill-picker").onclick = () => safe(() => openSettings("skills"));
 $("#settings-button").onclick = () => safe(() => openSettings());
-$("#close-settings").onclick = () => $("#settings").close();
+$("#close-settings").onclick = () => closeSettings();
 $("#close-preview").onclick = () => $("#preview").close();
 function toggleDebug() {
   $("#debug").classList.toggle("hidden");

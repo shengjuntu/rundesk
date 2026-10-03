@@ -56,7 +56,7 @@ const assert = require("node:assert/strict");
     await page.waitForFunction(
       () => document.querySelector("#workspace").options.length > 0,
     );
-    const screenshots = path.resolve("docs/screenshots");
+    const screenshots = path.resolve("docs/screenshots/0.7.0/streaming");
     fs.mkdirSync(screenshots, { recursive: true });
     await page.evaluate(() => {
       state.session = { id: "conversation-regression" };

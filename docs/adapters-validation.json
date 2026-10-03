@@ -1,0 +1,13 @@
+{
+  "mode": "RunDesk 0.7.0 demo protocol; no live model, real search or render",
+  "productionDemoGuardUnchanged": true,
+  "passed": 6,
+  "checks": [
+    "unmodified news bootstrap configures dedicated identity, skill and MCP",
+    "news runtime creates sourced task and automatically registers its application",
+    "news adapter can stop its accepted run",
+    "existing video binary creates project configuration and sees its native skill",
+    "video source metadata, task submission and fenced stop remain compatible",
+    "both existing clients appear as separate applications without adapter code changes"
+  ]
+}

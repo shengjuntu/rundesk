@@ -6,17 +6,17 @@ function renderCapabilityStrip() {
   if(!current) {box.replaceChildren();return;}
   const model=session ? (session.model || "Codex 自动选择") : ($("#model").value.trim() || current.defaultModel || "Codex 默认模型");
   const open=button("查看能力",openCapabilityDialog,"capability-link");open.id="view-capabilities";
-  box.replaceChildren(el("span",{class:"capability-instance"},current.name),el("span",{class:"capability-model",title:model},model),open);
+  box.replaceChildren(el("span",{class:"capability-instance"},contextTitle()),el("span",{class:"capability-model",title:model},model),open);
   if(session?.source?.kind==="application") box.append(el("span",{class:"capability-source",title:session.source.taskId||""},"来自 "+session.source.appId));
 }
-function scopeLabel(scope) { return {instance:"实例",project:"项目",other:"其他来源"}[scope]||scope; }
+function scopeLabel(scope) { return {instance:"当前助手／应用",project:"项目",other:"其他来源"}[scope]||scope; }
 function capabilityInventory(data) {
   const result=el("div",{class:"capability-inventory"});
   for(const [kind,message] of Object.entries(data.errors||{})) result.append(el("p",{class:"error"},kind+"："+message));
   if(data.skills) {
     const card=el("section",{class:"card"},el("h3",{},"当前可用 Skills"));
     for(const skill of data.skills) card.append(el("div",{class:"capability-row"},el("strong",{},skill.name),el("span",{class:"badge"},scopeLabel(skill.sourceScope)),el("span",{class:"muted"},skill.enabled===false?"已禁用":"已启用")));
-    if(!data.skills.length) card.append(el("p",{class:"help"},"此实例在当前工作区没有发现 Skill。"));
+    if(!data.skills.length) card.append(el("p",{class:"help"},"这个助手或应用在当前项目没有发现 Skill。"));
     if(data.skillWarnings?.length) card.append(el("p",{class:"error"},"部分 Skill 加载失败，请在 Skills 设置中查看详细错误。"));
     result.append(card);
   }
@@ -28,7 +28,7 @@ function capabilityInventory(data) {
       const label=!server.enabled?"已禁用":observed?`${Object.keys(observed.tools||{}).length} 个已发现工具`:"未发现工具状态";
       card.append(el("div",{class:"capability-row"},el("strong",{},server.name),el("span",{class:"muted"},label)));
     }
-    if(!data.mcp.servers?.length)card.append(el("p",{class:"help"},"此实例在当前工作区没有配置 MCP 服务。"));
+    if(!data.mcp.servers?.length)card.append(el("p",{class:"help"},"这个助手或应用在当前项目没有配置 MCP 服务。"));
     if(status?.error)card.append(el("p",{class:"error"},status.error));
     if(status?.nextCursor)card.append(el("p",{class:"help"},"当前仅显示首批状态；更多内容请在 MCP 设置中查看。"));
     card.append(el("p",{class:"help"},"这里显示配置连接发现的能力，不代表当前会话已调用，也不代表外部服务已通过真实执行测试。"));
@@ -45,7 +45,7 @@ async function renderConfigurationOverview(target) {
   const tiles=el("div",{class:"configuration-grid"});
   for(const [label,description,tab] of [
     ["模型与认证",current.defaultModel||"沿用 Codex 模型配置","instances"],
-    ["Skills","实例技能与项目技能，注明来源","skills"],
+    ["Skills","完整技能目录与项目约定","skills"],
     ["MCP 工具","连接服务、配置凭据与查看状态","mcp"],
     ["运行诊断","权限、生效值与连接问题","runtime"],
   ]) {
@@ -59,12 +59,12 @@ async function renderConfigurationOverview(target) {
     finally{scan.disabled=false;}
   });scan.id="scan-instance-capabilities";
   target.replaceChildren(
-    el("section",{class:"configuration-intro"},el("p",{class:"eyebrow"},"INSTANCE CONFIGURATION"),el("h3",{},current.name),el("p",{},current.description||"为这个助手配置长期使用的模型、技能和工具。"),el("p",{class:"help"},`${count} 个关联会话 · 当前工作区：${work.name}`)),
+    el("section",{class:"configuration-intro"},el("p",{class:"eyebrow"},"YOUR ASSISTANT"),el("h3",{},contextTitle()),el("p",{},current.description||"为这个助手配置长期使用的模型、技能和工具。"),el("p",{class:"help"},`${count} 个关联会话 · 当前工作区：${work.name}`)),
     tiles,
-    el("p",{class:"configuration-scope"},"模型默认值用于新会话；实例 Skills 与 MCP 供这个实例使用，当前工作区的项目配置也可能参与。修改后是否生效，以实际运行记录为准。"),
-    el("div",{class:"actions"},scan,button("编辑实例与权限",()=>openTab("instances"))),
+    el("p",{class:"configuration-scope"},"模型默认值用于新对话。技能与工具由当前助手或应用共享，项目配置也可能参与；会话中可查看实际运行情况。"),
+    el("div",{class:"actions"},scan,button("模型、认证与权限",()=>openTab("instances"))),
     inventory,
-    el("section",{class:"card integration-links"},el("h3",{},"应用接入"),el("p",{},"应用与此 WebUI 使用 /api/v1。支持任务提交去重、事件续传和接收回执查询。"),el("a",{href:"/api/v1/openapi.json",target:"_blank",rel:"noopener"},"打开 OpenAPI 定义"),el("p",{class:"help"},"现有 /api 接口继续兼容。应用来源标签用于业务关联；本版仍使用后台 Token，不是独立应用权限。")),
+    el("details",{class:"card integration-links"},el("summary",{},"开发者接入说明"),el("h3",{},"应用接入"),el("p",{},"应用与此 WebUI 使用 /api/v1。支持任务提交去重、事件续传和接收回执查询。"),el("a",{href:"/api/v1/openapi.json",target:"_blank",rel:"noopener"},"打开 OpenAPI 定义"),el("p",{class:"help"},"现有 /api 接口继续兼容。应用来源标签用于业务关联；本版仍使用后台 Token，不是独立应用权限。")),
   );
 }
 async function openCapabilityDialog() {
@@ -79,8 +79,8 @@ async function openCapabilityDialog() {
     const source=data.session?.source;
     const heading=el("div",{class:"card"},el("h3",{},data.instance.name),el("p",{},"工作区："+data.workspace.name),el("p",{},"会话模型："+(data.session?data.session.model||"Codex 自动选择":data.instance.defaultModel||"Codex 默认模型")));
     if(source?.kind==="application")heading.append(el("p",{class:"help"},"来源应用："+source.appId+(source.taskId?" · 业务任务："+source.taskId:"")));
-    if(data.session)heading.append(el("p",{class:"help"},"此会话固定绑定实例与工作区。这里查看当前能力，不会为会话复制一套配置。"));
-    const actions=el("div",{class:"actions"},button("配置所属实例",async()=>{dialog.close();await openSettings("overview");}));
+    if(data.session)heading.append(el("p",{class:"help"},"这条对话使用所属助手或应用的配置。这里可查看当前能力及上次实际运行情况。"));
+    const actions=el("div",{class:"actions"},button("打开设置",async()=>{dialog.close();await openSettings("overview");}));
     const last=data.lastSubmission;
     const submitted=el("section",{class:"card"},el("h3",{},"上次提交与实际运行"));
     if(last)submitted.append(el("p",{},"提交时选用的 Skills："+(last.skills?.map(x=>x.name).join("、")||"未显式指定，由 Codex 按需发现")),el("p",{class:"help"},"运行编号："+last.runId+" · "+new Date(last.time).toLocaleString()));

@@ -9,6 +9,10 @@ def ref(name):return {'$ref':'#/components/schemas/'+name}
 def arr(item):return {'type':'array','items':item}
 bool_={'type':'boolean'};integer={'type':'integer'}
 schemas={
+ 'ApplicationInput':obj({'name':st(minLength=1,maxLength=160),'description':st(maxLength=4096),'instanceId':st(),'workspaceId':st(),'entryUrl':st(maxLength=2048),'revision':integer},['name','instanceId']),
+ 'Application':obj({'appId':st(),'name':st(),'description':st(),'instanceId':st(),'workspaceId':st(),'entryUrl':st(),'origin':st(),'revision':integer,'created':st(),'sessionCount':integer,'activeCount':integer,'lastActivity':st()},['appId','name','instanceId','revision']),
+ 'SkillBundle':obj({'name':st(),'files':arr(obj({'path':st(),'size':integer,'executable':bool_},['path','size','executable'])),'size':integer,'backupPath':st()},['name','files','size']),
+ 'SkillFilePreview':obj({'path':st(),'size':integer,'binary':bool_,'text':st(),'truncated':bool_},['path','size','binary']),
  'Error':obj({'error':st(),'code':st(),'requestId':st(),'retryable':bool_},['error','code','requestId','retryable']),
  'Skill':obj({'name':st(),'path':st()},['name','path']),
  'Input':obj({'text':st(minLength=1,maxLength=262144),'files':arr(st()),'skills':arr(ref('Skill'))},['text']),
@@ -30,6 +34,7 @@ schemas={
 }
 paths={}
 requests={
+ ('PUT','/applications/{appId}'):ref('ApplicationInput'),
  ('PUT','/sessions/{sid}/messages/{eid}/feedback'):ref('FeedbackInput'),
  ('POST','/login'):obj({'token':st()},['token']),
  ('POST','/instances'):ref('InstanceInput'),('PATCH','/instances/{iid}'):obj({'name':st(),'description':st(),'defaultModel':st(),'permissions':ref('Permissions'),'revision':integer},['revision']),
@@ -46,6 +51,7 @@ requests={
 }
 idempotent={('POST',p) for p in ['/instances','/workspaces','/sessions','/sessions/{sid}/turns']}
 summaries={
+ '/applications':'应用列表与任务统计','/applications/{appId}':'读取或登记应用；绑定不可变，修改信息需 revision','/workspaces/{wid}/skill-bundles':'导入完整技能 ZIP 或目录；替换会完整备份原目录',
  '/meta':'版本、运行模式与能力发现','/instances':'实例列表与创建','/sessions':'会话列表与创建','/sessions/{sid}/turns':'提交新任务，返回原始接收回执','/sessions/{sid}/steer':'向当前轮追加要求','/sessions/{sid}/stop':'请求停止当前任务','/sessions/{sid}/events':'持久化事件分页或 SSE 订阅','/requests/{key}':'查询幂等提交回执','/instances/{iid}/configuration':'实例配置总览','/sessions/{sid}/configuration':'会话配置与上次执行记录','/openapi.json':'OpenAPI 3.1 契约',
 }
 for file in sorted((root/'internal/app').glob('*.go')):
@@ -53,8 +59,11 @@ for file in sorted((root/'internal/app').glob('*.go')):
  for method,path in re.findall(r'mux.HandleFunc\("(GET|POST|PUT|PATCH|DELETE) /api([^" ]*)"',file.read_text()):
   params=[{'name':n,'in':'path','required':True,'schema':st()} for n in re.findall(r'\{(.*?)\}',path)]
   def query(name,schema=st(),required=False):params.append({'name':name,'in':'query','required':required,'schema':schema})
-  if path.startswith('/workspaces/{wid}/') and any('/'+x in path for x in ['skills','mcp','models','config','diagnostics','account']):query('instanceId')
+  if path.startswith('/workspaces/{wid}/') and any('/'+x in path for x in ['skills','skill-bundles','mcp','models','config','diagnostics','account']):query('instanceId')
   if path=='/workspaces/{wid}/skills/{name}':query('scope',st(enum=['instance','project'],default='project'))
+  if '/skill-bundles' in path:
+   query('scope',st(enum=['instance','project'],default='instance'))
+   if path.endswith('/skill-bundles'):query('name',required=True);query('replace',st(enum=['0','1'],default='0'))
   if path=='/sessions':
    if method=='GET':
     for n in ['instanceId','workspaceId','appId','taskId']:query(n)
@@ -75,6 +84,11 @@ for file in sorted((root/'internal/app').glob('*.go')):
   response=ref('NativeObject'); status='202' if path.endswith('/turns') else '200'
   if path=='/sessions':response=arr(ref('Session')) if method=='GET' else ref('Session')
   if path=='/sessions/{sid}' and method!='DELETE' or path.endswith('/turns'):response=ref('Session')
+  if path=='/applications':response=arr(ref('Application'))
+  if path=='/applications/{appId}':response=ref('Application')
+  if '/skill-bundles' in path:response=ref('SkillBundle')
+  if '/skill-bundles/' in path and path.endswith('/file'):response=ref('SkillFilePreview')
+  if '/skill-bundles/' in path and method=='DELETE':response=obj({'backupPath':st()},['backupPath'])
   if path=='/instances':response=arr(ref('Instance')) if method=='GET' else ref('Instance')
   if path=='/instances/{iid}':response=ref('Instance')
   if path=='/workspaces':response=arr(ref('Workspace')) if method=='GET' else ref('Workspace')
@@ -89,12 +103,15 @@ for file in sorted((root/'internal/app').glob('*.go')):
   content={'application/json':{'schema':response}}
   if path.endswith('/events'):content['text/event-stream']={'schema':st(),'example':'id: 123\ndata: {"id":123,"sessionId":"...","method":"run/state","data":{}}\n\n'}
   if path.endswith('/file') or path.endswith('/export') and not '/mcp/' in path:content={'application/octet-stream':{'schema':st(format='binary')}}
+  if '/skill-bundles/' in path and path.endswith('/file'):content={'application/json':{'schema':response}}
+  if '/skill-bundles/' in path and path.endswith('/export'):content={'application/zip':{'schema':st(format='binary')}}
   if path.endswith('/skills/{name}') and method=='GET':content={'application/json':{'schema':obj({'content':st()},['content'])}}
   op={'operationId':method.lower()+'_'+re.sub(r'[^A-Za-z0-9]+','_',path).strip('_'),'summary':summaries.get(path,path),'parameters':params,'responses':{status:{'description':'成功。202 仅表示任务已接收。','content':content,'headers':{'X-Request-ID':{'schema':st()},'RunDesk-API-Version':{'schema':st(enum=['v1'])},'Idempotency-Replayed':{'schema':st(enum=['true','false']),'description':'仅适用于幂等提交；true 表示返回原始回执。'}}},'default':{'description':'结构化错误。retryable=true 仅允许按相同操作与 Key 重试。','content':{'application/json':{'schema':ref('Error')}}}}}
   if path=='/login':op['security']=[]
   if (method,path) in requests:op['requestBody']={'required':True,'content':{'application/json':{'schema':requests[(method,path)]}}}
   if path.endswith('/uploads'):op['requestBody']={'required':True,'content':{'multipart/form-data':{'schema':obj({'file':st(format='binary')},['file'])}}}
+  if path.endswith('/skill-bundles') and method=='POST':op['requestBody']={'required':True,'content':{'application/zip':{'schema':st(format='binary')},'multipart/form-data':{'schema':{'type':'object','additionalProperties':st(format='binary'),'description':'每个 multipart 字段名为文件相对路径；根部 SKILL.md 或一层技能文件夹。最多 1000 文件、解压后 32 MiB。'}}}}
   paths.setdefault(path,{})[method.lower()]=op
-spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':'1.1.0','description':'RunDesk 0.6.1。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。Source 是调用方声明的业务标签，不代表应用鉴权或隔离。此版本继续使用后台 Token/Cookie。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
+spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':'1.2.0','description':'RunDesk 0.7.0。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。Source 是调用方声明的业务标签，不代表应用鉴权或隔离。此版本继续使用后台 Token/Cookie。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

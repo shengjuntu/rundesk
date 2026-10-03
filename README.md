@@ -1,9 +1,9 @@
-# RunDesk 0.6.1
+# RunDesk 0.7.0
 
-对话交互升级：工具图标、回复复制与评价、分享预览和浏览器朗读，手机端可打开历史会话抽屉。延续 0.6.0 的应用 API、持久化提交去重、实例配置总览和会话能力面板。旧 `/api` 保持兼容。
+首页直接使用通用助手；专用应用统一在「应用」页管理，一个应用对应一份专用配置。Skills 与 MCP 使用独立管理页。技能支持完整文件夹和 ZIP 导入、目录浏览与完整导出，脚本、参考资料、模板和资源文件一并保留。现有 `/api` 和 `/api/v1` 客户端继续兼容。
 
-- [本版说明](docs/RELEASE-0.6.1.md)
-- [验证记录](docs/VALIDATION-0.6.1.md)
+- [本版说明](docs/RELEASE-0.7.0.md)
+- [验证记录](docs/VALIDATION-0.7.0.md)
 - [0.6.0 API 与实例配置说明](docs/RELEASE-0.6.0.md)
 - [应用 API v1](docs/API-V1.md)
 - [OpenAPI 定义](internal/app/openapi.json)
@@ -15,13 +15,13 @@
 
 对话、Skills/MCP 配置、运行审批、调试事件与文件产物使用同一组 HTTP API。ActiveVLM 等业务前台可以通过这层 API 驱动 Codex。项目正式定名 RunDesk；当前尚未绑定 GitHub 仓库。
 
-**状态：v0.6.1 原型。** 单用户、自托管。后端直接启动官方 `codex app-server`，没有复用 Sandbox Agent，也没有实现另一套 agent loop。
+**状态：v0.7.0 原型。** 单用户、自托管。后端直接启动官方 `codex app-server`，没有复用 Sandbox Agent，也没有实现另一套 agent loop。
 
-![RunDesk 工作台](docs/screenshots/v0.6.1/conversation-desktop.png)
+![RunDesk 工作台](docs/screenshots/0.7.0/applications-desktop.png)
 
 ## 开始使用
 
-需要 Go **1.25+** 和已安装、已登录的 Codex CLI。当前验证版本为 Codex **0.157.1**；较老版本的 App Server 方法可能不同。
+需要 Go **1.25+** 和已安装、已登录的 Codex CLI。此前原生协议验证版本为 Codex **0.157.1**（本次 0.7.0 验证使用明确标识的协议模拟器）；较老版本的 App Server 方法可能不同。
 
 ```bash
 codex login
@@ -45,11 +45,11 @@ go build -buildvcs=false -o bin/rundesk ./cmd/rundesk
 
 压缩包的 `bin/` 中若附带预编译版本，可直接运行对应文件：Linux x86-64 使用 `rundesk`，Windows x86-64 使用 `rundesk-windows-amd64.exe`。这些文件只包含本项目，不包含 Codex 或模型凭据。Windows 版本仅交叉编译，尚未进行 Windows 实机验证。
 
-## v0.5 能做什么
+## 当前能力
 
 | 能力 | 行为 |
 | --- | --- |
-| 实例 | 创建、切换、修改名称/说明/默认模型；独立 CODEX_HOME；登录状态与空闲连接重载 |
+| 助手与应用 | 通用助手直接对话；应用卡片、任务、名称和入口管理；各自配置模型、技能、工具与认证 |
 | 对话 | 创建工作区/会话、搜索、重命名、置顶、归档/恢复、删除、Markdown 导出 |
 | 运行 | 继续原生线程、模型选择、流式输出、停止任务 |
 | 运行管理 | 每个会话单独一个 App Server 进程；关闭浏览器后继续运行 |
@@ -58,7 +58,7 @@ go build -buildvcs=false -o bin/rundesk ./cmd/rundesk
 | 运行状态 | 生效模型/Provider/目录/权限；连接告警去重与原始错误；历史记录明确标记 |
 | 轨迹工作台 | 全程总览、分层时间轴、按步骤排列、异常定位、原始事件详情、实时增量、刷新恢复和 JSON 导出 |
 | 事件 | SQLite 持久化、SSE 重放、方向/分类/方法/关键词/时间筛选、历史分页、暂停显示、JSONL 导出 |
-| Skills | 原生扫描与开关、实例/项目 SKILL.md 创建/编辑/导入/导出、带备份的移除、显式选中提交 |
+| Skills | 独立页面；完整目录/ZIP 导入、文件浏览、ZIP 导出；编辑 SKILL.md 保留附属文件；同名替换与移除完整备份 |
 | MCP | stdio/HTTP 表单与 JSON 编辑、开关、版本冲突检测、合并导入/导出、状态与工具清单 |
 | 项目记忆 | 可编辑笔记、版本检查、每轮显式注入、保留当时注入内容 |
 | 调试 | 输入、实际 turn/start 参数、工具事件、耗时、Token 用量、原生压缩事件 |
@@ -69,13 +69,15 @@ MCP 支持 stdio 的 `command/args/env` 和 HTTP 的 `url/bearer_token_env_var` 
 
 调试页展示的是 **App Server 提供的数据**。完整模型 HTTP 请求、系统上下文、隐藏推理和 Codex 内部记忆并不一定公开。项目笔记是本应用维护的明确文本，不声称等同于 Codex 原生记忆。`tokenUsage.total` 是累计用量，不应当成当前上下文占用。
 
-## 多实例怎么用
+## 通用助手与应用怎么用
 
-1. 左侧「Codex 实例」旁的齿轮，或「配置 → 实例」，填写名称并创建实例。
-2. 实例页显示该实例的 CODEX_HOME、登录命令和账号状态。新实例不自动复制默认实例的配置或凭据。完成登录后点击「重新加载空闲连接」。使用 --codex 自定义路径时，登录命令也要使用该可执行文件。
-3. Skills 页选择保存范围：**实例技能**在该实例的 `CODEX_HOME/skills/`；**项目技能**在工作区 `.agents/skills/`，同一目录上的实例共享文件。开关通过当前实例的原生配置接口保存。
-4. MCP 页编辑当前实例的用户层配置。一个实例在多个工作区使用同一份用户配置；项目配置的覆盖仍由 Codex 决定。
-5. 选择实例和工作区后开始对话。会话创建时固定绑定实例、工作区和模型；已有会话不会随着默认模型更改而迁移。
+1. 左侧「对话」直接进入通用助手，不需要选择 instance。通过「助手设置」管理模型、认证和项目记忆；Skills、MCP 会打开各自的独立管理页。
+2. 「应用」页集中展示 news2douyin、RunDesk Video 等专用应用。进入卡片后查看任务，或分别管理模型、技能和工具。业务任务仍从应用自己的界面发起；已有任务可在 RunDesk 查看、补充和审批。
+3. 每个应用固定绑定一份专用配置。可通过「添加应用」创建，或使用应用登记 API；这里不会安装或托管应用软件。接入信息展开后可复制 API 地址与所需编号。
+4. 技能页「导入文件夹 / 导入 ZIP」接收一个完整技能，根部需要 `SKILL.md`，同时保留 `scripts/`、`references/`、`assets/` 等文件。浏览器文件夹上传会根据 shebang 恢复脚本可执行位；ZIP 导入/导出保留执行位。最多 1000 个普通文件、解压后 32 MiB，不接收链接或越界路径。
+5. 「编辑 SKILL.md / 创建简单技能」默认折叠。编辑说明不会删除脚本或参考资料。完整替换需要明确勾选，替换或移除前将原目录放入 `.rundesk/skill-backups/`。不要把多个技能或整个源码仓库当成一个技能导入。
+6. 专用技能保存到所属配置的 `CODEX_HOME/skills/`；项目技能保存到工作区 `.agents/skills/`，使用该目录的助手共享。MCP 修改对应配置的用户层，项目覆盖仍由 Codex 决定。独立配置不是操作系统隔离。
+7. 升级时按历史 `source.appId` 自动归类归属明确的应用。无任务或归属冲突的旧配置在「应用 → 接入说明与历史配置」保留，可查看或登记，不会删除、搬迁或重新执行。旧默认配置中的应用任务也保留，并标明与通用助手共享配置。
 
 **默认实例**继续使用启动服务时的 CODEX_HOME（缺省 `~/.codex`），用于兼容原有会话。不要在升级时更换服务用户或默认 CODEX_HOME。新实例保存在 `--data` 目录下；配置目录不开放修改和删除，避免丢失原生线程。
 
@@ -83,7 +85,7 @@ MCP 支持 stdio 的 `command/args/env` 和 HTTP 的 `url/bearer_token_env_var` 
 
 这不是操作系统隔离。实例继续继承服务的普通环境变量，用户/系统全局 Skills、项目配置、项目文件及 OS 密钥环可能共享。新实例不继承 `CODEX_SQLITE_HOME` 覆盖，以免把原生数据库指向同一外部目录。凭据存储由 Codex 决定；独立 CODEX_HOME 不承诺独立系统密钥环账号。
 
-权限在「配置 → 实例」编辑，缺省保持 workspace-write / on-request / user；网络沿用 Codex 配置。修改在各会话下一轮通过新进程恢复原 thread 后应用，不改写 config.toml。服务端管理要求优先，拒绝配置时会显示错误，不回退为更宽权限。`never` 仅停止请求审批，不等于允许沙箱外操作。完整访问会移除沙箱边界。自动审查需要 Codex 与模型支持。
+权限在「助手设置 / 应用设置 → 模型与认证 → 高级运行权限」编辑，缺省保持 workspace-write / on-request / user；网络沿用 Codex 配置。修改在各会话下一轮通过新进程恢复原 thread 后应用，不改写 config.toml。服务端管理要求优先，拒绝配置时会显示错误，不回退为更宽权限。`never` 仅停止请求审批，不等于允许沙箱外操作。完整访问会移除沙箱边界。自动审查需要 Codex 与模型支持。
 
 对话标题下的「查看运行配置」展示 App Server 实际返回值；未返回的字段明确标记未知。旧连接告警只是历史记录，不等同于当前故障。诊断沙箱固定使用 workspace-write + 禁网，即使实例选择完整访问也不会把无沙箱执行当作通过。
 
@@ -135,7 +137,7 @@ node scripts/trace-model-test.cjs
 python3 scripts/native-smoke.py --codex /path/to/codex
 ```
 
-浏览器测试可选：在开发环境安装 Playwright 和 Chromium，然后运行 `node scripts/ui-smoke.cjs`。Node/Playwright 只用于测试，不是 RunDesk 运行依赖。
+浏览器测试可选：在开发环境安装 Playwright 和 Chromium，然后运行 `node scripts/product-smoke.cjs`。Node/Playwright 只用于测试，不是 RunDesk 运行依赖。完整验证范围与复现命令见 [0.7.0 验证记录](docs/VALIDATION-0.7.0.md)。
 
 原生协议 smoke 测试使用临时 `CODEX_HOME`，验证配置、Skills 和 MCP，不请求模型推理，不修改已有 Codex 配置。
 

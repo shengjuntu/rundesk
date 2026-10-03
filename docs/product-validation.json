@@ -1,0 +1,19 @@
+{
+  "mode": "RunDesk 0.7.0 demo protocol; no live model or external MCP execution",
+  "passed": 13,
+  "checks": [
+    "default general assistant has no instance picker and excludes application tasks",
+    "application model changes preserve assistant defaults and existing task models",
+    "folder import preserves script, reference and binary assets in application scope",
+    "directory browser previews text/binary; ZIP export and MD edits retain sibling files",
+    "ZIP import rejects silent overwrite and supports explicit backed-up replacement",
+    "independent Skills page refresh retains application ownership",
+    "independent MCP page keeps forms collapsed and writes only the chosen application",
+    "application trace refresh returns to the same task",
+    "assistant and application drafts remain separate",
+    "new conversation sends successfully and accepted messages do not return as drafts",
+    "new zero-task apps and legacy configuration registration work without replacing identities",
+    "390px mobile pages, directory viewer and skill controls fit without horizontal overflow",
+    "no page JavaScript errors"
+  ]
+}

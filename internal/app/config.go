@@ -81,6 +81,8 @@ func (m *Manager) Skills(wid string, ids ...string) (json.RawMessage, error) {
 	return m.ConfigCall(wid, "skills/list", map[string]any{"cwds": []string{w.Path}, "forceReload": true}, ids...)
 }
 func (m *Manager) SaveSkill(wid, name, content string, opts ...string) error {
+	m.skillMu.Lock()
+	defer m.skillMu.Unlock()
 	content = strings.ReplaceAll(content, "\r\n", "\n")
 	if !slug.MatchString(name) {
 		return errors.New("Skill 名称仅支持字母、数字、下划线和连字符，最多 64 字符")

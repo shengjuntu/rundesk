@@ -5,7 +5,7 @@ function renderSessions() {
   const sessions = state.sessions.filter(
     (s) =>
       s.workspaceId === ws()?.id &&
-      s.instanceId === instance()?.id &&
+      sessionInContext(s) &&
       !!s.archived === archived &&
       (!query || s.title.toLowerCase().includes(query)),
   );
@@ -37,13 +37,14 @@ async function selectFirst() {
   const first = state.sessions.find(
     (s) =>
       s.workspaceId === ws()?.id &&
-      s.instanceId === instance()?.id &&
+      sessionInContext(s) &&
       !!s.archived === archived,
   );
   if (first) await selectSession(first.id);
   else {
     resetConversation();
     $("#model").value = instance()?.defaultModel || "";
+    restoreProductDraft();
   }
 }
 function renderStatus() {
@@ -57,13 +58,13 @@ function renderStatus() {
   const transitioning = ["starting", "stopping"].includes(s?.status);
   const steering = active(s?.status) && !transitioning;
   $("#send").disabled =
-    state.sending || transitioning || (steering && !s?.turnId) || !!s?.archived;
+    state.loadingSession || state.sending || transitioning || (steering && !s?.turnId) || !!s?.archived;
   $("#send").title = steering ? "补充指令到当前任务" : "发送";
   $("#send").setAttribute("aria-label", $("#send").title);
   $("#send").classList.toggle("steering", steering);
   $("#send").textContent = steering ? "补充" : "↑";
   $("#stop").disabled = s?.status === "stopping";
-  $("#prompt").disabled = !!s?.archived;
+  $("#prompt").disabled = state.loadingSession || !!s?.archived;
   $("#prompt").placeholder = s?.archived
     ? "从会话菜单恢复后，可继续对话。"
     : steering
@@ -310,7 +311,7 @@ async function renderSkills(target) {
   const scope = el(
     "select",
     { id: "skill-scope" },
-    el("option", { value: "instance" }, "实例技能"),
+    el("option", { value: "instance" }, "当前助手／应用"),
     el("option", { value: "project" }, "项目技能 · 共享目录"),
   );
   const name = el("input", {
@@ -330,7 +331,7 @@ async function renderSkills(target) {
     el(
       "p",
       {},
-      `当前实例：${current.name}。实例技能随实例使用；项目技能由此目录的所有实例共享。其他来源提供原生启用开关。`,
+      "专用技能随助手或应用使用；项目技能在共享项目中可见。",
     ),
   );
   for (const sk of state.skills) {
@@ -362,12 +363,14 @@ async function renderSkills(target) {
         if (!state.chosenSkills.some((s) => s.path === sk.path))
           state.chosenSkills.push({ name: sk.name, path: sk.path });
         renderAttachments();
-        $("#settings").close();
+        closeSettings();
       },
       "quiet",
     );
-    use.disabled = sk.enabled === false;
-    const ops = el("div", { class: "row" }, use, toggle);
+    use.disabled = sk.enabled === false || !skillCanBeSelected();
+    if(!skillCanBeSelected())use.textContent="在任务中选用";
+    use.classList.add("skill-use");
+    const ops = el("div", { class: "skill-actions" }, use, el("label",{class:"skill-enable"},toggle,"启用"));
     const normalized = sk.path.replaceAll("\\", "/");
     const projectRoot = work.path.replaceAll("\\", "/") + "/.agents/skills/";
     const instanceRoot = current.codexHome.replaceAll("\\", "/") + "/skills/";
@@ -394,45 +397,17 @@ async function renderSkills(target) {
             scope.value = skScope;
             name.value = slug;
             text.value = v.content;
+            const editor=text.closest("details.configuration-editor");if(editor)editor.open=true;
             text.focus();
           },
           "quiet",
         ),
       );
-      ops.append(
-        button(
-          "导出",
-          async () => {
-            const v = await api(
-              cp("/skills/" + encodeURIComponent(slug), skScope),
-            );
-            downloadText(slug + "-SKILL.md", v.content);
-          },
-          "quiet",
-        ),
-        button(
-          "移除",
-          async () => {
-            if (
-              !confirm(
-                `移除${skScope === "project" ? "项目" : "实例"} Skill「${sk.name}」？SKILL.md 会备份，附属文件保留。`,
-              )
-            )
-              return;
-            const r = await api(
-              cp("/skills/" + encodeURIComponent(slug), skScope),
-              { method: "DELETE" },
-            );
-            state.chosenSkills = state.chosenSkills.filter(
-              (s) => s.path !== sk.path,
-            );
-            renderAttachments();
-            toast("已移除；备份位于 " + r.backupPath);
-            await renderSettings();
-          },
-          "quiet",
-        ),
-      );
+      ops.append(button("目录",()=>openSkillDirectory(work.id,current.id,slug,skScope),"quiet"),button("导出 ZIP",()=>downloadSkillBundle(work.id,current.id,slug,skScope),"quiet"),button("移除",async()=>{
+        if(!confirm(`移除技能「${sk.name}」的完整目录？所有文件都会备份。`))return;
+        const result=await api(cp("/skill-bundles/"+encodeURIComponent(slug),skScope),{method:"DELETE"});
+        state.chosenSkills=state.chosenSkills.filter(s=>s.path!==sk.path);renderAttachments();toast("完整目录已备份："+result.backupPath);await renderSettings();
+      },"quiet"));
     }
     list.append(
       el(
@@ -442,19 +417,19 @@ async function renderSkills(target) {
           "div",
           {},
           el("strong", {}, sk.name),
-          el("p", {}, sk.description || ""),
+          sk.description?.length>220?el("details",{class:"skill-description"},el("summary",{},sk.description.slice(0,160)+"…"),el("p",{},sk.description)):el("p", {}, sk.description || ""),
           el(
             "span",
             { class: "badge" },
             managed
               ? skScope === "instance"
-                ? "实例技能"
+                ? "当前助手／应用"
                 : "项目技能 · 共享"
               : sk.scope === "system"
                 ? "Codex 内置"
                 : "其他来源",
           ),
-          el("small", {}, sk.path),
+          el("details",{class:"skill-path"},el("summary",{},"查看文件位置"),el("small",{},sk.path)),
         ),
         ops,
       ),
@@ -462,7 +437,7 @@ async function renderSkills(target) {
   }
   if (!state.skills.length)
     list.append(
-      el("p", { class: "empty" }, "未发现 Skills。可以在下方创建项目 Skill。"),
+      el("p", { class: "empty" }, "还没有可用技能。导入完整目录，或展开下方编辑器创建简单技能。"),
     );
   const file = el("input", {
     type: "file",
@@ -481,16 +456,17 @@ async function renderSkills(target) {
       toast("已载入编辑器，确认后点击保存。");
     });
   target.replaceChildren(
+    skillBundleImporter(work.id,current.id),
     list,
     ...errors.map((e) => el("pre", { class: "error" }, json(e))),
     el(
       "div",
       { class: "card" },
-      el("h3", {}, "创建 / 编辑 Skill"),
+      el("h3", {}, "编辑 SKILL.md / 创建简单技能"),
       el(
         "p",
         {},
-        "实例技能写入当前 CODEX_HOME/skills；项目技能写入工作区 .agents/skills。",
+        "这里只编辑 SKILL.md；已有脚本、参考资料和模板会保留。完整技能请使用上方目录导入。",
       ),
       el("label", { for: "skill-scope" }, "保存范围"),
       scope,
@@ -668,13 +644,9 @@ async function renderMCP(target) {
   const list = el(
     "div",
     { class: "card" },
-    el("h3", {}, "实例 MCP 配置"),
-    el("p", {class:"help"}, `正在编辑 ${current.name}。保存影响此实例的后续任务；其他实例不随之修改。项目层配置可能覆盖这里的值。`),
-    el(
-      "p",
-      {},
-      `当前实例：${current.name}。写入 ${current.codexHome}/config.toml；使用此目录的客户端会读到变更。项目层配置仍可能覆盖。`,
-    ),
+    el("h3", {}, "MCP 工具配置"),
+    el("p", {class:"help"}, `正在编辑 ${contextTitle()}。保存用于这个助手或应用的后续任务，项目层配置可能覆盖这里的值。`),
+
   );
   const save = async (n, value, remove = false) => {
     const r = await api(cp("/mcp/" + encodeURIComponent(n)), {
@@ -725,6 +697,7 @@ async function renderMCP(target) {
             () => {
               name.value = n;
               fill(v);
+              const editor=name.closest("details.configuration-editor");if(editor)editor.open=true;
               name.focus();
             },
             "quiet",
@@ -742,7 +715,7 @@ async function renderMCP(target) {
     );
   }
   if (!Object.keys(info.userServers || {}).length)
-    list.append(el("p", { class: "empty" }, "此实例还没有用户层 MCP 配置。"));
+    list.append(el("p", { class: "empty" }, "当前助手／应用还没有用户层 MCP 配置。"));
   list.append(
     el(
       "div",
@@ -973,7 +946,7 @@ async function renderRuntime(target) {
       el(
         "p",
         { class: "help" },
-        "实例页可查看当前实例的登录状态和登录命令。模型在创建会话时确定。",
+        "模型与认证页可查看登录状态和登录命令。模型在创建会话时确定。",
       ),
     ),
     el(
@@ -1062,7 +1035,9 @@ async function switchInstance() {
   $("#models").replaceChildren();
   updateWorkspaceLabel();
   renderSessions();
-  await selectFirst();
+  if(instance().id==="default")await enterAssistant();
+  else if(currentApplication())await showApplication(currentApplication().appId);
+  else await showLegacyApplication(instance().id);
 }
 $("#instance").onchange = () => safe(switchInstance);
 $("#manage-instances").onclick = () => safe(() => openSettings("overview"));

@@ -1,4 +1,4 @@
-# RunDesk 应用接口 v1（RunDesk 0.6.1）
+# RunDesk 应用接口 v1（RunDesk 0.7.0）
 
 RunDesk 为两类客户端提供同一套运行能力：人通过 WebUI，应用通过 HTTP API。Codex 执行 Agent loop；应用负责自己的交互、业务数据和审核流程。
 
@@ -140,3 +140,32 @@ PUT 设置一个确定的状态，可用相同内容重试，不要求 Idempoten
 错误代码：`invalid_event_id`（400）、`message_not_found`（404）、`message_not_completed`（400）、`invalid_rating`（400）、`comment_too_long`（400）。不同会话之间不会通过 eid 返回回复原文。
 
 分享由 WebUI 先展示选中回复，再复制、下载 Markdown，或由用户点击系统分享；此版本不建立公开链接。朗读通过浏览器语音接口进行，不调用 RunDesk/Codex 的模型任务。两者没有新增后台发布或音频生成接口。
+
+
+## 应用登记（0.7.0）
+
+`GET /applications` 返回应用列表及按所属 instance 汇总的 sessionCount、activeCount 和 lastActivity。`GET /applications/{appId}` 返回单个应用。
+
+`PUT /applications/{appId}` 接收 name、description、instanceId、workspaceId、entryUrl 和可选 revision。name、instanceId 必填；appId 为 1–80 个字母、数字、点、下划线、冒号或连字符，首位为字母或数字。entryUrl 为空或不带登录凭据的 HTTP(S) 地址。workspaceId 用于管理视图默认项目，创建业务会话仍需明确传入 workspaceId。
+
+一个应用固定绑定一个专用 instance，每个 instance 也只能属于一个应用。`default` 留给通用助手。修改绑定返回 `409 application_binding_conflict`；修改名称等元数据需当前 revision，冲突返回 `409 revision_conflict`。完全相同的 PUT 重试返回已有记录，不增版本，也不创建会话；不要求 Idempotency-Key。登记不创建 Codex 任务。
+
+旧客户端的首条带 `source.kind=application` 的新会话可自动登记（专用、无冲突的配置）。启动迁移仅使用历史 source 的一对一证据，不凭实例名称猜测。默认配置和有歧义的历史任务保持可用。应用来源仍不是独立权限，本版继续使用后台 Token/Cookie。
+
+## 完整技能目录（0.7.0）
+
+以下路径均支持 `instanceId` 和 `scope=instance|project`；新目录 API 默认 scope=instance。旧 `/skills/{name}` 接口的默认 scope=project 保持不变。
+
+| 方法与路径 | 用途 |
+| --- | --- |
+| POST /workspaces/{wid}/skill-bundles?name={name} | 导入一个完整技能；Content-Type 为 application/zip 或 multipart/form-data |
+| GET /workspaces/{wid}/skill-bundles/{name} | 文件相对路径、字节数、可执行标记与总大小 |
+| GET /workspaces/{wid}/skill-bundles/{name}/file?path={relativePath} | 安全文本预览；二进制只返回说明，长文本显示前 256 KiB |
+| GET /workspaces/{wid}/skill-bundles/{name}/export | 导出完整 ZIP，保留脚本可执行位 |
+| DELETE /workspaces/{wid}/skill-bundles/{name} | 将整个技能目录移动到备份位置，返回 backupPath |
+
+multipart 每个字段名是文件相对路径（如 `research/scripts/run.py`），上传文件名仅作提示。ZIP 与目录都接受根部 `SKILL.md`，或一层包装目录。不得夹带多个技能；总计最多 1000 个文件、32 MiB，SKILL.md 最多 256 KiB。拒绝绝对路径、父目录跳转、符号链接、特殊文件和大小写冲突。普通资源二进制可保留。空目录不单独归档；浏览器上传无法携带原生权限，以 shebang 标记脚本可执行。
+
+同名技能默认返回 `409 skill_exists`。用户选择替换时加 `replace=1`，先完整备份原目录，再安装新目录。备份位于当前根目录下 `.rundesk/skill-backups/`，相对位置包含在响应中。上传、浏览、导出沿用现有认证和同源检查；导入不会执行技能脚本。原有 SKILL.md 编辑不影响兄弟文件；旧的单 MD 删除接口也保留旧语义，新 UI 使用完整目录移除。
+
+OpenAPI 文档版本 1.2.0；48 个路径、57 个操作。应用执行协议仍为 `/api/v1`。

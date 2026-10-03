@@ -84,7 +84,7 @@ function permissionEditor(current) {
   };
   sandbox.onchange=policy.onchange=update;update();
   return {
-    node:el("fieldset",{class:"permission-fields"},el("legend",{},"实例运行权限"),el("label",{for:"permission-sandbox"},"沙箱边界"),sandbox,el("label",{for:"permission-policy"},"审批策略"),policy,el("label",{for:"permission-reviewer"},"审批处理方"),reviewer,el("label",{for:"permission-network"},"工作区沙箱网络"),network,note,el("p",{class:"help"},"保存后在该实例各会话的下一轮生效；正在执行或等待审批的任务保持原配置。不会修改你的 config.toml。生效值以 App Server 返回为准。")),
+    node:el("fieldset",{class:"permission-fields"},el("legend",{},"运行权限"),el("label",{for:"permission-sandbox"},"沙箱边界"),sandbox,el("label",{for:"permission-policy"},"审批策略"),policy,el("label",{for:"permission-reviewer"},"审批处理方"),reviewer,el("label",{for:"permission-network"},"工作区沙箱网络"),network,note,el("p",{class:"help"},"保存后在该助手或应用各会话的下一轮生效；正在执行或等待审批的任务保持原配置。不会修改你的 config.toml。生效值以 App Server 返回为准。")),
     value:()=>({sandbox:sandbox.value,approvalPolicy:policy.value,reviewer:reviewer.value,...(sandbox.value==="workspace-write"&&network.value!=="inherit"?{networkAccess:network.value==="true"}:{})})
   };
 }

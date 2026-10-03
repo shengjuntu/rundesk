@@ -7,11 +7,14 @@
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/trace.css" />
     <link rel="stylesheet" href="/conversation.css" />
+    <link rel="stylesheet" href="/product.css" />
     <script defer src="/conversation.js"></script>
     <script defer src="/app.js"></script>
     <script defer src="/manage.js"></script>
     <script defer src="/reliability.js"></script>
     <script defer src="/configuration.js"></script>
+    <script defer src="/applications.js"></script>
+    <script defer src="/skill-bundles.js"></script>
     <script defer src="/trace-model.js"></script>
     <script defer src="/trace.js"></script>
   </head>
@@ -32,26 +35,23 @@
       </form>
     </div>
     <div class="shell" id="shell">
-      <aside id="history-sidebar" class="sidebar" aria-label="实例与会话">
+      <aside id="history-sidebar" class="sidebar" aria-label="助手与应用">
         <button id="sidebar-close" class="quiet sidebar-close" aria-label="关闭会话列表">关闭</button>
         <a class="brand" href="/"
           ><span class="brandmark">r.</span><strong>RunDesk</strong
-          ><small>0.6.1</small></a
+          ><small>0.7.0</small></a
         >
+        <nav class="primary-nav" aria-label="主要功能">
+          <button id="nav-assistant" class="selected" aria-current="page"><span class="nav-symbol">◌</span>对话</button>
+          <button id="nav-applications"><span class="nav-symbol">▦</span>应用<span id="application-count" class="nav-count"></span></button>
+        </nav>
+        <div class="hidden" aria-hidden="true"><select id="instance" tabindex="-1"></select><button id="manage-instances" tabindex="-1">高级配置</button></div>
+        <p id="history-label" class="sidebar-label">通用助手</p>
         <div class="workspace">
-          <label for="instance">Codex 实例</label>
-          <div class="row">
-            <select id="instance" aria-label="Codex 实例"></select
-            ><button id="manage-instances" class="icon" title="管理实例">
-              ⚙
-            </button>
-          </div>
-        </div>
-        <div class="workspace">
-          <label for="workspace">工作区</label>
+          <label for="workspace">当前项目</label>
           <div class="row">
             <select id="workspace"></select
-            ><button id="add-workspace" class="icon" title="添加工作区">
+            ><button id="add-workspace" class="icon" title="添加项目">
               ＋
             </button>
           </div>
@@ -74,6 +74,7 @@
           </div>
         </div>
         <nav id="session-list"></nav>
+        <button id="assistant-settings" class="sidebar-settings">助手设置<span>模型 · 技能 · 工具</span></button>
         <div class="sidebar-bottom">
           <span class="status-dot"></span
           ><span id="connection">本地运行后台</span
@@ -85,13 +86,14 @@
         <header>
           <button id="sidebar-toggle" class="reply-action sidebar-toggle" title="会话列表" aria-label="会话列表" aria-controls="history-sidebar" aria-expanded="false"></button>
           <div class="breadcrumb">
-            工作台 <span>/</span>
+            <button id="back-applications" class="quiet hidden" aria-label="返回应用">应用 /</button>
+            <span id="page-label">通用助手</span><span class="breadcrumb-divider">/</span>
             <strong id="workspace-name">默认工作区</strong>
           </div>
           <div class="row">
             <button id="trace-button" class="quiet">轨迹</button
             ><span id="mode" class="badge">CODEX</span
-            ><button id="settings-button" class="quiet">配置</button
+            ><button id="settings-button" class="quiet">助手设置</button
             ><button id="debug-button" class="quiet">
               调试台 <span class="shortcut">⌘ J</span>
             </button>
@@ -100,6 +102,8 @@
         <div id="demo-banner" class="demo-banner hidden">
           演示模式 · 使用协议模拟器，不调用真实模型。真实运行请去掉 --demo。
         </div>
+        <section id="applications-page" class="applications-page hidden" aria-label="应用管理"></section>
+        <section id="capability-page" class="capability-page hidden" aria-label="能力管理"></section>
         <div class="main-row">
           <section class="conversation">
             <div class="conversation-header">
@@ -122,7 +126,7 @@
             <div id="runtime-strip" class="runtime-strip hidden"></div>
             <div id="messages" class="messages">
               <div class="welcome">
-                <div class="welcome-mark">r.</div>
+                <div class="welcome-mark" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z"/></svg></div>
                 <p class="eyebrow">YOUR CODEX, ONE PLACE.</p>
                 <h1>从一个想法开始。</h1>
                 <p>对话、工具和运行状态，在同一个工作台。</p>
@@ -269,19 +273,19 @@
     <dialog id="settings">
       <div class="dialog-head">
         <div>
-          <p class="eyebrow">INSTANCE &amp; WORKSPACE</p>
-          <h2>实例配置</h2>
+          <p id="settings-eyebrow" class="eyebrow">ASSISTANT SETTINGS</p>
+          <h2 id="settings-title">助手设置</h2>
           <p id="settings-context" class="help"></p>
         </div>
         <button id="close-settings" class="icon" title="关闭配置">×</button>
       </div>
       <div class="settings-tabs tabs">
         <button data-settings-tab="overview">总览</button
-        ><button data-settings-tab="instances">模型与实例</button
+        ><button data-settings-tab="instances">模型与认证</button
         ><button class="selected" data-settings-tab="notes">项目记忆</button
-        ><button data-settings-tab="skills">Skills</button
-        ><button data-settings-tab="mcp">MCP</button
-        ><button data-settings-tab="runtime">运行配置</button>
+        ><button data-settings-tab="skills">技能 Skills</button
+        ><button data-settings-tab="mcp">工具 MCP</button
+        ><button data-settings-tab="runtime">运行诊断</button>
       </div>
       <div id="settings-content"></div>
     </dialog>

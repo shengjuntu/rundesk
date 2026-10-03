@@ -75,6 +75,8 @@ type handle struct {
 	requests       map[string]Approval
 }
 type Manager struct {
+	applicationMu   sync.Mutex
+	skillMu         sync.Mutex
 	Store           *store.Store
 	Data            string
 	Codex           string
@@ -149,6 +151,9 @@ func New(data, codex string, demo bool) (*Manager, error) {
 			}
 		}
 		m.sessions[v.ID] = &v
+	}
+	if e = m.migrateApplications(); e != nil {
+		return fail(e)
 	}
 	rows, e = s.List("approval")
 	if e != nil {
@@ -291,6 +296,9 @@ func (m *Manager) CreateSessionWithSource(wid, title, model, iid string, source 
 	}
 	i, err := m.Instance(iid)
 	if err != nil {
+		return Session{}, err
+	}
+	if err = m.bindApplicationSource(source, i, wid); err != nil {
 		return Session{}, err
 	}
 	if model == "" {
