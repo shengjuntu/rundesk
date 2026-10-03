@@ -1,11 +1,11 @@
-# RunDesk 0.8.0
+# RunDesk 0.8.1
 
 轨迹重新设计为「问题 → 实际步骤 → 回复与来源」。对轨迹的提问会新建关联的独立分析会话，由 Codex 使用内置的只读 MCP 工具查询记录。
 
 首页直接使用通用助手；专用应用统一在「应用」页管理，一个应用对应一份专用配置。Skills 与 MCP 使用独立管理页。技能支持完整文件夹和 ZIP 导入、目录浏览与完整导出，脚本、参考资料、模板和资源文件一并保留。现有 `/api` 和 `/api/v1` 客户端继续兼容。
 
-- [本版说明](docs/RELEASE-0.8.0.md)
-- [验证记录](docs/VALIDATION-0.8.0.md)
+- [本版说明](docs/RELEASE-0.8.1.md)
+- [验证记录](docs/VALIDATION-0.8.1.md)
 - [0.6.0 API 与实例配置说明](docs/RELEASE-0.6.0.md)
 - [应用 API v1](docs/API-V1.md)
 - [OpenAPI 定义](internal/app/openapi.json)
@@ -17,7 +17,7 @@
 
 对话、Skills/MCP 配置、运行审批、调试事件与文件产物使用同一组 HTTP API。ActiveVLM 等业务前台可以通过这层 API 驱动 Codex。项目正式定名 RunDesk；当前尚未绑定 GitHub 仓库。
 
-**状态：v0.8.0 原型。** 单用户、自托管。后端直接启动官方 `codex app-server`，没有复用 Sandbox Agent，也没有实现另一套 agent loop。
+**状态：v0.8.1 原型。** 单用户、自托管。后端直接启动官方 `codex app-server`，没有复用 Sandbox Agent，也没有实现另一套 agent loop。
 
 ![RunDesk 工作台](docs/screenshots/0.8.0/applications-desktop.png)
 
@@ -92,11 +92,11 @@ MCP 支持 stdio 的 `command/args/env` 和 HTTP 的 `url/bearer_token_env_var` 
 
 对话标题下的「查看运行配置」展示 App Server 实际返回值；未返回的字段明确标记未知。旧连接告警只是历史记录，不等同于当前故障。诊断沙箱固定使用 workspace-write + 禁网，即使实例选择完整访问也不会把无沙箱执行当作通过。
 
-点击顶栏「轨迹」进入任务过程页。左侧选择一轮问题，中间查看实际步骤、助手回复和工具返回的链接，点开步骤可读取输入、输出及原始事件。技能选中只表示已提交，工具执行结束也不等于已完成业务目标。
+点击顶栏「轨迹」进入单一纵向时间轴。每个 Turn 节点显示问题、实际回复摘录、工具次数、耗时和需关注信息；点击节点在原位置展开完整过程。支持跨轮次搜索、仅需关注、下一处需关注及显式跳到最新一轮。点开步骤可读取输入、输出及原始事件。技能选中只表示已提交，工具执行结束也不等于已完成业务目标。
 
-「问问这段过程 → 新建分析并提问」创建独立 session 和 Codex thread；原任务消息与事件不变。分析会话沿用原模型、认证和项目，请求只读文件沙箱，并通过会话级配置挂载内置 `rundesk_trace` MCP；不写入长期 MCP 配置。5 个工具支持轮次、步骤、筛选、统计和完整事件分段读取。分析范围固定在创建时的原会话快照，后续提问继续同一分析会话。需要重新执行业务任务时，点击「继续原任务」。详情见 [过程与分析](docs/TRACE.md)。
+「分析 Turn → 新建分析并提问」创建独立 session 和 Codex thread；原任务消息与事件不变。分析会话沿用原模型、认证和项目，请求只读文件沙箱，并通过会话级配置挂载内置 `rundesk_trace` MCP；不写入长期 MCP 配置。5 个工具支持轮次、步骤、筛选、统计和完整事件分段读取。分析范围固定在创建时的原会话快照，后续提问继续同一分析会话。需要重新执行业务任务时，点击「继续原任务」。详情见 [过程与分析](docs/TRACE.md)。
 
-![任务过程 · 虚构查询演示](docs/screenshots/0.8.0/process-blocked-desktop.png)
+![任务过程 · 虚构查询演示](docs/screenshots/0.8.1/timeline-overview-desktop.png)
 
 Ubuntu 安装和升级见 [Ubuntu 指南](docs/UBUNTU.md)。
 
@@ -142,7 +142,7 @@ node scripts/trace-model-test.cjs
 python3 scripts/native-smoke.py --codex /path/to/codex
 ```
 
-浏览器测试可选：在开发环境安装 Playwright 和 Chromium，然后运行 `node scripts/product-smoke.cjs`。Node/Playwright 只用于测试，不是 RunDesk 运行依赖。完整验证范围与复现命令见 [0.8.0 验证记录](docs/VALIDATION-0.8.0.md)。
+浏览器测试可选：在开发环境安装 Playwright 和 Chromium，然后运行 `node scripts/product-smoke.cjs`。Node/Playwright 只用于测试，不是 RunDesk 运行依赖。完整验证范围与复现命令见 [0.8.1 验证记录](docs/VALIDATION-0.8.1.md)。
 
 原生协议 smoke 测试使用临时 `CODEX_HOME`，验证配置、Skills 和 MCP，不请求模型推理，不修改已有 Codex 配置。
 

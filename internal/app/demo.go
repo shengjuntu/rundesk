@@ -69,7 +69,7 @@ func DemoAgent() {
 		load()
 		switch msg.Method {
 		case "initialize":
-			reply(map[string]string{"userAgent": "rundesk-demo/0.8.0"})
+			reply(map[string]string{"userAgent": "rundesk-demo/0.8.1"})
 		case "initialized":
 		case "thread/start", "thread/resume":
 			thread, _ = p["threadId"].(string)

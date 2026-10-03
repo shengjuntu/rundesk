@@ -3,7 +3,7 @@
   "info": {
     "title": "RunDesk Application API",
     "version": "1.3.0",
-    "description": "RunDesk 0.8.0。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。Source 是调用方声明的业务标签，不代表应用鉴权或隔离。此版本继续使用后台 Token/Cookie。"
+    "description": "RunDesk 0.8.1。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。Source 是调用方声明的业务标签，不代表应用鉴权或隔离。此版本继续使用后台 Token/Cookie。"
   },
   "servers": [
     {
