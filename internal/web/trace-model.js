@@ -258,8 +258,8 @@
             break;
           case "item/started":
           case "item/completed": {
-            const item = p.item || {},
-              iid = item.id;
+            let item = p.item || {};
+            const iid = item.id;
             if (!iid) break;
             if (item.type === "userMessage" && r.inputRow) {
               this.ref(r.inputRow, e);
@@ -268,6 +268,8 @@
             const key = "item-" + (p.turnId || r.id) + "-" + iid,
               done = e.method === "item/completed";
             let row = this.rows.get(key);
+            // Completed events may omit arguments supplied by the start event.
+            item = { ...(row?.detail || {}), ...item };
             const type = item.type || "unknown";
             const track =
               {
@@ -286,7 +288,7 @@
             const title =
               {
                 userMessage: "用户消息",
-                agentMessage: "助手回复",
+                agentMessage: item.phase === "commentary" ? "阶段说明" : "助手回复",
                 reasoning: "可见推理",
                 commandExecution: short(item.command),
                 mcpToolCall:
@@ -333,7 +335,7 @@
               );
             if (done) {
               row.end = ms(p.completedAtMs) || t;
-              row.status = item.status || "completed";
+              row.status = p.item?.status || "completed";
               if (
                 item.exitCode != null &&
                 item.exitCode !== 0 &&
@@ -341,6 +343,7 @@
               )
                 row.status = "failed";
               if (item.success === false) row.status = "failed";
+              if (item.error || item.result?.isError === true) row.status = "failed";
               row.exitCode = item.exitCode;
               row.timeConflict = row.start != null && row.end < row.start;
               row.incomplete = row.start == null || row.timeConflict;

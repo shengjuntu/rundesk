@@ -1,0 +1,19 @@
+{
+  "mode": "RunDesk demo protocol; fictional Twitter fixtures; no external search or live model",
+  "passed": 13,
+  "checks": [
+    "process view preserves original draft and offers a separate analysis composer",
+    "access-denied error is visible with original input and output; HTML is inert",
+    "empty result is distinct from execution failure and never claims the account does not exist",
+    "refresh restores selected historical round and step, without rerunning it",
+    "successful lookup retains skill disclosure, search, MCP arguments, source links and untruncated final reply",
+    "failed creation retains analysis question; retry creates exactly one linked independent session",
+    "analysis uses session-local read-only MCP and a new thread while source events remain unchanged",
+    "subsequent questions continue the analysis session, without creating another session or changing the original task",
+    "bidirectional source/analysis navigation restores the selected round and preserves the original unsent draft",
+    "390px mobile round navigation, process, detail drawer and keyboard close fit without overflow",
+    "2,001 tool steps stay paginated and the last step is searchable after multi-page event loading",
+    "export preserves all selected-round steps and source references, beyond the visible page",
+    "no uncaught browser JavaScript errors"
+  ]
+}

@@ -41,6 +41,7 @@ type Session struct {
 	Pinned      bool          `json:"pinned"`
 	Archived    bool          `json:"archived"`
 	Source      SessionSource `json:"source"`
+	TraceOrigin *TraceOrigin  `json:"traceOrigin,omitempty"`
 }
 type Approval struct {
 	ID         string      `json:"id"`
@@ -285,6 +286,9 @@ func (m *Manager) CreateSession(wid, title, model string, ids ...string) (Sessio
 	return m.CreateSessionWithSource(wid, title, model, instanceID(ids), SessionSource{})
 }
 func (m *Manager) CreateSessionWithSource(wid, title, model, iid string, source SessionSource) (Session, error) {
+	return m.createSession(wid, title, model, iid, source, nil)
+}
+func (m *Manager) createSession(wid, title, model, iid string, source SessionSource, origin *TraceOrigin) (Session, error) {
 	if err := source.validate(); err != nil {
 		return Session{}, err
 	}
@@ -304,7 +308,7 @@ func (m *Manager) CreateSessionWithSource(wid, title, model, iid string, source 
 	if model == "" {
 		model = i.DefaultModel
 	}
-	s := Session{Source: source, ID: store.ID(), InstanceID: i.ID, WorkspaceID: wid, Title: title, Model: model, Status: "idle", Created: store.Now(), Updated: store.Now()}
+	s := Session{Source: source, TraceOrigin: origin, ID: store.ID(), InstanceID: i.ID, WorkspaceID: wid, Title: title, Model: model, Status: "idle", Created: store.Now(), Updated: store.Now()}
 	if e := m.Store.Put("session", s.ID, s); e != nil {
 		return s, e
 	}
@@ -662,6 +666,10 @@ func (m *Manager) run(s Session, w Workspace, h *handle, in Input) {
 		return
 	}
 	permissions := i.Permissions.normalized()
+	if s.TraceOrigin != nil {
+		permissions.Sandbox = "read-only"
+		permissions.NetworkAccess = nil
+	}
 	h.mu.Lock()
 	old := h.client
 	changed := old != nil && h.permissionsKey != "" && h.permissionsKey != permissions.key()
@@ -695,6 +703,12 @@ func (m *Manager) run(s Session, w Workspace, h *handle, in Input) {
 	var raw json.RawMessage
 	if !ready {
 		params := permissions.threadParams(w.Path)
+		if s.TraceOrigin != nil {
+			if e := m.configureTraceAnalysis(s, params); e != nil {
+				fail(e)
+				return
+			}
+		}
 		if s.Model != "" {
 			params["model"] = s.Model
 		}
@@ -746,6 +760,9 @@ func (m *Manager) run(s Session, w Workspace, h *handle, in Input) {
 		return
 	}
 	text := in.Text
+	if s.TraceOrigin != nil {
+		text += traceAnalysisInstructions(s.TraceOrigin)
+	}
 	if w.Notes != "" {
 		text += "\n\n<project-notes revision=\"" + fmt.Sprint(w.Revision) + "\">\n" + w.Notes + "\n</project-notes>"
 	}

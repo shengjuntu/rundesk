@@ -202,6 +202,7 @@ function wireSuggestions() {
   );
 }
 function resetConversation() {
+  window.RunDeskTraceUI?.close(false);
   state.loadingSession=false;
   stashProductDraft(); state.draftContext=null; $("#prompt").value=""; state.taskAppID="";
   resetReplyActions();
@@ -313,7 +314,10 @@ function scheduleRender() {
   state.rendering = true;
   setTimeout(() => {
     state.rendering = false;
-    if (window.RunDeskTraceUI?.isOpen()) return;
+    if (window.RunDeskTraceUI?.isOpen()) {
+      window.RunDeskTraceUI.updateLive();
+      return;
+    }
     renderMessages();
     renderDebug();
   }, 90);
@@ -845,6 +849,7 @@ async function previewFile(file) {
   }
 }
 async function openSettings(tab = "overview") {
+  window.RunDeskTraceUI?.close();
   state.settingsTab = tab;
   if(["skills","mcp"].includes(tab))return showCapabilityPage(tab);
   if(state.view==="capability")closeSettings();

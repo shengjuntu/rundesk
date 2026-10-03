@@ -169,7 +169,7 @@ func (c *Client) Reply(id json.RawMessage, result any) error {
 	return c.Send(Message{ID: id, Result: b})
 }
 func (c *Client) Initialize(ctx context.Context) error {
-	_, err := c.Call(ctx, "initialize", map[string]any{"clientInfo": map[string]string{"name": "rundesk", "title": "RunDesk", "version": "0.7.0"}, "capabilities": map[string]bool{"experimentalApi": true}})
+	_, err := c.Call(ctx, "initialize", map[string]any{"clientInfo": map[string]string{"name": "rundesk", "title": "RunDesk", "version": "0.8.0"}, "capabilities": map[string]bool{"experimentalApi": true}})
 	if err != nil {
 		return err
 	}

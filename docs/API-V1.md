@@ -169,3 +169,23 @@ multipart 每个字段名是文件相对路径（如 `research/scripts/run.py`�
 同名技能默认返回 `409 skill_exists`。用户选择替换时加 `replace=1`，先完整备份原目录，再安装新目录。备份位于当前根目录下 `.rundesk/skill-backups/`，相对位置包含在响应中。上传、浏览、导出沿用现有认证和同源检查；导入不会执行技能脚本。原有 SKILL.md 编辑不影响兄弟文件；旧的单 MD 删除接口也保留旧语义，新 UI 使用完整目录移除。
 
 OpenAPI 文档版本 1.2.0；48 个路径、57 个操作。应用执行协议仍为 `/api/v1`。
+
+## 0.8.0：独立轨迹分析会话
+
+`POST /api/v1/sessions` 新增一个与普通创建参数互斥的请求形式，继续使用已有 `Idempotency-Key` 与提交回执：
+
+```json
+{
+  "traceAnalysis": {
+    "sessionId": "原任务会话 ID",
+    "runId": "所选运行 ID",
+    "eventIds": [123, 124]
+  }
+}
+```
+
+服务端校验来源、运行与事件归属，固定原会话当时的最大事件游标。返回新 session，`threadId` 初始为空，`source.kind` 为 `human`，`traceOrigin` 包含 `sessionId`、`runId`、`eventIds`、`through`、`capturedAt` 和来源标题。沿用来源实例、项目和模型；不接受同时设置 workspaceId、instanceId、model、title 或业务来源。最多携带 32 个事件编号。
+
+创建本身不调用模型、不提交原任务；后续将问题提交到**新 session 的** `/turns`。首次运行启动新的原生线程，恢复时仍沿用该分析线程；只读 MCP 的来源快照保持不变。响应关联信息会持久化并出现在会话列表。新会话的事件、停止、审批和反馈走现有接口。
+
+内置 stdio MCP 为 `rundesk_trace`，只在分析会话的 thread/start 或 thread/resume 覆盖配置中加入。工具为 `trace_list_runs`、`trace_find_steps`、`trace_get_step`、`trace_read_event`、`trace_statistics`。这些工具不开放为匿名 HTTP 查询端点，不接收 SQL。详情与边界见 [TRACE.md](TRACE.md)。OpenAPI 文档更新为 1.3.0，路径和操作数量保持 48 / 57。

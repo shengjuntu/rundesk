@@ -1,998 +1,331 @@
-/* Full-window trace workspace; no frontend build or runtime dependencies. */
+/* A question, its recorded attempts, and its reply share one workspace. */
 "use strict";
 (function () {
-  const { Model, TRACKS, bad, duration, orderRows, nextRow } = RunDeskTrace;
-  // Use individual CSSOM properties; RunDesk's CSP intentionally blocks style attributes.
-  function te(tag, attrs = {}, ...children) {
-    const styles = attrs.style,
-      clean = { ...attrs };
-    delete clean.style;
-    const n = el(tag, clean, ...children);
-    if (styles)
-      for (const pair of styles.split(";")) {
-        const at = pair.indexOf(":");
-        if (at > 0)
-          n.style.setProperty(
-            pair.slice(0, at).trim(),
-            pair.slice(at + 1).trim(),
-          );
-      }
+  const {Model, bad, duration, short} = RunDeskTrace;
+  const {inspect, replyRows, links, text} = RunDeskProcess;
+  const labels = {completed:"执行结束", running:"进行中", inProgress:"进行中", pending:"等待确认", accepted:"已允许", resolved:"已处理", declined:"已拒绝", failed:"失败", interrupted:"已中断", expired:"已失效", warning:"告警", unknown:"记录不完整", cancelled:"已取消", canceled:"已取消"};
+  const types = {input:"问题与补充", tools:"工具调用", model:"公开摘要", approval:"人工确认", context:"技能与上下文", system:"状态记录"};
+  const PAGE_SIZE = 60;
+  let model = new Model(), sid = null, run = null, selected = null, opened = false;
+  let epoch = 0, cursor = 0, busy = false, timer, query = "", filter = "all", page = 0;
+  let followLatest = true, currentSession = null, full = new Map(), fetching = new Set();
+  let lastSignature = "", detailSignature = "", restored = false;
+  let creatingAnalysis = false;
+  const root = el("section", {id:"trace-workspace", class:"trace-workspace hidden", "aria-label":"任务过程与追问"});
+  root.innerHTML = `<header class="trace-head"><div class="trace-heading"><span class="trace-symbol" aria-hidden="true">◉</span><div><p id="trace-owner" class="trace-eyebrow"></p><h1>任务过程 <span id="trace-session-title"></span></h1></div></div><div class="trace-head-actions"><span id="trace-demo" class="trace-demo hidden">演示记录</span><button id="trace-refresh" title="重新读取记录">刷新</button><button id="trace-export">导出记录</button><button id="trace-close">返回对话</button></div></header>
+<div class="trace-layout"><aside class="trace-rounds"><div class="trace-rounds-heading"><h2>本次对话</h2><span id="trace-round-count"></span></div><p class="trace-rail-note">每次提问是一轮，过程和回复一起保留。</p><nav id="trace-runs" aria-label="选择问题轮次"></nav><p id="trace-load" role="status"></p></aside>
+<div class="trace-center"><div id="trace-scroll" class="trace-scroll"><section class="trace-question"><div class="trace-section-line"><span id="trace-round-label" class="trace-eyebrow">当前问题</span><span id="trace-run-state" class="trace-state"></span></div><h2 id="trace-question-text"></h2><div id="trace-run-meta" class="trace-run-meta"></div><div id="trace-context"></div><div id="trace-analyses"></div></section>
+<section class="trace-process-section" aria-label="执行过程"><div class="trace-section-line"><h2>执行过程 <span id="trace-count"></span></h2><button id="trace-find-issue">定位待处理步骤</button></div><p class="trace-caption">按实际发生顺序记录。步骤完成与是否查到目标分别展示。</p><div class="trace-filters"><div role="group" aria-label="筛选步骤"><button data-filter="all" aria-pressed="true">全部</button><button data-filter="tools" aria-pressed="false">工具</button><button data-filter="issues" aria-pressed="false">需关注</button></div><input id="trace-search" type="search" placeholder="搜索步骤或返回内容" aria-label="搜索过程"/></div><div id="trace-steps-list" aria-label="执行步骤"></div><div class="trace-pagination"><button id="trace-page-prev">上一页</button><span id="trace-page-label"></span><button id="trace-page-next">下一页</button></div></section>
+<section id="trace-outcome" class="trace-outcome" aria-label="本轮回复"></section>
+<details id="trace-evidence" class="trace-evidence"><summary>工具返回的链接 <span id="trace-link-count"></span></summary><p class="trace-caption">这些网址来自工具返回内容，最多展示 100 项；链接出现本身不代表内容已核实。点击对应步骤可检查原始记录。</p><div id="trace-links"></div></details>
+<details class="trace-evidence"><summary>会话文件</summary><p class="trace-caption">当前会话的文件，不推定属于所选轮次。</p><div id="trace-files"></div></details>
+</div><section class="trace-dock"><div class="trace-compose-heading"><strong>问问这段过程</strong><span id="trace-compose-context">新建独立分析会话，由 Codex 使用只读工具查询原任务记录。</span><button id="trace-continue">继续原任务</button></div><form id="trace-analysis-form"><textarea id="trace-analysis-question" rows="2" aria-label="轨迹分析问题" placeholder="例如：为什么没查到？哪个步骤出了问题？" required maxlength="16000"></textarea><div class="trace-analysis-actions"><span>保留原任务 · 关联所选轮次与步骤</span><button id="trace-create-analysis" type="submit">新建分析并提问</button></div></form><p id="trace-analysis-feedback" role="status"></p></section></div>
+<aside id="trace-detail" class="trace-detail hidden" aria-label="步骤详情"><div class="trace-detail-heading"><strong>步骤详情</strong><button id="trace-detail-close" aria-label="关闭步骤详情">×</button></div><div id="trace-detail-content"></div></aside></div>`;
+  document.body.append(root);
+  const q = s => root.querySelector(s);
+  const fmt = n => n == null ? "未提供完整耗时" : n < 1000 ? Math.round(n)+" ms" : n < 60000 ? (n/1000).toFixed(1)+" s" : (n/60000).toFixed(1)+" min";
+  const stamp = n => n ? new Date(n).toLocaleString("zh-CN",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}) : "时间未提供";
+  const isIssue = r => bad(r.status) || ["warning", "pending", "unknown"].includes(r.status);
+  const currentRun = () => model.runMap.get(run);
+  const rows = () => model.list(run || "missing");
+  const hydrated = row => {
+    const record = full.get(row.refs.at(-1));
+    return record?.data?.params?.item ? {...row, detail:{...row.detail,...record.data.params.item}} : row;
+  };
+  function save() {
+    if (!sid) return;
+    try {sessionStorage.setItem("rundesk-process-"+sid, JSON.stringify({run, selected, query, filter, page, followLatest, scroll:q("#trace-scroll").scrollTop, draft:q("#trace-analysis-question").value}));} catch {}
+  }
+  function icon(row) {
+    const paths = {tools:'<path d="m8 3 1 5-5-1 3 3 4-1 6 6 2-2-6-6 1-4-3-3Z"/>', model:'<path d="M4 5h12v9H9l-4 3v-3H4Z"/><path d="M7 8h6M7 11h4"/>', approval:'<path d="M10 2 17 5v5c0 4-7 8-7 8S3 14 3 10V5Z"/><path d="m6 10 3 3 5-6"/>', context:'<path d="M4 3h8l4 4v10H4Z"/><path d="M12 3v5h4M7 11h6M7 14h4"/>', input:'<path d="M3 4h14v10H8l-5 4Z"/>', system:'<circle cx="10" cy="10" r="7"/><path d="M10 6v5M10 14v.1"/>'};
+    const n = el("span", {class:"trace-step-icon "+row.track, "aria-hidden":"true"});
+    n.innerHTML = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">'+(paths[row.track]||paths.system)+'</svg>';
     return n;
   }
-
-  const labels = {
-    completed: "完成",
-    running: "进行中",
-    inProgress: "进行中",
-    pending: "等待确认",
-    accepted: "已允许",
-    resolved: "已处理",
-    declined: "已拒绝",
-    failed: "失败",
-    interrupted: "已中断",
-    expired: "已失效",
-    warning: "告警",
-    unknown: "时间不完整",
-    cancelled: "已取消",
-  };
-  const colors = {
-    input: "#87adff",
-    model: "#c2a2ff",
-    tools: "#57d4bf",
-    approval: "#ffca79",
-    context: "#dcaff1",
-    system: "#ff98a6",
-  };
-  let model = new Model(),
-    sid = null,
-    cursor = 0,
-    epoch = 0,
-    busy = false,
-    opened = false,
-    run = "all",
-    selected = null,
-    view = null,
-    follow = true,
-    mode = "time",
-    query = "",
-    listOrder = "time",
-    lastSessionStatus = "",
-    runOptionsSignature = "",
-    errorsOnly = false,
-    tracks = new Set(TRACKS.map((x) => x[0])),
-    detailKey = "",
-    refreshTimer = null,
-    restorePosition = true;
-  const root = te("section", {
-    id: "trace-workspace",
-    class: "trace-workspace hidden",
-    "aria-label": "运行轨迹工作台",
-  });
-  root.innerHTML = `<header class="trace-head"><div class="trace-brand"><span class="brandmark">r.</span><div><p class="eyebrow">RUN TRACE</p><h1>运行轨迹 <span id="trace-session-title"></span></h1></div></div><div class="trace-head-actions"><span id="trace-demo" class="badge hidden">DEMO · 模拟事件</span><button id="trace-refresh">刷新</button><button id="trace-focus" aria-pressed="false">专注模式</button><button id="trace-close">返回对话 ↗</button></div></header>
-<div class="trace-toolbar"><label>运行 <select id="trace-run" aria-label="选择运行"><option value="all">全部运行</option></select></label><input id="trace-search" type="search" placeholder="查找命令、工具或内容…" aria-label="搜索轨迹"/><label class="trace-check"><input id="trace-errors" type="checkbox"/>仅异常</label><details class="trace-layer-menu"><summary>轨道 ▾</summary><div id="trace-layers"></div></details><div class="trace-modes" role="group" aria-label="排列方式"><button id="trace-time" aria-pressed="true">时间比例</button><button id="trace-steps" aria-pressed="false">按步骤</button></div><span id="trace-load" role="status"></span></div>
-<div class="trace-stats" id="trace-stats"></div>
-<div class="trace-body"><div class="trace-main"><section class="trace-timeline-card"><div class="trace-section-head"><strong>全程总览</strong><span id="trace-range-label">拖动选区定位 · 滚轮缩放</span></div><div class="trace-overview" id="trace-overview"><canvas aria-label="全程轨迹总览"></canvas><div id="trace-window"><i class="trace-grip left" data-edge="left"></i><i class="trace-grip right" data-edge="right"></i></div></div><div class="trace-axis-head"><span>执行轨道</span><div id="trace-axis"></div></div><div id="trace-lanes"></div><p class="trace-timing-note">区间按原生事件时间或后台接收时间绘制；虚线表示端点不完整。模型轨道仅展示接口公开的阶段。</p></section><section class="trace-list-card"><div class="trace-section-head"><strong>步骤索引 <span id="trace-count"></span></strong><div class="trace-list-actions"><select id="trace-order" aria-label="步骤排序"><option value="time">发生顺序</option><option value="duration">耗时从长到短</option></select><button id="trace-longest" title="只比较完整起止区间">定位最长步骤</button></div></div><div class="trace-list-head"><span>时间</span><span>步骤 / 内容</span><span>状态</span><span>耗时</span></div><div id="trace-list" tabindex="0" aria-label="轨迹步骤列表"><div id="trace-list-inner"></div></div></section></div><aside id="trace-detail" class="trace-detail"><div class="trace-detail-head"><strong>步骤详情</strong><button id="trace-detail-close" aria-label="收起步骤详情">×</button></div><div id="trace-detail-content"><div class="trace-empty">选择一个步骤<br/><small>时间轴与列表会同步定位。</small></div></div></aside></div>
-<footer class="trace-footer"><div><button id="trace-prev" title="上一事件，快捷键 ←">← 上一个</button><button id="trace-next" title="下一事件，快捷键 →">下一个 →</button><button id="trace-prev-error">上一异常</button><button id="trace-next-error">下一异常</button></div><span id="trace-position"></span><div><button id="trace-zoom-out" aria-label="缩小时间轴">−</button><button id="trace-zoom-in" aria-label="放大时间轴">＋</button><button id="trace-fit">适应全程</button><button id="trace-follow" aria-pressed="true">跟随实时 ●</button><button id="trace-export">导出轨迹</button></div></footer>`;
-  document.body.append(root);
-  const q = (s) => root.querySelector(s),
-    dur = (n) =>
-      n == null
-        ? "未提供"
-        : n < 1000
-          ? Math.max(0, n).toFixed(0) + " ms"
-          : n < 60000
-            ? (n / 1000).toFixed(2) + " s"
-            : (n / 60000).toFixed(1) + " min";
-  const relative = (t) => dur(t - model.bounds(run)[0]);
-  const rowTime = (x) => x.start ?? x.end;
-  function save() {
-    if (sid)
-      sessionStorage.setItem(
-        "rundesk-trace-" + sid,
-        JSON.stringify({
-          run,
-          selected,
-          view,
-          follow,
-          mode,
-          query,
-          listOrder,
-          errorsOnly,
-          tracks: [...tracks],
-        }),
-      );
+  function status(row) {
+    if (row.title === "显式选中 Skills") return "已提交";
+    if (row.point && row.status === "completed") return "已记录";
+    if (row.track === "tools" && row.status === "completed") return "调用完成";
+    if (row.type === "agentMessage" && row.status === "completed") return "已回复";
+    return labels[row.status] || row.status || "未提供状态";
   }
-  function visible() {
-    return model
-      .list(run)
-      .filter(
-        (x) =>
-          tracks.has(x.track) &&
-          (!errorsOnly || bad(x.status) || x.status === "warning") &&
-          (!query ||
-            [x.title, x.body, x.type, x.itemId]
-              .join(" ")
-              .toLowerCase()
-              .includes(query.toLowerCase())),
-      );
-  }
-  function extent() {
-    return mode === "steps"
-      ? [0, Math.max(1, visible().length)]
-      : model.bounds(run);
-  }
-  function fit() {
-    view = extent();
-    save();
-    render();
-  }
-  function clamp(v, b = extent()) {
-    let width = Math.max(
-      mode === "time" ? 1 : 0.1,
-      Math.min(v[1] - v[0], b[1] - b[0]),
-    );
-    let left = Math.max(b[0], Math.min(v[0], b[1] - width));
-    return [left, left + width];
-  }
-  function frame() {
-    return view ? clamp(view) : extent();
-  }
-  function setFollow(v) {
-    follow = v;
-    q("#trace-follow").textContent = v ? "跟随实时 ●" : "跟随实时";
-    q("#trace-follow").setAttribute("aria-pressed", String(v));
-    save();
-  }
-  function zoom(factor, anchor = 0.5) {
-    const b = frame(),
-      width = (b[1] - b[0]) * factor,
-      at = b[0] + (b[1] - b[0]) * anchor;
-    view = clamp([at - width * anchor, at + width * (1 - anchor)]);
-    setFollow(false);
-    render();
-  }
-  function renderStats() {
-    const s = model.stats(run),
-      b = s.bounds;
-    const cards = [
-      ["观测跨度", model.runs.length ? dur(b[1] - b[0]) : "—"],
-      ["审批等待", dur(s.wait)],
-      ["异常步骤", String(s.errors)],
-      [
-        "线程累计 Token",
-        s.tokens?.total?.totalTokens == null
-          ? "未提供"
-          : Number(s.tokens.total.totalTokens).toLocaleString(),
-      ],
-    ];
-    q("#trace-stats").replaceChildren(
-      ...cards.map(([name, value]) =>
-        te("div", {}, te("span", {}, name), te("strong", {}, value)),
-      ),
-    );
-    q("#trace-stats").append(
-      te(
-        "p",
-        {},
-        "累计 Token 并非上下文占用；审批等待为已闭合区间的合并时长。",
-      ),
-    );
-  }
-  function renderRuns() {
-    const select = q("#trace-run");
-    const signature = JSON.stringify([
-      run,
-      model.runs.map((r) => [r.id, r.title, r.status]),
-    ]);
-    if (runOptionsSignature === signature) return;
-    runOptionsSignature = signature;
-    select.replaceChildren(
-      te("option", { value: "all" }, "全部运行 · " + model.runs.length),
-      ...model.runs.map((r, i) =>
-        te(
-          "option",
-          { value: r.id },
-          `${String(i + 1).padStart(2, "0")} · ${r.title.slice(0, 55)} · ${labels[r.status] || r.status}`,
-        ),
-      ),
-    );
-    select.value = run;
-    if (!select.value) {
-      select.append(te("option", { value: run }, "正在恢复运行选择…"));
-      select.value = run;
+  function liveText(row) {
+    if (row.end != null || state.session?.id !== sid) return "";
+    const methods = {agentMessage:"item/agentMessage/delta", commandExecution:"item/commandExecution/outputDelta", reasoning:"item/reasoning/summaryTextDelta"};
+    let output = "";
+    for (const e of state.events) {
+      const p = e.data?.params || {};
+      if (e.method === methods[row.type] && p.itemId === row.itemId && p.turnId === row.turnId) output += p.delta || "";
     }
+    return output.slice(-100000);
   }
-  function boxes(rows) {
-    const b = frame(),
-      den = b[1] - b[0],
-      last = model.lastTime;
-    return rows.map((row, i) => {
-      const start = mode === "steps" ? i : (row.start ?? row.end),
-        end = mode === "steps" ? i + 0.85 : model.endpoint(row);
-      return {
-        row,
-        start,
-        end,
-        left: ((start - b[0]) / den) * 100,
-        width: Math.max(
-          mode === "steps" ? 0 : 0.3,
-          ((end - start) / den) * 100,
-        ),
-      };
-    });
+  function visibleRows() {
+    return rows().filter(r => !(r === currentRun()?.inputRow || r.id === currentRun()?.inputRow?.id) &&
+      (filter === "all" || filter === "tools" && r.track === "tools" || filter === "issues" && isIssue(r)) &&
+      (!query || [r.title,r.body,text(r.detail)].join(" ").toLowerCase().includes(query.toLowerCase())));
   }
-  function renderTimeline(rows) {
-    const b = frame(),
-      bounds = extent(),
-      width = b[1] - b[0];
-    q("#trace-range-label").textContent =
-      mode === "steps"
-        ? "按步骤排列 · 宽度不代表耗时"
-        : `${relative(b[0])} — ${relative(b[1])} · 滚轮缩放 / 拖动平移`;
-    q("#trace-axis").replaceChildren(
-      ...Array.from({ length: 6 }, (_, i) =>
-        te(
-          "span",
-          { style: `left:${i * 20}%` },
-          mode === "steps"
-            ? Math.floor(b[0] + (width * i) / 5) + 1
-            : relative(b[0] + (width * i) / 5),
-        ),
-      ),
-    );
-    const items = boxes(rows);
-    const lanes = q("#trace-lanes");
-    lanes.replaceChildren();
-    for (const [track, label] of TRACKS) {
-      if (!tracks.has(track)) continue;
-      const line = te("div", { class: "trace-lane" }),
-        content = te("div", {
-          class: "trace-lane-content",
-          "data-track": track,
-        });
-      line.append(
-        te(
-          "div",
-          { class: "trace-lane-label" },
-          te("i", { style: "background:" + colors[track] }),
-          label,
-        ),
-        content,
-      );
-      const candidates = items.filter(
-        (x) => x.row.track === track && x.left + x.width >= 0 && x.left <= 100,
-      );
-      const right = [];
-      let hidden = 0;
-      for (const box of candidates) {
-        const { row } = box,
-          left = Math.max(0, box.left),
-          w = Math.min(100 - left, box.width + Math.min(0, box.left));
-        let level = right.findIndex((x) => x < left);
-        if (level < 0) level = right.length;
-        if (level >= 3) {
-          hidden++;
-          continue;
-        }
-        right[level] = left + Math.max(w, 2);
-        const node = te(
-          "button",
-          {
-            class:
-              "trace-block " +
-              (row.id === selected ? "selected " : "") +
-              (row.incomplete ? "incomplete " : "") +
-              (bad(row.status) ? "bad " : ""),
-            style: `left:${left}%;width:max(10px,${w}%);top:${level * 26 + 7}px;--track:${colors[track]}`,
-            "data-row": row.id,
-            title: `${row.title} · ${labels[row.status] || row.status}`,
-            "aria-label": `${label}：${row.title}，${labels[row.status] || row.status}`,
-            onclick: () => choose(row.id),
-          },
-          te(
-            "span",
-            {},
-            (bad(row.status) ? "! " : row.status === "pending" ? "◷ " : "") +
-              row.title,
-          ),
-        );
-        content.append(node);
-      }
-      const chosen = items.find((x) => x.row.id === selected);
-      if (chosen && chosen.left >= 0 && chosen.left <= 100)
-        content.append(
-          te("i", { class: "trace-playhead", style: `left:${chosen.left}%` }),
-        );
-      content.style.height =
-        Math.max(42, Math.min(3, right.length) * 26 + 14) + "px";
-      if (hidden)
-        content.append(
-          te("span", { class: "trace-density" }, `+${hidden} 步 · 缩放查看`),
-        );
-      lanes.append(line);
-    }
-    drawOverview(rows, bounds, b);
+  function selectRun(id) {
+    if (!model.runMap.has(id)) return;
+    run = id; selected = null; page = 0; query = ""; filter = "all";
+    followLatest = id === model.runs.at(-1)?.id;
+    q("#trace-search").value = "";
+    q("#trace-scroll").scrollTop = 0;
+    hideDetail(); lastSignature = ""; render(); save();
   }
-  function drawOverview(rows, bounds, b) {
-    const canvas = q("#trace-overview canvas"),
-      rect = canvas.getBoundingClientRect(),
-      dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.max(1, rect.width * dpr);
-    canvas.height = 64 * dpr;
-    const ctx = canvas.getContext("2d");
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, rect.width, 64);
-    const span = bounds[1] - bounds[0];
-    rows.forEach((row, i) => {
-      const a = mode === "steps" ? i : (row.start ?? row.end),
-        z = mode === "steps" ? i + 0.8 : model.endpoint(row),
-        x = ((a - bounds[0]) / span) * rect.width,
-        w = Math.max(2, ((z - a) / span) * rect.width);
-      ctx.fillStyle = bad(row.status) ? "#e56d72" : colors[row.track];
-      ctx.fillRect(
-        x,
-        TRACKS.findIndex((t) => t[0] === row.track) * 9 + 5,
-        w,
-        5,
-      );
-    });
-    const chosen = rows.findIndex((x) => x.id === selected);
-    if (chosen >= 0) {
-      const row = rows[chosen],
-        at = mode === "steps" ? chosen : (row.start ?? row.end),
-        x = ((at - bounds[0]) / span) * rect.width;
-      ctx.strokeStyle = "#fff";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, 64);
-      ctx.stroke();
-    }
-    const win = q("#trace-window");
-    win.style.left = ((b[0] - bounds[0]) / span) * 100 + "%";
-    win.style.width = Math.max(0.5, ((b[1] - b[0]) / span) * 100) + "%";
-  }
-  let cachedRows = [];
-  function renderList() {
-    const viewport = q("#trace-list"),
-      inner = q("#trace-list-inner"),
-      height = 54,
-      rows = cachedRows;
-    const from = Math.max(0, Math.floor(viewport.scrollTop / height) - 5),
-      to = Math.min(
-        rows.length,
-        from + Math.ceil((viewport.clientHeight || 250) / height) + 12,
-      );
-    inner.style.height = rows.length * height + "px";
-    inner.replaceChildren();
-    if (!rows.length) {
-      inner.style.height = "150px";
-      inner.append(
-        te(
-          "div",
-          { class: "trace-empty" },
-          model.runs.length
-            ? "没有匹配的步骤。调整筛选或显示其他轨道。"
-            : "这个会话还没有运行记录。",
-        ),
-      );
-      return;
-    }
-    for (let i = from; i < to; i++) {
-      const row = rows[i],
-        n = te(
-          "button",
-          {
-            class: "trace-step " + (row.id === selected ? "selected" : ""),
-            style: `top:${i * height}px`,
-            "data-row": row.id,
-            onclick: () => choose(row.id),
-          },
-          te("span", { class: "trace-step-time" }, relative(rowTime(row))),
-          te(
-            "span",
-            { class: "trace-step-title" },
-            te("i", { style: "background:" + colors[row.track] }),
-            te(
-              "span",
-              {},
-              te("strong", {}, row.title),
-              te(
-                "small",
-                {},
-                String(row.body || "")
-                  .replace(/\s+/g, " ")
-                  .slice(0, 150),
-              ),
-            ),
-          ),
-          te(
-            "span",
-            {
-              class:
-                "trace-state " +
-                (bad(row.status)
-                  ? "is-error"
-                  : row.status === "pending"
-                    ? "is-wait"
-                    : ""),
-            },
-            labels[row.status] || row.status,
-          ),
-          te(
-            "span",
-            { class: "trace-step-duration" },
-            row.point
-              ? "—"
-              : row.start != null && row.end != null && !row.timeConflict
-                ? dur(row.end - row.start)
-                : ["pending", "running", "inProgress"].includes(row.status)
-                  ? "观测中"
-                  : "端点不完整",
-          ),
-        );
-      inner.append(n);
-    }
-  }
-  function choose(id, scroll = true) {
-    selected = id;
-    detailKey = "";
-    root.classList.remove("focus-mode");
-    q("#trace-focus").setAttribute("aria-pressed", false);
-    root.classList.add("show-detail");
+  function selectStep(id) {
     const row = model.rows.get(id);
     if (!row) return;
-    setFollow(false);
-    const rows = visible(),
-      index = rows.findIndex((x) => x.id === id);
-    const b = frame(),
-      at = mode === "steps" ? index : rowTime(row);
-    if (at < b[0] || at > b[1]) {
-      const width = b[1] - b[0];
-      view = clamp([at - width * 0.25, at + width * 0.75]);
-    }
-    const listIndex = orderRows(rows, listOrder).findIndex((x) => x.id === id);
-    if (scroll && listIndex >= 0)
-      q("#trace-list").scrollTop = Math.max(
-        0,
-        listIndex * 54 - q("#trace-list").clientHeight / 2,
-      );
-    save();
-    render();
+    if (run !== row.runId) selectRun(row.runId);
+    selected = id;
+    if (!visibleRows().some(r=>r.id===id)) {filter="all";query="";q("#trace-search").value="";}
+    const index = visibleRows().findIndex(r=>r.id===id);
+    if(index>=0)page=Math.floor(index/PAGE_SIZE);
+    root.classList.add("has-detail"); q("#trace-detail").classList.remove("hidden");
+    detailSignature="";render();save();q("#trace-detail-close").focus();
   }
-  function detail() {
-    const row = model.rows.get(selected);
-    if (!row) {
-      q("#trace-detail-content").replaceChildren(
-        te("div", { class: "trace-empty" }, "选择一个步骤查看详情。"),
-      );
-      return;
+  function hideDetail() {
+    selected=null;detailSignature="";root.classList.remove("has-detail");q("#trace-detail").classList.add("hidden");
+  }
+  function renderRounds() {
+    q("#trace-round-count").textContent=model.runs.length;
+    const host=q("#trace-runs"), existing=new Map([...host.children].map(n=>[n.dataset.run,n]));
+    const nodes=model.runs.map((r,i)=>{
+      let n=existing.get(r.id);
+      if(!n){n=button("",()=>selectRun(r.id),"trace-round");n.dataset.run=r.id;}
+      const sig=JSON.stringify([r.title,r.status,r.id===run]);
+      if(n._sig!==sig){n.replaceChildren(el("span",{class:"trace-round-number"},String(i+1).padStart(2,"0")),el("span",{class:"trace-round-label"},el("strong",{},r.title),el("small",{},labels[r.status]||r.status)));n._sig=sig;}
+      n.classList.toggle("selected",r.id===run);n.setAttribute("aria-current",r.id===run?"step":"false");return n;
+    });
+    const keep=new Set(nodes);for(const child of [...host.children])if(!keep.has(child))child.remove();
+    nodes.forEach((n,i)=>{if(host.children[i]!==n)host.insertBefore(n,host.children[i]||null);});
+  }
+  function renderQuestion() {
+    const r=currentRun(), list=rows(), index=model.runs.findIndex(x=>x.id===run);
+    q("#trace-round-label").textContent=r?`第 ${index+1} 轮 · ${stamp(r.start)}`:"当前会话";
+    q("#trace-question-text").textContent=r?.inputRow?.body || r?.title || "还没有运行记录";
+    q("#trace-run-state").textContent=r?(labels[r.status]||r.status):"等待提问";
+    q("#trace-run-state").className="trace-state "+(r&&bad(r.status)?"issue":"");
+    const toolCount=list.filter(r=>r.track==="tools").length;
+    q("#trace-create-analysis").disabled=!r||creatingAnalysis;
+    const related=state.sessions.filter(s=>s.traceOrigin?.sessionId===sid && s.traceOrigin.runId===run);
+    const relatedHost=q("#trace-analyses"),relatedSignature=JSON.stringify(related.map(s=>[s.id,s.title,s.updated]));
+    if(relatedHost._sig!==relatedSignature){relatedHost._sig=relatedSignature;relatedHost.replaceChildren(...related.slice(0,5).map(s=>button("打开分析会话 · "+stamp(Date.parse(s.created)),()=>selectSession(s.id),"trace-context-chip")));}
+    q("#trace-run-meta").textContent=r?[`${toolCount} 次工具调用`,`${list.filter(isIssue).length} 个需关注步骤`,r.end!=null?`本轮 ${fmt(r.end-r.start)}`:"运行边界尚未完整"].join(" · "):"发送问题后，实际执行的步骤会出现在这里。";
+    const host=q("#trace-context"), skills=list.filter(x=>x.title==="显式选中 Skills");
+    const sig=JSON.stringify(skills.map(x=>[x.id,x.body]));
+    if(host._sig!==sig){host.replaceChildren(...skills.map(row=>button("已选技能 · 查看提交记录",()=>selectStep(row.id),"trace-context-chip")));host._sig=sig;}
+  }
+  function renderSteps() {
+    const list=visibleRows();page=Math.min(page,Math.max(0,Math.ceil(list.length/PAGE_SIZE)-1));
+    q("#trace-count").textContent=`${list.length} 步`;
+    q("#trace-find-issue").disabled=!rows().some(isIssue);
+    for(const b of root.querySelectorAll("[data-filter]"))b.setAttribute("aria-pressed",b.dataset.filter===filter);
+    const host=q("#trace-steps-list"), existing=new Map([...host.children].map(n=>[n.dataset.row,n]));
+    const shown=list.slice(page*PAGE_SIZE,(page+1)*PAGE_SIZE);
+    const nodes=shown.map(row=>{
+      let n=existing.get(row.id);
+      if(!n){n=button("",()=>selectStep(row.id),"trace-step");n.dataset.row=row.id;}
+      const sig=JSON.stringify([row.title,row.body,row.status,row.end,row.id===selected]);
+      if(n._sig!==sig){
+        const value=inspect(hydrated(row));
+        let excerpt=short(value.error||value.output||value.input||row.body,150);
+        if(!excerpt)excerpt=row.end==null?"等待工具或模型返回内容…":"未记录可展示的返回内容";
+        n.replaceChildren(icon(row),el("span",{class:"trace-step-copy"},el("strong",{},row.title),el("span",{},excerpt)),el("span",{class:"trace-step-meta"},el("span",{class:"trace-state "+(isIssue(row)?"issue":"")},status(row)),el("small",{},row.point?stamp(row.start).split(" ").at(-1):row.end==null?"等待结束记录":fmt(duration(row)))));
+        n._sig=sig;
+      }
+      n.classList.toggle("selected",row.id===selected);n.classList.toggle("needs-attention",isIssue(row));return n;
+    });
+    const keep=new Set(nodes);for(const child of [...host.children])if(!keep.has(child))child.remove();
+    nodes.forEach((n,i)=>{if(host.children[i]!==n)host.insertBefore(n,host.children[i]||null);});
+    if(!nodes.length)host.replaceChildren(el("p",{class:"trace-empty"},model.runs.length?"没有匹配的步骤。可以调整筛选条件。":"尚未开始。这里会保留成功、失败和中断的过程。"));
+    q(".trace-pagination").classList.toggle("hidden",list.length<=PAGE_SIZE);
+    q("#trace-page-prev").disabled=page===0;q("#trace-page-next").disabled=(page+1)*PAGE_SIZE>=list.length;
+    q("#trace-page-label").textContent=`${page*PAGE_SIZE+1}–${Math.min((page+1)*PAGE_SIZE,list.length)} / ${list.length}`;
+  }
+  async function readFull(row) {
+    const id=row.refs.at(-1), session=sid, generation=epoch;
+    if(full.has(id)||fetching.has(id))return;
+    fetching.add(id);
+    try {
+      const record=await api(`/sessions/${encodeURIComponent(session)}/events/${id}`);
+      if(generation!==epoch||sid!==session)return;
+      full.set(id,record);renderOutcome();renderEvidence();detailSignature="";renderDetail();
+    } catch(e) {if(generation===epoch)q("#trace-load").textContent="完整记录读取失败，可刷新重试："+e.message;}
+    finally {if(generation===epoch)fetching.delete(id);}
+  }
+  function renderOutcome() {
+    const r=currentRun(), answers=replyRows(rows()), host=q("#trace-outcome");
+    const sig=JSON.stringify([run,r?.status,answers.map(a=>[a.id,inspect(hydrated(a)).output,liveText(a),full.has(a.refs.at(-1))])]);
+    if(host._sig===sig)return;host._sig=sig;
+    host.replaceChildren(el("div",{class:"trace-section-line"},el("h2",{},"本轮回复"),el("span",{class:"trace-caption"},"来自助手的实际输出")));
+    if(!answers.length){
+      host.append(el("p",{class:"trace-no-reply"},r&&bad(r.status)?"这一轮已中断或失败，尚未记录最终回复。已发生的步骤仍可查看。":r?.status==="completed"?"执行已结束，但没有记录最终回复。可以检查步骤，或继续提问。":"尚未记录回复，执行过程会持续更新。"));
     }
-    const key = JSON.stringify([
-      row.id,
-      row.status,
-      row.refs,
-      row.body,
-      row.end,
-    ]);
-    if (key === detailKey) return;
-    detailKey = key;
-    const content = q("#trace-detail-content");
-    content.replaceChildren(
-      te(
-        "p",
-        { class: "trace-detail-track" },
-        TRACKS.find((x) => x[0] === row.track)?.[1] || row.track,
-      ),
-      te("h2", {}, row.title),
-      te(
-        "span",
-        { class: "trace-state " + (bad(row.status) ? "is-error" : "") },
-        labels[row.status] || row.status,
-      ),
-    );
-    const meta = te("dl", { class: "trace-meta" });
-    for (const [name, value] of [
-      [
-        "开始",
-        row.start == null
-          ? "未提供"
-          : new Date(row.start).toLocaleTimeString("zh-CN", { hour12: false }),
-      ],
-      [
-        "耗时",
-        row.point
-          ? "瞬时事件"
-          : row.start != null && row.end != null && !row.timeConflict
-            ? dur(row.end - row.start)
-            : ["pending", "running", "inProgress"].includes(row.status)
-              ? "观测中"
-              : "端点不完整",
-      ],
-      [
-        "时间依据",
-        row.timeSource +
-          (row.endSource && row.endSource !== row.timeSource
-            ? " → " + row.endSource
-            : ""),
-      ],
-      ["Item ID", row.itemId],
-      ["退出码", row.exitCode],
-    ])
-      if (value != null) meta.append(te("dt", {}, name), te("dd", {}, value));
-    content.append(meta);
-    if (row.incomplete)
-      content.append(
-        te(
-          "p",
-          { class: "trace-detail-note" },
-          "缺少完整的开始或结束事件；虚线范围仅表示已观测部分，不计为完整耗时。",
-        ),
-      );
-    if (row.note)
-      content.append(te("p", { class: "trace-detail-note" }, row.note));
-    if (row.body)
-      content.append(
-        te("h3", {}, row.track === "tools" ? "输出 / 结果" : "内容"),
-        te("pre", { class: "trace-readable" }, row.body),
-      );
-    if (row.detail) {
-      const d = te(
-        "details",
-        { class: "trace-json" },
-        te("summary", {}, "结构化输入与结果"),
-        te("pre", {}, json(row.detail)),
-      );
-      content.append(d);
+    for(const row of answers){
+      const output=inspect(hydrated(row)).output||liveText(row);
+      const note=row.end==null?"正在生成 · 实时片段":row.detail?.phase==="final_answer"?"最终回复":"最新助手回复 · 接口未标明最终阶段";
+      host.append(el("p",{class:"trace-caption"},note),markdown(output.slice(0,200000)||"等待回复内容…"));
+      if(output.includes("[预览已截断]")&&!full.has(row.refs.at(-1)))host.append(el("p",{class:"trace-caption"},"正在读取完整回复…"));
+      if(output.length>200000)host.append(el("p",{class:"trace-caption"},"页面显示前 200,000 字符；可下载完整事件。"));
+      const actions=el("div",{class:"trace-answer-actions"},button("查看回复记录",()=>selectStep(row.id)));
+      if(row.end!=null)actions.append(button("复制回复",async()=>{await readFull(row);const result=inspect(hydrated(row)).output;if(!full.has(row.refs.at(-1)))throw Error("完整回复未读取，未复制截断内容");await copyReplyText(result);}));
+      host.append(actions);
+      if(row.end!=null&&!full.has(row.refs.at(-1)))readFull(row);
     }
-    const sources = te(
-      "div",
-      { class: "trace-sources" },
-      te("h3", {}, "原始事件"),
-      te("p", {}, "预览可能截断；点击读取对应完整记录。"),
-    );
-    for (const id of row.refs)
-      sources.append(
-        button(
-          "#" + id,
-          async () => {
-            const session = sid,
-              chosen = selected;
-            const ev = await api(
-              `/sessions/${encodeURIComponent(session)}/events/${id}`,
-            );
-            if (sid !== session || selected !== chosen) return;
-            const panel = te(
-              "details",
-              { open: true, class: "trace-json" },
-              te("summary", {}, `#${id} · ${ev.method}`),
-              te(
-                "pre",
-                {},
-                json(ev).slice(0, 100000) +
-                  (json(ev).length > 100000
-                    ? "\n…显示前 100,000 字符，请下载完整事件。"
-                    : ""),
-              ),
-            );
-            const download = button("下载此事件", () =>
-              downloadJSON(ev, `rundesk-event-${id}.json`),
-            );
-            panel.append(download);
-            sources.append(panel);
-          },
-          "trace-source",
-        ),
-      );
-    content.append(sources);
+    const suggestions=el("div",{class:"trace-question-suggestions"});
+    if(r)suggestions.append(button("解释这一轮的结果",()=>suggest(`请解释第 ${model.runs.indexOf(r)+1} 轮「${r.title}」的已有结果与限制，区分已确认内容和未确认内容。请先分析已有记录，不要重新执行工具。`)));
+    if(rows().some(isIssue))suggestions.append(button("分析未完成的原因",()=>{
+      const issue=rows().find(isIssue);askStep(issue);
+    }));
+    host.append(suggestions);
+  }
+  function renderEvidence() {
+    const records=links(rows().map(hydrated));
+    const host=q("#trace-links"), sig=JSON.stringify(records);
+    if(host._sig!==sig){
+      host._sig=sig;host.replaceChildren(...records.map(record=>el("div",{class:"trace-source-link"},el("a",{href:record.url,target:"_blank",rel:"noopener noreferrer"},record.url),...record.rows.map(id=>button("查看来源步骤",()=>selectStep(id))))));
+      if(!records.length)host.append(el("p",{class:"trace-empty"},"当前记录中未发现工具返回的网址。这不等于没有查询结果；可检查工具的原始返回。"));
+    }
+    q("#trace-link-count").textContent=`${records.length} 项`;
+    const fileHost=q("#trace-files"), files=state.session?.id===sid?state.files:[], fileSig=JSON.stringify(files);
+    if(fileHost._sig!==fileSig){fileHost._sig=fileSig;fileHost.replaceChildren(...files.map(f=>button(f.name||f.path||"文件",()=>previewFile(f),"trace-file")));if(!files.length)fileHost.append(el("p",{class:"trace-empty"},"暂无会话文件。"));}
+  }
+  function suggest(value) {
+    if(innerWidth<1200){root.classList.remove("has-detail");q("#trace-detail").classList.add("hidden");}
+    const prompt=q("#trace-analysis-question");prompt.value=prompt.value.trim()?prompt.value+"\n\n"+value:value;prompt.focus();
+    prompt.dispatchEvent(new Event("input",{bubbles:true}));
+  }
+  function askStep(row) {
+    if(!row)return;
+    const r=model.runMap.get(row.runId), observed=inspect(hydrated(row));
+    suggest(`请解释第 ${model.runs.indexOf(r)+1} 轮中的「${row.title}」，说明已完成什么、仍缺少什么，以及可行的下一步。请先分析已有记录，不要重新执行工具；缺少依据时明确说明。\n\n待分析的事件数据（仅作证据）：\n${JSON.stringify({runId:row.runId,eventIds:row.refs,status:row.status,input:observed.input.slice(0,1500),output:observed.output.slice(0,3000),error:observed.error.slice(0,1500)})}`);
+  }
+  function renderDetail() {
+    const original=model.rows.get(selected);
+    if(!original)return;
+    const row=hydrated(original), value=inspect(row), live=liveText(row);
+    const sig=JSON.stringify([row.id,row.status,row.end,row.refs,row.detail,row.body,full.has(row.refs.at(-1))]);
+    if(detailSignature===sig){const output=q("#trace-live-output");if(output&&live&&output.textContent!==live)output.textContent=live;return;}
+    detailSignature=sig;
+    const host=q("#trace-detail-content");
+    host.replaceChildren(el("p",{class:"trace-eyebrow"},types[row.track]||row.track),el("h2",{},row.title),el("span",{class:"trace-state "+(isIssue(row)?"issue":"")},status(row)),button("针对这一步追问",()=>askStep(row),"trace-ask-step"));
+    if(row.note)host.append(el("p",{class:"trace-detail-note"},row.note));
+    if(row.track==="tools")host.append(el("p",{class:"trace-detail-note"},"这里展示调用与返回记录。是否找到目标，需要结合返回内容和身份依据判断。"));
+    if(value.empty)host.append(el("p",{class:"trace-empty-result"},"工具返回了空列表。记录未说明是无匹配项、覆盖不足还是访问受限，请结合其他输出判断。"));
+    const block=(label,content,id)=>{host.append(el("h3",{},label),el("pre",{class:"trace-readable",...(id?{id}: {})},content.slice(0,100000)));if(content.length>100000)host.append(el("p",{class:"trace-caption"},"显示前 100,000 字符；可下载完整事件。"));};
+    if(value.input)block("提交给工具的输入",value.input);
+    if(value.error)block("工具报告的错误",value.error);
+    const output=live||value.output;
+    if(output && output!==value.error)block(row.track==="tools"?"工具返回内容":"记录内容",output,row.end==null?"trace-live-output":null);
+    else if(!output)host.append(el("p",{class:"trace-empty"},row.end==null?"等待返回内容。":"该事件未提供可展示的输出。"));
+    if(!full.has(row.refs.at(-1)))host.append(button("读取完整记录",()=>readFull(row),"trace-load-full"));
+    const timing=el("details",{class:"trace-technical"},el("summary",{},"时间与运行信息"));
+    timing.append(el("p",{},`开始：${stamp(row.start)}\n结束：${stamp(row.end)}\n耗时：${row.point?"瞬时记录":fmt(duration(row))}\n时间依据：${row.timeSource}${row.endSource&&row.endSource!==row.timeSource?" → "+row.endSource:""}`));
+    if(row.incomplete)timing.append(el("p",{},"缺少完整边界或时间有冲突，不推定完整耗时。"));
+    if(row.exitCode!=null)timing.append(el("p",{},"退出码："+row.exitCode));
+    if(currentRun()?.effective)timing.append(el("pre",{},text(currentRun().effective)));
+    host.append(timing);
+    const raw=el("details",{class:"trace-technical"},el("summary",{},"原始事件与下载"),el("p",{class:"trace-caption"},"完整事件包含工具参数和输出；导出前请检查敏感信息。"));
+    for(const id of row.refs)raw.append(button("#"+id,async()=>{
+      const generation=epoch, session=sid, chosen=selected;
+      const record=full.get(id)||await api(`/sessions/${encodeURIComponent(session)}/events/${id}`);
+      if(generation!==epoch||session!==sid||chosen!==selected)return;
+      full.set(id,record);
+      const section=el("details",{open:true},el("summary",{},`#${id} · ${record.method}`),el("pre",{},text(record).slice(0,100000)),button("下载完整事件",()=>downloadText(`rundesk-event-${id}.json`,text(record),"application/json")));
+      raw.append(section);
+    }));
+    host.append(raw);
+  }
+  function syncComposer() {
+    if(!opened)return;
+    q("#trace-create-analysis").disabled=!currentRun()||creatingAnalysis;
+    q("#trace-analysis-question").disabled=creatingAnalysis;
+  }
+  async function startAnalysis() {
+    if(creatingAnalysis||!currentRun())return;
+    const question=q("#trace-analysis-question").value.trim();if(!question)return;
+    creatingAnalysis=true;syncComposer();
+    const source=sid,generation=epoch,chosen=model.rows.get(selected);
+    const selection={sessionId:source,runId:run,...(chosen?{eventIds:chosen.refs}:{})};
+    let created;
+    q("#trace-analysis-feedback").textContent="正在建立关联的分析会话…";
+    try {
+      created=await api("/sessions",{method:"POST",body:{traceAnalysis:selection}});
+      await refreshSessions();
+      if(!opened||sid!==source||generation!==epoch){toast("分析会话已创建，可从会话列表打开。");return;}
+      q("#trace-analysis-question").value="";save();
+      await selectSession(created.id);
+      if(state.session?.id!==created.id)return;
+      $("#prompt").value=question;
+      await sendMessage();
+    } catch(e) {
+      if(created&&state.session?.id===created.id){$("#send-feedback").textContent="分析会话已创建，问题尚未确认发送；可在此重试。";toast(e.message);}
+      else if(opened&&sid===source)q("#trace-analysis-feedback").textContent="未完成创建，问题已保留："+e.message;
+    } finally {creatingAnalysis=false;syncComposer();}
   }
   function render() {
-    if (!opened) return;
-    q("#trace-detail").style.top =
-      innerWidth < 900 ? q(".trace-body").offsetTop + "px" : "";
-    q("#trace-detail").style.bottom =
-      innerWidth < 900 ? q(".trace-footer").offsetHeight + 12 + "px" : "";
-    renderStats();
-    renderRuns();
-    const chronological = visible();
-    cachedRows = orderRows(chronological, listOrder);
-    renderTimeline(chronological);
-    for (const [id, delta, onlyBad] of [
-      ["#trace-prev", -1, false],
-      ["#trace-next", 1, false],
-      ["#trace-prev-error", -1, true],
-      ["#trace-next-error", 1, true],
-    ])
-      q(id).disabled = !nextRow(
-        onlyBad ? chronological : cachedRows,
-        selected,
-        delta,
-        onlyBad,
-      );
-    q("#trace-longest").disabled = !chronological.some(
-      (r) => duration(r) != null,
-    );
-    q("#trace-count").textContent = cachedRows.length + " 步";
-    renderList();
-    detail();
-    q("#trace-position").textContent = selected
-      ? `${Math.max(0, cachedRows.findIndex((x) => x.id === selected) + 1)} / ${cachedRows.length}`
-      : `${cachedRows.length} 步`;
-    q("#trace-time").setAttribute("aria-pressed", mode === "time");
-    q("#trace-steps").setAttribute("aria-pressed", mode === "steps");
-    setFollow(follow);
+    if(!opened)return;
+    renderRounds();renderQuestion();renderSteps();renderOutcome();renderEvidence();renderDetail();syncComposer();
   }
   async function refresh() {
-    if (!opened || busy || !sid) return;
-    busy = true;
-    const token = epoch,
-      session = sid;
-    let through = 0;
-    q("#trace-load").textContent = "正在读取…";
-    try {
-      do {
-        const page = await api(
-          `/sessions/${encodeURIComponent(session)}/trace?` +
-            new URLSearchParams({ after: cursor, through, limit: 250 }),
-        );
-        if (token !== epoch || !opened) return;
-        const previous = extent(),
-          entire = !view || (view[0] <= previous[0] && view[1] >= previous[1]);
-        model.ingest(page.events);
-        if (!page.hasMore) model.reconcile(page.session);
-        if (active(page.session.status))
-          model.lastTime = Math.max(
-            model.lastTime,
-            Date.parse(page.observedAt) || 0,
-          );
-        cursor = page.nextCursor;
-        through = page.hasMore ? page.snapshot : 0;
-        if (!through && run !== "all" && !model.runMap.has(run)) {
-          run = "all";
-          view = null;
+    if(!opened||busy||!sid)return;
+    busy=true;const generation=epoch, session=sid;let through=0;
+    q("#trace-load").textContent="读取记录…";
+    try{
+      do{
+        const result=await api(`/sessions/${encodeURIComponent(session)}/trace?`+new URLSearchParams({after:cursor,through,limit:250}));
+        if(generation!==epoch||!opened)return;
+        model.ingest(result.events);cursor=result.nextCursor;through=result.hasMore?result.snapshot:0;
+        currentSession=result.session;
+        if(!through){
+          model.reconcile(currentSession);
+          if(followLatest||!model.runMap.has(run))run=model.runs.at(-1)?.id||null;
+          if(selected&&!model.rows.has(selected))hideDetail();
+          const signature=JSON.stringify([model.records,currentSession.status,run,selected]);
+          if(signature!==lastSignature){lastSignature=signature;render();}
+          if(!restored){restored=true;let saved;try{saved=JSON.parse(sessionStorage.getItem("rundesk-process-"+sid)||"null");}catch{}q("#trace-scroll").scrollTop=saved?.scroll||0;if(selected) {root.classList.add("has-detail");q("#trace-detail").classList.remove("hidden");renderDetail();}}
         }
-        if (!selected && !through) {
-          selected =
-            model.list(run).find((x) => bad(x.status) || x.status === "pending")
-              ?.id || model.list(run).at(-1)?.id;
-        }
-        if (follow) {
-          const b = extent();
-          if (entire || !view || view[1] - view[0] >= b[1] - b[0]) view = b;
-          else view = [Math.max(b[0], b[1] - (view[1] - view[0])), b[1]];
-        }
-        const unchanged =
-          !page.events.length &&
-          !active(page.session.status) &&
-          lastSessionStatus === page.session.status &&
-          !restorePosition;
-        if (!through) lastSessionStatus = page.session.status;
-        if (!unchanged) render();
-        if (!through && restorePosition && selected) {
-          const index = cachedRows.findIndex((x) => x.id === selected);
-          if (index >= 0)
-            q("#trace-list").scrollTop = Math.max(
-              0,
-              index * 54 - q("#trace-list").clientHeight / 2,
-            );
-          renderList();
-          restorePosition = false;
-        }
-        q("#trace-load").textContent = `${model.records} 条生命周期事件`;
-        if (through) await new Promise((resolve) => setTimeout(resolve, 0));
-      } while (through);
+        q("#trace-load").textContent=`${model.records} 条记录 · ${active(currentSession.status)?"持续更新":"已同步"}`;
+        if(through)await new Promise(resolve=>setTimeout(resolve,0));
+      }while(through);
       save();
-    } catch (e) {
-      if (token === epoch)
-        q("#trace-load").textContent = "读取失败：" + e.message;
-    } finally {
-      if (token === epoch) busy = false;
-    }
-  }
-  function restore() {
-    try {
-      const saved = JSON.parse(
-        sessionStorage.getItem("rundesk-trace-" + sid) || "null",
-      );
-      if (saved) {
-        run = saved.run || "all";
-        selected = saved.selected;
-        view =
-          Array.isArray(saved.view) &&
-          saved.view.length === 2 &&
-          saved.view.every(Number.isFinite)
-            ? saved.view
-            : null;
-        follow = saved.follow !== false;
-        mode = saved.mode === "steps" ? "steps" : "time";
-        query = saved.query || "";
-        listOrder = saved.listOrder === "duration" ? "duration" : "time";
-        errorsOnly = !!saved.errorsOnly;
-        tracks = new Set(
-          (saved.tracks || TRACKS.map((x) => x[0])).filter((x) =>
-            TRACKS.some((t) => t[0] === x),
-          ),
-        );
-      }
-    } catch {}
-  }
-  function syncControls() {
-    q("#trace-search").value = query;
-    q("#trace-order").value = listOrder;
-    q("#trace-errors").checked = errorsOnly;
-    for (const input of q("#trace-layers").querySelectorAll("input"))
-      input.checked = tracks.has(input.value);
+    }catch(e){if(generation===epoch)q("#trace-load").textContent="读取失败，已显示的记录保留："+e.message;}
+    finally{if(generation===epoch)busy=false;}
   }
   function open() {
-    if (!state.session) {
-      toast("请先选择一个已有会话。");
-      return;
-    }
-    if (sid !== state.session.id) {
-      sid = state.session.id;
-      model = new Model();
-      cursor = 0;
-      epoch++;
-      busy = false;
-      run = "all";
-      selected = null;
-      view = null;
-      follow = true;
-      query = "";
-      listOrder = "time";
-      lastSessionStatus = "";
-      runOptionsSignature = "";
-      mode = "time";
-      errorsOnly = false;
-      tracks = new Set(TRACKS.map((x) => x[0]));
-      restore();
-    }
-    sessionStorage.setItem("rundesk-trace-session",state.session.id);
-    opened = true;
-    restorePosition = true;
-    $("#shell").inert = true;
-    detailKey = "";
-    root.classList.remove("hidden");
-    q("#trace-session-title").textContent = state.session.title;
-    q("#trace-demo").classList.toggle("hidden", !state.demo);
-    history.replaceState(
-      null,
-      "",
-      location.pathname + location.search + "#trace",
-    );
-    syncControls();
-    render();
-    refresh();
-    clearInterval(refreshTimer);
-    refreshTimer = setInterval(refresh, 1800);
-    q("#trace-close").focus();
+    if(!state.session){toast("请先发起一次对话或选择已有任务。");return;}
+    if(opened)return;
+    sid=state.session.id;model=new Model();cursor=0;epoch++;busy=false;full=new Map();fetching=new Set();lastSignature="";detailSignature="";restored=false;currentSession=state.session;
+    let saved;try{saved=JSON.parse(sessionStorage.getItem("rundesk-process-"+sid)||"null");}catch{}
+    run=saved?.run||null;selected=saved?.selected||null;query=saved?.query||"";filter=["all","tools","issues"].includes(saved?.filter)?saved.filter:"all";page=Number.isInteger(saved?.page)&&saved.page>=0?saved.page:0;followLatest=saved?.followLatest!==false;
+    q("#trace-search").value=query;
+    q("#trace-analysis-question").value=saved?.draft||"";
+    q("#trace-analysis-feedback").textContent="";
+    opened=true;$("#shell").inert=true;root.classList.remove("hidden");root.classList.remove("has-detail");q("#trace-detail").classList.add("hidden");
+    q("#trace-owner").textContent=[$("#page-label").textContent,ws()?.name].filter(Boolean).join(" / ");q("#trace-session-title").textContent=state.session.title;
+    q("#trace-demo").classList.toggle("hidden",!state.demo);
+    sessionStorage.setItem("rundesk-trace-session",sid);history.replaceState(null,"",location.pathname+location.search+"#trace");
+    render();refresh();clearInterval(timer);timer=setInterval(refresh,1400);q("#trace-close").focus();
   }
-  function close() {
-    opened = false;
-    $("#shell").inert = false;
-    epoch++;
-    busy = false;
-    clearInterval(refreshTimer);
-    root.classList.add("hidden");
-    history.replaceState(null, "", location.pathname + location.search+"#session/"+encodeURIComponent(state.session.id));
-    $("#trace-button").focus();
-    save();
-    scheduleRender();
+  function close(navigate=true) {
+    if(!opened)return;
+    save();opened=false;epoch++;busy=false;clearInterval(timer);
+    $("#shell").inert=false;root.classList.add("hidden");
+    if(navigate&&sid){history.replaceState(null,"",location.pathname+location.search+"#session/"+encodeURIComponent(sid));$("#trace-button").focus();}
+    renderStatus();scheduleRender();
   }
-  function navigate(delta, onlyBad = false) {
-    const rows = onlyBad ? visible() : orderRows(visible(), listOrder);
-    const target = nextRow(rows, selected, delta, onlyBad);
-    if (target) choose(target.id);
-  }
-
-  function downloadJSON(data, name) {
-    const a = document.createElement("a"),
-      url = URL.createObjectURL(
-        new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
-      );
-    a.href = url;
-    a.download = name;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-  q("#trace-close").onclick = close;
-  q("#trace-refresh").onclick = refresh;
-  q("#trace-run").onchange = (e) => {
-    root.classList.remove("show-detail");
-    run = e.target.value;
-    selected = null;
-    view = null;
-    detailKey = "";
-    q("#trace-list").scrollTop = 0;
-    fit();
-  };
-  q("#trace-search").oninput = (e) => {
-    root.classList.remove("show-detail");
-    query = e.target.value;
-    q("#trace-list").scrollTop = 0;
-    save();
-    render();
-  };
-  q("#trace-errors").onchange = (e) => {
-    root.classList.remove("show-detail");
-    errorsOnly = e.target.checked;
-    q("#trace-list").scrollTop = 0;
-    save();
-    render();
-  };
-  for (const [id, label] of TRACKS)
-    q("#trace-layers").append(
-      te(
-        "label",
-        {},
-        te("input", {
-          type: "checkbox",
-          checked: true,
-          value: id,
-          onchange: (e) => {
-            e.target.checked ? tracks.add(id) : tracks.delete(id);
-            save();
-            render();
-          },
-        }),
-        label,
-      ),
-    );
-  q("#trace-time").onclick = () => {
-    mode = "time";
-    view = null;
-    fit();
-  };
-  q("#trace-steps").onclick = () => {
-    mode = "steps";
-    view = null;
-    fit();
-  };
-  q("#trace-order").onchange = (e) => {
-    listOrder = e.target.value;
-    setFollow(false);
-    q("#trace-list").scrollTop = 0;
-    save();
-    render();
-  };
-  q("#trace-longest").onclick = () => {
-    const row = orderRows(visible(), "duration").find(
-      (r) => duration(r) != null,
-    );
-    if (row) choose(row.id);
-  };
-  q("#trace-fit").onclick = fit;
-  q("#trace-zoom-in").onclick = () => zoom(0.5);
-  q("#trace-zoom-out").onclick = () => zoom(2);
-  q("#trace-follow").onclick = () => {
-    setFollow(!follow);
-    if (follow) {
-      view = null;
-      refresh();
-      render();
-    }
-  };
-  q("#trace-prev").onclick = () => navigate(-1);
-  q("#trace-next").onclick = () => navigate(1);
-  q("#trace-prev-error").onclick = () => navigate(-1, true);
-  q("#trace-next-error").onclick = () => navigate(1, true);
-  q("#trace-focus").onclick = () => {
-    root.classList.toggle("focus-mode");
-    q("#trace-focus").setAttribute(
-      "aria-pressed",
-      root.classList.contains("focus-mode"),
-    );
-    render();
-  };
-  q("#trace-detail-close").onclick = () => {
-    root.classList.remove("show-detail");
-    root.classList.add("focus-mode");
-    q("#trace-focus").setAttribute("aria-pressed", true);
-    render();
-  };
-  q("#trace-export").onclick = () =>
-    downloadJSON(
-      {
-        format: "rundesk-trace/1",
-        sessionId: sid,
-        exportedAt: new Date().toISOString(),
-        filter: { run, query, listOrder, errorsOnly, tracks: [...tracks] },
-        runs: model.runs
-          .filter((r) => run === "all" || r.id === run)
-          .map(({ inputRow, ...r }) => r),
-        rows: orderRows(visible(), listOrder),
-        note: "生命周期事件投影；完整源事件使用会话 JSONL 导出。",
-      },
-      "rundesk-trace.json",
-    );
-  q("#trace-list").addEventListener("scroll", renderList);
-  q("#trace-lanes").addEventListener(
-    "wheel",
-    (e) => {
-      e.preventDefault();
-      const rect = q("#trace-axis").getBoundingClientRect();
-      zoom(
-        e.deltaY > 0 ? 1.25 : 0.8,
-        Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)),
-      );
-    },
-    { passive: false },
-  );
-  function drag(target, overview) {
-    target.addEventListener("pointerdown", (e) => {
-      if (e.button !== 0 || (!overview && e.target.closest("button"))) return;
-      const rect = (
-          overview ? q("#trace-overview") : q("#trace-axis")
-        ).getBoundingClientRect(),
-        startX = e.clientX,
-        b = frame(),
-        ext = extent(),
-        span = overview ? ext[1] - ext[0] : b[1] - b[0],
-        edge = e.target.dataset.edge;
-      setFollow(false);
-      target.setPointerCapture(e.pointerId);
-      let base = b;
-      if (overview && !e.target.closest("#trace-window")) {
-        const t = ext[0] + ((e.clientX - rect.left) / rect.width) * span,
-          w = b[1] - b[0];
-        base = clamp([t - w / 2, t + w / 2]);
-        view = base;
-        render();
-      }
-      const move = (ev) => {
-        const d =
-          ((ev.clientX - startX) / rect.width) * span * (overview ? 1 : -1);
-        view =
-          edge === "left"
-            ? clamp([Math.min(base[1] - 1, base[0] + d), base[1]])
-            : edge === "right"
-              ? clamp([base[0], Math.max(base[0] + 1, base[1] + d)])
-              : clamp([base[0] + d, base[1] + d]);
-        render();
-      };
-      const end = () => {
-        target.removeEventListener("pointermove", move);
-        target.removeEventListener("pointerup", end);
-        target.removeEventListener("pointercancel", end);
-        save();
-      };
-      target.addEventListener("pointermove", move);
-      target.addEventListener("pointerup", end);
-      target.addEventListener("pointercancel", end);
-    });
-  }
-  drag(q("#trace-overview"), true);
-  drag(q("#trace-lanes"), false);
-  root.addEventListener("keydown", (e) => {
-    if (e.target.matches("input,select,textarea")) return;
-    if (e.key === "Escape") {
-      if (root.classList.contains("show-detail") && innerWidth < 900) {
-        root.classList.remove("show-detail");
-        return;
-      }
-      close();
-    }
-    if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      navigate(-1, e.shiftKey);
-    }
-    if (e.key === "ArrowRight") {
-      e.preventDefault();
-      navigate(1, e.shiftKey);
-    }
-    if (e.key === "+" || e.key === "=") zoom(0.5);
-    if (e.key === "-") zoom(2);
-  });
-  new ResizeObserver(() => {
-    if (opened) render();
-  }).observe(q(".trace-main"));
-  $("#trace-button").onclick = open;
-  window.RunDeskTraceUI = {
-    open,
-    isOpen: () => opened,
-    sessionChanged: () => {
-      if (opened && sid !== state.session?.id) close();
-      if (location.hash === "#trace" && state.session) open();
-    },
-  };
+  q("#trace-close").onclick=()=>close();q("#trace-refresh").onclick=()=>{lastSignature="";refresh();};
+  q("#trace-detail-close").onclick=()=>{const id=selected;hideDetail();renderSteps();save();[...root.querySelectorAll(".trace-step")].find(n=>n.dataset.row===id)?.focus();};
+  q("#trace-search").oninput=e=>{query=e.target.value;page=0;renderSteps();save();};
+  for(const b of root.querySelectorAll("[data-filter]"))b.onclick=()=>{filter=b.dataset.filter;page=0;renderSteps();save();};
+  q("#trace-page-prev").onclick=()=>{page--;renderSteps();save();q(".trace-process-section").scrollIntoView({block:"start"});};
+  q("#trace-page-next").onclick=()=>{page++;renderSteps();save();q(".trace-process-section").scrollIntoView({block:"start"});};
+  q("#trace-find-issue").onclick=()=>{const row=rows().find(isIssue);if(row)selectStep(row.id);};
+  q("#trace-continue").onclick=()=>close();
+  q("#trace-analysis-form").onsubmit=e=>{e.preventDefault();startAnalysis();};
+  q("#trace-export").onclick=()=>downloadText(`rundesk-process-${sid}.json`,text({version:2,sessionId:sid,runId:run,exportedAt:new Date().toISOString(),note:"事件预览与可见过程；完整事件可按 refs 单独下载，不包含隐藏推理。",run:currentRun(),steps:rows().map(hydrated),links:links(rows().map(hydrated))}),"application/json");
+  root.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!q("#trace-detail").classList.contains("hidden")){q("#trace-detail-close").click();e.preventDefault();}else if(!e.target.matches("input,textarea,select")){close();e.preventDefault();}});
+  window.addEventListener("beforeunload",save);
+  $("#trace-button").onclick=open;
+  window.RunDeskTraceUI={open,close,isOpen:()=>opened,syncComposer,updateLive:()=>{if(opened){renderOutcome();renderDetail();syncComposer();}},openOrigin:async origin=>{await selectSession(origin.sessionId);sessionStorage.setItem("rundesk-process-"+origin.sessionId,JSON.stringify({run:origin.runId,followLatest:false}));open();},sessionChanged:()=>{if(opened&&sid!==state.session?.id)close(false);if(location.hash==="#trace"&&state.session)open();}};
 })();

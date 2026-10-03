@@ -18,8 +18,10 @@ schemas={
  'Input':obj({'text':st(minLength=1,maxLength=262144),'files':arr(st()),'skills':arr(ref('Skill'))},['text']),
  'SteerInput':obj({'text':st(),'files':arr(st()),'skills':arr(ref('Skill')),'expectedTurnId':st(),'requestId':st(minLength=8,maxLength=128)},['text','expectedTurnId','requestId']),
  'Source':obj({'kind':st(enum=['human','application']),'appId':st(maxLength=80),'taskId':st(maxLength=200)},extra=False),
- 'CreateSession':obj({'workspaceId':st(),'instanceId':st(default='default'),'title':st(),'model':st(),'source':ref('Source')},['workspaceId']),
- 'Session':obj({k:st() for k in ['id','instanceId','workspaceId','title','threadId','model','status','runId','turnId','error','created','updated']}|{'pinned':bool_,'archived':bool_,'source':ref('Source')},['id','instanceId','workspaceId','status'],True),
+ 'TraceSelection':obj({'sessionId':st(),'runId':st(),'eventIds':arr(integer)},['sessionId','runId']),
+ 'TraceOrigin':obj({'sessionId':st(),'runId':st(),'eventIds':arr(integer),'through':integer,'capturedAt':st(),'title':st()},['sessionId','runId','through','capturedAt']),
+ 'CreateSession':{'oneOf':[obj({'workspaceId':st(),'instanceId':st(default='default'),'title':st(),'model':st(),'source':ref('Source')},['workspaceId']),obj({'traceAnalysis':ref('TraceSelection')},['traceAnalysis'])]},
+ 'Session':obj({k:st() for k in ['id','instanceId','workspaceId','title','threadId','model','status','runId','turnId','error','created','updated']}|{'pinned':bool_,'archived':bool_,'source':ref('Source'),'traceOrigin':ref('TraceOrigin')},['id','instanceId','workspaceId','status'],True),
  'Permissions':obj({'sandbox':st(enum=['workspace-write','read-only','danger-full-access']),'approvalPolicy':st(enum=['on-request','never']),'reviewer':st(enum=['user','auto_review']),'networkAccess':bool_}),
  'InstanceInput':obj({'name':st(minLength=1),'description':st(),'defaultModel':st(),'permissions':ref('Permissions'),'revision':integer},['name']),
  'Instance':obj({'id':st(),'name':st(),'description':st(),'defaultModel':st(),'codexHome':st(),'revision':integer,'managed':bool_,'created':st(),'permissions':ref('Permissions')},['id','name','revision'],True),
@@ -112,6 +114,6 @@ for file in sorted((root/'internal/app').glob('*.go')):
   if path.endswith('/uploads'):op['requestBody']={'required':True,'content':{'multipart/form-data':{'schema':obj({'file':st(format='binary')},['file'])}}}
   if path.endswith('/skill-bundles') and method=='POST':op['requestBody']={'required':True,'content':{'application/zip':{'schema':st(format='binary')},'multipart/form-data':{'schema':{'type':'object','additionalProperties':st(format='binary'),'description':'每个 multipart 字段名为文件相对路径；根部 SKILL.md 或一层技能文件夹。最多 1000 文件、解压后 32 MiB。'}}}}
   paths.setdefault(path,{})[method.lower()]=op
-spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':'1.2.0','description':'RunDesk 0.7.0。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。Source 是调用方声明的业务标签，不代表应用鉴权或隔离。此版本继续使用后台 Token/Cookie。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
+spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':'1.3.0','description':'RunDesk 0.8.0。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。Source 是调用方声明的业务标签，不代表应用鉴权或隔离。此版本继续使用后台 Token/Cookie。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

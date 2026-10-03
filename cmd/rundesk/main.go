@@ -11,13 +11,33 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/shengjuntu/rundesk/internal/app"
+	"github.com/shengjuntu/rundesk/internal/tracequery"
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "__trace_mcp" {
+		if len(os.Args) != 5 {
+			log.Fatal("trace MCP requires database, source session, snapshot cursor")
+		}
+		through, e := strconv.ParseInt(os.Args[4], 10, 64)
+		if e != nil {
+			log.Fatal(e)
+		}
+		r, e := tracequery.Open(os.Args[2], os.Args[3], through)
+		if e != nil {
+			log.Fatal(e)
+		}
+		defer r.Close()
+		if e = tracequery.Serve(r, os.Stdin, os.Stdout); e != nil {
+			log.Fatal(e)
+		}
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "__demo_agent" {
 		app.DemoAgent()
 		return
@@ -39,7 +59,7 @@ func run() error {
 	version := flag.Bool("version", false, "print RunDesk version")
 	flag.Parse()
 	if *version {
-		fmt.Println("RunDesk 0.7.0")
+		fmt.Println("RunDesk 0.8.0")
 		return nil
 	}
 	if *demo {

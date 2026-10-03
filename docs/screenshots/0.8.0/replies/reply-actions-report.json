@@ -1,0 +1,25 @@
+{
+  "passed": 18,
+  "checks": [
+    "copy_exact_reply_markdown",
+    "copy_code_literal_and_html_safe",
+    "feedback_persists_after_reload",
+    "downvote_reason_saved",
+    "saved_feedback_reason_can_be_reviewed",
+    "feedback_toggle_clears_comment",
+    "failed_save_does_not_fake_success",
+    "preview_and_download_selected_reply_only",
+    "native_share_receives_only_preview_text_stub",
+    "speech_start_pause_resume_stop_stub",
+    "speech_error_restores_idle",
+    "long_speech_advances_chunks_and_finishes_stub",
+    "clipboard_denied_manual_copy_fallback",
+    "icon_tools_keep_keyboard_disclosure",
+    "mobile_history_drawer_and_escape",
+    "switch_session_stops_speech_and_closes_drawer",
+    "unsupported_speech_disabled",
+    "no_javascript_exceptions"
+  ],
+  "browser": "154.0.8037.57",
+  "fixture": "Codex protocol simulator; OS speech and native share stubbed"
+}

@@ -76,6 +76,15 @@ function renderStatus() {
   $("#archive-session").textContent = s?.archived ? "恢复会话" : "归档";
   $("#archive-session").disabled = active(s?.status);
   $("#delete-session").disabled = active(s?.status);
+  window.RunDeskTraceUI?.syncComposer();
+  renderAnalysisBanner();
+}
+function renderAnalysisBanner() {
+  const host=$("#analysis-banner"),origin=state.session?.traceOrigin;
+  host.classList.toggle("hidden",!origin);
+  if(!origin){host.replaceChildren();host._signature="";return;}
+  const signature=json(origin);if(host._signature===signature)return;host._signature=signature;
+  host.replaceChildren(el("strong",{},"过程分析 · 独立会话"),el("span",{},`来源：${origin.title} · 截至 ${new Date(origin.capturedAt).toLocaleString()} 的记录`),button("查看原任务过程",()=>RunDeskTraceUI.openOrigin(origin),"quiet"),el("span",{},"只读轨迹工具仅用于此分析会话；沿用原配置的模型与认证。原任务单独运行。"));
 }
 async function patchCurrent(patch) {
   if (!state.session) return;

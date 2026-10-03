@@ -1,9 +1,11 @@
-# RunDesk 0.7.0
+# RunDesk 0.8.0
+
+轨迹重新设计为「问题 → 实际步骤 → 回复与来源」。对轨迹的提问会新建关联的独立分析会话，由 Codex 使用内置的只读 MCP 工具查询记录。
 
 首页直接使用通用助手；专用应用统一在「应用」页管理，一个应用对应一份专用配置。Skills 与 MCP 使用独立管理页。技能支持完整文件夹和 ZIP 导入、目录浏览与完整导出，脚本、参考资料、模板和资源文件一并保留。现有 `/api` 和 `/api/v1` 客户端继续兼容。
 
-- [本版说明](docs/RELEASE-0.7.0.md)
-- [验证记录](docs/VALIDATION-0.7.0.md)
+- [本版说明](docs/RELEASE-0.8.0.md)
+- [验证记录](docs/VALIDATION-0.8.0.md)
 - [0.6.0 API 与实例配置说明](docs/RELEASE-0.6.0.md)
 - [应用 API v1](docs/API-V1.md)
 - [OpenAPI 定义](internal/app/openapi.json)
@@ -15,13 +17,13 @@
 
 对话、Skills/MCP 配置、运行审批、调试事件与文件产物使用同一组 HTTP API。ActiveVLM 等业务前台可以通过这层 API 驱动 Codex。项目正式定名 RunDesk；当前尚未绑定 GitHub 仓库。
 
-**状态：v0.7.0 原型。** 单用户、自托管。后端直接启动官方 `codex app-server`，没有复用 Sandbox Agent，也没有实现另一套 agent loop。
+**状态：v0.8.0 原型。** 单用户、自托管。后端直接启动官方 `codex app-server`，没有复用 Sandbox Agent，也没有实现另一套 agent loop。
 
-![RunDesk 工作台](docs/screenshots/0.7.0/applications-desktop.png)
+![RunDesk 工作台](docs/screenshots/0.8.0/applications-desktop.png)
 
 ## 开始使用
 
-需要 Go **1.25+** 和已安装、已登录的 Codex CLI。此前原生协议验证版本为 Codex **0.157.1**（本次 0.7.0 验证使用明确标识的协议模拟器）；较老版本的 App Server 方法可能不同。
+需要 Go **1.25+** 和已安装、已登录的 Codex CLI。此前原生协议验证版本为 Codex **0.157.1**（0.8.0 另以 Codex 0.159.2 验证了原生会话级 MCP 发现与调用，未发送模型推理请求）；较老版本的 App Server 方法可能不同。
 
 ```bash
 codex login
@@ -56,7 +58,8 @@ go build -buildvcs=false -o bin/rundesk ./cmd/rundesk
 | 审批 | 按服务端选项显示本次/会话/命令规则批准；对象校验、决策记录；权限请求按轮或会话授权 |
 | 权限 | 实例级沙箱、审批策略、审批处理方和网络覆盖；下一轮生效，运行中任务保持原配置 |
 | 运行状态 | 生效模型/Provider/目录/权限；连接告警去重与原始错误；历史记录明确标记 |
-| 轨迹工作台 | 全程总览、分层时间轴、按步骤排列、异常定位、原始事件详情、实时增量、刷新恢复和 JSON 导出 |
+| 任务过程 | 按问题分轮次；实际步骤、输入/输出、回复与来源；空结果、失败、中断、实时更新、刷新恢复、分页与导出 |
+| 轨迹分析 | 新建独立会话，关联原任务与记录快照；5 个内置只读 MCP 工具，由 Codex 按问题组织查询 |
 | 事件 | SQLite 持久化、SSE 重放、方向/分类/方法/关键词/时间筛选、历史分页、暂停显示、JSONL 导出 |
 | Skills | 独立页面；完整目录/ZIP 导入、文件浏览、ZIP 导出；编辑 SKILL.md 保留附属文件；同名替换与移除完整备份 |
 | MCP | stdio/HTTP 表单与 JSON 编辑、开关、版本冲突检测、合并导入/导出、状态与工具清单 |
@@ -89,9 +92,11 @@ MCP 支持 stdio 的 `command/args/env` 和 HTTP 的 `url/bearer_token_env_var` 
 
 对话标题下的「查看运行配置」展示 App Server 实际返回值；未返回的字段明确标记未知。旧连接告警只是历史记录，不等同于当前故障。诊断沙箱固定使用 workspace-write + 禁网，即使实例选择完整访问也不会把无沙箱执行当作通过。
 
-点击顶栏「轨迹」进入独立工作台。支持历史会话，直接投影原有事件，无需重新运行任务。步骤列表可按耗时从长到短排序，或点击「定位最长步骤」；时间轴仍保持发生顺序。使用说明见 [轨迹工作台](docs/TRACE.md)，设计与边界见 [设计记录](docs/TRACE-DESIGN.md)。
+点击顶栏「轨迹」进入任务过程页。左侧选择一轮问题，中间查看实际步骤、助手回复和工具返回的链接，点开步骤可读取输入、输出及原始事件。技能选中只表示已提交，工具执行结束也不等于已完成业务目标。
 
-![RunDesk 轨迹工作台 · 模拟数据](docs/screenshots/trace-workspace.png)
+「问问这段过程 → 新建分析并提问」创建独立 session 和 Codex thread；原任务消息与事件不变。分析会话沿用原模型、认证和项目，请求只读文件沙箱，并通过会话级配置挂载内置 `rundesk_trace` MCP；不写入长期 MCP 配置。5 个工具支持轮次、步骤、筛选、统计和完整事件分段读取。分析范围固定在创建时的原会话快照，后续提问继续同一分析会话。需要重新执行业务任务时，点击「继续原任务」。详情见 [过程与分析](docs/TRACE.md)。
+
+![任务过程 · 虚构查询演示](docs/screenshots/0.8.0/process-blocked-desktop.png)
 
 Ubuntu 安装和升级见 [Ubuntu 指南](docs/UBUNTU.md)。
 
@@ -137,7 +142,7 @@ node scripts/trace-model-test.cjs
 python3 scripts/native-smoke.py --codex /path/to/codex
 ```
 
-浏览器测试可选：在开发环境安装 Playwright 和 Chromium，然后运行 `node scripts/product-smoke.cjs`。Node/Playwright 只用于测试，不是 RunDesk 运行依赖。完整验证范围与复现命令见 [0.7.0 验证记录](docs/VALIDATION-0.7.0.md)。
+浏览器测试可选：在开发环境安装 Playwright 和 Chromium，然后运行 `node scripts/product-smoke.cjs`。Node/Playwright 只用于测试，不是 RunDesk 运行依赖。完整验证范围与复现命令见 [0.8.0 验证记录](docs/VALIDATION-0.8.0.md)。
 
 原生协议 smoke 测试使用临时 `CODEX_HOME`，验证配置、Skills 和 MCP，不请求模型推理，不修改已有 Codex 配置。
 

@@ -95,16 +95,27 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 	})
 	mux.HandleFunc("POST /api/sessions", func(w http.ResponseWriter, r *http.Request) {
 		var v struct {
-			WorkspaceID string `json:"workspaceId"`
-			InstanceID  string `json:"instanceId"`
-			Title       string
-			Model       string
-			Source      SessionSource `json:"source"`
+			WorkspaceID   string `json:"workspaceId"`
+			InstanceID    string `json:"instanceId"`
+			Title         string
+			Model         string
+			Source        SessionSource   `json:"source"`
+			TraceAnalysis *TraceSelection `json:"traceAnalysis"`
 		}
 		if !decode(w, r, &v) {
 			return
 		}
-		result, e := m.CreateSessionWithSource(v.WorkspaceID, v.Title, v.Model, v.InstanceID, v.Source)
+		var result Session
+		var e error
+		if v.TraceAnalysis != nil {
+			if v.WorkspaceID != "" || v.InstanceID != "" || v.Model != "" || v.Title != "" || v.Source.Kind != "" || v.Source.AppID != "" || v.Source.TaskID != "" {
+				e = failure(400, "invalid_trace_analysis", "轨迹分析沿用来源的模型与配置，请勿同时指定其他配置")
+			} else {
+				result, e = m.CreateTraceAnalysis(*v.TraceAnalysis)
+			}
+		} else {
+			result, e = m.CreateSessionWithSource(v.WorkspaceID, v.Title, v.Model, v.InstanceID, v.Source)
+		}
 		respond(w, result, e)
 	})
 	mux.HandleFunc("GET /api/sessions/{sid}", func(w http.ResponseWriter, r *http.Request) {

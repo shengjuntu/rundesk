@@ -1,0 +1,14 @@
+{
+  "codex": "codex-cli 0.159.2",
+  "mode": "real App Server and MCP; no inference turn sent",
+  "passed": 7,
+  "checks": [
+    "native thread/start accepts per-thread MCP override without writing config.toml",
+    "the normal pre-turn MCP reload retains the thread-scoped trace server",
+    "real Codex discovers all five read-only trace tools over stdio",
+    "Codex routes a typed tool call to the source snapshot and returns retained arguments and empty results",
+    "out-of-snapshot event access fails through the real MCP client",
+    "source database bytes and persistent Codex configuration remain unchanged",
+    "a separate ordinary thread does not inherit the analysis MCP server"
+  ]
+}
