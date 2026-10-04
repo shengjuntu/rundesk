@@ -447,6 +447,9 @@
                 plain(p),
             });
             break;
+          case "library/error":
+            this.add(e,r,{title:"文件自动保存失败",status:"failed",body:plain(d.error)});
+            break;
           case "error":
             this.add(e, r, {
               title: p.willRetry ? "原生错误 · 将重试" : "运行错误",

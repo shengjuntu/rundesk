@@ -482,7 +482,7 @@ function renderMessages() {
           (typeof previous === "string" ? previous : previous?.text || "") +
           (p.delta || ""),
       };
-    } else if (ev.method === "run/state" && ev.data.error) {
+    } else if ((ev.method === "run/state" || ev.method === "library/error") && ev.data.error) {
       items.push({
         _key: `error:${ev.id}`,
         type: "error",
@@ -501,7 +501,7 @@ function renderMessages() {
     const { _key, ...payload } = item;
     const key = JSON.stringify([state.session.id, _key, item.type]);
     let node = existing.get(key);
-    const signature = JSON.stringify(payload);
+    const signature = JSON.stringify([payload,state.deletedFilePaths||[]]);
     if (!node) {
       if (item.type === "user") node = el("div", { class: "message user" });
       else if (item.type === "agentMessage")
@@ -526,7 +526,7 @@ function renderMessages() {
                 el(
                   "div",
                   { class: "help" },
-                  `附件：${item.files.map((path) => path.split("/").pop()).join("、")}`,
+                  `附件：${item.files.map((path) => path.split("/").pop()+(state.deletedFilePaths?.includes(path)?"（文件已删除）":"")).join("、")}`,
                 ),
               ]
             : []),
@@ -817,9 +817,10 @@ async function loadFiles() {
     state.files = [];
     return;
   }
-  const files = await api(`/sessions/${id}/files`);
+  const [files,refs] = await Promise.all([api(`/sessions/${id}/files`),api("/library/deleted-references")]);
   if (state.session?.id === id) {
     state.files = files;
+    state.deletedFilePaths=refs.filter(x=>x.workspaceId===state.session.workspaceId).map(x=>x.path);renderMessages();
     if (state.tab === "files") renderDebug();
   }
 }
@@ -833,6 +834,7 @@ function fileURL(path, preview = false) {
   );
 }
 async function previewFile(file) {
+ if(file.deleted){toast("文件已删除");return;}
   $("#preview-title").textContent = file.name;
   const target = $("#preview-content");
   target.replaceChildren(el("p", { class: "loading" }, "正在加载…"));
@@ -1021,7 +1023,8 @@ $("#stop").onclick = () =>
       await refreshSessions();
     }
   });
-$("#attach").onclick = () => $("#upload").click();
+$("#nav-library").onclick=()=>RunDeskLibrary.open();
+$("#attach").onclick = () => {const wid=ws()?.id;RunDeskLibrary.menu(()=>$("#upload").click(),async f=>{if(ws()?.id!==wid)throw Error("项目已改变，请重新选择附件");const body=new FormData();body.append("libraryFileId",f.id);const result=await api(`/workspaces/${wid}/uploads`,{method:"POST",body});if(ws()?.id!==wid)return;state.uploads.push(result);renderAttachments();});};
 $("#upload").onchange = () =>
   safe(async () => {
     await uploadFiles([...$("#upload").files]);

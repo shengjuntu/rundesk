@@ -1,0 +1,14 @@
+{
+  "mode": "native demo App Server; no real model",
+  "passed": 8,
+  "checks": [
+    "plus menu uploads an attachment and automatically saves it in personal library",
+    "personal library previews uploaded text",
+    "completed conversation automatically saves generated report",
+    "another session selects and uses the same personal file through plus",
+    "personal file list fits desktop and mobile",
+    "deleting removes the library entry and marks historical attachment deleted",
+    "library files survive session deletion and page reload",
+    "no uncaught browser exceptions"
+  ]
+}

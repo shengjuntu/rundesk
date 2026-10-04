@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="/environments.css" />
     <link rel="stylesheet" href="/images.css" />
     <link rel="stylesheet" href="/builds.css" />
+<link rel="stylesheet" href="/library.css" />
     <link rel="stylesheet" href="/users.css" />
     <link rel="stylesheet" href="/diagnostics.css" />
     <link rel="stylesheet" href="/recovery.css" />
@@ -25,6 +26,7 @@
     <script defer src="/environments.js"></script>
     <script defer src="/images.js"></script>
     <script defer src="/builds.js"></script>
+<script defer src="/library.js"></script>
     <script defer src="/users.js"></script>
     <script defer src="/tasks.js"></script><script defer src="/schedules.js"></script><script defer src="/application-keys.js"></script>
     <link rel="stylesheet" href="/tasks.css"/>
@@ -55,13 +57,14 @@
         <button id="sidebar-close" class="quiet sidebar-close" aria-label="关闭会话列表">关闭</button>
         <a class="brand" href="/"
           ><span class="brandmark">r.</span><strong>RunDesk</strong
-          ><small>0.12.0</small></a
+          ><small>0.13.0</small></a
         >
         <nav class="primary-nav" aria-label="主要功能">
           <button id="nav-assistant" class="selected" aria-current="page"><span class="nav-symbol">◌</span>对话</button>
           <button id="nav-tasks"><span class="nav-symbol"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></svg></span>任务</button>
           <button id="nav-applications"><span class="nav-symbol">▦</span>应用<span id="application-count" class="nav-count"></span></button>
-          <button id="nav-users"><span class="nav-symbol">♙</span>用户与授权</button>
+          <button id="nav-library" type="button" class="nav-item">▧　我的文件</button>
+<button id="nav-users"><span class="nav-symbol">♙</span>用户与授权</button>
         </nav>
         <div class="hidden" aria-hidden="true"><select id="instance" tabindex="-1"></select><button id="manage-instances" tabindex="-1">高级配置</button></div>
         <p id="history-label" class="sidebar-label">通用助手</p>
@@ -182,7 +185,7 @@
                       id="attach"
                       type="button"
                       class="icon"
-                      title="上传附件"
+                      title="添加附件"
                     >
                       ＋</button
                     ><input

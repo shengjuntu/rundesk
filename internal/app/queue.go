@@ -20,6 +20,7 @@ type TaskSpec struct {
 	NotBefore   string        `json:"notBefore,omitempty"`
 }
 type Task struct {
+	FileOwner       string   `json:"fileOwner,omitempty"`
 	ID              string   `json:"id"`
 	SessionID       string   `json:"sessionId"`
 	RunID           string   `json:"runId"`
@@ -97,7 +98,7 @@ func (m *Manager) prepareTask(spec TaskSpec, validate bool) (Task, Session, erro
 	spec.Model = s.Model
 	spec.Source = s.Source
 	spec.Title = s.Title
-	t := Task{ID: store.ID(), SessionID: s.ID, Spec: spec, Status: "queued", Created: store.Now(), Updated: store.Now()}
+	t := Task{FileOwner: spec.Input.LibraryOwner, ID: store.ID(), SessionID: s.ID, Spec: spec, Status: "queued", Created: store.Now(), Updated: store.Now()}
 	s.TaskID = t.ID
 	return t, s, nil
 }
@@ -332,6 +333,7 @@ func (m *Manager) queueTick() {
 			m.cancel()
 			return
 		}
+		t.Spec.Input.LibraryOwner = t.FileOwner
 		_, e = m.start(t.SessionID, t.Spec.Input, nil, t.ID)
 		m.queueMu.Lock()
 		current := m.tasks[t.ID]

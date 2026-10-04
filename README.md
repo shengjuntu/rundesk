@@ -1,4 +1,6 @@
-# RunDesk 0.12.0
+# RunDesk 0.13.0
+
+新增个人文件库：上传和会话产物自动保存，输入框「＋」可从库中加入，支持搜索、预览、下载和删除。每个用户只能访问自己的库。见 [个人文件库](docs/PERSONAL-FILES.md)。
 
 新增应用镜像构建工作台：上传目录 ZIP、显式启动、查看日志、取消构建、登记成功结果。原应用目标和运行环境保持不变，更新由管理员显式执行。见 [镜像构建](docs/BUILDS.md)。
 
@@ -20,8 +22,8 @@
 
 首页直接使用通用助手；专用应用统一在「应用」页管理，一个应用对应一份专用配置。Skills 与 MCP 使用独立管理页。技能支持完整文件夹和 ZIP 导入、目录浏览与完整导出，脚本、参考资料、模板和资源文件一并保留。现有 `/api` 和 `/api/v1` 客户端继续兼容。
 
-- [本版说明](docs/RELEASE-0.12.0.md)
-- [验证记录](docs/VALIDATION-0.12.0.md)
+- [本版说明](docs/RELEASE-0.13.0.md)
+- [验证记录](docs/VALIDATION-0.13.0.md)
 - [0.6.0 API 与实例配置说明](docs/RELEASE-0.6.0.md)
 - [应用 API v1](docs/API-V1.md)
 - [OpenAPI 定义](internal/app/openapi.json)
@@ -33,7 +35,7 @@
 
 对话、Skills/MCP 配置、运行审批、调试事件与文件产物使用同一组 HTTP API。ActiveVLM 等业务前台可以通过这层 API 驱动 Codex。项目正式定名 RunDesk；当前尚未绑定 GitHub 仓库。
 
-**状态：v0.12.0 原型。** 自托管，支持管理员与应用项目成员。后端直接启动官方 `codex app-server`，没有复用 Sandbox Agent，也没有实现另一套 agent loop。
+**状态：v0.13.0 原型。** 自托管，支持管理员与应用项目成员。后端直接启动官方 `codex app-server`，没有复用 Sandbox Agent，也没有实现另一套 agent loop。
 
 ![RunDesk 工作台](docs/screenshots/0.8.0/applications-desktop.png)
 

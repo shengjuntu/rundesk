@@ -60,9 +60,10 @@ type Approval struct {
 	ResolvedAt string      `json:"resolvedAt,omitempty"`
 }
 type Input struct {
-	Text   string   `json:"text"`
-	Files  []string `json:"files"`
-	Skills []Skill  `json:"skills"`
+	LibraryOwner string   `json:"-"`
+	Text         string   `json:"text"`
+	Files        []string `json:"files"`
+	Skills       []Skill  `json:"skills"`
 }
 type Skill struct {
 	Name string `json:"name"`
@@ -82,6 +83,7 @@ type handle struct {
 	requests       map[string]Approval
 }
 type Manager struct {
+	libraryMu           sync.Mutex
 	buildMu             sync.Mutex
 	buildCancels        map[string]context.CancelFunc
 	userMu              sync.Mutex
@@ -213,6 +215,7 @@ func New(data, codex string, demo bool) (*Manager, error) {
 	if e = m.loadQueue(); e != nil {
 		return fail(e)
 	}
+	m.capturePendingPersonal()
 	m.wg.Add(1)
 	go m.buildLoop()
 	m.wg.Add(1)
@@ -717,6 +720,7 @@ func (m *Manager) onMessage(id string, h *handle, msg rpc.Message) {
 			b, _ := json.Marshal(t.Error)
 			errText = string(b)
 		}
+		m.capturePersonalRun(current)
 		changed := false
 		_ = m.update(id, func(v *Session) {
 			if v.RunID == current.RunID && active(v.Status) {
@@ -752,6 +756,9 @@ func (m *Manager) onMessage(id string, h *handle, msg rpc.Message) {
 	}
 }
 func (m *Manager) finish(id, status, errText string) {
+	if s, e := m.Session(id); e == nil {
+		m.capturePersonalRun(s)
+	}
 	if e := m.update(id, func(s *Session) { s.Status = status; s.Error = errText; s.Retry = nil }); e != nil {
 		log.Print(e)
 	}
@@ -850,6 +857,13 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 		return s, failure(429, "run_capacity", "并发已满，请稍后提交或加入任务队列")
 	}
 	if e = m.reserveProcess(id, h); e != nil {
+		return s, e
+	}
+	if in.LibraryOwner == "" && s.Source.Kind != "application" {
+		in.LibraryOwner = "administrator"
+	}
+	if e = m.preparePersonalRun(s, runID, in.LibraryOwner); e != nil {
+		m.unreserveProcess(id)
 		return s, e
 	}
 	accepted := false

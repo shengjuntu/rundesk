@@ -1,0 +1,19 @@
+{
+  "mode": "fake Docker CLI, native demo App Server, disposable user credentials; no real model",
+  "passed": 13,
+  "checks": [
+    "admin creates a project-scoped user and displays the access code once",
+    "user management fits desktop and 390px mobile",
+    "personal login opens member UI with only assigned application projects",
+    "runner executes through Docker demo, sees the process and downloads project output",
+    "member personal library auto-saves upload and generation without leaking to another project member",
+    "browser cookie cannot read another project or administrator APIs",
+    "member project and selected task survive refresh with server authorization",
+    "runner reviews and approves a native command request",
+    "member conversation fits mobile",
+    "viewer can read shared task but server rejects turns and uploads",
+    "admin disabling user invalidates active browser login and bearer access",
+    "access-code reset retires old code and returns a working replacement",
+    "no uncaught browser exceptions"
+  ]
+}

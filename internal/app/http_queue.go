@@ -21,6 +21,7 @@ func (s *Server) queueRoutes(mux *http.ServeMux) {
 		if !decode(w, r, &spec) {
 			return
 		}
+		spec.Input.LibraryOwner = personalOwner(r)
 		v, e := m.Enqueue(spec)
 		if e != nil {
 			writeErr(w, 400, e)

@@ -359,7 +359,7 @@ func (m *Manager) PrepareRecovery(id, expected string) (RecoveryPlan, error) {
 	return p, nil
 }
 
-func (m *Manager) ContinueRecovery(id string, req RecoveryRequest) (Session, error) {
+func (m *Manager) ContinueRecovery(id string, req RecoveryRequest, owners ...string) (Session, error) {
 	var p RecoveryPlan
 	if err := m.Store.Get("recovery-plan", id, &p); err != nil {
 		return Session{}, failure(409, "recovery_plan_missing", "请先重新核对恢复条件")
@@ -385,6 +385,9 @@ func (m *Manager) ContinueRecovery(id string, req RecoveryRequest) (Session, err
 		text += "\n补充说明：" + req.Note
 	}
 	in := Input{Text: text, Files: p.TaskInput.Files, Skills: p.TaskInput.Skills}
+	if len(owners) > 0 {
+		in.LibraryOwner = owners[0]
+	}
 	return m.start(id, in, &p)
 }
 
@@ -442,7 +445,7 @@ func (s *Server) recoveryRoutes(mux *http.ServeMux) {
 		if !decode(w, r, &req) {
 			return
 		}
-		v, err := s.Manager.ContinueRecovery(r.PathValue("sid"), req)
+		v, err := s.Manager.ContinueRecovery(r.PathValue("sid"), req, personalOwner(r))
 		if err != nil {
 			writeErr(w, 409, err)
 			return

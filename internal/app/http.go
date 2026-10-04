@@ -51,6 +51,7 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 	s.environmentRoutes(mux)
 	s.imageRoutes(mux)
 	s.buildRoutes(mux)
+	s.libraryRoutes(mux)
 	s.userRoutes(mux)
 	mux.HandleFunc("POST /api/login", s.login)
 	mux.HandleFunc("POST /api/logout", func(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +65,7 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 		writeJSON(w, 200, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("GET /api/meta", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, map[string]any{"name": "RunDesk", "version": Version, "apiVersions": []string{"v1"}, "demo": m.Demo, "protocol": "Codex App Server JSONL", "capabilities": []string{"instances", "sessions", "trace", "events", "approvals", "skills", "mcp", "notes", "files", "api-v1", "idempotency", "configuration-summary", "application-metadata", "reply-feedback", "applications", "skill-bundles", "task-recovery", "native-retry-status", "task-queue", "schedules", "application-credentials", "docker-environments", "image-catalog", "member-project-access"}})
+		writeJSON(w, 200, map[string]any{"name": "RunDesk", "version": Version, "apiVersions": []string{"v1"}, "demo": m.Demo, "protocol": "Codex App Server JSONL", "capabilities": []string{"instances", "sessions", "trace", "events", "approvals", "skills", "mcp", "notes", "files", "api-v1", "idempotency", "configuration-summary", "application-metadata", "reply-feedback", "applications", "skill-bundles", "task-recovery", "native-retry-status", "task-queue", "schedules", "application-credentials", "docker-environments", "image-catalog", "member-project-access", "personal-file-library"}})
 	})
 	mux.HandleFunc("GET /api/workspaces", func(w http.ResponseWriter, r *http.Request) {
 		if k := principal(r); k != nil {
@@ -156,6 +157,7 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 		if !decode(w, r, &in) {
 			return
 		}
+		in.LibraryOwner = personalOwner(r)
 		s, e := m.Start(r.PathValue("sid"), in)
 		if e != nil {
 			writeErr(w, 409, e)
@@ -465,6 +467,15 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.MultipartForm.RemoveAll()
+	if id := r.FormValue("libraryFileId"); id != "" {
+		if personalOwner(r) == "" {
+			respond(w, nil, failure(403, "personal_library_required", "个人文件仅供本人使用"))
+			return
+		}
+		v, e := s.Manager.AttachPersonal(personalOwner(r), id, ws.ID)
+		respond(w, v, e)
+		return
+	}
 	f, head, e := r.FormFile("file")
 	if e != nil {
 		writeErr(w, 400, e)
@@ -514,7 +525,17 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, e)
 		return
 	}
-	writeJSON(w, 201, map[string]any{"path": path, "name": name, "size": n})
+	result := map[string]any{"path": path, "name": name, "size": n}
+	if owner := personalOwner(r); owner != "" {
+		f, e := s.Manager.saveUploaded(owner, ws.ID, path, name)
+		if e != nil {
+			_ = root.Remove(path)
+			respond(w, nil, e)
+			return
+		}
+		result["libraryFileId"] = f.ID
+	}
+	writeJSON(w, 201, result)
 }
 func (s *Server) file(w http.ResponseWriter, r *http.Request) {
 	p := r.URL.Query().Get("path")
@@ -525,6 +546,10 @@ func (s *Server) file(w http.ResponseWriter, r *http.Request) {
 	ws, e := s.Manager.Workspace(r.PathValue("wid"))
 	if e != nil {
 		writeErr(w, 404, e)
+		return
+	}
+	if e = s.Manager.libraryPathDeleted(ws.ID, p); e != nil {
+		respond(w, nil, e)
 		return
 	}
 	root, e := os.OpenRoot(ws.Path)
@@ -597,7 +622,7 @@ func (s *Server) files(w http.ResponseWriter, r *http.Request) {
 				return e
 			}
 			if i.Mode().IsRegular() {
-				out = append(out, map[string]any{"path": path, "name": d.Name(), "size": i.Size(), "modified": i.ModTime()})
+				out = append(out, map[string]any{"path": path, "name": d.Name(), "size": i.Size(), "modified": i.ModTime(), "deleted": s.Manager.libraryPathDeleted(ws.ID, path) != nil})
 			}
 		}
 		return nil

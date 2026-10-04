@@ -24,6 +24,9 @@ func (m *Manager) validateInput(w Workspace, in Input, ids ...string) error {
 	}
 	defer root.Close()
 	for _, p := range in.Files {
+		if e := m.libraryPathDeleted(w.ID, p); e != nil {
+			return e
+		}
 		if !strings.HasPrefix(p, "uploads/") || !safePath(p) {
 			return errors.New("无效上传文件路径")
 		}

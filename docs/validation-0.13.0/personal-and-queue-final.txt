@@ -1,0 +1,1 @@
+ok  	github.com/shengjuntu/rundesk/internal/app	7.787s

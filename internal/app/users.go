@@ -387,6 +387,10 @@ func (s *Server) userGate(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+		if r.URL.Path == "/api/library" || strings.HasPrefix(r.URL.Path, "/api/library/") {
+			next.ServeHTTP(w, r)
+			return
+		}
 		if r.Method == "DELETE" || r.Method == "PUT" || r.Method == "PATCH" {
 			writeErr(w, 403, failure(403, "user_forbidden", "成员不能删除历史或修改运行配置"))
 			return
