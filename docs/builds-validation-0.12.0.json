@@ -1,0 +1,16 @@
+{
+  "mode": "fake Docker CLI; no actual image build or model",
+  "passed": 10,
+  "checks": [
+    "image page opens a separate build workbench with empty state",
+    "ZIP stores Dockerfile and skill folder without executing",
+    "successful build streams logs, registers immutable image and preserves app target; context removed",
+    "build page fits desktop and mobile",
+    "build route and logs persist after refresh",
+    "successful result opens the registered image version",
+    "build failure shows stderr and terminal status",
+    "running build can be canceled without retry",
+    "terminal record and retained files can be deleted",
+    "no uncaught browser exceptions"
+  ]
+}

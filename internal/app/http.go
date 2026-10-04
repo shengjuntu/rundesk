@@ -50,6 +50,7 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 	s.keyRoutes(mux)
 	s.environmentRoutes(mux)
 	s.imageRoutes(mux)
+	s.buildRoutes(mux)
 	s.userRoutes(mux)
 	mux.HandleFunc("POST /api/login", s.login)
 	mux.HandleFunc("POST /api/logout", func(w http.ResponseWriter, r *http.Request) {

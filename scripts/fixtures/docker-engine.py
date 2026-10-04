@@ -12,6 +12,19 @@ def finish(value=None):
  file.write_text(json.dumps(state));lock.close()
  if value is not None:print(json.dumps(value) if not isinstance(value,str) else value)
  sys.exit(0)
+if args[0]=='build':
+ import time
+ lock.close()
+ context=pathlib.Path(args[-1]);content=(pathlib.Path(args[args.index('--file')+1])).read_text()
+ print('#1 fixture build started',flush=True)
+ if 'FIXTURE_WAIT' in content:
+  while True:time.sleep(1)
+ if 'FIXTURE_FAIL' in content:
+  print('fixture dependency failed',file=sys.stderr,flush=True);sys.exit(2)
+ time.sleep(0.3)
+ image='sha256:'+hashlib.sha256(content.encode()).hexdigest()
+ pathlib.Path(args[args.index('--iidfile')+1]).write_text(image)
+ print('#2 fixture build complete',flush=True);sys.exit(0)
 if args[0]=='version':finish({'Version':'fixture-only','Os':'linux','Arch':'amd64'})
 if args[0]=='info':finish(['name=seccomp'])
 if args[:2]==['image','inspect']:

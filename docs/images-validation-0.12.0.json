@@ -1,0 +1,18 @@
+{
+  "mode": "fake local Docker CLI; no real Docker/model",
+  "passed": 12,
+  "checks": [
+    "separate image page has an explicit empty state",
+    "registration inspects without changing the application target",
+    "producer metadata and missing fields are clear; unrelated image config is hidden",
+    "selecting matching bytes pins the app without unnecessary environment updates",
+    "same tag with different bytes creates a new version and retains the old one",
+    "target selection exposes pending impact and preserves the running environment",
+    "app summary and image page expose updates and fit mobile",
+    "missing target image is visible and cannot destroy the old running container",
+    "explicit update uses selected immutable bytes after tag drift and preserves data",
+    "offline check result and image history remain available after page reload",
+    "a later successful check clears the previous failure",
+    "no implicit build, pull, image execution or browser errors"
+  ]
+}

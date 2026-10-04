@@ -82,6 +82,8 @@ type handle struct {
 	requests       map[string]Approval
 }
 type Manager struct {
+	buildMu             sync.Mutex
+	buildCancels        map[string]context.CancelFunc
 	userMu              sync.Mutex
 	executionMu         sync.RWMutex
 	environmentMu       sync.Mutex
@@ -205,9 +207,14 @@ func New(data, codex string, demo bool) (*Manager, error) {
 	if e = m.loadSchedules(); e != nil {
 		return fail(e)
 	}
+	if e = m.initBuilds(); e != nil {
+		return fail(e)
+	}
 	if e = m.loadQueue(); e != nil {
 		return fail(e)
 	}
+	m.wg.Add(1)
+	go m.buildLoop()
 	m.wg.Add(1)
 	go func() {
 		defer m.wg.Done()

@@ -229,6 +229,22 @@ for path,ops in list(paths.items()):
   projected['description']='个人访问码或成员 Cookie。grantId 必须属于当前用户；仅允许授权应用项目。viewer 仅 GET；runner 可提交、上传、审批。任务和文件在同项目共享。变更为本机执行后禁止成员写入。'
   paths.setdefault('/member/{grantId}'+path,{})[method]=projected
 
-spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':'1.10.0','description':'RunDesk 0.11.0。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
+
+schemas['ImageBuild']=obj({k:st() for k in ['id','instanceId','name','dockerfile','reference','created','updated','started','finished','contextSha256','imageId','imageVersionId','error']}|{'status':st(enum=['draft','queued','running','canceling','canceled','interrupted','failed','succeeded']),'files':integer,'contextBytes':integer,'timeoutMinutes':integer,'noCache':bool_,'logTruncated':bool_},['id','instanceId','name','status','dockerfile','reference','contextSha256','files','contextBytes','timeoutMinutes','noCache','logTruncated'])
+for path,ops in paths.items():
+ if '/builds' not in path:continue
+ for method,op in ops.items():
+  op['x-administrator-only']=True
+  op['description']='仅管理员。上传只创建 draft；显式 start 入队，全局串行。重复 start 返回同一任务，不重复执行。重启后未完成任务标为 interrupted，不自动重跑。完成后清理上下文，保留元数据与最多 4 MiB 日志。构建结果不自动选择或部署。'
+  schema=arr(ref('ImageBuild')) if method=='get' and path.endswith('/builds') else ref('ImageBuild')
+  if path.endswith('/log'):
+   schema=obj({'text':st(),'next':integer,'status':st(),'truncated':bool_},['text','next','status','truncated'])
+   op['parameters'].append({'name':'after','in':'query','schema':{'type':'integer','minimum':0,'maximum':4194304},'description':'字节偏移；每次最多返回 64 KiB，next 为后续偏移。'})
+  if method=='delete':schema=obj({'ok':bool_},['ok'])
+  op['responses']['200']['content']['application/json']['schema']=schema
+  if method=='post' and path.endswith('/builds'):
+   op['requestBody']={'required':True,'content':{'multipart/form-data':{'schema':obj({'file':st(format='binary',description='ZIP 最大 32 MiB；解压 128 MiB，4000 条目。禁止符号链接及路径穿越。'),'name':st(maxLength=120),'dockerfile':st(default='Dockerfile'),'timeoutMinutes':{'type':'integer','minimum':1,'maximum':120,'default':30},'noCache':bool_},['file'])}}}
+
+spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':'1.11.0','description':'RunDesk 0.12.0。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

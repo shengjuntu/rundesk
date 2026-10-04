@@ -222,3 +222,7 @@ OpenAPI 文档版本 1.2.0；48 个路径、57 个操作。应用执行协议仍
 ## 0.11.0 个人用户与成员入口
 
 增加 `/users` 用户管理和 `/member/catalog` 授权项目目录。个人访问码以 `rd_user_` 开头；与 `rd_app_` 应用凭据分别管理。成员通过 `/member/{grantId}/...` 使用受限的 sessions、workspaces 和 requests 接口，不访问管理员根接口。服务端强制校验当前用户授权、项目和应用来源。只读成员仅允许 GET；可执行成员只在 Docker 应用内提交。详见 [用户与项目授权](USERS.md) 与 OpenAPI 1.10.0。
+
+## 0.12.0 镜像构建
+
+新增管理员专用 `/instances/{iid}/builds` 路由，包含目录 ZIP 上传、状态、显式启动、取消、日志和删除。上传不执行；同任务重复 start 不重复构建。详见 [构建 API 与生命周期](BUILDS.md) 和 OpenAPI 1.11.0。
