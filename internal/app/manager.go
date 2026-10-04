@@ -80,6 +80,8 @@ type handle struct {
 	requests       map[string]Approval
 }
 type Manager struct {
+	scheduleMu          sync.Mutex
+	schedules           map[string]Schedule
 	queueMu             sync.Mutex
 	queueCycle          sync.Mutex
 	processMu           sync.Mutex
@@ -188,6 +190,9 @@ func New(data, codex string, demo bool) (*Manager, error) {
 			return fail(e)
 		}
 	}
+	if e = m.loadSchedules(); e != nil {
+		return fail(e)
+	}
 	if e = m.loadQueue(); e != nil {
 		return fail(e)
 	}
@@ -201,6 +206,7 @@ func New(data, codex string, demo bool) (*Manager, error) {
 			case <-ctx.Done():
 				return
 			case <-tick.C:
+				m.scheduleTick(time.Now())
 				m.queueTick()
 			}
 		}

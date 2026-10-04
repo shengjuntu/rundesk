@@ -46,13 +46,14 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 	s.messageRoutes(mux)
 	s.recoveryRoutes(mux)
  s.queueRoutes(mux)
+ s.scheduleRoutes(mux)
 	mux.HandleFunc("POST /api/login", s.login)
 	mux.HandleFunc("POST /api/logout", func(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, &http.Cookie{Name: "rundesk", Value: "", Path: "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteStrictMode})
 		writeJSON(w, 200, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("GET /api/meta", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, map[string]any{"name": "RunDesk", "version": Version, "apiVersions": []string{"v1"}, "demo": m.Demo, "protocol": "Codex App Server JSONL", "capabilities": []string{"instances", "sessions", "trace", "events", "approvals", "skills", "mcp", "notes", "files", "api-v1", "idempotency", "configuration-summary", "application-metadata", "reply-feedback", "applications", "skill-bundles", "task-recovery", "native-retry-status", "task-queue"}})
+		writeJSON(w, 200, map[string]any{"name": "RunDesk", "version": Version, "apiVersions": []string{"v1"}, "demo": m.Demo, "protocol": "Codex App Server JSONL", "capabilities": []string{"instances", "sessions", "trace", "events", "approvals", "skills", "mcp", "notes", "files", "api-v1", "idempotency", "configuration-summary", "application-metadata", "reply-feedback", "applications", "skill-bundles", "task-recovery", "native-retry-status", "task-queue", "schedules"}})
 	})
 	mux.HandleFunc("GET /api/workspaces", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, m.Workspaces()) })
 	mux.HandleFunc("POST /api/workspaces", func(w http.ResponseWriter, r *http.Request) {
