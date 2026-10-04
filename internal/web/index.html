@@ -18,6 +18,8 @@
     <script defer src="/reliability.js"></script>
     <script defer src="/configuration.js"></script>
     <script defer src="/applications.js"></script>
+    <script defer src="/tasks.js"></script>
+    <link rel="stylesheet" href="/tasks.css"/>
     <script defer src="/skill-bundles.js"></script>
     <script defer src="/trace-model.js"></script>
     <script defer src="/trace-process.js"></script>
@@ -45,10 +47,11 @@
         <button id="sidebar-close" class="quiet sidebar-close" aria-label="关闭会话列表">关闭</button>
         <a class="brand" href="/"
           ><span class="brandmark">r.</span><strong>RunDesk</strong
-          ><small>0.8.4</small></a
+          ><small>0.9.0</small></a
         >
         <nav class="primary-nav" aria-label="主要功能">
           <button id="nav-assistant" class="selected" aria-current="page"><span class="nav-symbol">◌</span>对话</button>
+          <button id="nav-tasks"><span class="nav-symbol">◷</span>任务</button>
           <button id="nav-applications"><span class="nav-symbol">▦</span>应用<span id="application-count" class="nav-count"></span></button>
         </nav>
         <div class="hidden" aria-hidden="true"><select id="instance" tabindex="-1"></select><button id="manage-instances" tabindex="-1">高级配置</button></div>
@@ -108,6 +111,7 @@
         <div id="demo-banner" class="demo-banner hidden">
           演示模式 · 使用协议模拟器，不调用真实模型。真实运行请去掉 --demo。
         </div>
+        <section id="tasks-page" class="tasks-page hidden" aria-label="任务队列"><div class="page-intro"><div><p class="eyebrow">BACKGROUND TASKS</p><h1>任务</h1><p id="queue-summary"></p></div><button id="new-task" class="primary">新建任务</button></div><div class="task-toolbar"><select id="task-filter" aria-label="任务状态"><option value="">所有状态</option><option value="queued">排队中</option><option value="waiting">等待审批</option><option value="completed">已完成</option><option value="failed">失败</option><option value="unconfirmed">待核对</option></select><button id="queue-toggle">暂停调度</button><button id="queue-settings">并发设置</button><button id="tasks-refresh">刷新</button></div><p id="tasks-error" class="tasks-error" role="status"></p><div id="task-list"></div><button id="tasks-more" class="hidden">加载更多</button><div id="schedule-list" class="schedule-list"></div></section>
         <section id="applications-page" class="applications-page hidden" aria-label="应用管理"></section>
         <section id="capability-page" class="capability-page hidden" aria-label="能力管理"></section>
         <div class="main-row">
@@ -130,7 +134,7 @@
             </div>
             <div id="capability-strip" class="capability-strip"></div>
             <div id="recovery-banner" class="recovery-banner hidden" aria-live="polite"></div>
-          <div id="analysis-banner" class="analysis-banner hidden"></div>
+          <div id="queue-banner" class="queue-banner hidden" role="status"></div><div id="analysis-banner" class="analysis-banner hidden"></div>
             <div id="runtime-strip" class="runtime-strip hidden"></div>
             <div id="messages" class="messages">
               <div class="welcome">

@@ -26,6 +26,7 @@ type Workspace struct {
 	Revision int    `json:"revision"`
 }
 type Session struct {
+	TaskID      string          `json:"taskId,omitempty"`
 	ID          string          `json:"id"`
 	WorkspaceID string          `json:"workspaceId"`
 	InstanceID  string          `json:"instanceId"`
@@ -79,25 +80,31 @@ type handle struct {
 	requests       map[string]Approval
 }
 type Manager struct {
-	applicationMu   sync.Mutex
-	skillMu         sync.Mutex
-	Store           *store.Store
-	Data            string
-	Codex           string
-	Demo            bool
-	mu              sync.Mutex
-	sessions        map[string]*Session
-	handles         map[string]*handle
-	instances       map[string]*Instance
-	workspaces      map[string]*Workspace
-	ctx             context.Context
-	cancel          context.CancelFunc
-	wg              sync.WaitGroup
-	loaded          atomic.Int32
-	runtimeMu       sync.Mutex
-	requestMu       sync.Mutex
-	requestOwner    string
-	pendingRequests map[string]bool
+	queueMu             sync.Mutex
+	queueCycle          sync.Mutex
+	processMu           sync.Mutex
+	processReservations map[string]bool
+	queue               QueueSettings
+	tasks               map[string]Task
+	applicationMu       sync.Mutex
+	skillMu             sync.Mutex
+	Store               *store.Store
+	Data                string
+	Codex               string
+	Demo                bool
+	mu                  sync.Mutex
+	sessions            map[string]*Session
+	handles             map[string]*handle
+	instances           map[string]*Instance
+	workspaces          map[string]*Workspace
+	ctx                 context.Context
+	cancel              context.CancelFunc
+	wg                  sync.WaitGroup
+	loaded              atomic.Int32
+	runtimeMu           sync.Mutex
+	requestMu           sync.Mutex
+	requestOwner        string
+	pendingRequests     map[string]bool
 }
 
 func New(data, codex string, demo bool) (*Manager, error) {
@@ -181,6 +188,23 @@ func New(data, codex string, demo bool) (*Manager, error) {
 			return fail(e)
 		}
 	}
+	if e = m.loadQueue(); e != nil {
+		return fail(e)
+	}
+	m.wg.Add(1)
+	go func() {
+		defer m.wg.Done()
+		tick := time.NewTicker(500 * time.Millisecond)
+		defer tick.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-tick.C:
+				m.queueTick()
+			}
+		}
+	}()
 	m.wg.Add(1)
 	go func() {
 		defer m.wg.Done()
@@ -292,7 +316,7 @@ func (m *Manager) CreateSession(wid, title, model string, ids ...string) (Sessio
 func (m *Manager) CreateSessionWithSource(wid, title, model, iid string, source SessionSource) (Session, error) {
 	return m.createSession(wid, title, model, iid, source, nil)
 }
-func (m *Manager) createSession(wid, title, model, iid string, source SessionSource, origin *TraceOrigin) (Session, error) {
+func (m *Manager) prepareSession(wid, title, model, iid string, source SessionSource, origin *TraceOrigin) (Session, error) {
 	if err := source.validate(); err != nil {
 		return Session{}, err
 	}
@@ -313,6 +337,13 @@ func (m *Manager) createSession(wid, title, model, iid string, source SessionSou
 		model = i.DefaultModel
 	}
 	s := Session{Source: source, TraceOrigin: origin, ID: store.ID(), InstanceID: i.ID, WorkspaceID: wid, Title: title, Model: model, Status: "idle", Created: store.Now(), Updated: store.Now()}
+	return s, nil
+}
+func (m *Manager) createSession(wid, title, model, iid string, source SessionSource, origin *TraceOrigin) (Session, error) {
+	s, e := m.prepareSession(wid, title, model, iid, source, origin)
+	if e != nil {
+		return s, e
+	}
 	if e := m.Store.Put("session", s.ID, s); e != nil {
 		return s, e
 	}
@@ -436,10 +467,15 @@ func (m *Manager) connect(id string, w Workspace, h *handle, ids ...string) (*rp
 	if c != nil {
 		return c, nil
 	}
-	if m.loaded.Add(1) > 16 {
-		m.loaded.Add(-1)
-		return nil, failure(503, "connection_limit", "最多加载 16 个会话/配置连接；请结束不再需要的任务或重新加载空闲应用连接")
+	m.processMu.Lock()
+	reserved := m.processReservations[id]
+	delete(m.processReservations, id)
+	if !reserved && int(m.loaded.Load())+len(m.processReservations) >= 16 {
+		m.processMu.Unlock()
+		return nil, failure(503, "connection_limit", "最多加载 16 个会话/配置连接")
 	}
+	m.loaded.Add(1)
+	m.processMu.Unlock()
 	runtimeKey := m.beginRuntime(id, w, i)
 	c, e := rpc.Start(m.command(w, i), func(msg rpc.Message) { m.onMessage(id, h, msg) }, func(dir string, msg rpc.Message) {
 		m.event(id, dir, msg.Method, msg)
@@ -688,7 +724,7 @@ func (m *Manager) expire(id string, h *handle, runs ...string) {
 	m.event(id, "internal", "approval/expired", map[string]string{})
 }
 func (m *Manager) Start(id string, in Input) (Session, error) { return m.start(id, in, nil) }
-func (m *Manager) start(id string, in Input, recovery *RecoveryPlan) (Session, error) {
+func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...string) (Session, error) {
 	if m.ctx.Err() != nil {
 		return Session{}, failure(503, "runtime_unavailable", "后台正在停止或事件记录已失效，任务未提交")
 	}
@@ -732,13 +768,52 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan) (Session, e
 			return s, e
 		}
 	}
+	m.queueMu.Lock()
+	defer m.queueMu.Unlock()
+	taskID := ""
+	if len(queued) > 0 {
+		taskID = queued[0]
+	}
+	for _, t := range m.tasks {
+		if t.SessionID != id {
+			continue
+		}
+		if (t.Status == "queued" || t.Status == "dispatching") && t.ID != taskID {
+			return s, failure(409, "task_reserved", "请先取消排队任务")
+		}
+		if t.ID != taskID {
+			if e = m.reconcileTaskLocked(t); e != nil {
+				return s, e
+			}
+		}
+	}
+	runID := store.ID()
+	if taskID != "" {
+		t, ok := m.tasks[taskID]
+		if !ok || t.SessionID != id || t.Status != "dispatching" || t.CancelRequested {
+			return s, failure(409, "task_canceled", "任务已经取消")
+		}
+		runID = t.RunID
+	}
+	if !m.capacityLocked(s.InstanceID) {
+		return s, failure(429, "run_capacity", "并发已满，请稍后提交或加入任务队列")
+	}
+	if e = m.reserveProcess(id, h); e != nil {
+		return s, e
+	}
+	accepted := false
+	defer func() {
+		if !accepted {
+			m.unreserveProcess(id)
+		}
+	}()
 	h.mu.Lock()
 	h.canceled = false
 	h.previousTurn = s.TurnID
 	h.last = time.Now()
 	h.mu.Unlock()
 	if e = m.update(id, func(s *Session) {
-		s.RunID = store.ID()
+		s.RunID = runID
 		s.TurnID = ""
 		s.Status = "starting"
 		s.Error = ""
@@ -759,7 +834,7 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan) (Session, e
 	}
 	s, _ = m.Session(id)
 	instanceAtSubmit, _ := m.Instance(s.InstanceID)
-	record := map[string]any{"instanceRevision": instanceAtSubmit.Revision, "runId": s.RunID, "input": in, "notes": w.Notes, "notesRevision": w.Revision, "cwd": w.Path, "instanceId": s.InstanceID, "model": s.Model}
+	record := map[string]any{"taskId": taskID, "instanceRevision": instanceAtSubmit.Revision, "runId": s.RunID, "input": in, "notes": w.Notes, "notesRevision": w.Revision, "cwd": w.Path, "instanceId": s.InstanceID, "model": s.Model}
 	if recovery != nil {
 		record["recovery"] = s.Recovery
 		record["recoveryInput"] = recovery.TaskInput
@@ -772,10 +847,12 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan) (Session, e
 		return s, &apiError{Status: 503, Code: "journal_unavailable", Message: "任务输入无法写入事件记录，未发送给 Codex；请检查数据目录和数据库状态", Cause: e}
 	}
 	m.wg.Add(1)
+	accepted = true
 	go func() { defer m.wg.Done(); h.op.Lock(); defer h.op.Unlock(); m.run(s, w, h, in, recovery) }()
 	return s, nil
 }
 func (m *Manager) run(s Session, w Workspace, h *handle, in Input, recovery *RecoveryPlan) {
+	defer m.unreserveProcess(s.ID)
 	fail := func(e error) {
 		h.mu.Lock()
 		c := h.client

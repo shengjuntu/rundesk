@@ -17,7 +17,7 @@ import (
 	"github.com/shengjuntu/rundesk/internal/store"
 )
 
-const Version = "0.8.4"
+const Version = "0.9.0"
 
 type apiError struct {
 	Status        int
@@ -144,7 +144,7 @@ func supportsIdempotency(r *http.Request) bool {
 		return false
 	}
 	p := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	return len(p) == 2 && (p[1] == "instances" || p[1] == "workspaces" || p[1] == "sessions") || len(p) == 4 && p[1] == "sessions" && (p[3] == "turns" || p[3] == "recover")
+	return len(p) == 2 && (p[1] == "instances" || p[1] == "workspaces" || p[1] == "sessions" || p[1] == "tasks") || len(p) == 4 && p[1] == "sessions" && (p[3] == "turns" || p[3] == "recover")
 }
 
 type recordedResponse struct {

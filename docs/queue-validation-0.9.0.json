@@ -1,0 +1,13 @@
+{
+  "mode": "native demo JSONL, no live model",
+  "passed": 7,
+  "checks": [
+    "paused queue persists a new task from the UI",
+    "reserved session shows queue ownership and disables direct submission",
+    "native demo approval consumes capacity and task cancellation reaches interrupted",
+    "concurrency revision is saved",
+    "route and stored task survive page reload",
+    "mobile page fits 390px width",
+    "no uncaught browser error"
+  ]
+}

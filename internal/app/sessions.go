@@ -34,7 +34,7 @@ func (m *Manager) PatchSession(id string, p SessionPatch) (Session, error) {
 	if e != nil {
 		return s, e
 	}
-	if p.Archived != nil && *p.Archived && active(s.Status) {
+	if p.Archived != nil && *p.Archived && (active(s.Status) || m.queueReserved(id)) {
 		return s, errors.New("运行中的会话不能归档，请先停止任务")
 	}
 	e = m.update(id, func(s *Session) {
@@ -70,7 +70,7 @@ func (m *Manager) DeleteSession(id string) error {
 	if e != nil {
 		return e
 	}
-	if active(s.Status) {
+	if active(s.Status) || m.queueReserved(id) {
 		return errors.New("运行中的会话不能删除，请先停止任务")
 	}
 	h.mu.Lock()

@@ -79,6 +79,7 @@ function renderStatus() {
   window.RunDeskTraceUI?.syncComposer();
   renderAnalysisBanner();
   window.RunDeskRecovery?.render();
+ window.RunDeskTasks?.banner();
 }
 function renderAnalysisBanner() {
   const host=$("#analysis-banner"),origin=state.session?.traceOrigin;

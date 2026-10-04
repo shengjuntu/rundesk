@@ -41,8 +41,15 @@ schemas={
  'MessageFeedback':obj({'sessionId':st(),'eventId':integer,'rating':st(enum=['up','down','none']),'comment':st(),'updated':st()},['sessionId','eventId','rating','comment','updated']),
  'NativeObject':obj(extra=True),
 }
+schemas.update({
+ 'TaskSpec':obj({'title':st(maxLength=120),'workspaceId':st(),'instanceId':st(),'model':st(),'source':ref('Source'),'input':ref('Input'),'notBefore':st(format='date-time')},['workspaceId','input']),
+ 'Task':obj({k:st() for k in ['id','sessionId','runId','status','reason','created','updated','startedAt','finishedAt','scheduleId','scheduledFor']}|{'spec':ref('TaskSpec'),'cancelRequested':bool_},['id','sessionId','status','spec']),
+ 'QueueSettings':obj({'revision':integer,'paused':bool_,'maxConcurrent':{'type':'integer','minimum':1,'maximum':16},'perInstance':{'type':'object','additionalProperties':{'type':'integer','minimum':1,'maximum':16}}},['revision','paused','maxConcurrent','perInstance']),
+ 'TaskPage':obj({'items':arr(ref('Task')),'nextCursor':st()},['items','nextCursor'])
+})
 paths={}
 requests={
+ ('PUT','/queue'):ref('QueueSettings'),('POST','/tasks'):ref('TaskSpec'),
  ('PUT','/applications/{appId}'):ref('ApplicationInput'),
  ('PUT','/sessions/{sid}/messages/{eid}/feedback'):ref('FeedbackInput'),
  ('POST','/login'):obj({'token':st()},['token']),
@@ -60,7 +67,7 @@ requests={
  ('PUT','/workspaces/{wid}/mcp/{name}'):obj({'version':st(),'config':obj(extra=True),'remove':bool_},['version']),
  ('POST','/workspaces/{wid}/mcp/import'):obj({'version':st(),'bundle':obj(extra=True),'overwrite':bool_},['version','bundle']),
 }
-idempotent={('POST',p) for p in ['/instances','/workspaces','/sessions','/sessions/{sid}/turns','/sessions/{sid}/recover']}
+idempotent={('POST',p) for p in ['/instances','/workspaces','/sessions','/sessions/{sid}/turns','/sessions/{sid}/recover','/tasks']}
 summaries={
  '/sessions/{sid}/recovery/check':'核对当前失败或中断轮次；15 分钟内有效，每会话只保留最近一次核对',
  '/sessions/{sid}/recover':'按服务端核对结果继续原会话；重新核对原生状态，新轮次关联失败来源',
@@ -77,6 +84,9 @@ for file in sorted((root/'internal/app').glob('*.go')):
   if '/skill-bundles' in path:
    query('scope',st(enum=['instance','project'],default='instance'))
    if path.endswith('/skill-bundles'):query('name',required=True);query('replace',st(enum=['0','1'],default='0'))
+  if path=='/tasks' and method=='GET':
+   for n in ['status','appId','instanceId','cursor']:query(n)
+   query('limit',integer)
   if path=='/sessions':
    if method=='GET':
     for n in ['instanceId','workspaceId','appId','taskId']:query(n)
@@ -95,6 +105,9 @@ for file in sorted((root/'internal/app').glob('*.go')):
   params.append({'name':'X-Request-ID','in':'header','schema':st(),'description':'可选关联编号；响应回传有效编号，否则由服务器生成。'})
   if (method,path) in idempotent:params.append({'name':'Idempotency-Key','in':'header','required':True,'schema':st(pattern='^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$'),'description':'每个逻辑操作唯一。相同请求重试必须复用，不能将 Key 用于不同请求。'})
   response=ref('NativeObject'); status='202' if path.endswith(('/turns','/recover')) else '200'
+  if path=='/tasks' and method=='GET':
+   for n in ['status','appId','instanceId','cursor']:query(n)
+   query('limit',integer)
   if path=='/sessions':response=arr(ref('Session')) if method=='GET' else ref('Session')
   if path=='/sessions/{sid}' and method!='DELETE' or path.endswith(('/turns','/recover')):response=ref('Session')
   if path.endswith('/recovery/check'):response=ref('RecoveryPlan')
@@ -114,6 +127,9 @@ for file in sorted((root/'internal/app').glob('*.go')):
   if path.endswith('/events'):response=arr(ref('Event'))
   if path.endswith('/approvals') or path.endswith('/files') or path=='/instances/{iid}/runtime':response=arr(ref('NativeObject'))
   if path.endswith('/events/{eid}'):response=ref('Event')
+  if path=='/queue':response=ref('QueueSettings')
+  if path=='/tasks':response=ref('TaskPage') if method=='GET' else ref('Task');status='202' if method=='POST' else '200'
+  if path.startswith('/tasks/'):response=ref('Task')
   content={'application/json':{'schema':response}}
   if path.endswith('/events'):content['text/event-stream']={'schema':st(),'example':'id: 123\ndata: {"id":123,"sessionId":"...","method":"run/state","data":{}}\n\n'}
   if path.endswith('/file') or path.endswith('/export') and not '/mcp/' in path:content={'application/octet-stream':{'schema':st(format='binary')}}
@@ -126,6 +142,6 @@ for file in sorted((root/'internal/app').glob('*.go')):
   if path.endswith('/uploads'):op['requestBody']={'required':True,'content':{'multipart/form-data':{'schema':obj({'file':st(format='binary')},['file'])}}}
   if path.endswith('/skill-bundles') and method=='POST':op['requestBody']={'required':True,'content':{'application/zip':{'schema':st(format='binary')},'multipart/form-data':{'schema':{'type':'object','additionalProperties':st(format='binary'),'description':'每个 multipart 字段名为文件相对路径；根部 SKILL.md 或一层技能文件夹。最多 1000 文件、解压后 32 MiB。'}}}}
   paths.setdefault(path,{})[method.lower()]=op
-spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':'1.4.0','description':'RunDesk 0.8.4。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。Source 是调用方声明的业务标签，不代表应用鉴权或隔离。此版本继续使用后台 Token/Cookie。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
+spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':'1.5.0','description':'RunDesk 0.9.0。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。Source 是调用方声明的业务标签，不代表应用鉴权或隔离。此版本继续使用后台 Token/Cookie。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

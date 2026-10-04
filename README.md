@@ -1,4 +1,6 @@
-# RunDesk 0.8.4
+# RunDesk 0.9.0
+
+新增持久化任务队列，支持暂停调度、延后执行、取消、共享并发额度。普通对话也遵循同一并发限制。见 [队列说明](docs/QUEUE.md)。
 
 失败或中断的任务可「核对并继续」：先查看原生状态、已有步骤和文件，再在原会话继续剩余工作。Codex 自身重试会显示进度，恢复轮次与失败来源在时间线上关联。见 [恢复说明](docs/RECOVERY.md)。
 
@@ -6,8 +8,8 @@
 
 首页直接使用通用助手；专用应用统一在「应用」页管理，一个应用对应一份专用配置。Skills 与 MCP 使用独立管理页。技能支持完整文件夹和 ZIP 导入、目录浏览与完整导出，脚本、参考资料、模板和资源文件一并保留。现有 `/api` 和 `/api/v1` 客户端继续兼容。
 
-- [本版说明](docs/RELEASE-0.8.4.md)
-- [验证记录](docs/VALIDATION-0.8.4.md)
+- [本版说明](docs/RELEASE-0.9.0.md)
+- [验证记录](docs/VALIDATION-0.9.0.md)
 - [0.6.0 API 与实例配置说明](docs/RELEASE-0.6.0.md)
 - [应用 API v1](docs/API-V1.md)
 - [OpenAPI 定义](internal/app/openapi.json)
@@ -19,7 +21,7 @@
 
 对话、Skills/MCP 配置、运行审批、调试事件与文件产物使用同一组 HTTP API。ActiveVLM 等业务前台可以通过这层 API 驱动 Codex。项目正式定名 RunDesk；当前尚未绑定 GitHub 仓库。
 
-**状态：v0.8.4 原型。** 单用户、自托管。后端直接启动官方 `codex app-server`，没有复用 Sandbox Agent，也没有实现另一套 agent loop。
+**状态：v0.9.0 原型。** 单用户、自托管。后端直接启动官方 `codex app-server`，没有复用 Sandbox Agent，也没有实现另一套 agent loop。
 
 ![RunDesk 工作台](docs/screenshots/0.8.0/applications-desktop.png)
 
@@ -158,7 +160,7 @@ python3 scripts/native-smoke.py --codex /path/to/codex
 
 ## 暂未覆盖
 
-多用户权限与隔离、容器调度、配额、任务队列、Cron、HTTP 幂等提交键、对已有 Codex 原生历史的批量导入、全量原生记忆管理、任意 MCP 工具的独立交互测试、完整富文本编辑器、自动更新和生产运维。后端终止 Codex 后，其外部工具进程的清理行为依赖操作系统和 Codex，生产部署建议使用服务管理器/容器管理整个进程树。
+多用户权限与隔离、Cron、对已有 Codex 原生历史的批量导入、全量原生记忆管理、任意 MCP 工具的独立交互测试、完整富文本编辑器、自动更新和生产运维。后端终止 Codex 后，其外部工具进程的清理行为依赖操作系统和 Codex，生产部署建议使用操作系统服务管理器管理整个进程树；本项目不需要容器。
 
 本版本适合作为可运行的开发起点；不建议直接作为公网多租户服务。
 
