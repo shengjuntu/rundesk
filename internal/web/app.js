@@ -166,6 +166,8 @@ async function boot() {
   if (state.workspaces.some((w) => w.id === last)) $("#workspace").value = last;
   updateWorkspaceLabel();
   await refreshSessions();
+  const linkedSession=new URLSearchParams(location.search).get("session");
+  if(linkedSession){const linked=await api("/sessions/"+encodeURIComponent(linkedSession));renderInstanceOptions(linked.instanceId);$("#workspace").value=linked.workspaceId;updateWorkspaceLabel();await refreshSessions();setProductPage("conversation");await selectSession(linked.id);return;}
   if (await restoreProductRoute()) return;
   setProductPage("conversation");
   const sid =

@@ -83,6 +83,8 @@ type handle struct {
 	requests       map[string]Approval
 }
 type Manager struct {
+	collabMu            sync.Mutex
+	a2aMu               sync.Mutex
 	libraryMu           sync.Mutex
 	buildMu             sync.Mutex
 	buildCancels        map[string]context.CancelFunc
@@ -216,6 +218,8 @@ func New(data, codex string, demo bool) (*Manager, error) {
 		return fail(e)
 	}
 	m.capturePendingPersonal()
+	m.wg.Add(1)
+	go m.collaborationLoop()
 	m.wg.Add(1)
 	go m.buildLoop()
 	m.wg.Add(1)

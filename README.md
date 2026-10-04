@@ -1,3 +1,7 @@
+# RunDesk 0.14.0 协作预览
+
+新增管理员协作入口、现有 Agent 能力登记、负责人委派与结果回收、A2A 0.3 JSON-RPC、Gitea Issue 黑板。见 [协作说明](docs/COLLABORATION.md)。升级时继续使用原数据目录；先备份 state.db 和配置。Gitea 密钥通过服务端环境变量提供。
+
 # RunDesk 0.13.0
 
 新增个人文件库：上传和会话产物自动保存，输入框「＋」可从库中加入，支持搜索、预览、下载和删除。每个用户只能访问自己的库。见 [个人文件库](docs/PERSONAL-FILES.md)。

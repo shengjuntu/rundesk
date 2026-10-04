@@ -266,6 +266,22 @@ for path,ops in paths.items():
  op=ops.get('post')
  if op:op['requestBody']['content']['multipart/form-data']['schema']={'oneOf':[obj({'file':st(format='binary')},['file']),obj({'libraryFileId':st(description='本人的个人库文件；服务端复制到当前获授权工作区，不新增库条目。')},['libraryFileId'])]}
 
-spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':'1.12.0','description':'RunDesk 0.13.0。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
+# Collaboration management is administrator-only; A2A also accepts scoped application keys.
+for path, methods in {
+ '/collaboration/config':['get','put'], '/collaboration/discover':['post'],
+ '/collaborations':['get','post'], '/collaborations/{cid}':['get'],
+ '/collaborations/{cid}/actions':['post'], '/collaborations/{cid}/board':['post'],
+ '/collaborations/{cid}/work/{work}/reconcile':['post'],
+ '/a2a/{agent}/agent-card.json':['get'], '/a2a/{agent}':['post'],
+}.items():
+ paths[path]={}
+ for method in methods:
+  params=[{'name':name,'in':'path','required':True,'schema':st()} for name in __import__('re').findall(r'\{(\w+)\}',path)]
+  op={'summary':'A2A 0.3 JSON-RPC' if '/a2a/' in path else '协作任务与黑板', 'description':'具体契约见 docs/COLLABORATION.md。协作管理仅限管理员；A2A 仅允许绑定相同应用配置和项目的应用凭据，任务按凭据隔离。', 'parameters':params,'responses':{'200':{'description':'成功；A2A 协议错误在 JSON-RPC error 中返回','content':{'application/json':{'schema':obj(extra=True)}}},'403':{'description':'禁止访问'}}}
+  if method in ['post','put']:op['requestBody']={'required':True,'content':{'application/json':{'schema':obj(extra=True)}}}
+  if path=='/collaborations' and method=='get':op['responses']['200']['content']['application/json']['schema']=arr(obj(extra=True))
+  paths[path][method]=op
+
+spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':'1.13.0','description':'RunDesk 0.14.0。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

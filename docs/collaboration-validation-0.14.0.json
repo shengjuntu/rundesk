@@ -1,0 +1,13 @@
+{
+  "mode": "demo App Server; no live model or Gitea",
+  "checks": [
+    "register existing configuration without role management",
+    "create collaboration through UI",
+    "invalid demo controller response stops instead of inventing delegation",
+    "task links open exact session for review and approvals",
+    "cancel persists and is visible",
+    "mobile page fits viewport",
+    "no browser exceptions"
+  ],
+  "passed": 7
+}

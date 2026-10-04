@@ -52,6 +52,7 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 	s.imageRoutes(mux)
 	s.buildRoutes(mux)
 	s.libraryRoutes(mux)
+	s.collaborationRoutes(mux)
 	s.userRoutes(mux)
 	mux.HandleFunc("POST /api/login", s.login)
 	mux.HandleFunc("POST /api/logout", func(w http.ResponseWriter, r *http.Request) {
@@ -65,7 +66,7 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 		writeJSON(w, 200, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("GET /api/meta", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, map[string]any{"name": "RunDesk", "version": Version, "apiVersions": []string{"v1"}, "demo": m.Demo, "protocol": "Codex App Server JSONL", "capabilities": []string{"instances", "sessions", "trace", "events", "approvals", "skills", "mcp", "notes", "files", "api-v1", "idempotency", "configuration-summary", "application-metadata", "reply-feedback", "applications", "skill-bundles", "task-recovery", "native-retry-status", "task-queue", "schedules", "application-credentials", "docker-environments", "image-catalog", "member-project-access", "personal-file-library"}})
+		writeJSON(w, 200, map[string]any{"name": "RunDesk", "version": Version, "apiVersions": []string{"v1"}, "demo": m.Demo, "protocol": "Codex App Server JSONL", "capabilities": []string{"instances", "sessions", "trace", "events", "approvals", "skills", "mcp", "notes", "files", "api-v1", "idempotency", "configuration-summary", "application-metadata", "reply-feedback", "applications", "skill-bundles", "task-recovery", "native-retry-status", "task-queue", "schedules", "application-credentials", "docker-environments", "image-catalog", "member-project-access", "personal-file-library", "collaboration", "a2a-0.3-jsonrpc", "gitea-blackboard"}})
 	})
 	mux.HandleFunc("GET /api/workspaces", func(w http.ResponseWriter, r *http.Request) {
 		if k := principal(r); k != nil {

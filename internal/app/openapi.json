@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Application API",
-    "version": "1.12.0",
-    "description": "RunDesk 0.13.0。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。"
+    "version": "1.13.0",
+    "description": "RunDesk 0.14.0。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。"
   },
   "servers": [
     {
@@ -4360,6 +4360,433 @@
           "read"
         ],
         "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
+      }
+    },
+    "/collaboration/config": {
+      "get": {
+        "summary": "协作任务与黑板",
+        "description": "具体契约见 docs/COLLABORATION.md。协作管理仅限管理员；A2A 仅允许绑定相同应用配置和项目的应用凭据，任务按凭据隔离。",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "成功；A2A 协议错误在 JSON-RPC error 中返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "禁止访问"
+          }
+        }
+      },
+      "put": {
+        "summary": "协作任务与黑板",
+        "description": "具体契约见 docs/COLLABORATION.md。协作管理仅限管理员；A2A 仅允许绑定相同应用配置和项目的应用凭据，任务按凭据隔离。",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "成功；A2A 协议错误在 JSON-RPC error 中返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "禁止访问"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collaboration/discover": {
+      "post": {
+        "summary": "协作任务与黑板",
+        "description": "具体契约见 docs/COLLABORATION.md。协作管理仅限管理员；A2A 仅允许绑定相同应用配置和项目的应用凭据，任务按凭据隔离。",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "成功；A2A 协议错误在 JSON-RPC error 中返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "禁止访问"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collaborations": {
+      "get": {
+        "summary": "协作任务与黑板",
+        "description": "具体契约见 docs/COLLABORATION.md。协作管理仅限管理员；A2A 仅允许绑定相同应用配置和项目的应用凭据，任务按凭据隔离。",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "成功；A2A 协议错误在 JSON-RPC error 中返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {},
+                    "required": [],
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "禁止访问"
+          }
+        }
+      },
+      "post": {
+        "summary": "协作任务与黑板",
+        "description": "具体契约见 docs/COLLABORATION.md。协作管理仅限管理员；A2A 仅允许绑定相同应用配置和项目的应用凭据，任务按凭据隔离。",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "成功；A2A 协议错误在 JSON-RPC error 中返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "禁止访问"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collaborations/{cid}": {
+      "get": {
+        "summary": "协作任务与黑板",
+        "description": "具体契约见 docs/COLLABORATION.md。协作管理仅限管理员；A2A 仅允许绑定相同应用配置和项目的应用凭据，任务按凭据隔离。",
+        "parameters": [
+          {
+            "name": "cid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；A2A 协议错误在 JSON-RPC error 中返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "禁止访问"
+          }
+        }
+      }
+    },
+    "/collaborations/{cid}/actions": {
+      "post": {
+        "summary": "协作任务与黑板",
+        "description": "具体契约见 docs/COLLABORATION.md。协作管理仅限管理员；A2A 仅允许绑定相同应用配置和项目的应用凭据，任务按凭据隔离。",
+        "parameters": [
+          {
+            "name": "cid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；A2A 协议错误在 JSON-RPC error 中返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "禁止访问"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collaborations/{cid}/board": {
+      "post": {
+        "summary": "协作任务与黑板",
+        "description": "具体契约见 docs/COLLABORATION.md。协作管理仅限管理员；A2A 仅允许绑定相同应用配置和项目的应用凭据，任务按凭据隔离。",
+        "parameters": [
+          {
+            "name": "cid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；A2A 协议错误在 JSON-RPC error 中返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "禁止访问"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collaborations/{cid}/work/{work}/reconcile": {
+      "post": {
+        "summary": "协作任务与黑板",
+        "description": "具体契约见 docs/COLLABORATION.md。协作管理仅限管理员；A2A 仅允许绑定相同应用配置和项目的应用凭据，任务按凭据隔离。",
+        "parameters": [
+          {
+            "name": "cid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "work",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；A2A 协议错误在 JSON-RPC error 中返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "禁止访问"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/a2a/{agent}/agent-card.json": {
+      "get": {
+        "summary": "A2A 0.3 JSON-RPC",
+        "description": "具体契约见 docs/COLLABORATION.md。协作管理仅限管理员；A2A 仅允许绑定相同应用配置和项目的应用凭据，任务按凭据隔离。",
+        "parameters": [
+          {
+            "name": "agent",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；A2A 协议错误在 JSON-RPC error 中返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "禁止访问"
+          }
+        }
+      }
+    },
+    "/a2a/{agent}": {
+      "post": {
+        "summary": "A2A 0.3 JSON-RPC",
+        "description": "具体契约见 docs/COLLABORATION.md。协作管理仅限管理员；A2A 仅允许绑定相同应用配置和项目的应用凭据，任务按凭据隔离。",
+        "parameters": [
+          {
+            "name": "agent",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；A2A 协议错误在 JSON-RPC error 中返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "禁止访问"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": true
+              }
+            }
+          }
+        }
       }
     },
     "/docker/status": {
