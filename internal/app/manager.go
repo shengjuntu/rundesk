@@ -103,6 +103,7 @@ type Manager struct {
 	processReservations map[string]bool
 	queue               QueueSettings
 	tasks               map[string]Task
+	registrationMu      sync.Mutex
 	applicationMu       sync.Mutex
 	skillMu             sync.Mutex
 	Store               *store.Store

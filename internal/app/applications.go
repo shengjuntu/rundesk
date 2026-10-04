@@ -240,6 +240,8 @@ func (m *Manager) migrateApplications() error {
 	return nil
 }
 func (s *Server) applicationRoutes(mux *http.ServeMux) {
+	s.applicationConnectRoutes(mux)
+	s.applicationCapabilityRoutes(mux)
 	mux.HandleFunc("GET /api/applications", func(w http.ResponseWriter, r *http.Request) { v, e := s.Manager.Applications(); respond(w, v, e) })
 	mux.HandleFunc("GET /api/applications/{appId}", func(w http.ResponseWriter, r *http.Request) {
 		v, e := s.Manager.Applications()

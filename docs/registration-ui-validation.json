@@ -1,0 +1,10 @@
+{
+  "checks": [
+    "application appears automatically without manual creation",
+    "administrator can open capability selection",
+    "collaboration defaults to assistant and workers; advanced options collapsed",
+    "mobile fits viewport",
+    "no browser exceptions"
+  ],
+  "passed": 5
+}

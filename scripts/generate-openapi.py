@@ -9,6 +9,9 @@ def ref(name):return {'$ref':'#/components/schemas/'+name}
 def arr(item):return {'type':'array','items':item}
 bool_={'type':'boolean'};integer={'type':'integer'}
 schemas={
+ 'ApplicationConnect':obj({'name':st(),'description':st(),'installationId':st(),'entryUrl':st(),'instanceId':st(description='迁移旧配置时可选'),'workspaceId':st(),'defaults':obj({'model':st(),'skills':{'type':'object','additionalProperties':{'type':'object','additionalProperties':st()}},'mcp':{'type':'object','additionalProperties':{'type':'object','additionalProperties':True}}})},['name','installationId']),
+ 'ApplicationConnectionResult':obj({'application':ref('Application'),'status':st(enum=['connected','needs_attention']),'message':st(),'managementPath':st()},['application','status','message','managementPath']),
+
  'ApplicationInput':obj({'name':st(minLength=1,maxLength=160),'description':st(maxLength=4096),'instanceId':st(),'workspaceId':st(),'entryUrl':st(maxLength=2048),'revision':integer},['name','instanceId']),
  'Application':obj({'appId':st(),'name':st(),'description':st(),'instanceId':st(),'workspaceId':st(),'entryUrl':st(),'origin':st(),'revision':integer,'created':st(),'sessionCount':integer,'activeCount':integer,'lastActivity':st()},['appId','name','instanceId','revision']),
  'SkillBundle':obj({'name':st(),'files':arr(obj({'path':st(),'size':integer,'executable':bool_},['path','size','executable'])),'size':integer,'backupPath':st()},['name','files','size']),
@@ -75,6 +78,8 @@ requests={
  ('POST','/schedules'):ref('ScheduleSpec'),('PUT','/schedules/{id}'):obj({'spec':ref('ScheduleSpec'),'revision':integer},['spec','revision']),('DELETE','/schedules/{id}'):obj({'revision':integer},['revision']),('POST','/schedules/preview'):obj({'cron':st(),'timezone':st()},['cron','timezone']),
  ('PUT','/queue'):ref('QueueSettings'),('POST','/tasks'):ref('TaskSpec'),
  ('PUT','/applications/{appId}'):ref('ApplicationInput'),
+ ('POST','/applications/{appId}/connect'):ref('ApplicationConnect'),
+ ('POST','/applications/{appId}/capabilities'):obj({'skills':arr(st()),'mcp':arr(st())}),
  ('PUT','/sessions/{sid}/messages/{eid}/feedback'):ref('FeedbackInput'),
  ('POST','/login'):obj({'token':st()},['token']),
  ('POST','/instances'):ref('InstanceInput'),('PATCH','/instances/{iid}'):obj({'name':st(),'description':st(),'defaultModel':st(),'permissions':ref('Permissions'),'revision':integer},['revision']),
@@ -145,6 +150,7 @@ for file in sorted((root/'internal/app').glob('*.go')):
   if path.endswith('/recovery/check'):response=ref('RecoveryPlan')
   if path=='/applications':response=arr(ref('Application'))
   if path=='/applications/{appId}':response=ref('Application')
+  if path=='/applications/{appId}/connect':response=ref('ApplicationConnectionResult')
   if '/skill-bundles' in path:response=ref('SkillBundle')
   if '/skill-bundles/' in path and path.endswith('/file'):response=ref('SkillFilePreview')
   if '/skill-bundles/' in path and method=='DELETE':response=obj({'backupPath':st()},['backupPath'])
@@ -282,6 +288,6 @@ for path, methods in {
   if path=='/collaborations' and method=='get':op['responses']['200']['content']['application/json']['schema']=arr(obj(extra=True))
   paths[path][method]=op
 
-spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':'1.13.0','description':'RunDesk 0.14.0。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
+spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':'1.14.0','description':'RunDesk 0.15.0。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

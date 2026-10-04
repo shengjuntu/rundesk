@@ -1,3 +1,7 @@
+# RunDesk 0.15.0 应用主动接入
+
+news2douyin 与视频应用主动注册，自动复用或创建专用配置。模型、Skills、MCP、Docker 统一在应用管理维护；重连不覆盖管理员配置。协作默认由通用助手协调，应用自动进入能力目录。见 [接入与升级](docs/APPLICATION-CONNECT.md)。
+
 # RunDesk 0.14.0 协作预览
 
 新增管理员协作入口、现有 Agent 能力登记、负责人委派与结果回收、A2A 0.3 JSON-RPC、Gitea Issue 黑板。见 [协作说明](docs/COLLABORATION.md)。升级时继续使用原数据目录；先备份 state.db 和配置。Gitea 密钥通过服务端环境变量提供。

@@ -1,0 +1,15 @@
+{
+  "mode": "RunDesk 0.15.0 demo protocol; no live model, real search or render",
+  "productionDemoGuardUnchanged": true,
+  "passed": 8,
+  "checks": [
+    "news automatically registers identity and seeds capabilities",
+    "reconnection reuses application identity",
+    "news runtime creates sourced task and automatically registers its application",
+    "news adapter can stop its accepted run",
+    "existing video binary creates project configuration and sees its native skill",
+    "video source metadata, task submission and fenced stop remain compatible",
+    "both adapted clients appear as separate applications",
+    "assistant and workers appear automatically in collaboration"
+  ]
+}

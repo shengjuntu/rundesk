@@ -17,6 +17,7 @@ import (
 )
 
 type CollaborationAgent struct {
+	Automatic   bool   `json:"automatic,omitempty"`
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
@@ -96,6 +97,36 @@ func (m *Manager) collaborationConfig() (CollaborationConfig, error) {
 	if errors.Is(e, sql.ErrNoRows) {
 		e = nil
 	}
+	if e != nil {
+		return v, e
+	}
+	apps, e := m.applicationRecords()
+	if e != nil {
+		return v, e
+	}
+	if len(apps) > 0 {
+		spaces := m.Workspaces()
+		if len(spaces) > 0 {
+			sort.Slice(spaces, func(i, j int) bool { return spaces[i].ID < spaces[j].ID })
+			auto := []CollaborationAgent{{ID: "rundesk-assistant", Name: "通用助手", Description: "理解用户目标，委派给应用，检查并汇总结果。", InstanceID: DefaultInstance, WorkspaceID: spaces[0].ID, Automatic: true}}
+			for _, a := range apps {
+				if a.WorkspaceID != "" {
+					auto = append(auto, CollaborationAgent{ID: "app:" + a.AppID, Name: a.Name, Description: a.Description, InstanceID: a.InstanceID, WorkspaceID: a.WorkspaceID, Automatic: true})
+				}
+			}
+			// Generated identities are authoritative; manual entries cannot shadow them.
+			generated := map[string]bool{}
+			for _, a := range auto {
+				generated[a.ID] = true
+			}
+			for _, a := range v.Agents {
+				if !generated[a.ID] {
+					auto = append(auto, a)
+				}
+			}
+			v.Agents = auto
+		}
+	}
 	return v, e
 }
 
@@ -154,6 +185,15 @@ func (m *Manager) saveCollaborationConfig(v CollaborationConfig) (CollaborationC
 			return v, fmt.Errorf("Gitea 需要 owner、repo 和 token 环境变量名")
 		}
 	}
+	manual := []CollaborationAgent{}
+	for _, a := range v.Agents {
+		if a.ID == "rundesk-assistant" || strings.HasPrefix(a.ID, "app:") {
+			continue
+		}
+		a.Automatic = false
+		manual = append(manual, a)
+	}
+	v.Agents = manual
 	v.Revision++
 	e = m.Store.Put("collaboration-config", "main", v)
 	return v, e
@@ -201,12 +241,23 @@ func (m *Manager) createCollaboration(in CollaborationInput) (Collaboration, err
 	if strings.TrimSpace(in.Goal) == "" || len(in.Goal) > 32000 {
 		return c, fmt.Errorf("目标需为 1–32000 字节")
 	}
+	if in.Mode == "" {
+		in.Mode = "p2p"
+	}
+	if in.Leader == "" {
+		in.Leader = "rundesk-assistant"
+	}
 	if in.Mode != "blackboard" && in.Mode != "p2p" && in.Mode != "hybrid" {
 		return c, fmt.Errorf("交互模式需为 blackboard、p2p 或 hybrid")
 	}
 	cfg, e := m.collaborationConfig()
 	if e != nil {
 		return c, e
+	}
+	if len(in.Agents) == 0 {
+		for _, a := range cfg.Agents {
+			in.Agents = append(in.Agents, a.ID)
+		}
 	}
 	selected := map[string]bool{in.Leader: true}
 	for _, id := range in.Agents {
