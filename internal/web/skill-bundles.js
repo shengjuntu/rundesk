@@ -17,7 +17,7 @@ function showSkillImport(files,kind,wid,iid){
  form.onsubmit=async event=>{event.preventDefault();submit.disabled=true;error.textContent="";try{
    let body,headers={};if(directory){body=new FormData();for(const f of files)body.append(f.webkitRelativePath||f.name,f,f.name);}else{body=files[0];headers["Content-Type"]="application/zip";}
    const p=bundlePath(wid,iid,"",scope.value)+"&name="+encodeURIComponent(name.value)+"&replace="+(replace.checked?"1":"0");
-   const r=await fetch("/api/v1"+p,{method:"POST",body,headers});let result;try{result=await r.json();}catch{throw Error("导入失败，请检查网络后重试");}if(!r.ok)throw Error(result.error||"导入失败");
+   const result=await api(p,{method:"POST",body,headers});
    if(d.open){d.close();toast(`已导入 ${result.files.length} 个文件`+(result.backupPath?"；原目录已备份":""));if(instance()?.id===iid&&ws()?.id===wid)await renderSettings();}
   }catch(e){error.textContent=e.message;}finally{submit.disabled=false;}};
  d.append(form);document.body.append(d);d.addEventListener("close",()=>d.remove(),{once:true});d.showModal();

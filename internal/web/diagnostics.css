@@ -1,0 +1,26 @@
+#diagnostics-dialog{width:min(1040px,calc(100vw - 30px));max-height:88dvh;padding:0;border:1px solid #dce3ed;border-radius:14px;color:#33445d}
+#diagnostics-dialog[open]{display:flex;flex-direction:column}
+.diagnostics-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;gap:20px;border-bottom:1px solid #e5eaf2}
+.diagnostics-head h2{margin:0;font-size:19px}.diagnostics-head p{font-size:11px;color:#7a899e;margin:8px 0 0}
+.diagnostics-layout{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:220px;overflow:hidden}
+#diagnostics-list{overflow:auto;background:#f6f8fc;padding:12px;border-right:1px solid #e3e9f2}
+.diagnostics-item{width:100%;display:block;text-align:left;padding:12px;background:transparent;border:1px solid transparent;border-radius:8px;margin-bottom:7px;overflow-wrap:anywhere}
+.diagnostics-item.selected{background:#fff;border-color:#d5deed}.diagnostics-item strong{display:block;font-size:12px;color:#9b6641}
+.diagnostics-item span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:11px;color:#75849a;line-height:1.8;margin:6px 0}.diagnostics-item small{font-size:10px;color:#8d9bb0}
+#diagnostics-detail{min-width:0;overflow:auto;padding:22px 26px;overflow-wrap:anywhere}
+.diagnostics-origin{font-size:11px;color:#7f91ab;margin:0}.diagnostics-fields{display:grid;grid-template-columns:110px minmax(0,1fr);gap:11px;font-size:12px;margin:22px 0;line-height:1.7}
+.diagnostics-fields dt{color:#8491a4}.diagnostics-fields dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+#diagnostics-detail h3{font-size:16px;line-height:1.8;margin:10px 0 16px;white-space:pre-wrap}#diagnostics-detail h4{font-size:13px;font-weight:500;margin:20px 0 10px}
+#diagnostics-detail pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;line-height:1.8;background:#f4f6fa;border-radius:8px;padding:14px;max-height:350px;overflow:auto}
+#diagnostics-detail textarea{width:100%}#diagnostics-detail .help{font-size:11px;line-height:1.8}.diagnostics-footer{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e5eaf2;padding:12px 22px;gap:15px}
+#diagnostics-copy-status{font-size:12px;color:#6d7d93;margin:0}.diagnostics-footer button,.diagnostics-head button,#diagnostics-copy{font-size:12px;white-space:nowrap}
+[data-diagnostics-open].has-errors{color:#a36b37!important;background:#fff6e9!important;border-color:#ead8bd!important}
+.diagnostics-inline{display:flex;align-items:center;gap:12px;background:#fff7eb;color:#95683c;font-size:12px;margin:16px;padding:12px;border-radius:8px;overflow-wrap:anywhere}.diagnostics-inline span{flex:1}.diagnostics-inline button{flex:none;font-size:11px}
+.toast .diagnostics-link{border:0;background:transparent;color:#d6e3ff;text-decoration:underline;font-size:12px;margin-left:12px;padding:0}
+.run-error .diagnostics-link{margin-left:12px;font-size:12px}
+@media(max-width:700px){#diagnostics-dialog{width:calc(100vw - 16px);max-height:94dvh}.diagnostics-head{padding:16px}.diagnostics-layout{grid-template-columns:1fr;overflow:auto;display:block}#diagnostics-list{max-height:180px;border-right:0;border-bottom:1px solid #e3e9f2}#diagnostics-detail{padding:18px;overflow:visible}.diagnostics-fields{grid-template-columns:85px minmax(0,1fr);gap:9px;font-size:11px}.diagnostics-footer{padding:12px 16px}.diagnostics-head h2{font-size:17px}.diagnostics-inline{flex-wrap:wrap}.trace-head-actions [data-diagnostics-open]{max-width:70px;font-size:9px;padding:5px}}
+@media(max-width:600px){main>header [data-diagnostics-open]{font-size:10px;padding:5px 7px}}
+
+.login-diagnostics{display:block;font-size:12px;text-align:center;margin-top:12px;color:#6f82a5}
+
+.diagnostics-metadata{font-size:12px;color:#74859f;margin-top:20px}.diagnostics-metadata summary{cursor:pointer;padding:8px 0}#diagnostics-detail h3{max-height:160px;overflow:auto}

@@ -1,11 +1,11 @@
-# RunDesk 0.8.1
+# RunDesk 0.8.2
 
 轨迹重新设计为「问题 → 实际步骤 → 回复与来源」。对轨迹的提问会新建关联的独立分析会话，由 Codex 使用内置的只读 MCP 工具查询记录。
 
 首页直接使用通用助手；专用应用统一在「应用」页管理，一个应用对应一份专用配置。Skills 与 MCP 使用独立管理页。技能支持完整文件夹和 ZIP 导入、目录浏览与完整导出，脚本、参考资料、模板和资源文件一并保留。现有 `/api` 和 `/api/v1` 客户端继续兼容。
 
-- [本版说明](docs/RELEASE-0.8.1.md)
-- [验证记录](docs/VALIDATION-0.8.1.md)
+- [本版说明](docs/RELEASE-0.8.2.md)
+- [验证记录](docs/VALIDATION-0.8.2.md)
 - [0.6.0 API 与实例配置说明](docs/RELEASE-0.6.0.md)
 - [应用 API v1](docs/API-V1.md)
 - [OpenAPI 定义](internal/app/openapi.json)
@@ -17,7 +17,7 @@
 
 对话、Skills/MCP 配置、运行审批、调试事件与文件产物使用同一组 HTTP API。ActiveVLM 等业务前台可以通过这层 API 驱动 Codex。项目正式定名 RunDesk；当前尚未绑定 GitHub 仓库。
 
-**状态：v0.8.1 原型。** 单用户、自托管。后端直接启动官方 `codex app-server`，没有复用 Sandbox Agent，也没有实现另一套 agent loop。
+**状态：v0.8.2 原型。** 单用户、自托管。后端直接启动官方 `codex app-server`，没有复用 Sandbox Agent，也没有实现另一套 agent loop。
 
 ![RunDesk 工作台](docs/screenshots/0.8.0/applications-desktop.png)
 
@@ -98,6 +98,8 @@ MCP 支持 stdio 的 `command/args/env` 和 HTTP 的 `url/bearer_token_env_var` 
 
 ![任务过程 · 虚构查询演示](docs/screenshots/0.8.1/timeline-overview-desktop.png)
 
+发生 HTTP 500 或运行错误时，点顶栏「错误记录」查看请求方法、路径、状态、requestId、响应详情和关联会话，可直接复制诊断信息。非 JSON 错误页不会再被丢弃。当前标签页保留最近 50 组记录，页面请求与 Codex 运行事件分别标记。使用范围见 [错误诊断](docs/DIAGNOSTICS.md)。
+
 Ubuntu 安装和升级见 [Ubuntu 指南](docs/UBUNTU.md)。
 
 ## 部署与数据
@@ -142,7 +144,7 @@ node scripts/trace-model-test.cjs
 python3 scripts/native-smoke.py --codex /path/to/codex
 ```
 
-浏览器测试可选：在开发环境安装 Playwright 和 Chromium，然后运行 `node scripts/product-smoke.cjs`。Node/Playwright 只用于测试，不是 RunDesk 运行依赖。完整验证范围与复现命令见 [0.8.1 验证记录](docs/VALIDATION-0.8.1.md)。
+浏览器测试可选：在开发环境安装 Playwright 和 Chromium，然后运行 `node scripts/product-smoke.cjs`。Node/Playwright 只用于测试，不是 RunDesk 运行依赖。完整验证范围与复现命令见 [0.8.2 验证记录](docs/VALIDATION-0.8.2.md)。
 
 原生协议 smoke 测试使用临时 `CODEX_HOME`，验证配置、Skills 和 MCP，不请求模型推理，不修改已有 Codex 配置。
 

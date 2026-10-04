@@ -89,6 +89,8 @@ Content-Type: application/json
 {"error":"会话不存在","code":"session_not_found","requestId":"a-generated-id","retryable":false}
 ```
 
+0.8.2 的新错误响应还提供可选 `details`：`time`、`origin`、`method`、`path`（不含查询字符串）、`durationMs`、`causes`；识别到 Codex RPC 错误时还有 `rpcCode` 和可用的 `rpcData`。错误文本和结构化数据会遮盖常见密钥字段。历史幂等回执保持原样，因此客户端必须允许 `details` 缺省。API 描述版本为 1.3.1。
+
 响应包含 `X-Request-ID` 和 `RunDesk-API-Version`。可以传入有效的 `X-Request-ID` 关联业务日志；它不是幂等 Key，不影响去重。幂等回放保留原回执内容，错误回执中的 requestId 属于原请求；当前 HTTP 访问编号以响应头为准。
 
 关键代码：invalid_request、unauthorized、forbidden、session_not_found、instance_not_found、workspace_not_found、revision_required、revision_conflict、session_busy、session_archived、run_conflict、idempotency_key_required、idempotency_conflict、request_in_progress、request_unconfirmed、request_not_found、storage_unavailable。

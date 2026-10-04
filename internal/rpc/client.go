@@ -21,8 +21,9 @@ type Message struct {
 	Error  *Error          `json:"error,omitempty"`
 }
 type Error struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+	Code    int             `json:"code"`
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data,omitempty"`
 }
 
 func (e *Error) Error() string { return fmt.Sprintf("RPC %d: %s", e.Code, e.Message) }
@@ -169,7 +170,7 @@ func (c *Client) Reply(id json.RawMessage, result any) error {
 	return c.Send(Message{ID: id, Result: b})
 }
 func (c *Client) Initialize(ctx context.Context) error {
-	_, err := c.Call(ctx, "initialize", map[string]any{"clientInfo": map[string]string{"name": "rundesk", "title": "RunDesk", "version": "0.8.1"}, "capabilities": map[string]bool{"experimentalApi": true}})
+	_, err := c.Call(ctx, "initialize", map[string]any{"clientInfo": map[string]string{"name": "rundesk", "title": "RunDesk", "version": "0.8.2"}, "capabilities": map[string]bool{"experimentalApi": true}})
 	if err != nil {
 		return err
 	}

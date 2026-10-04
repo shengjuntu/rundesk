@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="/trace.css" />
     <link rel="stylesheet" href="/conversation.css" />
     <link rel="stylesheet" href="/product.css" />
+    <link rel="stylesheet" href="/diagnostics.css" />
+    <script defer src="/diagnostics.js"></script>
     <script defer src="/conversation.js"></script>
     <script defer src="/app.js"></script>
     <script defer src="/manage.js"></script>
@@ -32,6 +34,7 @@
           placeholder="RUNDESK_TOKEN"
           required
         /><button class="primary">连接后台</button>
+        <a href="#diagnostics" class="quiet login-diagnostics" data-diagnostics-open>错误记录</a>
         <p id="login-error" class="error"></p>
       </form>
     </div>
@@ -40,7 +43,7 @@
         <button id="sidebar-close" class="quiet sidebar-close" aria-label="关闭会话列表">关闭</button>
         <a class="brand" href="/"
           ><span class="brandmark">r.</span><strong>RunDesk</strong
-          ><small>0.8.1</small></a
+          ><small>0.8.2</small></a
         >
         <nav class="primary-nav" aria-label="主要功能">
           <button id="nav-assistant" class="selected" aria-current="page"><span class="nav-symbol">◌</span>对话</button>
@@ -95,7 +98,7 @@
             <button id="trace-button" class="quiet">轨迹</button
             ><span id="mode" class="badge">CODEX</span
             ><button id="settings-button" class="quiet">助手设置</button
-            ><button id="debug-button" class="quiet">
+            ><button id="diagnostics-button" class="quiet" data-diagnostics-open title="查看请求与运行错误">错误记录</button><button id="debug-button" class="quiet">
               调试台 <span class="shortcut">⌘ J</span>
             </button>
           </div>

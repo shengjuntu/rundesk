@@ -44,7 +44,10 @@ const statusLabel = {
 };
 let toastTimer;
 function toast(text) {
-  $("#toast").textContent = text;
+  const message=text instanceof Error?text.message:String(text);
+  $("#toast").textContent = message;
+  const diagnostic=text?.diagnosticId?{id:text.diagnosticId}:window.RunDeskDiagnostics?.recent(message);
+  if(diagnostic)$("#toast").append(button("查看详情",()=>RunDeskDiagnostics.open(diagnostic.id),"diagnostics-link"));
   $("#toast").classList.remove("hidden");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => $("#toast").classList.add("hidden"), 6500);
@@ -74,7 +77,7 @@ async function safe(fn) {
   try {
     return await fn();
   } catch (e) {
-    toast(e.message);
+    toast(e);
     console.error(e);
   }
 }
@@ -100,20 +103,23 @@ async function api(path, options = {}) {
     if(!pendingAPI.has(signature)) pendingAPI.set(signature,Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,"0")).join(""));
     headers["Idempotency-Key"]=pendingAPI.get(signature);savePendingAPI();
   }
-  if (body && !(body instanceof FormData)) {
+  if (body && !(body instanceof FormData) && !(body instanceof Blob)) {
     headers["Content-Type"] = "application/json";
     options={...options,body:JSON.stringify(body)};
   }
-  const r = await fetch("/api/v1" + path, { ...options, headers });
-  let data;
-  try {data = await r.json();} catch {throw Error(`HTTP ${r.status}`);}
-  if(signature && (r.ok || r.status<500 && !["request_in_progress","request_unconfirmed"].includes(data.code))) {pendingAPI.delete(signature);savePendingAPI();}
-  if (!r.ok) {
-    if (r.status === 401) $("#login").classList.remove("hidden");
-    const error=Error(data.error || `HTTP ${r.status}`);error.code=data.code;error.requestId=data.requestId;throw error;
+  const targetSession=path.match(/^\/sessions\/([^/?]+)/)?.[1];
+  const target=targetSession?state.sessions.find(s=>s.id===targetSession):null;
+  const context={sessionId:targetSession||((method==="POST"&&path==="/sessions")?undefined:state.session?.id),instanceId:path.match(/^\/instances\/([^/?]+)/)?.[1]||new URLSearchParams(path.split("?")[1]||"").get("instanceId")||body?.instanceId||target?.instanceId||$("#instance").value,workspaceId:path.match(/^\/workspaces\/([^/?]+)/)?.[1]||body?.workspaceId||target?.workspaceId||$("#workspace").value};
+  try {
+    const data=await RunDeskDiagnostics.request("/api/v1"+path,{...options,headers},context);
+    if(signature){pendingAPI.delete(signature);savePendingAPI();}
+    return data;
+  } catch(error) {
+    if(signature&&error.status>=400&&error.status<500&&!["request_in_progress","request_unconfirmed"].includes(error.code)){pendingAPI.delete(signature);savePendingAPI();}
+    throw error;
   }
-  return data;
 }
+
 const ws = () => state.workspaces.find((w) => w.id === $("#workspace").value);
 const instance = () =>
   state.instances.find((i) => i.id === $("#instance").value);
@@ -269,11 +275,15 @@ async function selectSession(id) {
   renderStatus();
   const stream = new EventSource(`/api/v1/sessions/${id}/events?stream=1`);
   state.stream = stream;
+  let streamDisconnected=false;
   stream.onopen = () => {
+    streamDisconnected=false;
     $("#connection").textContent = "后台已连接";
   };
   stream.onerror = () => {
+    if(state.session?.id!==id)return;
     $("#connection").textContent = "正在重连…";
+    if(!streamDisconnected){streamDisconnected=true;RunDeskDiagnostics.record({kind:"stream",message:"事件连接中断，浏览器正在重连",method:"GET",url:`/api/v1/sessions/${id}/events?stream=1`,sessionId:id,instanceId:state.session.instanceId,workspaceId:state.session.workspaceId,note:"EventSource 未提供 HTTP 状态或响应正文。请结合请求错误和服务日志判断，不能仅据此认定 HTTP 500。"});}
   };
   stream.onmessage = (e) => {
     if (state.session?.id !== id) return;
@@ -286,6 +296,7 @@ async function selectSession(id) {
     if (event.id <= state.cursor) return;
     state.cursor = event.id;
     state.events.push(event);
+    RunDeskDiagnostics.captureEvent(event,state.session);
     if (state.events.length > 12000) state.events.splice(0, 1000);
     scheduleRender();
     if (
@@ -474,6 +485,7 @@ function renderMessages() {
         _key: `error:${ev.id}`,
         type: "error",
         text: ev.data.error,
+        eventId:ev.id,
       });
     }
   }
@@ -519,7 +531,12 @@ function renderMessages() {
         );
       else if (item.type === "agentMessage")
         renderAssistant(node, item);
-      else if (item.type === "error") node.textContent = item.text;
+      else if (item.type === "error") {
+        node.replaceChildren(document.createTextNode(item.text),button("查看错误详情",()=>{
+          const event=state.events.find(e=>e.id===item.eventId),record=event&&RunDeskDiagnostics.captureEvent(event,state.session);
+          RunDeskDiagnostics.open(record?.id);
+        },"diagnostics-link"));
+      }
       else {
         toolSummary(node.firstElementChild, item);
         const content = node.lastElementChild;
@@ -834,9 +851,8 @@ async function previewFile(file) {
     ["txt", "md", "json", "log"].includes(ext) &&
     file.size < 1048576
   ) {
-    const r = await fetch(fileURL(file.path, true));
-    if (!r.ok) throw Error("文件读取失败");
-    target.replaceChildren(el("pre", {}, await r.text()));
+    const text = await RunDeskDiagnostics.request(fileURL(file.path,true),{},{sessionId:state.session?.id,workspaceId:ws()?.id},"text");
+    target.replaceChildren(el("pre", {}, text));
   } else {
     target.replaceChildren(
       el(
@@ -948,6 +964,7 @@ $("#login-form").onsubmit = (e) => {
 $("#logout").onclick = () =>
   safe(async () => {
     await api("/logout", { method: "POST" });
+    RunDeskDiagnostics.clear();
     if (state.stream) state.stream.close();
     location.reload();
   });

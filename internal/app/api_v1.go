@@ -15,7 +15,7 @@ import (
 	"github.com/shengjuntu/rundesk/internal/store"
 )
 
-const Version = "0.8.1"
+const Version = "0.8.2"
 
 type apiError struct {
 	Status        int
@@ -48,7 +48,7 @@ func writeAPIError(w http.ResponseWriter, status int, err error) {
 			status = 413
 		}
 	}
-	writeJSON(w, status, map[string]any{"error": err.Error(), "code": code, "requestId": w.Header().Get("X-Request-ID"), "retryable": retryable})
+	writeJSON(w, status, map[string]any{"error": diagnosticText(err.Error()), "code": code, "requestId": w.Header().Get("X-Request-ID"), "retryable": retryable, "details": errorDiagnostic(w, status, code, err)})
 }
 
 var safeRequestID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$`)
@@ -76,7 +76,7 @@ func (s *Server) apiBoundary(next http.Handler) http.Handler {
 				w.Header().Set("RunDesk-API-Version", "legacy")
 			}
 		}
-		next.ServeHTTP(w, r)
+		diagnosticBoundary(w, r, next)
 	})
 }
 
@@ -121,10 +121,13 @@ func supportsIdempotency(r *http.Request) bool {
 }
 
 type recordedResponse struct {
-	header http.Header
-	code   int
-	body   bytes.Buffer
+	header     http.Header
+	code       int
+	body       bytes.Buffer
+	diagnostic *requestDiagnostic
 }
+
+func (w *recordedResponse) requestDiagnostic() *requestDiagnostic { return w.diagnostic }
 
 func (w *recordedResponse) Header() http.Header { return w.header }
 func (w *recordedResponse) WriteHeader(code int) {
@@ -221,7 +224,7 @@ func (s *Server) idempotent(next http.Handler) http.Handler {
 		}
 		defer func() { m.requestMu.Lock(); delete(m.pendingRequests, key); m.requestMu.Unlock() }()
 		r.Body = io.NopCloser(bytes.NewReader(body))
-		reply := &recordedResponse{header: w.Header().Clone()}
+		reply := &recordedResponse{header: w.Header().Clone(), diagnostic: requestDiagnosticOf(w)}
 		next.ServeHTTP(reply, r)
 		if reply.code == 0 {
 			reply.code = 200

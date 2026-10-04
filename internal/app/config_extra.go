@@ -266,5 +266,5 @@ func (m *Manager) Diagnostics(wid string, ids ...string) (any, error) {
 		_, e := m.ConfigCall(wid, "mcpServerStatus/list", map[string]any{"limit": 100}, ids...)
 		return "状态读取成功；各服务的连接和工具见 MCP 页", e
 	})
-	return map[string]any{"version": "0.8.1", "platform": runtime.GOOS + "/" + runtime.GOARCH, "demo": m.Demo, "loadedConnections": m.loaded.Load(), "instanceId": i.ID, "codexHome": i.CodexHome, "checks": checks, "permissions": i.Permissions, "note": "检查不会调用模型。沙箱检查固定使用 workspace-write 和禁网设置；通过仅说明最小命令可执行，不代表模型凭据、网络或全部工具已验证。"}, nil
+	return map[string]any{"version": "0.8.2", "platform": runtime.GOOS + "/" + runtime.GOARCH, "demo": m.Demo, "loadedConnections": m.loaded.Load(), "instanceId": i.ID, "codexHome": i.CodexHome, "checks": checks, "permissions": i.Permissions, "note": "检查不会调用模型。沙箱检查固定使用 workspace-write 和禁网设置；通过仅说明最小命令可执行，不代表模型凭据、网络或全部工具已验证。"}, nil
 }

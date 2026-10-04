@@ -59,7 +59,7 @@ func run() error {
 	version := flag.Bool("version", false, "print RunDesk version")
 	flag.Parse()
 	if *version {
-		fmt.Println("RunDesk 0.8.1")
+		fmt.Println("RunDesk 0.8.2")
 		return nil
 	}
 	if *demo {
