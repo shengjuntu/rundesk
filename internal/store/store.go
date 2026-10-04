@@ -162,7 +162,7 @@ func (s *Store) DeleteSession(id string) error {
 		return e
 	}
 	defer tx.Rollback()
-	for _, q := range []string{"DELETE FROM events WHERE session=?", "DELETE FROM objects WHERE kind='message-feedback' AND json_extract(data,'$.sessionId')=?", "DELETE FROM objects WHERE kind='steer' AND json_extract(data,'$.sessionId')=?", "DELETE FROM objects WHERE kind='approval' AND json_extract(data,'$.sessionId')=?", "DELETE FROM objects WHERE kind='runtime' AND id=?", "DELETE FROM objects WHERE kind='session' AND id=?"} {
+	for _, q := range []string{"DELETE FROM events WHERE session=?", "DELETE FROM objects WHERE kind='message-feedback' AND json_extract(data,'$.sessionId')=?", "DELETE FROM objects WHERE kind='steer' AND json_extract(data,'$.sessionId')=?", "DELETE FROM objects WHERE kind='approval' AND json_extract(data,'$.sessionId')=?", "DELETE FROM objects WHERE kind='recovery-plan' AND json_extract(data,'$.sessionId')=?", "DELETE FROM objects WHERE kind='runtime' AND id=?", "DELETE FROM objects WHERE kind='session' AND id=?"} {
 		if _, e = tx.Exec(q, id); e != nil {
 			return e
 		}

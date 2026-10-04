@@ -53,7 +53,7 @@ function renderStatus() {
   $("#session-title").textContent = s?.title || "新对话";
   $("#run-status").textContent = s?.archived
     ? "已归档"
-    : statusLabel[s?.status] || s?.status || "就绪";
+    : s?.retry && active(s.status) ? "Codex 正在重试" : statusLabel[s?.status] || s?.status || "就绪";
   $("#stop").classList.toggle("hidden", !active(s?.status));
   const transitioning = ["starting", "stopping"].includes(s?.status);
   const steering = active(s?.status) && !transitioning;
@@ -78,6 +78,7 @@ function renderStatus() {
   $("#delete-session").disabled = active(s?.status);
   window.RunDeskTraceUI?.syncComposer();
   renderAnalysisBanner();
+  window.RunDeskRecovery?.render();
 }
 function renderAnalysisBanner() {
   const host=$("#analysis-banner"),origin=state.session?.traceOrigin;

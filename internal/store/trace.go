@@ -12,7 +12,7 @@ func (s *Store) TraceEvents(session string, after, through int64, limit int) ([]
 	if limit < 1 || limit > 501 {
 		return nil, 0, fmt.Errorf("invalid trace page size")
 	}
-	rows, err := s.db.Query(`SELECT id,time,direction,method,data FROM events WHERE session=? AND id>? AND id<=? AND method IN ('run/input','run/steer','turn/start','turn/started','turn/completed','run/state','item/started','item/completed','approval/pending','approval/resolved','approval/expired','serverRequest/resolved','thread/tokenUsage/updated','thread/compacted','error','warning','configWarning','deprecationNotice','runtime/effective') ORDER BY id LIMIT ?`, session, after, through, limit)
+	rows, err := s.db.Query(`SELECT id,time,direction,method,data FROM events WHERE session=? AND id>? AND id<=? AND method IN ('run/input','run/steer','run/retry','thread/start','turn/start','turn/started','turn/completed','run/state','item/started','item/completed','approval/pending','approval/resolved','approval/expired','serverRequest/resolved','thread/tokenUsage/updated','thread/compacted','error','warning','configWarning','deprecationNotice','runtime/effective') ORDER BY id LIMIT ?`, session, after, through, limit)
 	if err != nil {
 		return nil, 0, err
 	}

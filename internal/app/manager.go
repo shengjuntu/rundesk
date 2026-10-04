@@ -26,22 +26,24 @@ type Workspace struct {
 	Revision int    `json:"revision"`
 }
 type Session struct {
-	ID          string        `json:"id"`
-	WorkspaceID string        `json:"workspaceId"`
-	InstanceID  string        `json:"instanceId"`
-	Title       string        `json:"title"`
-	ThreadID    string        `json:"threadId"`
-	Model       string        `json:"model"`
-	Status      string        `json:"status"`
-	RunID       string        `json:"runId"`
-	TurnID      string        `json:"turnId"`
-	Error       string        `json:"error,omitempty"`
-	Created     string        `json:"created"`
-	Updated     string        `json:"updated"`
-	Pinned      bool          `json:"pinned"`
-	Archived    bool          `json:"archived"`
-	Source      SessionSource `json:"source"`
-	TraceOrigin *TraceOrigin  `json:"traceOrigin,omitempty"`
+	ID          string          `json:"id"`
+	WorkspaceID string          `json:"workspaceId"`
+	InstanceID  string          `json:"instanceId"`
+	Title       string          `json:"title"`
+	ThreadID    string          `json:"threadId"`
+	Model       string          `json:"model"`
+	Status      string          `json:"status"`
+	RunID       string          `json:"runId"`
+	TurnID      string          `json:"turnId"`
+	Error       string          `json:"error,omitempty"`
+	Created     string          `json:"created"`
+	Updated     string          `json:"updated"`
+	Pinned      bool            `json:"pinned"`
+	Archived    bool            `json:"archived"`
+	Source      SessionSource   `json:"source"`
+	TraceOrigin *TraceOrigin    `json:"traceOrigin,omitempty"`
+	Recovery    *RecoveryOrigin `json:"recovery,omitempty"`
+	Retry       *RetryNotice    `json:"retry,omitempty"`
 }
 type Approval struct {
 	ID         string      `json:"id"`
@@ -71,6 +73,7 @@ type handle struct {
 	mu             sync.Mutex
 	client         *rpc.Client
 	thread         string
+	previousTurn   string
 	canceled       bool
 	last           time.Time
 	requests       map[string]Approval
@@ -146,6 +149,7 @@ func New(data, codex string, demo bool) (*Manager, error) {
 		}
 		if active(v.Status) {
 			v.Status = "interrupted"
+			v.Retry = nil
 			v.Error = "后台已重启；任务未自动重跑。"
 			if e = s.Put("session", v.ID, v); e != nil {
 				return fail(e)
@@ -498,6 +502,21 @@ func (m *Manager) connect(id string, w Workspace, h *handle, ids ...string) (*rp
 func (m *Manager) onMessage(id string, h *handle, msg rpc.Message) {
 	var p map[string]json.RawMessage
 	_ = json.Unmarshal(msg.Params, &p)
+	var eventTurn string
+	_ = json.Unmarshal(p["turnId"], &eventTurn)
+	if eventTurn == "" {
+		var turn struct {
+			ID string `json:"id"`
+		}
+		_ = json.Unmarshal(p["turn"], &turn)
+		eventTurn = turn.ID
+	}
+	h.mu.Lock()
+	retired := eventTurn != "" && eventTurn == h.previousTurn
+	h.mu.Unlock()
+	if retired {
+		return
+	}
 	if len(msg.ID) > 0 && msg.Method != "" {
 		switch msg.Method {
 		case "item/commandExecution/requestApproval", "item/fileChange/requestApproval", "item/permissions/requestApproval", "item/tool/requestUserInput", "mcpServer/elicitation/request":
@@ -531,12 +550,62 @@ func (m *Manager) onMessage(id string, h *handle, msg rpc.Message) {
 		return
 	}
 	switch msg.Method {
+	case "error":
+		var info struct {
+			ThreadID  string `json:"threadId"`
+			TurnID    string `json:"turnId"`
+			WillRetry bool   `json:"willRetry"`
+			Error     struct {
+				Message string `json:"message"`
+			} `json:"error"`
+		}
+		if json.Unmarshal(msg.Params, &info) != nil {
+			return
+		}
+		s, err := m.Session(id)
+		if err != nil || !active(s.Status) || s.Status == "stopping" || info.ThreadID != s.ThreadID || info.TurnID == "" || (s.TurnID != "" && s.TurnID != info.TurnID) {
+			return
+		}
+		_ = m.update(id, func(v *Session) {
+			if v.RunID != s.RunID || !active(v.Status) || v.Status == "stopping" {
+				return
+			}
+			v.Retry = nil
+			if info.WillRetry {
+				v.Retry = &RetryNotice{Message: diagnosticText(info.Error.Message), Time: store.Now()}
+			}
+		})
+		m.event(id, "internal", "run/retry", map[string]any{"runId": s.RunID, "turnId": info.TurnID, "willRetry": info.WillRetry})
+	case "item/started", "item/agentMessage/delta":
+		s, err := m.Session(id)
+		if err != nil || s.Retry == nil {
+			return
+		}
+		var tid string
+		_ = json.Unmarshal(p["turnId"], &tid)
+		if tid == s.TurnID {
+			_ = m.update(id, func(v *Session) {
+				if v.RunID == s.RunID {
+					v.Retry = nil
+				}
+			})
+			m.event(id, "internal", "run/retry", map[string]any{"runId": s.RunID, "willRetry": false})
+		}
 	case "turn/started":
 		var t struct {
 			ID string `json:"id"`
 		}
 		_ = json.Unmarshal(p["turn"], &t)
+		current, err := m.Session(id)
+		var threadID string
+		_ = json.Unmarshal(p["threadId"], &threadID)
+		if err != nil || !active(current.Status) || (threadID != "" && threadID != current.ThreadID) || (current.TurnID != "" && current.TurnID != t.ID) {
+			return
+		}
 		_ = m.update(id, func(s *Session) {
+			if s.RunID != current.RunID || !active(s.Status) {
+				return
+			}
 			s.TurnID = t.ID
 			if s.Status == "starting" {
 				s.Status = "running"
@@ -544,10 +613,17 @@ func (m *Manager) onMessage(id string, h *handle, msg rpc.Message) {
 		})
 	case "turn/completed":
 		var t struct {
+			ID     string `json:"id"`
 			Status string `json:"status"`
 			Error  any    `json:"error"`
 		}
 		_ = json.Unmarshal(p["turn"], &t)
+		current, err := m.Session(id)
+		var threadID string
+		_ = json.Unmarshal(p["threadId"], &threadID)
+		if err != nil || !active(current.Status) || (threadID != "" && threadID != current.ThreadID) || (current.TurnID != "" && t.ID != "" && current.TurnID != t.ID) {
+			return
+		}
 		status := t.Status
 		if status == "" {
 			status = "completed"
@@ -557,8 +633,19 @@ func (m *Manager) onMessage(id string, h *handle, msg rpc.Message) {
 			b, _ := json.Marshal(t.Error)
 			errText = string(b)
 		}
-		m.finish(id, status, errText)
-		m.expire(id, h)
+		changed := false
+		_ = m.update(id, func(v *Session) {
+			if v.RunID == current.RunID && active(v.Status) {
+				v.Status = status
+				v.Error = errText
+				v.Retry = nil
+				changed = true
+			}
+		})
+		if changed {
+			m.event(id, "internal", "run/state", map[string]string{"runId": current.RunID, "status": status, "error": errText})
+			m.expire(id, h, current.RunID)
+		}
 	case "serverRequest/resolved":
 		h.mu.Lock()
 		for aid, a := range h.requests {
@@ -581,15 +668,18 @@ func (m *Manager) onMessage(id string, h *handle, msg rpc.Message) {
 	}
 }
 func (m *Manager) finish(id, status, errText string) {
-	if e := m.update(id, func(s *Session) { s.Status = status; s.Error = errText }); e != nil {
+	if e := m.update(id, func(s *Session) { s.Status = status; s.Error = errText; s.Retry = nil }); e != nil {
 		log.Print(e)
 	}
 	m.event(id, "internal", "run/state", map[string]string{"status": status, "error": errText})
 }
-func (m *Manager) expire(id string, h *handle) {
+func (m *Manager) expire(id string, h *handle, runs ...string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	for aid, a := range h.requests {
+		if len(runs) > 0 && a.RunID != runs[0] {
+			continue
+		}
 		a.Status = "expired"
 		a.Request.Params, _ = json.Marshal(redact(a.Request.Params))
 		_ = m.Store.Put("approval", aid, a)
@@ -597,7 +687,8 @@ func (m *Manager) expire(id string, h *handle) {
 	}
 	m.event(id, "internal", "approval/expired", map[string]string{})
 }
-func (m *Manager) Start(id string, in Input) (Session, error) {
+func (m *Manager) Start(id string, in Input) (Session, error) { return m.start(id, in, nil) }
+func (m *Manager) start(id string, in Input, recovery *RecoveryPlan) (Session, error) {
 	if m.ctx.Err() != nil {
 		return Session{}, failure(503, "runtime_unavailable", "后台正在停止或事件记录已失效，任务未提交")
 	}
@@ -636,8 +727,14 @@ func (m *Manager) Start(id string, in Input) (Session, error) {
 	if active(s.Status) {
 		return s, failure(409, "session_busy", "该会话已有任务正在运行")
 	}
+	if recovery != nil {
+		if e = m.validateRecovery(s, h, recovery); e != nil {
+			return s, e
+		}
+	}
 	h.mu.Lock()
 	h.canceled = false
+	h.previousTurn = s.TurnID
 	h.last = time.Now()
 	h.mu.Unlock()
 	if e = m.update(id, func(s *Session) {
@@ -645,6 +742,11 @@ func (m *Manager) Start(id string, in Input) (Session, error) {
 		s.TurnID = ""
 		s.Status = "starting"
 		s.Error = ""
+		s.Retry = nil
+		s.Recovery = nil
+		if recovery != nil {
+			s.Recovery = &RecoveryOrigin{PlanID: recovery.ID, SourceRunID: recovery.SourceRunID, SourceTurnID: recovery.SourceTurnID, RootRunID: recovery.RootRunID, CheckedAt: recovery.CheckedAt}
+		}
 		if s.Title == "新对话" {
 			r := []rune(in.Text)
 			if len(r) > 30 {
@@ -657,7 +759,12 @@ func (m *Manager) Start(id string, in Input) (Session, error) {
 	}
 	s, _ = m.Session(id)
 	instanceAtSubmit, _ := m.Instance(s.InstanceID)
-	if e = m.event(id, "internal", "run/input", map[string]any{"instanceRevision": instanceAtSubmit.Revision, "runId": s.RunID, "input": in, "notes": w.Notes, "notesRevision": w.Revision, "cwd": w.Path, "instanceId": s.InstanceID, "model": s.Model}); e != nil {
+	record := map[string]any{"instanceRevision": instanceAtSubmit.Revision, "runId": s.RunID, "input": in, "notes": w.Notes, "notesRevision": w.Revision, "cwd": w.Path, "instanceId": s.InstanceID, "model": s.Model}
+	if recovery != nil {
+		record["recovery"] = s.Recovery
+		record["recoveryInput"] = recovery.TaskInput
+	}
+	if e = m.event(id, "internal", "run/input", record); e != nil {
 		_ = m.update(id, func(v *Session) {
 			v.Status = "failed"
 			v.Error = "任务输入无法写入事件记录，未发送给 Codex"
@@ -665,10 +772,10 @@ func (m *Manager) Start(id string, in Input) (Session, error) {
 		return s, &apiError{Status: 503, Code: "journal_unavailable", Message: "任务输入无法写入事件记录，未发送给 Codex；请检查数据目录和数据库状态", Cause: e}
 	}
 	m.wg.Add(1)
-	go func() { defer m.wg.Done(); h.op.Lock(); defer h.op.Unlock(); m.run(s, w, h, in) }()
+	go func() { defer m.wg.Done(); h.op.Lock(); defer h.op.Unlock(); m.run(s, w, h, in, recovery) }()
 	return s, nil
 }
-func (m *Manager) run(s Session, w Workspace, h *handle, in Input) {
+func (m *Manager) run(s Session, w Workspace, h *handle, in Input, recovery *RecoveryPlan) {
 	fail := func(e error) {
 		h.mu.Lock()
 		c := h.client
@@ -787,6 +894,7 @@ func (m *Manager) run(s Session, w Workspace, h *handle, in Input) {
 		return
 	}
 	text := in.Text
+	text += recoveryInstructions(recovery)
 	if s.TraceOrigin != nil {
 		text += traceAnalysisInstructions(s.TraceOrigin)
 	}

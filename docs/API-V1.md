@@ -1,4 +1,4 @@
-# RunDesk 应用接口 v1（RunDesk 0.8.3）
+# RunDesk 应用接口 v1（RunDesk 0.8.4）
 
 RunDesk 为两类客户端提供同一套运行能力：人通过 WebUI，应用通过 HTTP API。Codex 执行 Agent loop；应用负责自己的交互、业务数据和审核流程。
 
@@ -29,7 +29,7 @@ RunDesk 为两类客户端提供同一套运行能力：人通过 WebUI，应用
 
 ## 创建与提交去重
 
-以下 v1 POST 必须提供 `Idempotency-Key`：`/instances`、`/workspaces`、`/sessions`、`/sessions/{sid}/turns`。Key 为 8–128 字符，首字符为字母或数字，其余允许字母、数字、下划线、点、冒号、连字符，建议使用 UUID。
+以下 v1 POST 必须提供 `Idempotency-Key`：`/instances`、`/workspaces`、`/sessions`、`/sessions/{sid}/turns`、`/sessions/{sid}/recover`。Key 为 8–128 字符，首字符为字母或数字，其余允许字母、数字、下划线、点、冒号、连字符，建议使用 UUID。
 
 应用应先把 Key 保存进自己的业务任务记录，再提交。Key 在一个 RunDesk 数据目录内全局唯一，不是按应用名隔离。相同 Key、方法、路径、查询参数和 JSON 内容返回原回执；对象字段顺序不影响比较，数组顺序有意义。不同内容使用同一 Key 返回 `409 idempotency_conflict`。
 
@@ -83,13 +83,23 @@ Content-Type: application/json
 
 审批仍读取 pending approvals 并按服务端提供的 decisions 提交；过期审批不能重放。不新增默认批准、不扩大权限。HTTP 200 表示停止/审批请求被处理，最终运行结果以状态和事件为准。
 
+## 失败任务继续（0.8.4）
+
+先 `POST /sessions/{sid}/recovery/check`，body 为 `{"expectedRunId":"失败轮次"}`。核对不会发起模型任务。根据返回的 canContinue / requiresReview / requiresFix 展示原目标、已有步骤、文件和原生状态，并核对应用业务记录。
+
+确认后 `POST /sessions/{sid}/recover`，携带新的逻辑操作 Idempotency-Key，以及 planId / expectedRunId / reviewedEffects / issueResolved / note。后端重新检查状态；成功返回 202，Session 新增可选 recovery 元数据。仍沿用原会话和已存在的原生线程，新轮次记录来源。
+
+同一次恢复请求重试复用相同 Key 和内容；它与失败原任务的 Key 不同。正在运行、已完成或来源不确定时不重复执行；核对 15 分钟有效，每会话最新 plan 替换旧 plan。完整字段、错误与边界见 [RECOVERY.md](RECOVERY.md)。
+
+Session 可选 retry 字段和 run/retry 事件显示 Codex 自身的重试；RunDesk 没有自动重跑任务。重试中的会话仍是 active。客户端不要把原生 error 通知直接等同于最终 failed。
+
 ## 错误与关联编号
 
 ```json
 {"error":"会话不存在","code":"session_not_found","requestId":"a-generated-id","retryable":false}
 ```
 
-0.8.2 的新错误响应还提供可选 `details`：`time`、`origin`、`method`、`path`（不含查询字符串）、`durationMs`、`causes`；识别到 Codex RPC 错误时还有 `rpcCode` 和可用的 `rpcData`。错误文本和结构化数据会遮盖常见密钥字段。历史幂等回执保持原样，因此客户端必须允许 `details` 缺省。API 描述版本为 1.3.2。0.8.3 增加 `origin=codex_transport` 和可选 `transportOperation`，表示本地 App Server 传输故障。
+0.8.2 的新错误响应还提供可选 `details`：`time`、`origin`、`method`、`path`（不含查询字符串）、`durationMs`、`causes`；识别到 Codex RPC 错误时还有 `rpcCode` 和可用的 `rpcData`。错误文本和结构化数据会遮盖常见密钥字段。历史幂等回执保持原样，因此客户端必须允许 `details` 缺省。API 描述版本为 1.4.0。0.8.3 增加 `origin=codex_transport` 和可选 `transportOperation`，表示本地 App Server 传输故障。
 
 响应包含 `X-Request-ID` 和 `RunDesk-API-Version`。可以传入有效的 `X-Request-ID` 关联业务日志；它不是幂等 Key，不影响去重。幂等回放保留原回执内容，错误回执中的 requestId 属于原请求；当前 HTTP 访问编号以响应头为准。
 

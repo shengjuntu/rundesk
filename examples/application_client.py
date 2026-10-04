@@ -79,3 +79,20 @@ class RunDesk:
     def steer(self, session_id, turn_id, text, request_id):
         return self.call('POST', f'/sessions/{session_id}/steer', {
             'text': text, 'expectedTurnId': turn_id, 'requestId': request_id})
+
+    def check_recovery(self, session_id, run_id):
+        """Read native state and evidence. Does not start a model turn."""
+        return self.call('POST', f'/sessions/{session_id}/recovery/check', {
+            'expectedRunId': run_id})
+
+    def recover(self, session_id, plan, key, *, reviewed_effects=False,
+                issue_resolved=False, note=''):
+        """Explicit continuation with a NEW logical operation key.
+
+        Persist key/body first. Only acknowledge effects after checking actual
+        business records. Retries of this request must use the same key/body.
+        """
+        return self.call('POST', f'/sessions/{session_id}/recover', {
+            'planId': plan['id'], 'expectedRunId': plan['sourceRunId'],
+            'reviewedEffects': reviewed_effects, 'issueResolved': issue_resolved,
+            'note': note}, key=key)

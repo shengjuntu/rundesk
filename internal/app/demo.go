@@ -24,6 +24,7 @@ func DemoAgent() {
 	var cancel chan struct{}
 	var activeTurn string
 	thread, cwd := "", ""
+	history := newDemoHistory()
 	servers := map[string]any{}
 	version := 0
 	disabledSkills := map[string]bool{}
@@ -69,7 +70,7 @@ func DemoAgent() {
 		load()
 		switch msg.Method {
 		case "initialize":
-			reply(map[string]string{"userAgent": "rundesk-demo/0.8.3"})
+			reply(map[string]string{"userAgent": "rundesk-demo/0.8.4"})
 		case "initialized":
 		case "thread/start", "thread/resume":
 			thread, _ = p["threadId"].(string)
@@ -90,6 +91,13 @@ func DemoAgent() {
 				model = "demo-fixture"
 			}
 			reply(map[string]any{"thread": map[string]any{"id": thread, "turns": []any{}}, "model": model, "modelProvider": "demo", "cwd": cwd, "approvalPolicy": p["approvalPolicy"], "approvalsReviewer": p["approvalsReviewer"], "sandbox": map[string]any{"type": mode, "networkAccess": network}})
+		case "thread/read":
+			tid, _ := p["threadId"].(string)
+			if v, err := history.read(tid); err == nil {
+				reply(map[string]any{"thread": v})
+			} else {
+				send(map[string]any{"id": msg.ID, "error": map[string]any{"code": -32602, "message": "demo thread not found"}})
+			}
 		case "account/read":
 			reply(map[string]any{"account": map[string]string{"type": "demo"}, "requiresOpenaiAuth": false})
 		case "model/list":
@@ -161,6 +169,7 @@ func DemoAgent() {
 			activeTurn = turn
 			mu.Unlock()
 			tid, dir := thread, cwd
+			history.turn(tid, turn, "inProgress", "")
 			reply(map[string]any{"turn": map[string]any{"id": turn, "status": "inProgress", "items": []any{}}})
 			go func(params map[string]any) {
 				base := func(extra map[string]any) map[string]any {
@@ -170,6 +179,8 @@ func DemoAgent() {
 				}
 				notify("turn/started", base(map[string]any{"turn": map[string]any{"id": turn, "status": "inProgress"}}))
 				interrupted := false
+				var turnError any
+				finalReply := ""
 				defer func() {
 					mu.Lock()
 					if activeTurn == turn {
@@ -181,7 +192,11 @@ func DemoAgent() {
 					if interrupted {
 						status = "interrupted"
 					}
-					notify("turn/completed", base(map[string]any{"turn": map[string]any{"id": turn, "status": status, "error": nil}}))
+					if turnError != nil {
+						status = "failed"
+					}
+					history.turn(tid, turn, status, finalReply)
+					notify("turn/completed", base(map[string]any{"turn": map[string]any{"id": turn, "status": status, "error": turnError}}))
 				}()
 				text := ""
 				if arr, ok := params["input"].([]any); ok {
@@ -192,7 +207,24 @@ func DemoAgent() {
 						}
 					}
 				}
-				userText := strings.SplitN(text, "\n\n[Application context]", 2)[0]
+				userText := strings.SplitN(strings.SplitN(text, "\n\n[Application context]", 2)[0], "\n\n[RunDesk recovery]", 2)[0]
+				if strings.Contains(userText, "恢复演示") && !strings.Contains(text, "[RunDesk recovery]") {
+					item := map[string]any{"id": "inspect-" + turn, "type": "commandExecution", "command": "demo: read local sample", "status": "completed", "aggregatedOutput": "已生成演示草稿，未执行真实命令。", "exitCode": 0}
+					notify("item/completed", base(map[string]any{"item": item}))
+					demoWriteOutput(dir, text, "recovery-draft.md", "# 恢复演示草稿\n\n模拟已完成部分，未访问外部应用。\n")
+					turnError = map[string]any{"message": "演示：模型连接中断，已有草稿需先核对。", "codexErrorInfo": "responseStreamDisconnected"}
+					notify("error", base(map[string]any{"error": turnError, "willRetry": false}))
+					return
+				}
+				if strings.Contains(userText, "重试演示") {
+					notify("error", base(map[string]any{"error": map[string]any{"message": "演示：连接暂时中断，Codex 正在重试。"}, "willRetry": true}))
+					select {
+					case <-ch:
+						interrupted = true
+						return
+					case <-time.After(1500 * time.Millisecond):
+					}
+				}
 				if strings.Contains(userText, "轨迹") {
 					samples := []map[string]any{
 						{"id": "reason-" + turn, "type": "reasoning", "summary": []string{"演示：检查输入和项目配置。"}},
@@ -255,6 +287,7 @@ func DemoAgent() {
 						notify("item/agentMessage/delta", base(map[string]any{"itemId": itemID, "delta": string(part)}))
 					}
 				}
+				finalReply = message
 				notify("item/completed", base(map[string]any{"item": map[string]any{"id": itemID, "type": "agentMessage", "text": message}}))
 				notify("thread/tokenUsage/updated", base(map[string]any{"tokenUsage": map[string]any{"total": map[string]int{"totalTokens": 230, "inputTokens": 100, "outputTokens": 130}, "last": map[string]int{"totalTokens": 230, "inputTokens": 100, "outputTokens": 130}, "modelContextWindow": 128000}}))
 				// Write through a rooted handle, just like the application's own file API.

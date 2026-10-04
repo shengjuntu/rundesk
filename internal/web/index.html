@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="/conversation.css" />
     <link rel="stylesheet" href="/product.css" />
     <link rel="stylesheet" href="/diagnostics.css" />
+    <link rel="stylesheet" href="/recovery.css" />
+    <script defer src="/recovery.js"></script>
     <script defer src="/diagnostics.js"></script>
     <script defer src="/conversation.js"></script>
     <script defer src="/app.js"></script>
@@ -43,7 +45,7 @@
         <button id="sidebar-close" class="quiet sidebar-close" aria-label="关闭会话列表">关闭</button>
         <a class="brand" href="/"
           ><span class="brandmark">r.</span><strong>RunDesk</strong
-          ><small>0.8.3</small></a
+          ><small>0.8.4</small></a
         >
         <nav class="primary-nav" aria-label="主要功能">
           <button id="nav-assistant" class="selected" aria-current="page"><span class="nav-symbol">◌</span>对话</button>
@@ -127,7 +129,8 @@
               </div>
             </div>
             <div id="capability-strip" class="capability-strip"></div>
-            <div id="analysis-banner" class="analysis-banner hidden"></div>
+            <div id="recovery-banner" class="recovery-banner hidden" aria-live="polite"></div>
+          <div id="analysis-banner" class="analysis-banner hidden"></div>
             <div id="runtime-strip" class="runtime-strip hidden"></div>
             <div id="messages" class="messages">
               <div class="welcome">

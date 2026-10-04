@@ -148,10 +148,11 @@
         node.append(el("span",{class:"trace-turn-dot","aria-hidden":"true"},String(i+1).padStart(2,"0")),el("article",{class:"trace-turn-card"},toggle));
       }
       const toggle=node.querySelector(".trace-round");
-      const sig=JSON.stringify([r.title,r.status,r.start,r.end,data.tools,data.issues,data.empty,data.reply,isOpen,r.id===run,i]);
+      const sig=JSON.stringify([r.title,r.status,r.start,r.end,data.tools,data.issues,data.empty,data.reply,isOpen,r.id===run,i,r.recovery]);
       if(toggle._sig!==sig){
         const meta=el("span",{class:"trace-turn-meta"},`Turn ${i+1}`,el("span",{},stamp(r.start)),el("span",{class:"trace-state "+(bad(r.status)?"issue":active(r.status)?"running":"")},labels[r.status]||r.status));
         const stats=el("span",{class:"trace-turn-stats"},el("span",{},`${data.tools} 次工具调用`),el("span",{},r.end!=null&&r.start!=null&&r.end>=r.start?fmt(r.end-r.start):"耗时尚未完整"));
+        if(r.recovery)stats.append(el("span",{class:"trace-context-chip"},"恢复轮次"));
         if(data.issues)stats.append(el("span",{class:"trace-turn-alert"},`${data.issues} 个需关注步骤`));
         if(data.empty)stats.append(el("span",{class:"trace-turn-empty"},`${data.empty} 个空返回`));
         stats.append(el("span",{class:"trace-turn-action"},isOpen?"收起过程":"查看过程"));
@@ -187,8 +188,8 @@
     if(relatedHost._sig!==relatedSignature){relatedHost._sig=relatedSignature;relatedHost.replaceChildren(...related.slice(0,5).map(s=>button("打开分析会话 · "+stamp(Date.parse(s.created)),()=>selectSession(s.id),"trace-context-chip")));}
     q("#trace-run-meta").textContent=r?[`${toolCount} 次工具调用`,`${list.filter(isIssue).length} 个需关注步骤`,r.end!=null?`本轮 ${fmt(r.end-r.start)}`:"运行边界尚未完整"].join(" · "):"发送问题后，实际执行的步骤会出现在这里。";
     const host=q("#trace-context"), skills=list.filter(x=>x.title==="显式选中 Skills");
-    const sig=JSON.stringify(skills.map(x=>[x.id,x.body]));
-    if(host._sig!==sig){host.replaceChildren(...skills.map(row=>button("已选技能 · 查看提交记录",()=>selectStep(row.id),"trace-context-chip")));host._sig=sig;}
+    const sig=JSON.stringify([skills.map(x=>[x.id,x.body]),r?.recovery]);
+    if(host._sig!==sig){host.replaceChildren(...skills.map(row=>button("已选技能 · 查看提交记录",()=>selectStep(row.id),"trace-context-chip")));if(r?.recovery)host.append(button("查看来源轮次",()=>selectRun(r.recovery.sourceRunId),"trace-context-chip"));host._sig=sig;}
   }
   function renderSteps() {
     const list=visibleRows();page=Math.min(page,Math.max(0,Math.ceil(list.length/PAGE_SIZE)-1));

@@ -1,3 +1,13 @@
+# 升级到 RunDesk 0.8.4
+
+停止旧服务、替换程序，沿用原系统用户、数据目录、CODEX_HOME 和启动参数，刷新浏览器。无需数据库迁移。升级不会自动重跑中断任务。
+
+失败任务新增「核对并继续」，新恢复轮次保留来源。核对需要原生 thread/read；方法不可用或结果不完整时显示原因，不自动降级为重发。Codex 原生重试状态也会显示。
+
+OpenAPI 描述升级到 1.4.0，HTTP 路径仍为 /api/v1；两个新接口及 Session 可选 recovery/retry 字段向后兼容。已有 news2douyin 和 Video App 基本调用无需修改；接入恢复操作时，先展示核对结果、检查业务记录，再用新逻辑操作 Key 提交。详见 [恢复说明](RECOVERY.md)。
+
+Linux amd64 与 Windows amd64 二进制随包提供；Windows 仅交叉编译。
+
 # 升级到 RunDesk 0.8.3
 
 停止旧服务，替换程序，沿用原用户、数据目录、CODEX_HOME 与启动参数，刷新浏览器。无需数据库迁移。包内有 Linux amd64 和 Windows amd64 二进制；Windows 仅交叉编译。

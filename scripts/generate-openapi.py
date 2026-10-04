@@ -17,12 +17,18 @@ schemas={
  'Error':obj({'error':st(),'code':st(),'requestId':st(),'retryable':bool_,'details':ref('ErrorDetails')},['error','code','requestId','retryable']),
  'Skill':obj({'name':st(),'path':st()},['name','path']),
  'Input':obj({'text':st(minLength=1,maxLength=262144),'files':arr(st()),'skills':arr(ref('Skill'))},['text']),
+ 'RetryNotice':obj({'message':st(),'time':st()},['message','time']),
+ 'RecoveryOrigin':obj({'planId':st(),'sourceRunId':st(),'sourceTurnId':st(),'rootRunId':st(),'checkedAt':st()},['planId','sourceRunId','rootRunId','checkedAt']),
+ 'RecoveryStep':obj({'eventId':integer,'name':st(),'status':st()},['eventId','name','status']),
+ 'NativeRecovery':obj({'status':st(),'turnId':st(),'turnStatus':st(),'reply':st()},['status']),
+ 'RecoveryRequest':obj({'planId':st(),'expectedRunId':st(),'reviewedEffects':bool_,'issueResolved':bool_,'note':st(description='最多 4000 UTF-8 字节。')},['planId','expectedRunId']),
+ 'RecoveryPlan':obj({k:st() for k in ['id','sessionId','sourceRunId','sourceTurnId','threadId','rootRunId','checkedAt','sourceUpdated','category','reason','failure']}|{'instanceRevision':integer,'canContinue':bool_,'requiresReview':bool_,'requiresFix':bool_,'taskInput':ref('Input'),'steps':arr(ref('RecoveryStep')),'artifacts':arr(st()),'truncated':bool_,'submitted':bool_,'native':ref('NativeRecovery')},['id','sessionId','sourceRunId','checkedAt','category','reason','canContinue','requiresReview','requiresFix','taskInput','steps','artifacts','native']),
  'SteerInput':obj({'text':st(),'files':arr(st()),'skills':arr(ref('Skill')),'expectedTurnId':st(),'requestId':st(minLength=8,maxLength=128)},['text','expectedTurnId','requestId']),
  'Source':obj({'kind':st(enum=['human','application']),'appId':st(maxLength=80),'taskId':st(maxLength=200)},extra=False),
  'TraceSelection':obj({'sessionId':st(),'runId':st(),'eventIds':arr(integer)},['sessionId','runId']),
  'TraceOrigin':obj({'sessionId':st(),'runId':st(),'eventIds':arr(integer),'through':integer,'capturedAt':st(),'title':st()},['sessionId','runId','through','capturedAt']),
  'CreateSession':{'oneOf':[obj({'workspaceId':st(),'instanceId':st(default='default'),'title':st(),'model':st(),'source':ref('Source')},['workspaceId']),obj({'traceAnalysis':ref('TraceSelection')},['traceAnalysis'])]},
- 'Session':obj({k:st() for k in ['id','instanceId','workspaceId','title','threadId','model','status','runId','turnId','error','created','updated']}|{'pinned':bool_,'archived':bool_,'source':ref('Source'),'traceOrigin':ref('TraceOrigin')},['id','instanceId','workspaceId','status'],True),
+ 'Session':obj({k:st() for k in ['id','instanceId','workspaceId','title','threadId','model','status','runId','turnId','error','created','updated']}|{'pinned':bool_,'archived':bool_,'source':ref('Source'),'traceOrigin':ref('TraceOrigin'),'recovery':ref('RecoveryOrigin'),'retry':ref('RetryNotice')},['id','instanceId','workspaceId','status'],True),
  'Permissions':obj({'sandbox':st(enum=['workspace-write','read-only','danger-full-access']),'approvalPolicy':st(enum=['on-request','never']),'reviewer':st(enum=['user','auto_review']),'networkAccess':bool_}),
  'InstanceInput':obj({'name':st(minLength=1),'description':st(),'defaultModel':st(),'permissions':ref('Permissions'),'revision':integer},['name']),
  'Instance':obj({'id':st(),'name':st(),'description':st(),'defaultModel':st(),'codexHome':st(),'revision':integer,'managed':bool_,'created':st(),'permissions':ref('Permissions')},['id','name','revision'],True),
@@ -44,6 +50,8 @@ requests={
  ('POST','/workspaces'):obj({'name':st(),'path':st()}),
  ('PUT','/workspaces/{wid}/notes'):obj({'text':st(),'revision':integer},['text','revision']),
  ('POST','/sessions'):ref('CreateSession'),('POST','/sessions/{sid}/turns'):ref('Input'),('POST','/sessions/{sid}/steer'):ref('SteerInput'),
+ ('POST','/sessions/{sid}/recovery/check'):obj({'expectedRunId':st()},['expectedRunId']),
+ ('POST','/sessions/{sid}/recover'):ref('RecoveryRequest'),
  ('POST','/sessions/{sid}/stop'):obj({'expectedRunId':st()},['expectedRunId']),
  ('PATCH','/sessions/{sid}'):obj({'title':st(),'pinned':bool_,'archived':bool_}),
  ('POST','/sessions/{sid}/approvals/{aid}'):obj({'decision':{},'scope':st(enum=['turn','session']),'answers':obj(extra=True),'content':{}}),
@@ -52,8 +60,10 @@ requests={
  ('PUT','/workspaces/{wid}/mcp/{name}'):obj({'version':st(),'config':obj(extra=True),'remove':bool_},['version']),
  ('POST','/workspaces/{wid}/mcp/import'):obj({'version':st(),'bundle':obj(extra=True),'overwrite':bool_},['version','bundle']),
 }
-idempotent={('POST',p) for p in ['/instances','/workspaces','/sessions','/sessions/{sid}/turns']}
+idempotent={('POST',p) for p in ['/instances','/workspaces','/sessions','/sessions/{sid}/turns','/sessions/{sid}/recover']}
 summaries={
+ '/sessions/{sid}/recovery/check':'核对当前失败或中断轮次；15 分钟内有效，每会话只保留最近一次核对',
+ '/sessions/{sid}/recover':'按服务端核对结果继续原会话；重新核对原生状态，新轮次关联失败来源',
  '/applications':'应用列表与任务统计','/applications/{appId}':'读取或登记应用；绑定不可变，修改信息需 revision','/workspaces/{wid}/skill-bundles':'导入完整技能 ZIP 或目录；替换会完整备份原目录',
  '/meta':'版本、运行模式与能力发现','/instances':'实例列表与创建','/sessions':'会话列表与创建','/sessions/{sid}/turns':'提交新任务，返回原始接收回执','/sessions/{sid}/steer':'向当前轮追加要求','/sessions/{sid}/stop':'请求停止当前任务','/sessions/{sid}/events':'持久化事件分页或 SSE 订阅','/requests/{key}':'查询幂等提交回执','/instances/{iid}/configuration':'实例配置总览','/sessions/{sid}/configuration':'会话配置与上次执行记录','/openapi.json':'OpenAPI 3.1 契约',
 }
@@ -84,9 +94,10 @@ for file in sorted((root/'internal/app').glob('*.go')):
   if path.endswith('/file'):query('path',required=True);query('preview',st(enum=['0','1']))
   params.append({'name':'X-Request-ID','in':'header','schema':st(),'description':'可选关联编号；响应回传有效编号，否则由服务器生成。'})
   if (method,path) in idempotent:params.append({'name':'Idempotency-Key','in':'header','required':True,'schema':st(pattern='^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$'),'description':'每个逻辑操作唯一。相同请求重试必须复用，不能将 Key 用于不同请求。'})
-  response=ref('NativeObject'); status='202' if path.endswith('/turns') else '200'
+  response=ref('NativeObject'); status='202' if path.endswith(('/turns','/recover')) else '200'
   if path=='/sessions':response=arr(ref('Session')) if method=='GET' else ref('Session')
-  if path=='/sessions/{sid}' and method!='DELETE' or path.endswith('/turns'):response=ref('Session')
+  if path=='/sessions/{sid}' and method!='DELETE' or path.endswith(('/turns','/recover')):response=ref('Session')
+  if path.endswith('/recovery/check'):response=ref('RecoveryPlan')
   if path=='/applications':response=arr(ref('Application'))
   if path=='/applications/{appId}':response=ref('Application')
   if '/skill-bundles' in path:response=ref('SkillBundle')
@@ -115,6 +126,6 @@ for file in sorted((root/'internal/app').glob('*.go')):
   if path.endswith('/uploads'):op['requestBody']={'required':True,'content':{'multipart/form-data':{'schema':obj({'file':st(format='binary')},['file'])}}}
   if path.endswith('/skill-bundles') and method=='POST':op['requestBody']={'required':True,'content':{'application/zip':{'schema':st(format='binary')},'multipart/form-data':{'schema':{'type':'object','additionalProperties':st(format='binary'),'description':'每个 multipart 字段名为文件相对路径；根部 SKILL.md 或一层技能文件夹。最多 1000 文件、解压后 32 MiB。'}}}}
   paths.setdefault(path,{})[method.lower()]=op
-spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':'1.3.2','description':'RunDesk 0.8.3。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。Source 是调用方声明的业务标签，不代表应用鉴权或隔离。此版本继续使用后台 Token/Cookie。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
+spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':'1.4.0','description':'RunDesk 0.8.4。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。Source 是调用方声明的业务标签，不代表应用鉴权或隔离。此版本继续使用后台 Token/Cookie。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

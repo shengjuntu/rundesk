@@ -1,0 +1,14 @@
+{
+  "mode": "RunDesk demo JSONL fixture, persisted demo thread state, Chromium response-loss injection; no live model or external business write",
+  "passed": 8,
+  "checks": [
+    "failed demo task shows original goal, native failure, completed step and existing file with safe preview; acknowledgement required",
+    "Escape returns focus to the trigger and preserves the main draft",
+    "lost acceptance response is retried with the identical key and body; original session/thread, new run, origin link and draft retained",
+    "single timeline preserves the failed source and completed continuation with source navigation",
+    "native willRetry remains the same active task, offers no duplicate start and clears after progress",
+    "390px recovery dialog, evidence and review controls fit without horizontal overflow",
+    "blocked completed-state preview displays native reply and cannot submit a continuation (UI fixture; server gate covered in Go)",
+    "no uncaught browser JavaScript errors"
+  ]
+}

@@ -1,11 +1,13 @@
-# RunDesk 0.8.3
+# RunDesk 0.8.4
+
+失败或中断的任务可「核对并继续」：先查看原生状态、已有步骤和文件，再在原会话继续剩余工作。Codex 自身重试会显示进度，恢复轮次与失败来源在时间线上关联。见 [恢复说明](docs/RECOVERY.md)。
 
 轨迹重新设计为「问题 → 实际步骤 → 回复与来源」。对轨迹的提问会新建关联的独立分析会话，由 Codex 使用内置的只读 MCP 工具查询记录。
 
 首页直接使用通用助手；专用应用统一在「应用」页管理，一个应用对应一份专用配置。Skills 与 MCP 使用独立管理页。技能支持完整文件夹和 ZIP 导入、目录浏览与完整导出，脚本、参考资料、模板和资源文件一并保留。现有 `/api` 和 `/api/v1` 客户端继续兼容。
 
-- [本版说明](docs/RELEASE-0.8.3.md)
-- [验证记录](docs/VALIDATION-0.8.3.md)
+- [本版说明](docs/RELEASE-0.8.4.md)
+- [验证记录](docs/VALIDATION-0.8.4.md)
 - [0.6.0 API 与实例配置说明](docs/RELEASE-0.6.0.md)
 - [应用 API v1](docs/API-V1.md)
 - [OpenAPI 定义](internal/app/openapi.json)
@@ -17,7 +19,7 @@
 
 对话、Skills/MCP 配置、运行审批、调试事件与文件产物使用同一组 HTTP API。ActiveVLM 等业务前台可以通过这层 API 驱动 Codex。项目正式定名 RunDesk；当前尚未绑定 GitHub 仓库。
 
-**状态：v0.8.3 原型。** 单用户、自托管。后端直接启动官方 `codex app-server`，没有复用 Sandbox Agent，也没有实现另一套 agent loop。
+**状态：v0.8.4 原型。** 单用户、自托管。后端直接启动官方 `codex app-server`，没有复用 Sandbox Agent，也没有实现另一套 agent loop。
 
 ![RunDesk 工作台](docs/screenshots/0.8.0/applications-desktop.png)
 
@@ -43,7 +45,7 @@ go build -buildvcs=false -o bin/rundesk ./cmd/rundesk
 ./bin/rundesk --demo
 ```
 
-演示模式有醒目的横幅，**不调用模型，不执行生成的命令**。输入“审批”可以检查确认流程；输入“审批 告警”可检查规则对象提交和重复告警合并；输入“轨迹 审批”可生成包含命令失败、MCP 和上下文压缩的模拟轨迹。演示规则不会写入真实 Codex。演示数据位于数据目录的 `demo/` 子目录，与真实模式隔离；模拟器的 MCP 配置与 Skill 开关保存在演示实例目录，跨连接与重启保留。
+演示模式有醒目的横幅，**不调用模型，不执行生成的命令**。输入“审批”可以检查确认流程；输入“审批 告警”可检查规则对象提交和重复告警合并；输入“轨迹 审批”可生成包含命令失败、MCP 和上下文压缩的模拟轨迹。输入“恢复演示”可检查失败后的核对与继续；输入“重试演示”可观察原生重试状态。演示规则不会写入真实 Codex。演示数据位于数据目录的 `demo/` 子目录，与真实模式隔离；模拟器的 MCP 配置与 Skill 开关保存在演示实例目录，跨连接与重启保留。
 
 压缩包的 `bin/` 中若附带预编译版本，可直接运行对应文件：Linux x86-64 使用 `rundesk`，Windows x86-64 使用 `rundesk-windows-amd64.exe`。这些文件只包含本项目，不包含 Codex 或模型凭据。Windows 版本仅交叉编译，尚未进行 Windows 实机验证。
 
@@ -144,7 +146,7 @@ node scripts/trace-model-test.cjs
 python3 scripts/native-smoke.py --codex /path/to/codex
 ```
 
-浏览器测试可选：在开发环境安装 Playwright 和 Chromium，然后运行 `node scripts/product-smoke.cjs`。Node/Playwright 只用于测试，不是 RunDesk 运行依赖。完整验证范围与复现命令见 [0.8.3 验证记录](docs/VALIDATION-0.8.3.md)。
+浏览器测试可选：在开发环境安装 Playwright 和 Chromium，然后运行 `node scripts/product-smoke.cjs`。Node/Playwright 只用于测试，不是 RunDesk 运行依赖。完整验证范围与复现命令见 [0.8.4 验证记录](docs/VALIDATION-0.8.4.md)。
 
 原生协议 smoke 测试使用临时 `CODEX_HOME`，验证配置、Skills 和 MCP，不请求模型推理，不修改已有 Codex 配置。
 

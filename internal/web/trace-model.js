@@ -187,6 +187,7 @@
             status: "running",
             refs: [e.id],
             input: true,
+            recovery: d.recovery,
           };
           this.runs.push(r);
           this.runMap.set(r.id, r);
@@ -246,6 +247,9 @@
                 status: "failed",
                 body: plain(p.turn.error),
               });
+            break;
+          case "run/retry":
+            this.add(e, r, {title: d.willRetry ? "Codex 正在重试" : "重试状态已更新", body: "原生 Codex 通知；未新建任务轮次。"});
             break;
           case "run/state":
             this.closeRun(r, t, d.status || "unknown");
@@ -445,8 +449,8 @@
             break;
           case "error":
             this.add(e, r, {
-              title: "运行错误",
-              status: "failed",
+              title: p.willRetry ? "原生错误 · 将重试" : "运行错误",
+              status: p.willRetry ? "warning" : "failed",
               body: plain(p.error || p),
             });
             break;

@@ -1,0 +1,20 @@
+{
+  "mode": "real RunDesk demo service and Chromium; explicit browser HTTP faults and synthetic runtime event; no real provider fault reproduced",
+  "passed": 14,
+  "checks": [
+    "JSON HTTP 500 displays URL, method, status, request IDs, session, code and upstream cause; copy uses redacted content",
+    "repeated identical requests group with count, timestamps and recent correlation IDs",
+    "HTML 500 response remains inert text and is not discarded by JSON parsing",
+    "empty 502, HTTP 200 invalid JSON, and no-response network failure are distinguished without inventing a 500",
+    "oversized errors are bounded at 32 KiB with an explicit truncation indication",
+    "error history remains available after refresh in the same tab",
+    "errors inside settings dialogs have a reachable detail action without closing the original form",
+    "failed send retains the draft and exposes details; only manual retry occurs and keeps the same idempotency key; request body is excluded",
+    "runtime error card opens event details and does not mislabel an upstream 500 as a browser HTTP status",
+    "replayed event IDs do not inflate counts after runtime errors were grouped",
+    "SSE disconnect is recorded once per outage with unknown HTTP status",
+    "trace entry, 390px mobile details and Escape work without horizontal overflow",
+    "clear removes the current tab history",
+    "no uncaught browser JavaScript errors"
+  ]
+}

@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Application API",
-    "version": "1.3.2",
-    "description": "RunDesk 0.8.3。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。Source 是调用方声明的业务标签，不代表应用鉴权或隔离。此版本继续使用后台 Token/Cookie。"
+    "version": "1.4.0",
+    "description": "RunDesk 0.8.4。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。Source 是调用方声明的业务标签，不代表应用鉴权或隔离。此版本继续使用后台 Token/Cookie。"
   },
   "servers": [
     {
@@ -4140,6 +4140,187 @@
         }
       }
     },
+    "/sessions/{sid}/recovery/check": {
+      "post": {
+        "operationId": "post_sessions_sid_recovery_check",
+        "summary": "核对当前失败或中断轮次；15 分钟内有效，每会话只保留最近一次核对",
+        "parameters": [
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryPlan"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedRunId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "expectedRunId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/{sid}/recover": {
+      "post": {
+        "operationId": "post_sessions_sid_recover",
+        "summary": "按服务端核对结果继续原会话；重新核对原生状态，新轮次关联失败来源",
+        "parameters": [
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            },
+            "description": "每个逻辑操作唯一。相同请求重试必须复用，不能将 Key 用于不同请求。"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecoveryRequest"
+              }
+            }
+          }
+        }
+      }
+    },
     "/sessions/{sid}/runtime": {
       "get": {
         "operationId": "get_sessions_sid_runtime",
@@ -5309,6 +5490,206 @@
         ],
         "additionalProperties": false
       },
+      "RetryNotice": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "time"
+        ],
+        "additionalProperties": false
+      },
+      "RecoveryOrigin": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string"
+          },
+          "sourceRunId": {
+            "type": "string"
+          },
+          "sourceTurnId": {
+            "type": "string"
+          },
+          "rootRunId": {
+            "type": "string"
+          },
+          "checkedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "planId",
+          "sourceRunId",
+          "rootRunId",
+          "checkedAt"
+        ],
+        "additionalProperties": false
+      },
+      "RecoveryStep": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "eventId",
+          "name",
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "NativeRecovery": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "turnId": {
+            "type": "string"
+          },
+          "turnStatus": {
+            "type": "string"
+          },
+          "reply": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "RecoveryRequest": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string"
+          },
+          "expectedRunId": {
+            "type": "string"
+          },
+          "reviewedEffects": {
+            "type": "boolean"
+          },
+          "issueResolved": {
+            "type": "boolean"
+          },
+          "note": {
+            "type": "string",
+            "description": "最多 4000 UTF-8 字节。"
+          }
+        },
+        "required": [
+          "planId",
+          "expectedRunId"
+        ],
+        "additionalProperties": false
+      },
+      "RecoveryPlan": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "sourceRunId": {
+            "type": "string"
+          },
+          "sourceTurnId": {
+            "type": "string"
+          },
+          "threadId": {
+            "type": "string"
+          },
+          "rootRunId": {
+            "type": "string"
+          },
+          "checkedAt": {
+            "type": "string"
+          },
+          "sourceUpdated": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "failure": {
+            "type": "string"
+          },
+          "instanceRevision": {
+            "type": "integer"
+          },
+          "canContinue": {
+            "type": "boolean"
+          },
+          "requiresReview": {
+            "type": "boolean"
+          },
+          "requiresFix": {
+            "type": "boolean"
+          },
+          "taskInput": {
+            "$ref": "#/components/schemas/Input"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecoveryStep"
+            }
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "submitted": {
+            "type": "boolean"
+          },
+          "native": {
+            "$ref": "#/components/schemas/NativeRecovery"
+          }
+        },
+        "required": [
+          "id",
+          "sessionId",
+          "sourceRunId",
+          "checkedAt",
+          "category",
+          "reason",
+          "canContinue",
+          "requiresReview",
+          "requiresFix",
+          "taskInput",
+          "steps",
+          "artifacts",
+          "native"
+        ],
+        "additionalProperties": false
+      },
       "SteerInput": {
         "type": "object",
         "properties": {
@@ -5511,6 +5892,12 @@
           },
           "traceOrigin": {
             "$ref": "#/components/schemas/TraceOrigin"
+          },
+          "recovery": {
+            "$ref": "#/components/schemas/RecoveryOrigin"
+          },
+          "retry": {
+            "$ref": "#/components/schemas/RetryNotice"
           }
         },
         "required": [
