@@ -5,7 +5,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
 (async()=>{
  const temp=fs.mkdtempSync(path.join(os.tmpdir(),'rundesk-process-')),port=35000+Math.floor(Math.random()*16000),base=`http://127.0.0.1:${port}`,token='process-test-only-token-1234567890';
  const proc=spawn(path.resolve('bin/rundesk'),['--demo','--data',temp,'--listen',`127.0.0.1:${port}`],{env:{...process.env,RUNDESK_TOKEN:token},stdio:['ignore','ignore','pipe']});let logs='',browser,page;proc.stderr.on('data',d=>logs+=d);
- const checks=[],errors=[],out=path.resolve('docs/screenshots/0.8.4');fs.mkdirSync(out,{recursive:true});
+ const checks=[],errors=[],out=path.resolve('docs/screenshots/0.9.2');fs.mkdirSync(out,{recursive:true});
  const call=async(method,p,body)=>{const r=await fetch(base+'/api/v1'+p,{method,headers:{Authorization:'Bearer '+token,'Content-Type':'application/json','Idempotency-Key':crypto.randomUUID()},body:body===undefined?undefined:JSON.stringify(body)});assert(r.ok,`${method} ${p}: ${r.status} ${await r.clone().text()}`);return r.json();};
  const seed=sessions=>{const result=spawnSync('python3',['-c',`import json,sqlite3,sys\nx=json.load(sys.stdin)\ndb=sqlite3.connect(x['db'])\nfor sid,events in x['sessions']:\n for e in events: db.execute('INSERT INTO events(session,time,direction,method,data) VALUES(?,?,?,?,?)',(sid,e['time'],e['direction'],e['method'],json.dumps(e['data'],ensure_ascii=False).encode('utf-8')))\ndb.commit()`],{input:JSON.stringify({db:path.join(temp,'demo/state.db'),sessions}),encoding:'utf8'});assert.equal(result.status,0,result.stderr);};
  const events=[];let clock=0;const start=Date.parse('2026-10-03T10:00:00Z');
@@ -74,7 +74,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await page.locator('.trace-round').last().focus();await page.keyboard.press('Enter');assert.equal(await page.locator('.trace-turn.expanded').count(),1);await page.keyboard.press('Enter');assert.equal(await page.locator('.trace-turn.expanded').count(),0);
   checks.push('incremental turn arrival preserves historical selection and filters; latest jump is explicit; collapsed state survives refresh and keyboard toggles');
   assert.deepEqual(errors,[]);checks.push('no uncaught browser JavaScript errors');
-  const report={mode:'RunDesk demo protocol; fictional Twitter fixtures; no external search or live model',passed:checks.length,checks};fs.writeFileSync('docs/process-validation-0.8.4.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
+  const report={mode:'RunDesk demo protocol; fictional Twitter fixtures; no external search or live model',passed:checks.length,checks};fs.writeFileSync('docs/process-validation-0.9.2.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
  }catch(e){if(page)await page.screenshot({path:out+'/failure.png',fullPage:true}).catch(()=>{});console.error(e);console.error(logs.slice(-1800));process.exitCode=1;}
  finally{if(browser)await browser.close();proc.kill('SIGTERM');await new Promise(r=>proc.once('exit',r));fs.rmSync(temp,{recursive:true,force:true});}
 })();

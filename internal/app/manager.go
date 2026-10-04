@@ -80,6 +80,7 @@ type handle struct {
 	requests       map[string]Approval
 }
 type Manager struct {
+	keyMu               sync.Mutex
 	scheduleMu          sync.Mutex
 	schedules           map[string]Schedule
 	queueMu             sync.Mutex

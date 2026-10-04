@@ -46,7 +46,7 @@ class RunDesk:
             raise RunDeskError(error.code, body) from error
 
     def register_application(self, app_id, name, instance_id, workspace_id='', description='', entry_url='', revision=None):
-        """Register metadata without creating a task. Binding is immutable."""
+        """Administrator only: register metadata. Binding is immutable."""
         from urllib.parse import quote
         body = dict(name=name, instanceId=instance_id, workspaceId=workspace_id,
                     description=description, entryUrl=entry_url)
@@ -96,3 +96,33 @@ class RunDesk:
             'planId': plan['id'], 'expectedRunId': plan['sourceRunId'],
             'reviewedEffects': reviewed_effects, 'issueResolved': issue_resolved,
             'note': note}, key=key)
+
+    def whoami(self):
+        return self.call('GET', '/whoami')
+
+    def create_task(self, spec, key):
+        """Application credentials can omit instanceId/source; workspaceId is required."""
+        return self.call('POST', '/tasks', spec, key=key)
+
+    def task(self, task_id):
+        return self.call('GET', '/tasks/' + task_id)
+
+    def tasks(self, **filters):
+        from urllib.parse import urlencode
+        return self.call('GET', '/tasks?' + urlencode(filters))
+
+    def cancel_task(self, task_id):
+        return self.call('POST', '/tasks/' + task_id + '/cancel', {})
+
+    def schedules(self):
+        return self.call('GET', '/schedules')
+
+    def create_schedule(self, spec, key):
+        return self.call('POST', '/schedules', spec, key=key)
+
+    def update_schedule(self, schedule_id, spec, revision):
+        return self.call('PUT', '/schedules/' + schedule_id,
+                         {'spec': spec, 'revision': revision})
+
+    def delete_schedule(self, schedule_id, revision):
+        return self.call('DELETE', '/schedules/' + schedule_id, {'revision': revision})

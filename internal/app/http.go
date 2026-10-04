@@ -45,17 +45,30 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 	s.integrationRoutes(mux)
 	s.messageRoutes(mux)
 	s.recoveryRoutes(mux)
- s.queueRoutes(mux)
- s.scheduleRoutes(mux)
+	s.queueRoutes(mux)
+	s.scheduleRoutes(mux)
+	s.keyRoutes(mux)
 	mux.HandleFunc("POST /api/login", s.login)
 	mux.HandleFunc("POST /api/logout", func(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, &http.Cookie{Name: "rundesk", Value: "", Path: "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteStrictMode})
 		writeJSON(w, 200, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("GET /api/meta", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, map[string]any{"name": "RunDesk", "version": Version, "apiVersions": []string{"v1"}, "demo": m.Demo, "protocol": "Codex App Server JSONL", "capabilities": []string{"instances", "sessions", "trace", "events", "approvals", "skills", "mcp", "notes", "files", "api-v1", "idempotency", "configuration-summary", "application-metadata", "reply-feedback", "applications", "skill-bundles", "task-recovery", "native-retry-status", "task-queue", "schedules"}})
+		writeJSON(w, 200, map[string]any{"name": "RunDesk", "version": Version, "apiVersions": []string{"v1"}, "demo": m.Demo, "protocol": "Codex App Server JSONL", "capabilities": []string{"instances", "sessions", "trace", "events", "approvals", "skills", "mcp", "notes", "files", "api-v1", "idempotency", "configuration-summary", "application-metadata", "reply-feedback", "applications", "skill-bundles", "task-recovery", "native-retry-status", "task-queue", "schedules", "application-credentials"}})
 	})
-	mux.HandleFunc("GET /api/workspaces", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, m.Workspaces()) })
+	mux.HandleFunc("GET /api/workspaces", func(w http.ResponseWriter, r *http.Request) {
+		if k := principal(r); k != nil {
+			items := []map[string]string{}
+			for _, v := range m.Workspaces() {
+				if k.workspace(v.ID) {
+					items = append(items, map[string]string{"id": v.ID, "name": v.Name})
+				}
+			}
+			writeJSON(w, 200, items)
+			return
+		}
+		writeJSON(w, 200, m.Workspaces())
+	})
 	mux.HandleFunc("POST /api/workspaces", func(w http.ResponseWriter, r *http.Request) {
 		var v struct {
 			Name string
@@ -83,6 +96,9 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 		q := r.URL.Query()
 		filtered := ss[:0]
 		for _, item := range ss {
+			if !sessionVisible(r, item) {
+				continue
+			}
 			if (q.Get("instanceId") == "" || item.InstanceID == q.Get("instanceId")) && (q.Get("workspaceId") == "" || item.WorkspaceID == q.Get("workspaceId")) && (q.Get("appId") == "" || item.Source.AppID == q.Get("appId")) && (q.Get("taskId") == "" || item.Source.TaskID == q.Get("taskId")) {
 				filtered = append(filtered, item)
 			}
@@ -242,7 +258,7 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 		writeErr(w, 404, failure(404, "not_found", "API 路径或方法不存在"))
 	})
 	mux.Handle("/", http.FileServerFS(web.Files))
-	return s.apiBoundary(s.guard(s.idempotent(mux)))
+	return s.apiBoundary(s.guard(s.applicationGate(s.idempotent(mux))))
 }
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -313,11 +329,11 @@ func (s *Server) guard(next http.Handler) http.Handler {
 			writeErr(w, 403, errors.New("跨站请求被拒绝"))
 			return
 		}
-		if strings.HasPrefix(r.URL.Path, "/api/") && r.URL.Path != "/api/login" && s.Token != "" {
-			auth := same(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "), s.Token)
-			c, e := r.Cookie("rundesk")
-			if !auth && (e != nil || !same(c.Value, s.cookie)) {
-				writeErr(w, 401, errors.New("需要登录"))
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			var err error
+			r, err = s.authorize(r)
+			if err != nil {
+				writeErr(w, 401, err)
 				return
 			}
 		}
@@ -376,6 +392,9 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 	defer tick.Stop()
 	beat := 0
 	for {
+		if !s.credentialStillValid(r) {
+			return
+		}
 		if _, e := s.Manager.Session(id); e != nil {
 			return
 		}

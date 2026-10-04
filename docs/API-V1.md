@@ -1,3 +1,7 @@
+# 0.9.2 补充
+
+现行契约为 OpenAPI 1.7.0，新增持久化队列、Cron 与应用专用凭据。应用接入应优先阅读 [应用凭据](APPLICATION-CREDENTIALS.md)、[队列](QUEUE.md) 与 [定时任务](SCHEDULES.md)。以下历史基础接口说明中的管理员 Token 仍兼容；应用 Bearer 凭据受项目与操作限制。
+
 # RunDesk 应用接口 v1（RunDesk 0.8.4）
 
 RunDesk 为两类客户端提供同一套运行能力：人通过 WebUI，应用通过 HTTP API。Codex 执行 Agent loop；应用负责自己的交互、业务数据和审核流程。

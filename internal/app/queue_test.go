@@ -143,3 +143,41 @@ func TestQueueAPIReplayAndCursor(t *testing.T) {
 		t.Fatal("invalid time accepted")
 	}
 }
+
+func TestQueuePerInstanceDoesNotBlockOtherApplications(t *testing.T) {
+	m := testManager(t)
+	q := m.Queue()
+	q.Paused = true
+	q.MaxConcurrent = 2
+	q.PerInstance = map[string]int{"default": 1}
+	if _, e := m.SaveQueue(q); e != nil {
+		t.Fatal(e)
+	}
+	wid := m.Workspaces()[0].ID
+	first, e := m.Enqueue(TaskSpec{WorkspaceID: wid, Input: Input{Text: "审批"}})
+	if e != nil {
+		t.Fatal(e)
+	}
+	second, e := m.Enqueue(TaskSpec{WorkspaceID: wid, Input: Input{Text: "waiting behind first"}})
+	if e != nil {
+		t.Fatal(e)
+	}
+	i, e := m.CreateInstance(InstancePatch{Name: "parallel app"})
+	if e != nil {
+		t.Fatal(e)
+	}
+	third, e := m.Enqueue(TaskSpec{WorkspaceID: wid, InstanceID: i.ID, Source: SessionSource{Kind: "application", AppID: "queue-parallel-test"}, Input: Input{Text: "independent task"}})
+	if e != nil {
+		t.Fatal(e)
+	}
+	q = m.Queue()
+	q.Paused = false
+	m.SaveQueue(q)
+	taskWait(t, m, first.ID, "waiting")
+	taskWait(t, m, third.ID, "completed")
+	if v, _ := m.Task(second.ID); v.Status != "queued" {
+		t.Fatal("instance cap bypassed", v.Status)
+	}
+	m.CancelTask(second.ID)
+	m.CancelTask(first.ID)
+}

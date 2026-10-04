@@ -17,7 +17,7 @@ import (
 	"github.com/shengjuntu/rundesk/internal/store"
 )
 
-const Version = "0.9.1"
+const Version = "0.9.2"
 
 type apiError struct {
 	Status        int
@@ -210,9 +210,9 @@ func (s *Server) idempotent(next http.Handler) http.Handler {
 		m := s.Manager
 		m.requestMu.Lock()
 		var record requestRecord
-		err = m.Store.Get("api-request", requestStoreKey(key), &record)
+		err = m.Store.Get("api-request", requestStoreKey(requestNamespace(r, key)), &record)
 		if err == nil {
-			pending := m.pendingRequests[key]
+			pending := m.pendingRequests[requestNamespace(r, key)]
 			m.requestMu.Unlock()
 			if record.Fingerprint != fingerprint {
 				writeErr(w, 409, failure(409, "idempotency_conflict", "同一 Idempotency-Key 已用于不同请求"))
@@ -244,16 +244,16 @@ func (s *Server) idempotent(next http.Handler) http.Handler {
 			return
 		}
 		record = requestRecord{Key: key, Method: r.Method, Path: strings.TrimPrefix(r.URL.Path, "/api"), State: "processing", Created: store.Now(), Fingerprint: fingerprint, Owner: m.requestOwner}
-		err = m.Store.Put("api-request", requestStoreKey(key), record)
+		err = m.Store.Put("api-request", requestStoreKey(requestNamespace(r, key)), record)
 		if err == nil {
-			m.pendingRequests[key] = true
+			m.pendingRequests[requestNamespace(r, key)] = true
 		}
 		m.requestMu.Unlock()
 		if err != nil {
 			writeErr(w, 503, failure(503, "storage_unavailable", "无法保存提交记录，操作未执行"))
 			return
 		}
-		defer func() { m.requestMu.Lock(); delete(m.pendingRequests, key); m.requestMu.Unlock() }()
+		defer func() { m.requestMu.Lock(); delete(m.pendingRequests, requestNamespace(r, key)); m.requestMu.Unlock() }()
 		r.Body = io.NopCloser(bytes.NewReader(body))
 		reply := &recordedResponse{header: w.Header().Clone(), diagnostic: requestDiagnosticOf(w)}
 		next.ServeHTTP(reply, r)
@@ -267,7 +267,7 @@ func (s *Server) idempotent(next http.Handler) http.Handler {
 			record.Response = json.RawMessage(`{"error":"handler did not return JSON"}`)
 		}
 		m.requestMu.Lock()
-		err = m.Store.Put("api-request", requestStoreKey(key), record)
+		err = m.Store.Put("api-request", requestStoreKey(requestNamespace(r, key)), record)
 		m.requestMu.Unlock()
 		if err != nil {
 			writeErr(w, 503, failure(503, "request_unconfirmed", "操作可能已经执行，但接收记录保存失败；请检查会话，不要更换 Key 重发"))
@@ -291,8 +291,8 @@ func (s *Server) integrationRoutes(mux *http.ServeMux) {
 		}
 		var record requestRecord
 		s.Manager.requestMu.Lock()
-		err := s.Manager.Store.Get("api-request", requestStoreKey(key), &record)
-		pending := s.Manager.pendingRequests[key]
+		err := s.Manager.Store.Get("api-request", requestStoreKey(requestNamespace(r, key)), &record)
+		pending := s.Manager.pendingRequests[requestNamespace(r, key)]
 		s.Manager.requestMu.Unlock()
 		if errors.Is(err, sql.ErrNoRows) {
 			writeErr(w, 404, failure(404, "request_not_found", "没有找到该请求"))

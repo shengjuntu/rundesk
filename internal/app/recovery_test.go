@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/shengjuntu/rundesk/internal/rpc"
 	"github.com/shengjuntu/rundesk/internal/store"
 	"net/http/httptest"
@@ -27,6 +28,17 @@ func failedDemo(t *testing.T, m *Manager) Session {
 func prepare(t *testing.T, m *Manager, s Session) RecoveryPlan {
 	t.Helper()
 	p, e := m.PrepareRecovery(s.ID, s.RunID)
+	// A process-exit watcher may still hold h.op after Done closes. Retry only
+	// the read-only check's explicit busy response; never replay a model turn.
+	deadline := time.Now().Add(time.Second)
+	for e != nil && time.Now().Before(deadline) {
+		var ae *apiError
+		if !errors.As(e, &ae) || ae.Code != "session_busy" {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+		p, e = m.PrepareRecovery(s.ID, s.RunID)
+	}
 	if e != nil {
 		t.Fatal(e)
 	}

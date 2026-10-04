@@ -7,7 +7,15 @@ import (
 
 func (s *Server) scheduleRoutes(mux *http.ServeMux) {
 	m := s.Manager
-	mux.HandleFunc("GET /api/schedules", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, m.Schedules()) })
+	mux.HandleFunc("GET /api/schedules", func(w http.ResponseWriter, r *http.Request) {
+		items := []Schedule{}
+		for _, v := range m.Schedules() {
+			if scheduleVisible(r, v) {
+				items = append(items, v)
+			}
+		}
+		writeJSON(w, 200, items)
+	})
 	mux.HandleFunc("POST /api/schedules", func(w http.ResponseWriter, r *http.Request) {
 		var spec ScheduleSpec
 		if !decode(w, r, &spec) {

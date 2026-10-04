@@ -27,7 +27,7 @@ schemas={
  'Source':obj({'kind':st(enum=['human','application']),'appId':st(maxLength=80),'taskId':st(maxLength=200)},extra=False),
  'TraceSelection':obj({'sessionId':st(),'runId':st(),'eventIds':arr(integer)},['sessionId','runId']),
  'TraceOrigin':obj({'sessionId':st(),'runId':st(),'eventIds':arr(integer),'through':integer,'capturedAt':st(),'title':st()},['sessionId','runId','through','capturedAt']),
- 'CreateSession':{'oneOf':[obj({'workspaceId':st(),'instanceId':st(default='default'),'title':st(),'model':st(),'source':ref('Source')},['workspaceId']),obj({'traceAnalysis':ref('TraceSelection')},['traceAnalysis'])]},
+ 'CreateSession':{'oneOf':[obj({'workspaceId':st(),'instanceId':st(description='管理员默认 default；应用凭据默认绑定的专用配置'),'title':st(),'model':st(),'source':ref('Source')},['workspaceId']),obj({'traceAnalysis':ref('TraceSelection')},['traceAnalysis'])]},
  'Session':obj({k:st() for k in ['id','instanceId','workspaceId','title','threadId','model','status','runId','turnId','error','created','updated']}|{'pinned':bool_,'archived':bool_,'source':ref('Source'),'traceOrigin':ref('TraceOrigin'),'recovery':ref('RecoveryOrigin'),'retry':ref('RetryNotice')},['id','instanceId','workspaceId','status'],True),
  'Permissions':obj({'sandbox':st(enum=['workspace-write','read-only','danger-full-access']),'approvalPolicy':st(enum=['on-request','never']),'reviewer':st(enum=['user','auto_review']),'networkAccess':bool_}),
  'InstanceInput':obj({'name':st(minLength=1),'description':st(),'defaultModel':st(),'permissions':ref('Permissions'),'revision':integer},['name']),
@@ -51,8 +51,14 @@ schemas.update({
  'ScheduleSpec':obj({'name':st(),'cron':st(description='五段：分 时 日 月 周'),'timezone':st(description='IANA 时区，禁止 Local'),'enabled':bool_,'misfire':st(enum=['skip','once']),'overlap':st(enum=['skip','queue']),'task':ref('TaskSpec')},['name','cron','timezone','enabled','task']),
  'Schedule':obj({k:st() for k in ['id','created','updated','nextAt','lastAt','lastTaskId','lastReason']}|{'spec':ref('ScheduleSpec'),'revision':integer},['id','spec','revision']),
 })
+schemas.update({
+ 'ApplicationKey':obj({k:st() for k in ['id','appId','instanceId','name','created','expiresAt','revokedAt']}|{'workspaceIds':arr(st()),'scopes':arr(st(enum=['read','run','schedules','files','approvals']))},['id','appId','instanceId','name','created','workspaceIds','scopes']),
+ 'KeyInput':obj({'name':st(minLength=1,maxLength=120),'workspaceIds':arr(st()),'scopes':arr(st(enum=['read','run','schedules','files','approvals'])),'expiresAt':st(format='date-time')},['name','workspaceIds','scopes']),
+ 'WorkspaceSummary':obj({'id':st(),'name':st()},['id','name'])
+})
 paths={}
 requests={
+ ('POST','/applications/{appId}/keys'):ref('KeyInput'),
  ('POST','/schedules'):ref('ScheduleSpec'),('PUT','/schedules/{id}'):obj({'spec':ref('ScheduleSpec'),'revision':integer},['spec','revision']),('DELETE','/schedules/{id}'):obj({'revision':integer},['revision']),('POST','/schedules/preview'):obj({'cron':st(),'timezone':st()},['cron','timezone']),
  ('PUT','/queue'):ref('QueueSettings'),('POST','/tasks'):ref('TaskSpec'),
  ('PUT','/applications/{appId}'):ref('ApplicationInput'),
@@ -123,7 +129,7 @@ for file in sorted((root/'internal/app').glob('*.go')):
   if '/skill-bundles/' in path and method=='DELETE':response=obj({'backupPath':st()},['backupPath'])
   if path=='/instances':response=arr(ref('Instance')) if method=='GET' else ref('Instance')
   if path=='/instances/{iid}':response=ref('Instance')
-  if path=='/workspaces':response=arr(ref('Workspace')) if method=='GET' else ref('Workspace')
+  if path=='/workspaces':response=arr({'oneOf':[ref('Workspace'),ref('WorkspaceSummary')]}) if method=='GET' else ref('Workspace')
   if path.endswith('/configuration'):response=ref('Configuration')
   if path=='/sessions/{sid}/messages/{eid}':response=ref('Reply')
   if path=='/sessions/{sid}/feedback':response=arr(ref('MessageFeedback'))
@@ -138,6 +144,9 @@ for file in sorted((root/'internal/app').glob('*.go')):
   if path=='/schedules':response=arr(ref('Schedule')) if method=='GET' else ref('Schedule')
   if path=='/schedules/{id}' and method!='DELETE':response=ref('Schedule')
   if path=='/schedules/preview':response=obj({'times':arr(st(format='date-time')),'timezone':st()},['times','timezone'])
+  if path=='/whoami':response={'oneOf':[obj({'kind':st(const='administrator')},['kind']),obj({'kind':st(const='application'),'credential':ref('ApplicationKey')},['kind','credential'])]}
+  if path=='/applications/{appId}/keys':response=arr(ref('ApplicationKey')) if method=='GET' else obj({'credential':ref('ApplicationKey'),'token':st(description='只在创建响应显示一次，丢失需撤销重建')},['credential','token']);status='201' if method=='POST' else '200'
+  if path=='/applications/{appId}/keys/{keyId}':response=ref('ApplicationKey')
   content={'application/json':{'schema':response}}
   if path.endswith('/events'):content['text/event-stream']={'schema':st(),'example':'id: 123\ndata: {"id":123,"sessionId":"...","method":"run/state","data":{}}\n\n'}
   if path.endswith('/file') or path.endswith('/export') and not '/mcp/' in path:content={'application/octet-stream':{'schema':st(format='binary')}}
@@ -149,7 +158,18 @@ for file in sorted((root/'internal/app').glob('*.go')):
   if (method,path) in requests:op['requestBody']={'required':True,'content':{'application/json':{'schema':requests[(method,path)]}}}
   if path.endswith('/uploads'):op['requestBody']={'required':True,'content':{'multipart/form-data':{'schema':obj({'file':st(format='binary')},['file'])}}}
   if path.endswith('/skill-bundles') and method=='POST':op['requestBody']={'required':True,'content':{'application/zip':{'schema':st(format='binary')},'multipart/form-data':{'schema':{'type':'object','additionalProperties':st(format='binary'),'description':'每个 multipart 字段名为文件相对路径；根部 SKILL.md 或一层技能文件夹。最多 1000 文件、解压后 32 MiB。'}}}}
+  scopes=None
+  if method=='GET' and path in ['/meta','/openapi.json','/whoami','/workspaces','/sessions','/tasks','/tasks/{tid}','/requests/{key}']:scopes=['read']
+  if path.startswith('/schedules'):scopes=['read','run','schedules']
+  if method=='POST' and path in ['/tasks','/tasks/{tid}/cancel','/sessions']:scopes=['read','run']
+  if path.startswith('/sessions/{sid}'):
+   if method=='GET' and path in ['/sessions/{sid}','/sessions/{sid}/events','/sessions/{sid}/trace','/sessions/{sid}/export','/sessions/{sid}/feedback','/sessions/{sid}/approvals','/sessions/{sid}/events/{eid}','/sessions/{sid}/messages/{eid}']:scopes=['read']
+   if (method in ['PATCH','DELETE'] and path=='/sessions/{sid}') or method=='POST' and path in ['/sessions/{sid}/turns','/sessions/{sid}/steer','/sessions/{sid}/stop','/sessions/{sid}/recover','/sessions/{sid}/recovery/check']:scopes=['read','run']
+   if path=='/sessions/{sid}/approvals/{aid}' and method=='POST':scopes=['read','run','approvals']
+  if (method=='GET' and path in ['/sessions/{sid}/files','/workspaces/{wid}/file']) or method=='POST' and path=='/workspaces/{wid}/uploads':scopes=['read','files']
+  op['x-administrator-only']=scopes is None and path!='/login'
+  if scopes:op['x-application-scopes']=scopes;op['description']='应用凭据还必须符合服务端的应用、专用配置和项目归属校验。'
   paths.setdefault(path,{})[method.lower()]=op
-spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':'1.6.0','description':'RunDesk 0.9.1。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。Source 是调用方声明的业务标签，不代表应用鉴权或隔离。此版本继续使用后台 Token/Cookie。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
+spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':'1.7.0','description':'RunDesk 0.9.2。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

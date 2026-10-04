@@ -1,4 +1,6 @@
-# RunDesk 0.9.1
+# RunDesk 0.9.2
+
+新增应用 API 凭据：按应用、项目和操作授权，支持有效期与撤销。见 [应用凭据](docs/APPLICATION-CREDENTIALS.md) 和 [升级说明](docs/UPGRADE-0.9.md)。
 
 新增 Cron 定时任务，支持明确时区、未来执行预览、错过时间和任务重叠处理。见 [定时任务](docs/SCHEDULES.md)。
 
@@ -10,8 +12,8 @@
 
 首页直接使用通用助手；专用应用统一在「应用」页管理，一个应用对应一份专用配置。Skills 与 MCP 使用独立管理页。技能支持完整文件夹和 ZIP 导入、目录浏览与完整导出，脚本、参考资料、模板和资源文件一并保留。现有 `/api` 和 `/api/v1` 客户端继续兼容。
 
-- [本版说明](docs/RELEASE-0.9.1.md)
-- [验证记录](docs/VALIDATION-0.9.1.md)
+- [本版说明](docs/RELEASE-0.9.2.md)
+- [验证记录](docs/VALIDATION-0.9.2.md)
 - [0.6.0 API 与实例配置说明](docs/RELEASE-0.6.0.md)
 - [应用 API v1](docs/API-V1.md)
 - [OpenAPI 定义](internal/app/openapi.json)
@@ -23,7 +25,7 @@
 
 对话、Skills/MCP 配置、运行审批、调试事件与文件产物使用同一组 HTTP API。ActiveVLM 等业务前台可以通过这层 API 驱动 Codex。项目正式定名 RunDesk；当前尚未绑定 GitHub 仓库。
 
-**状态：v0.9.1 原型。** 单用户、自托管。后端直接启动官方 `codex app-server`，没有复用 Sandbox Agent，也没有实现另一套 agent loop。
+**状态：v0.9.2 原型。** 单用户、自托管。后端直接启动官方 `codex app-server`，没有复用 Sandbox Agent，也没有实现另一套 agent loop。
 
 ![RunDesk 工作台](docs/screenshots/0.8.0/applications-desktop.png)
 

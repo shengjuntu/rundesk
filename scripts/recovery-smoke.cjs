@@ -4,7 +4,7 @@ const {spawn}=require('node:child_process'),fs=require('node:fs'),os=require('no
 (async()=>{
  const temp=fs.mkdtempSync(path.join(os.tmpdir(),'rundesk-recovery-')),port=35000+Math.floor(Math.random()*15000),base=`http://127.0.0.1:${port}`,token='recovery-test-token-1234567890';
  const server=spawn(path.resolve('bin/rundesk'),['--demo','--data',temp,'--listen',`127.0.0.1:${port}`],{env:{...process.env,RUNDESK_TOKEN:token},stdio:['ignore','ignore','pipe']});let logs='',browser,page;server.stderr.on('data',x=>logs+=x);
- const checks=[],errors=[],out=path.resolve('docs/screenshots/0.8.4');fs.mkdirSync(out,{recursive:true});
+ const checks=[],errors=[],out=path.resolve('docs/screenshots/0.9.2');fs.mkdirSync(out,{recursive:true});
  const send=async text=>{await page.locator('#prompt').fill(text);await page.locator('#send').click();};
  try{
   for(let n=0;n<100;n++){try{if((await fetch(base+'/api/meta')).status===401)break;}catch{}await new Promise(r=>setTimeout(r,80));}
@@ -31,7 +31,7 @@ const {spawn}=require('node:child_process'),fs=require('node:fs'),os=require('no
   await page.route(`**/api/v1/sessions/${blockedSid}/recover`,async route=>{recoverCalls++;await route.continue();});
   await page.locator('#recovery-banner button').click();await page.locator('.recovery-result.blocked').waitFor();assert(await page.locator('#recovery-submit').isDisabled());assert.match(await page.locator('#recovery-content').innerText(),/原生结果已经生成/);assert.equal(await page.locator('#recovery-reviewed').count(),0);assert.equal(recoverCalls,0);checks.push('blocked completed-state preview displays native reply and cannot submit a continuation (UI fixture; server gate covered in Go)');
   assert.deepEqual(errors,[]);checks.push('no uncaught browser JavaScript errors');
-  const report={mode:'RunDesk demo JSONL fixture, persisted demo thread state, Chromium response-loss injection; no live model or external business write',passed:checks.length,checks};fs.writeFileSync('docs/recovery-validation-0.8.4.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
+  const report={mode:'RunDesk demo JSONL fixture, persisted demo thread state, Chromium response-loss injection; no live model or external business write',passed:checks.length,checks};fs.writeFileSync('docs/recovery-validation-0.9.2.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
  }catch(e){if(page){await page.screenshot({path:out+'/recovery-failure.png'}).catch(()=>{});console.error(await page.locator('body').innerText());}console.error(e);console.error(logs.slice(-1500));process.exitCode=1;}
  finally{await browser?.close();if(server.exitCode===null){server.kill();await new Promise(r=>server.once('exit',r));}fs.rmSync(temp,{recursive:true,force:true});}
 })();

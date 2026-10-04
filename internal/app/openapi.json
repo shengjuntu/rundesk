@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Application API",
-    "version": "1.6.0",
-    "description": "RunDesk 0.9.1。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。Source 是调用方声明的业务标签，不代表应用鉴权或隔离。此版本继续使用后台 Token/Cookie。"
+    "version": "1.7.0",
+    "description": "RunDesk 0.9.2。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。"
   },
   "servers": [
     {
@@ -87,7 +87,12 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/openapi.json": {
@@ -150,7 +155,12 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/instances/{iid}/configuration": {
@@ -242,7 +252,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/sessions/{sid}/configuration": {
@@ -326,7 +337,356 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
+      }
+    },
+    "/whoami": {
+      "get": {
+        "operationId": "get_whoami",
+        "summary": "/whoami",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "administrator"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "application"
+                        },
+                        "credential": {
+                          "$ref": "#/components/schemas/ApplicationKey"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "credential"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
+      }
+    },
+    "/applications/{appId}/keys": {
+      "get": {
+        "operationId": "get_applications_appId_keys",
+        "summary": "/applications/{appId}/keys",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationKey"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true
+      },
+      "post": {
+        "operationId": "post_applications_appId_keys",
+        "summary": "/applications/{appId}/keys",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "credential": {
+                      "$ref": "#/components/schemas/ApplicationKey"
+                    },
+                    "token": {
+                      "type": "string",
+                      "description": "只在创建响应显示一次，丢失需撤销重建"
+                    }
+                  },
+                  "required": [
+                    "credential",
+                    "token"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyInput"
+              }
+            }
+          }
+        },
+        "x-administrator-only": true
+      }
+    },
+    "/applications/{appId}/keys/{keyId}": {
+      "delete": {
+        "operationId": "delete_applications_appId_keys_keyId",
+        "summary": "/applications/{appId}/keys/{keyId}",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "keyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationKey"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true
       }
     },
     "/applications": {
@@ -392,7 +752,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/applications/{appId}": {
@@ -463,7 +824,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       },
       "put": {
         "operationId": "put_applications_appId",
@@ -542,7 +904,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/login": {
@@ -625,7 +988,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false
       }
     },
     "/logout": {
@@ -688,7 +1052,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/meta": {
@@ -751,7 +1116,12 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/workspaces": {
@@ -776,7 +1146,14 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Workspace"
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/Workspace"
+                      },
+                      {
+                        "$ref": "#/components/schemas/WorkspaceSummary"
+                      }
+                    ]
                   }
                 }
               }
@@ -817,7 +1194,12 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       },
       "post": {
         "operationId": "post_workspaces",
@@ -908,7 +1290,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/workspaces/{wid}/notes": {
@@ -1002,7 +1385,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/sessions": {
@@ -1100,7 +1484,12 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       },
       "post": {
         "operationId": "post_sessions",
@@ -1181,7 +1570,13 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/sessions/{sid}": {
@@ -1252,7 +1647,12 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       },
       "patch": {
         "operationId": "patch_sessions_sid",
@@ -1344,7 +1744,13 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       },
       "delete": {
         "operationId": "delete_sessions_sid",
@@ -1413,7 +1819,13 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/sessions/{sid}/turns": {
@@ -1504,7 +1916,13 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/sessions/{sid}/steer": {
@@ -1585,7 +2003,13 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/sessions/{sid}/stop": {
@@ -1675,7 +2099,13 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/sessions/{sid}/events": {
@@ -1838,7 +2268,12 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/sessions/{sid}/approvals": {
@@ -1912,7 +2347,12 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/sessions/{sid}/approvals/{aid}": {
@@ -2020,7 +2460,14 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run",
+          "approvals"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/workspaces/{wid}/skills": {
@@ -2099,7 +2546,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/workspaces/{wid}/skills/{name}": {
@@ -2208,7 +2656,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       },
       "put": {
         "operationId": "put_workspaces_wid_skills_name",
@@ -2325,7 +2774,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       },
       "delete": {
         "operationId": "delete_workspaces_wid_skills_name",
@@ -2423,7 +2873,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/workspaces/{wid}/skills/toggle": {
@@ -2525,7 +2976,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/workspaces/{wid}/mcp": {
@@ -2604,7 +3056,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/workspaces/{wid}/mcp/{name}": {
@@ -2719,7 +3172,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/workspaces/{wid}/models": {
@@ -2798,7 +3252,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/workspaces/{wid}/config": {
@@ -2877,7 +3332,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/workspaces/{wid}/uploads": {
@@ -2968,7 +3424,13 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "files"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/workspaces/{wid}/file": {
@@ -3060,7 +3522,13 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "files"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/sessions/{sid}/files": {
@@ -3134,7 +3602,13 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "files"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/sessions/{sid}/export": {
@@ -3218,7 +3692,12 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/workspaces/{wid}/mcp/export": {
@@ -3309,7 +3788,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/workspaces/{wid}/mcp/import": {
@@ -3417,7 +3897,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/workspaces/{wid}/diagnostics": {
@@ -3496,7 +3977,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/instances/{iid}/reload": {
@@ -3567,7 +4049,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/instances": {
@@ -3633,7 +4116,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       },
       "post": {
         "operationId": "post_instances",
@@ -3714,7 +4198,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/instances/{iid}": {
@@ -3816,7 +4301,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/workspaces/{wid}/account": {
@@ -3895,7 +4381,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/queue": {
@@ -3958,7 +4445,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       },
       "put": {
         "operationId": "put_queue",
@@ -4029,7 +4517,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/tasks": {
@@ -4112,7 +4601,13 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       },
       "get": {
         "operationId": "get_tasks",
@@ -4253,7 +4748,12 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/tasks/{tid}": {
@@ -4324,7 +4824,12 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/tasks/{tid}/cancel": {
@@ -4395,7 +4900,13 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/schedules": {
@@ -4461,7 +4972,14 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run",
+          "schedules"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       },
       "post": {
         "operationId": "post_schedules",
@@ -4542,7 +5060,14 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run",
+          "schedules"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/schedules/{id}": {
@@ -4613,7 +5138,14 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run",
+          "schedules"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       },
       "put": {
         "operationId": "put_schedules_id",
@@ -4705,7 +5237,14 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run",
+          "schedules"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       },
       "delete": {
         "operationId": "delete_schedules_id",
@@ -4793,7 +5332,14 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run",
+          "schedules"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/schedules/preview": {
@@ -4896,7 +5442,14 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run",
+          "schedules"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/sessions/{sid}/messages/{eid}": {
@@ -4975,7 +5528,12 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/sessions/{sid}/feedback": {
@@ -5049,7 +5607,12 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/sessions/{sid}/messages/{eid}/feedback": {
@@ -5138,7 +5701,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/sessions/{sid}/recovery/check": {
@@ -5228,7 +5792,13 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/sessions/{sid}/recover": {
@@ -5319,7 +5889,13 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/sessions/{sid}/runtime": {
@@ -5390,7 +5966,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/instances/{iid}/runtime": {
@@ -5464,7 +6041,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/workspaces/{wid}/skill-bundles": {
@@ -5598,7 +6176,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/workspaces/{wid}/skill-bundles/{name}": {
@@ -5698,7 +6277,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       },
       "delete": {
         "operationId": "delete_workspaces_wid_skill_bundles_name",
@@ -5805,7 +6385,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/workspaces/{wid}/skill-bundles/{name}/file": {
@@ -5925,7 +6506,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/workspaces/{wid}/skill-bundles/{name}/export": {
@@ -6038,7 +6620,8 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": true
       }
     },
     "/sessions/{sid}/trace": {
@@ -6133,7 +6716,12 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     },
     "/sessions/{sid}/events/{eid}": {
@@ -6212,7 +6800,12 @@
               }
             }
           }
-        }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
       }
     }
   },
@@ -6812,7 +7405,7 @@
               },
               "instanceId": {
                 "type": "string",
-                "default": "default"
+                "description": "管理员默认 default；应用凭据默认绑定的专用配置"
               },
               "title": {
                 "type": "string"
@@ -7472,6 +8065,116 @@
           "id",
           "spec",
           "revision"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationKey": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "appId": {
+            "type": "string"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "created": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "revokedAt": {
+            "type": "string"
+          },
+          "workspaceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "read",
+                "run",
+                "schedules",
+                "files",
+                "approvals"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "appId",
+          "instanceId",
+          "name",
+          "created",
+          "workspaceIds",
+          "scopes"
+        ],
+        "additionalProperties": false
+      },
+      "KeyInput": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "workspaceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "read",
+                "run",
+                "schedules",
+                "files",
+                "approvals"
+              ]
+            }
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "name",
+          "workspaceIds",
+          "scopes"
+        ],
+        "additionalProperties": false
+      },
+      "WorkspaceSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
         ],
         "additionalProperties": false
       }

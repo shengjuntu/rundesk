@@ -41,6 +41,9 @@ func (s *Server) queueRoutes(mux *http.ServeMux) {
 		}
 		rows := []Task{}
 		for _, t := range m.Tasks() {
+			if !taskVisible(r, t) {
+				continue
+			}
 			if (q.Get("status") == "" || t.Status == q.Get("status")) && (q.Get("appId") == "" || t.Spec.Source.AppID == q.Get("appId")) && (q.Get("instanceId") == "" || t.Spec.InstanceID == q.Get("instanceId")) {
 				rows = append(rows, t)
 			}
