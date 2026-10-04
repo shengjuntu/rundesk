@@ -271,7 +271,7 @@ func (m *Manager) ImportSkillBundle(wid, name string, files []skillAsset, replac
 	if e = root.Rename(stage, dest); e != nil {
 		if backup != "" {
 			if rollback := root.Rename(backup, dest); rollback != nil {
-				return SkillBundle{}, failure(500, "skill_restore_required", "安装失败，原技能已保存在 "+backup)
+				return SkillBundle{}, &apiError{Status: 500, Code: "skill_restore_required", Message: "安装失败且自动恢复失败，原技能已保存在 " + backup, Cause: errors.Join(e, rollback)}
 			}
 		}
 		return SkillBundle{}, e

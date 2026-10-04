@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
@@ -12,30 +13,56 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/shengjuntu/rundesk/internal/rpc"
 	"github.com/shengjuntu/rundesk/internal/store"
 )
 
-const Version = "0.8.2"
+const Version = "0.8.3"
 
 type apiError struct {
 	Status        int
 	Code, Message string
 	Retryable     bool
+	Cause         error
 }
 
 func (e *apiError) Error() string { return e.Message }
+func (e *apiError) Unwrap() error { return e.Cause }
 func failure(status int, code, message string) error {
 	return &apiError{Status: status, Code: code, Message: message}
 }
 
 func writeAPIError(w http.ResponseWriter, status int, err error) {
-	code := map[int]string{400: "invalid_request", 401: "unauthorized", 403: "forbidden", 404: "not_found", 405: "method_not_allowed", 409: "conflict", 413: "body_too_large", 429: "rate_limited", 500: "internal_error", 502: "upstream_error", 503: "unavailable"}[status]
+	code := map[int]string{400: "invalid_request", 401: "unauthorized", 403: "forbidden", 404: "not_found", 405: "method_not_allowed", 409: "conflict", 413: "body_too_large", 429: "rate_limited", 500: "internal_error", 502: "upstream_error", 503: "unavailable", 504: "upstream_timeout"}[status]
 	if code == "" {
 		code = "request_failed"
 	}
 	retryable := false
 	var typed *apiError
-	if errors.As(err, &typed) {
+	var native *rpc.Error
+	var transport *rpc.TransportError
+	if !errors.As(err, &typed) {
+		switch {
+		case errors.Is(err, context.DeadlineExceeded):
+			typed = &apiError{Status: 504, Code: "codex_timeout"}
+		case errors.Is(err, context.Canceled):
+			typed = &apiError{Status: 503, Code: "operation_canceled"}
+		case errors.As(err, &native):
+			typed = &apiError{Status: 502, Code: "codex_rpc_error"}
+			if native.Code == -32602 {
+				typed.Status, typed.Code = 400, "codex_invalid_params"
+			}
+			if native.Code == -32601 {
+				typed.Code = "codex_method_unsupported"
+			}
+		case errors.As(err, &transport):
+			typed = &apiError{Status: 503, Code: "codex_unavailable"}
+			if transport.Op == "invalid JSON" || transport.Op == "read" {
+				typed.Status, typed.Code = 502, "codex_protocol_error"
+			}
+		}
+	}
+	if typed != nil {
 		code, retryable = typed.Code, typed.Retryable
 		if w.Header().Get("RunDesk-API-Version") == "v1" {
 			status = typed.Status
@@ -194,10 +221,14 @@ func (s *Server) idempotent(next http.Handler) http.Handler {
 			if record.State != "completed" {
 				if record.Owner == m.requestOwner && pending {
 					w.Header().Set("Retry-After", "1")
-					writeErr(w, 409, &apiError{409, "request_in_progress", "原请求仍在处理；请用相同 Key 查询或重试", true})
+					writeErr(w, 409, &apiError{Status: 409, Code: "request_in_progress", Message: "原请求仍在处理；请用相同 Key 查询或重试", Retryable: true})
 				} else {
 					writeErr(w, 409, failure(409, "request_unconfirmed", "原请求在服务重启前未完成记录；不会重新执行，请检查会话及事件"))
 				}
+				return
+			}
+			if record.HTTPStatus < 200 || record.HTTPStatus > 599 || !json.Valid(record.Response) {
+				writeErr(w, 503, failure(503, "receipt_invalid", "原请求的接收记录不完整，无法安全回放；操作未重新执行，请核对会话与事件，不要更换 Key 重发"))
 				return
 			}
 			w.Header().Set("Idempotency-Replayed", "true")
@@ -268,7 +299,7 @@ func (s *Server) integrationRoutes(mux *http.ServeMux) {
 			return
 		}
 		if err != nil {
-			writeErr(w, 500, err)
+			writeErr(w, 503, &apiError{Status: 503, Code: "storage_unavailable", Message: "无法读取请求记录；请检查数据目录和数据库状态", Cause: err})
 			return
 		}
 		if record.State != "completed" && (record.Owner != s.Manager.requestOwner || !pending) {

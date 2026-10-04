@@ -333,11 +333,13 @@ func (m *Manager) update(id string, f func(*Session)) error {
 	*s = v
 	return nil
 }
-func (m *Manager) event(id, dir, method string, data any) {
+func (m *Manager) event(id, dir, method string, data any) error {
 	if _, e := m.Store.Add(id, dir, method, redact(data)); e != nil {
 		log.Printf("journal failure: %v", e)
 		m.cancel()
+		return e
 	}
+	return nil
 }
 
 // Structured secrets are removed. Arbitrary prose/tool output may still contain sensitive data.
@@ -406,12 +408,18 @@ func (m *Manager) command(w Workspace, i Instance) *exec.Cmd {
 
 // Caller holds h.op. A connection is reused across turns.
 func (m *Manager) connect(id string, w Workspace, h *handle, ids ...string) (*rpc.Client, error) {
+	if m.ctx.Err() != nil {
+		return nil, failure(503, "runtime_unavailable", "后台正在停止或事件记录已失效，未启动 Codex")
+	}
 	i, err := m.Instance(ids...)
 	if err != nil {
 		return nil, err
 	}
 	h.mu.Lock()
 	c := h.client
+	if c != nil && c.Closing() {
+		c = nil
+	}
 	if c != nil {
 		select {
 		case <-c.Done():
@@ -426,7 +434,7 @@ func (m *Manager) connect(id string, w Workspace, h *handle, ids ...string) (*rp
 	}
 	if m.loaded.Add(1) > 16 {
 		m.loaded.Add(-1)
-		return nil, errors.New("最多加载 16 个会话/配置连接；空闲连接十分钟后释放")
+		return nil, failure(503, "connection_limit", "最多加载 16 个会话/配置连接；请结束不再需要的任务或重新加载空闲应用连接")
 	}
 	runtimeKey := m.beginRuntime(id, w, i)
 	c, e := rpc.Start(m.command(w, i), func(msg rpc.Message) { m.onMessage(id, h, msg) }, func(dir string, msg rpc.Message) {
@@ -435,7 +443,7 @@ func (m *Manager) connect(id string, w Workspace, h *handle, ids ...string) (*rp
 	})
 	if e != nil {
 		m.loaded.Add(-1)
-		return nil, e
+		return nil, &rpc.TransportError{Op: "start", Cause: e}
 	}
 	m.wg.Add(1)
 	go func() { defer m.wg.Done(); <-c.Done(); m.loaded.Add(-1) }()
@@ -447,8 +455,15 @@ func (m *Manager) connect(id string, w Workspace, h *handle, ids ...string) (*rp
 	ctx, cancel := context.WithTimeout(m.ctx, 30*time.Second)
 	defer cancel()
 	if e = c.Initialize(ctx); e != nil {
+		h.mu.Lock()
+		if h.client == c {
+			h.client = nil
+			h.thread = ""
+		}
+		h.mu.Unlock()
 		c.Close()
-		return nil, e
+		<-c.Done()
+		return nil, fmt.Errorf("Codex initialize: %w", e)
 	}
 	m.wg.Add(1)
 	go func() {
@@ -473,7 +488,7 @@ func (m *Manager) connect(id string, w Workspace, h *handle, ids ...string) (*rp
 				if canceled {
 					m.finish(id, "interrupted", "")
 				} else {
-					m.finish(id, "failed", "Codex App Server 连接已断开")
+					m.finish(id, "failed", c.Err().Error())
 				}
 			}
 		}
@@ -583,11 +598,14 @@ func (m *Manager) expire(id string, h *handle) {
 	m.event(id, "internal", "approval/expired", map[string]string{})
 }
 func (m *Manager) Start(id string, in Input) (Session, error) {
+	if m.ctx.Err() != nil {
+		return Session{}, failure(503, "runtime_unavailable", "后台正在停止或事件记录已失效，任务未提交")
+	}
 	if strings.TrimSpace(in.Text) == "" {
-		return Session{}, errors.New("请输入消息")
+		return Session{}, failure(400, "invalid_input", "请输入消息")
 	}
 	if len(in.Text) > 256*1024 {
-		return Session{}, errors.New("消息过长")
+		return Session{}, failure(400, "invalid_input", "消息过长")
 	}
 	s, e := m.Session(id)
 	if e != nil {
@@ -608,6 +626,9 @@ func (m *Manager) Start(id string, in Input) (Session, error) {
 	defer h.op.Unlock()
 	h.admission.Lock()
 	defer h.admission.Unlock()
+	if m.ctx.Err() != nil {
+		return s, failure(503, "runtime_unavailable", "后台正在停止或事件记录已失效，任务未提交")
+	}
 	s, _ = m.Session(id)
 	if s.Archived {
 		return s, failure(409, "session_archived", "请先恢复已归档会话，再提交任务")
@@ -636,7 +657,13 @@ func (m *Manager) Start(id string, in Input) (Session, error) {
 	}
 	s, _ = m.Session(id)
 	instanceAtSubmit, _ := m.Instance(s.InstanceID)
-	m.event(id, "internal", "run/input", map[string]any{"instanceRevision": instanceAtSubmit.Revision, "runId": s.RunID, "input": in, "notes": w.Notes, "notesRevision": w.Revision, "cwd": w.Path, "instanceId": s.InstanceID, "model": s.Model})
+	if e = m.event(id, "internal", "run/input", map[string]any{"instanceRevision": instanceAtSubmit.Revision, "runId": s.RunID, "input": in, "notes": w.Notes, "notesRevision": w.Revision, "cwd": w.Path, "instanceId": s.InstanceID, "model": s.Model}); e != nil {
+		_ = m.update(id, func(v *Session) {
+			v.Status = "failed"
+			v.Error = "任务输入无法写入事件记录，未发送给 Codex"
+		})
+		return s, &apiError{Status: 503, Code: "journal_unavailable", Message: "任务输入无法写入事件记录，未发送给 Codex；请检查数据目录和数据库状态", Cause: e}
+	}
 	m.wg.Add(1)
 	go func() { defer m.wg.Done(); h.op.Lock(); defer h.op.Unlock(); m.run(s, w, h, in) }()
 	return s, nil
@@ -720,7 +747,7 @@ func (m *Manager) run(s Session, w Workspace, h *handle, in Input) {
 		}
 		raw, e = c.Call(ctx, method, params)
 		if e != nil {
-			fail(e)
+			fail(fmt.Errorf("Codex %s: %w", method, e))
 			return
 		}
 		var res struct {
@@ -789,7 +816,7 @@ func (m *Manager) run(s Session, w Workspace, h *handle, in Input) {
 	}
 	raw, e = c.Call(ctx, "turn/start", map[string]any{"threadId": s.ThreadID, "input": input})
 	if e != nil {
-		fail(e)
+		fail(fmt.Errorf("Codex turn/start: %w", e))
 		return
 	}
 	var result struct {
@@ -797,7 +824,10 @@ func (m *Manager) run(s Session, w Workspace, h *handle, in Input) {
 			ID string `json:"id"`
 		} `json:"turn"`
 	}
-	_ = json.Unmarshal(raw, &result)
+	if e = json.Unmarshal(raw, &result); e != nil || result.Turn.ID == "" {
+		fail(errors.New("Codex turn/start 未返回有效 turn.id；提交结果无法确认，未自动重发，请核对原生线程"))
+		return
+	}
 	_ = m.update(s.ID, func(v *Session) {
 		if v.TurnID == "" {
 			v.TurnID = result.Turn.ID
@@ -957,7 +987,22 @@ func (m *Manager) ConfigCall(wid, method string, params any, ids ...string) (jso
 	}
 	ctx, cancel := context.WithTimeout(m.ctx, 45*time.Second)
 	defer cancel()
-	return c.Call(ctx, method, params)
+	raw, err := c.Call(ctx, method, params)
+	if err != nil {
+		var transport *rpc.TransportError
+		if errors.As(err, &transport) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			h.mu.Lock()
+			if h.client == c {
+				h.client = nil
+				h.thread = ""
+			}
+			h.mu.Unlock()
+			c.Close()
+			<-c.Done()
+		}
+		return nil, fmt.Errorf("Codex %s: %w", method, err)
+	}
+	return raw, nil
 }
 func (m *Manager) reap() {
 	m.mu.Lock()

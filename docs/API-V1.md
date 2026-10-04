@@ -1,4 +1,4 @@
-# RunDesk 应用接口 v1（RunDesk 0.7.0）
+# RunDesk 应用接口 v1（RunDesk 0.8.3）
 
 RunDesk 为两类客户端提供同一套运行能力：人通过 WebUI，应用通过 HTTP API。Codex 执行 Agent loop；应用负责自己的交互、业务数据和审核流程。
 
@@ -89,13 +89,26 @@ Content-Type: application/json
 {"error":"会话不存在","code":"session_not_found","requestId":"a-generated-id","retryable":false}
 ```
 
-0.8.2 的新错误响应还提供可选 `details`：`time`、`origin`、`method`、`path`（不含查询字符串）、`durationMs`、`causes`；识别到 Codex RPC 错误时还有 `rpcCode` 和可用的 `rpcData`。错误文本和结构化数据会遮盖常见密钥字段。历史幂等回执保持原样，因此客户端必须允许 `details` 缺省。API 描述版本为 1.3.1。
+0.8.2 的新错误响应还提供可选 `details`：`time`、`origin`、`method`、`path`（不含查询字符串）、`durationMs`、`causes`；识别到 Codex RPC 错误时还有 `rpcCode` 和可用的 `rpcData`。错误文本和结构化数据会遮盖常见密钥字段。历史幂等回执保持原样，因此客户端必须允许 `details` 缺省。API 描述版本为 1.3.2。0.8.3 增加 `origin=codex_transport` 和可选 `transportOperation`，表示本地 App Server 传输故障。
 
 响应包含 `X-Request-ID` 和 `RunDesk-API-Version`。可以传入有效的 `X-Request-ID` 关联业务日志；它不是幂等 Key，不影响去重。幂等回放保留原回执内容，错误回执中的 requestId 属于原请求；当前 HTTP 访问编号以响应头为准。
 
 关键代码：invalid_request、unauthorized、forbidden、session_not_found、instance_not_found、workspace_not_found、revision_required、revision_conflict、session_busy、session_archived、run_conflict、idempotency_key_required、idempotency_conflict、request_in_progress、request_unconfirmed、request_not_found、storage_unavailable。
 
 `retryable=false` 不是“永远不能操作”，表示不能据此自动重发。HTTP 5xx 或网络错误可能发生在操作已接收之后，必须保留 Key。接口找不到路径或方法时返回 JSON 404；过大的 JSON 请求返回 413。
+
+0.8.3 的 v1 错误分类：
+
+| 状态 | 代码 | 含义 |
+| --- | --- | --- |
+| 400 | codex_invalid_params、invalid_input | Codex 拒绝参数，或输入为空/过长 |
+| 502 | codex_rpc_error、codex_method_unsupported、codex_protocol_error | 上游 RPC 错误、原生版本缺少方法、JSONL 协议损坏 |
+| 503 | codex_unavailable、connection_limit、runtime_unavailable | 子进程不可用、连接满、后台停止 |
+| 503 | storage_unavailable、journal_unavailable、receipt_invalid | 接收记录读失败、任务输入无法记录、回执损坏 |
+| 504 | codex_timeout | 等待或写入 Codex 超时 |
+| 500 | internal_panic、skill_restore_required | 真正的内部异常、技能安装与恢复都失败 |
+
+上述分类不承诺失败任务可安全重发。特别是写入/等待超时可能已触发副作用；`retryable` 仍为 false。原生响应里的“HTTP 500”保留在错误详情中，不等于当前 RunDesk HTTP 状态。
 
 ## 事件、产物与业务关联
 

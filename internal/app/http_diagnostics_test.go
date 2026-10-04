@@ -30,7 +30,7 @@ func TestHTTPDiagnosticErrorDetails(t *testing.T) {
 	h.ServeHTTP(w, req)
 	data := object(t, w)
 	details := data["details"].(map[string]any)
-	if w.Code != 500 || data["requestId"] != "request-test-123" || details["path"] != "/api/v1/workspaces/demo/config" || details["origin"] != "codex_rpc" || details["rpcCode"] != float64(-32001) {
+	if w.Code != 502 || data["code"] != "codex_rpc_error" || data["requestId"] != "request-test-123" || details["path"] != "/api/v1/workspaces/demo/config" || details["origin"] != "codex_rpc" || details["rpcCode"] != float64(-32001) {
 		t.Fatal(w.Code, data)
 	}
 	if len(details["causes"].([]any)) != 2 || details["time"] == "" || details["durationMs"] == nil {

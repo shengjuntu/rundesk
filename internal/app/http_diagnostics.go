@@ -104,6 +104,10 @@ func errorDiagnostic(w http.ResponseWriter, status int, code string, err error) 
 			d["rpcData"] = diagnosticValue(native.Data)
 		}
 	}
+	var transport *rpc.TransportError
+	if errors.As(err, &transport) {
+		d["origin"], d["transportOperation"] = "codex_transport", transport.Op
+	}
 	causes := []string{}
 	for e, n := err, 0; e != nil && n < 8; e, n = errors.Unwrap(e), n+1 {
 		causes = append(causes, diagnosticText(e.Error()))

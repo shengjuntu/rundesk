@@ -18,6 +18,10 @@ import (
 
 func TestMain(m *testing.M) {
 	if len(os.Args) > 1 && os.Args[1] == "__demo_agent" {
+		if mode := os.Getenv("RUNDESK_APP_FAILURE_FIXTURE"); mode != "" {
+			appFailureFixture(mode)
+			os.Exit(0)
+		}
 		DemoAgent()
 		os.Exit(0)
 	}
