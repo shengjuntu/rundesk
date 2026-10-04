@@ -80,7 +80,15 @@ func (m *Manager) configureTraceAnalysis(s Session, params map[string]any) error
 	if !ok {
 		config = map[string]any{}
 	}
-	config["mcp_servers.rundesk_trace"] = map[string]any{"command": exe, "args": []string{"__trace_mcp", filepath.Join(m.Data, "state.db"), s.TraceOrigin.SessionID, strconv.FormatInt(s.TraceOrigin.Through, 10)}, "enabled": true, "required": true, "startup_timeout_sec": 15, "tool_timeout_sec": 30}
+	database := filepath.Join(m.Data, "state.db")
+	if s.ExecutionMode == "docker" {
+		database = filepath.Join(m.environmentRoot(s.EnvironmentID), "traces", s.ID+".db")
+		if e = m.Store.ExportTraceSnapshot(database, s.TraceOrigin.SessionID, s.TraceOrigin.Through); e != nil {
+			return e
+		}
+		exe = "/opt/rundesk/bin/rundesk"
+	}
+	config["mcp_servers.rundesk_trace"] = map[string]any{"command": exe, "args": []string{"__trace_mcp", database, s.TraceOrigin.SessionID, strconv.FormatInt(s.TraceOrigin.Through, 10)}, "enabled": true, "required": true, "startup_timeout_sec": 15, "tool_timeout_sec": 30}
 	params["config"] = config
 	return nil
 }

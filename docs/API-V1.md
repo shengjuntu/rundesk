@@ -218,3 +218,7 @@ OpenAPI 文档版本 1.2.0；48 个路径、57 个操作。应用执行协议仍
 创建本身不调用模型、不提交原任务；后续将问题提交到**新 session 的** `/turns`。首次运行启动新的原生线程，恢复时仍沿用该分析线程；只读 MCP 的来源快照保持不变。响应关联信息会持久化并出现在会话列表。新会话的事件、停止、审批和反馈走现有接口。
 
 内置 stdio MCP 为 `rundesk_trace`，只在分析会话的 thread/start 或 thread/resume 覆盖配置中加入。工具为 `trace_list_runs`、`trace_find_steps`、`trace_get_step`、`trace_read_event`、`trace_statistics`。这些工具不开放为匿名 HTTP 查询端点，不接收 SQL。详情与边界见 [TRACE.md](TRACE.md)。OpenAPI 文档更新为 1.3.0，路径和操作数量保持 48 / 57。
+
+## 0.11.0 个人用户与成员入口
+
+增加 `/users` 用户管理和 `/member/catalog` 授权项目目录。个人访问码以 `rd_user_` 开头；与 `rd_app_` 应用凭据分别管理。成员通过 `/member/{grantId}/...` 使用受限的 sessions、workspaces 和 requests 接口，不访问管理员根接口。服务端强制校验当前用户授权、项目和应用来源。只读成员仅允许 GET；可执行成员只在 Docker 应用内提交。详见 [用户与项目授权](USERS.md) 与 OpenAPI 1.10.0。

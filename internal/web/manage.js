@@ -312,7 +312,7 @@ function renderDebug() {
 }
 
 async function renderSkills(target) {
-  const current = instance(),
+  const current = (await RunDeskEnvironments.effective()).instance,
     work = ws(),
     cp = configPath(work.id, current.id);
   const raw = await api(cp("/skills"));
@@ -322,7 +322,7 @@ async function renderSkills(target) {
   const scope = el(
     "select",
     { id: "skill-scope" },
-    el("option", { value: "instance" }, "当前助手／应用"),
+    el("option", { value: "instance" }, RunDeskEnvironments.scopeLabel()),
     el("option", { value: "project" }, "项目技能 · 共享目录"),
   );
   const name = el("input", {
@@ -342,7 +342,7 @@ async function renderSkills(target) {
     el(
       "p",
       {},
-      "专用技能随助手或应用使用；项目技能在共享项目中可见。",
+      current.execution?.mode==="docker"?"当前应用、当前项目的独立技能目录。镜像中的标准技能首次初始化时补充，不覆盖已有文件。":"专用技能随助手或应用使用；项目技能在共享项目中可见。",
     ),
   );
   for (const sk of state.skills) {
@@ -434,7 +434,7 @@ async function renderSkills(target) {
             { class: "badge" },
             managed
               ? skScope === "instance"
-                ? "当前助手／应用"
+                ? RunDeskEnvironments.scopeLabel()
                 : "项目技能 · 共享"
               : sk.scope === "system"
                 ? "Codex 内置"
@@ -656,7 +656,7 @@ async function renderMCP(target) {
     "div",
     { class: "card" },
     el("h3", {}, "MCP 工具配置"),
-    el("p", {class:"help"}, `正在编辑 ${contextTitle()}。保存用于这个助手或应用的后续任务，项目层配置可能覆盖这里的值。`),
+    el("p", {class:"help"}, `正在编辑 ${contextTitle()} · ${RunDeskEnvironments.scopeLabel()}。${current.execution?.mode==="docker"?"此项目环境的 MCP 在容器中执行，其他项目独立配置。":"项目层配置可能覆盖这里的值。"}`),
 
   );
   const save = async (n, value, remove = false) => {

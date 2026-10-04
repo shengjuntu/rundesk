@@ -1,0 +1,67 @@
+{
+  "version": "0.10.1",
+  "date": "2026-10-04",
+  "goRace": "passed",
+  "goVet": "passed",
+  "imageContractRace": "passed",
+  "browserChecks": 37,
+  "suites": {
+    "images": {
+      "mode": "fake local Docker CLI; no real Docker/model",
+      "passed": 12,
+      "checks": [
+        "separate image page has an explicit empty state",
+        "registration inspects without changing the application target",
+        "producer metadata and missing fields are clear; unrelated image config is hidden",
+        "selecting matching bytes pins the app without unnecessary environment updates",
+        "same tag with different bytes creates a new version and retains the old one",
+        "target selection exposes pending impact and preserves the running environment",
+        "app summary and image page expose updates and fit mobile",
+        "missing target image is visible and cannot destroy the old running container",
+        "explicit update uses selected immutable bytes after tag drift and preserves data",
+        "offline check result and image history remain available after page reload",
+        "a later successful check clears the previous failure",
+        "no implicit build, pull, image execution or browser errors"
+      ]
+    },
+    "docker": {
+      "mode": "fake Docker CLI; real lease supervisor; native demo JSONL; no real Docker or model",
+      "passed": 12,
+      "checks": [
+        "general assistant stays native",
+        "new app configures Docker and opens dedicated runtime page",
+        "creating environment metadata does not launch Docker",
+        "one app has two independent project environments",
+        "UI starts managed environment",
+        "real supervisor carries demo App Server JSONL with correct environment home",
+        "recreate preserves host data and resumes native thread",
+        "authentication points to selected project container",
+        "runtime page fits desktop and mobile",
+        "Docker failure is visible in the environment card",
+        "runtime route survives refresh",
+        "no uncaught browser errors"
+      ]
+    },
+    "product": {
+      "mode": "RunDesk 0.10.1 demo protocol; no live model or external MCP execution",
+      "passed": 13,
+      "checks": [
+        "default general assistant has no instance picker and excludes application tasks",
+        "application model changes preserve assistant defaults and existing task models",
+        "folder import preserves script, reference and binary assets in application scope",
+        "directory browser previews text/binary; ZIP export and MD edits retain sibling files",
+        "ZIP import rejects silent overwrite and supports explicit backed-up replacement",
+        "independent Skills page refresh retains application ownership",
+        "independent MCP page keeps forms collapsed and writes only the chosen application",
+        "application trace refresh returns to the same task",
+        "assistant and application drafts remain separate",
+        "new conversation sends successfully and accepted messages do not return as drafts",
+        "new zero-task apps and legacy configuration registration work without replacing identities",
+        "390px mobile pages, directory viewer and skill controls fit without horizontal overflow",
+        "no page JavaScript errors"
+      ]
+    }
+  },
+  "realDocker": "not available / not verified",
+  "modelCalls": false
+}

@@ -1,6 +1,6 @@
 """Generate the shipped v1 contract from registered routes and curated schemas."""
 from pathlib import Path
-import json,re
+import json,re,copy
 root=Path(__file__).resolve().parents[1]
 def obj(props=None,required=(),extra=False):
  return dict(type='object',properties=props or {},required=list(required),additionalProperties=extra)
@@ -56,8 +56,21 @@ schemas.update({
  'KeyInput':obj({'name':st(minLength=1,maxLength=120),'workspaceIds':arr(st()),'scopes':arr(st(enum=['read','run','schedules','files','approvals'])),'expiresAt':st(format='date-time')},['name','workspaceIds','scopes']),
  'WorkspaceSummary':obj({'id':st(),'name':st()},['id','name'])
 })
+schemas.update({
+ 'ExecutionSpec':obj({'mode':st(enum=['local','docker']),'image':st(maxLength=255),'imageId':st(description='登记版本的固定 Image ID，必须与 imageVersionId 一致'),'imageVersionId':st(),'cpus':{'type':'integer','minimum':1,'maximum':32},'memoryMB':{'type':'integer','minimum':256,'maximum':65536},'pidsLimit':{'type':'integer','minimum':32,'maximum':4096},'idleMinutes':{'type':'integer','minimum':1,'maximum':1440},'network':st(enum=['bridge','none'])},['mode']),
+ 'Environment':obj({k:st() for k in ['id','instanceId','workspaceId','containerName','containerId','imageId','codexHome','state','error','created','observedAt','lastUsed','deployedAt']}|{'spec':ref('ExecutionSpec'),'exitCode':integer,'oomKilled':bool_,'revision':integer,'activeConnections':integer},['id','instanceId','workspaceId','spec','revision','state']),
+})
+schemas['ImageVersion']=obj({k:st() for k in ['id','instanceId','reference','imageId','os','architecture','created','version','source','revision','buildCreated','dockerfile','buildUrl','codexVersion','tools','skills','mcp','registeredAt','checkedAt','error']}|{'repoDigests':arr(st()),'size':integer,'availability':st(enum=['available','unavailable'])},['id','instanceId','reference','imageId','registeredAt','checkedAt','availability'])
+schemas['ImageCatalog']=obj({'versions':arr(ref('ImageVersion')),'execution':ref('ExecutionSpec'),'instanceRevision':integer,'environments':arr(ref('Environment')),'pendingUpdates':integer},['versions','execution','instanceRevision','environments','pendingUpdates'])
+schemas['Instance']['properties']['execution']=ref('ExecutionSpec')
+schemas['Session']['properties'].update({'environmentId':st(),'executionMode':st(enum=['local','docker'])})
 paths={}
 requests={
+ ('POST','/instances/{iid}/images'):obj({'reference':st()},['reference']),
+ ('POST','/instances/{iid}/images/{vid}/select'):obj({'revision':integer},['revision']),
+ ('PUT','/instances/{iid}/execution'):obj({'revision':integer,'spec':ref('ExecutionSpec')},['revision','spec']),
+ ('POST','/environments'):obj({'instanceId':st(),'workspaceId':st()},['instanceId','workspaceId']),
+ ('POST','/environments/{eid}/actions'):obj({'revision':integer,'applicationRevision':integer,'action':st(enum=['start','stop','recreate','remove','inspect'])},['revision','action']),
  ('POST','/applications/{appId}/keys'):ref('KeyInput'),
  ('POST','/schedules'):ref('ScheduleSpec'),('PUT','/schedules/{id}'):obj({'spec':ref('ScheduleSpec'),'revision':integer},['spec','revision']),('DELETE','/schedules/{id}'):obj({'revision':integer},['revision']),('POST','/schedules/preview'):obj({'cron':st(),'timezone':st()},['cron','timezone']),
  ('PUT','/queue'):ref('QueueSettings'),('POST','/tasks'):ref('TaskSpec'),
@@ -80,6 +93,14 @@ requests={
 }
 idempotent={('POST',p) for p in ['/instances','/workspaces','/sessions','/sessions/{sid}/turns','/sessions/{sid}/recover','/tasks','/schedules']}
 summaries={
+ '/instances/{iid}/images':'管理员：GET 读取持久化镜像目录及环境差异；POST 检查并登记本机镜像，不构建、不拉取、不启动容器',
+ '/instances/{iid}/images/{vid}/check':'管理员：按固定 Image ID 核对可用性；失败仍返回记录，检查 availability 和 error',
+ '/instances/{iid}/images/{vid}/select':'管理员：选择应用目标版本，需应用 revision；已有环境继续沿用原版本，需显式更新',
+ '/docker/status':'管理员：检查本机 Docker Engine；不启动模型',
+ '/instances/{iid}/execution':'管理员：修改应用运行方式和镜像；default 只能 local，需 revision',
+ '/environments':'管理员：按应用列出环境；POST 幂等地取得应用与项目对应环境，只创建元数据',
+ '/environments/{eid}':'管理员：从 Docker 核对状态、退出码和 OOM 标记',
+ '/environments/{eid}/actions':'管理员：启动、停止、重建或移除空闲容器；始终保留宿主机数据',
  '/sessions/{sid}/recovery/check':'核对当前失败或中断轮次；15 分钟内有效，每会话只保留最近一次核对',
  '/sessions/{sid}/recover':'按服务端核对结果继续原会话；重新核对原生状态，新轮次关联失败来源',
  '/applications':'应用列表与任务统计','/applications/{appId}':'读取或登记应用；绑定不可变，修改信息需 revision','/workspaces/{wid}/skill-bundles':'导入完整技能 ZIP 或目录；替换会完整备份原目录',
@@ -128,7 +149,14 @@ for file in sorted((root/'internal/app').glob('*.go')):
   if '/skill-bundles/' in path and path.endswith('/file'):response=ref('SkillFilePreview')
   if '/skill-bundles/' in path and method=='DELETE':response=obj({'backupPath':st()},['backupPath'])
   if path=='/instances':response=arr(ref('Instance')) if method=='GET' else ref('Instance')
-  if path=='/instances/{iid}':response=ref('Instance')
+  if path=='/instances/{iid}' or path=='/instances/{iid}/execution':response=ref('Instance')
+  if path=='/instances/{iid}/images':response=ref('ImageCatalog') if method=='GET' else ref('ImageVersion')
+  if path=='/instances/{iid}/images/{vid}/check':response=ref('ImageVersion')
+  if path=='/instances/{iid}/images/{vid}/select':response=ref('Instance')
+  if path=='/environments':
+   response=arr(ref('Environment')) if method=='GET' else ref('Environment')
+   if method=='GET':query('instanceId')
+  if path.startswith('/environments/'):response=ref('Environment')
   if path=='/workspaces':response=arr({'oneOf':[ref('Workspace'),ref('WorkspaceSummary')]}) if method=='GET' else ref('Workspace')
   if path.endswith('/configuration'):response=ref('Configuration')
   if path=='/sessions/{sid}/messages/{eid}':response=ref('Reply')
@@ -170,6 +198,37 @@ for file in sorted((root/'internal/app').glob('*.go')):
   op['x-administrator-only']=scopes is None and path!='/login'
   if scopes:op['x-application-scopes']=scopes;op['description']='应用凭据还必须符合服务端的应用、专用配置和项目归属校验。'
   paths.setdefault(path,{})[method.lower()]=op
-spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':'1.7.0','description':'RunDesk 0.9.2。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
+
+# Human member API is a constrained projection of application routes.
+schemas['UserGrant']=obj({'id':st(),'appId':st(),'workspaceId':st(),'role':st(enum=['viewer','runner'])},['appId','workspaceId','role'])
+schemas['UserInput']=obj({'name':st(maxLength=120),'enabled':bool_,'revision':integer,'grants':arr(ref('UserGrant'))},['name','grants'])
+schemas['User']=obj({'id':st(),'name':st(),'enabled':bool_,'revision':integer,'grants':arr(ref('UserGrant')),'created':st(),'updated':st()},['id','name','enabled','revision','grants'])
+schemas['UserCode']=obj({'user':ref('User'),'accessCode':st(description='仅本次返回；服务端只保存哈希。')},['user','accessCode'])
+for path,ops in paths.items():
+ for method,op in ops.items():
+  schema=None
+  if path=='/users':schema=arr(ref('User')) if method=='get' else ref('UserCode')
+  if path=='/users/{uid}':schema=ref('User')
+  if path=='/users/{uid}/access-code':schema=ref('UserCode')
+  if schema:op['responses']['200']['content']['application/json']['schema']=schema
+  if path in ['/users','/users/{uid}'] and method in ['post','put']:
+   op['requestBody']={'required':True,'content':{'application/json':{'schema':ref('UserInput')}}}
+   op['description']='仅管理员。创建始终启用账号；更新必须带当前 revision，变更会使现有浏览器登录失效。'
+  if path=='/users/{uid}/access-code':op['requestBody']={'required':True,'content':{'application/json':{'schema':obj({'revision':integer},['revision'])}}}
+  if path=='/whoami':op['responses']['200']['content']['application/json']['schema']['oneOf'].append(obj({'kind':st(const='user'),'user':ref('User')},['kind','user']))
+  if path=='/member/catalog':
+   op['x-administrator-only']=False;op['x-personal-user-only']=True
+   op['responses']['200']['content']['application/json']['schema']=obj({'user':ref('User'),'projects':arr(obj({'grant':ref('UserGrant'),'applicationName':st(),'projectName':st(),'canRun':bool_},['grant','applicationName','projectName','canRun']))},['user','projects'])
+for path,ops in list(paths.items()):
+ if path.split('/')[1] not in ['sessions','workspaces','requests']:continue
+ for method,op in ops.items():
+  if method not in ['get','post'] or not op.get('x-application-scopes'):continue
+  projected=copy.deepcopy(op);projected['operationId']='member_'+op['operationId']
+  projected.pop('x-application-scopes',None);projected['x-personal-user-only']=True
+  projected['parameters'].insert(0,{'name':'grantId','in':'path','required':True,'schema':st()})
+  projected['description']='个人访问码或成员 Cookie。grantId 必须属于当前用户；仅允许授权应用项目。viewer 仅 GET；runner 可提交、上传、审批。任务和文件在同项目共享。变更为本机执行后禁止成员写入。'
+  paths.setdefault('/member/{grantId}'+path,{})[method]=projected
+
+spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':'1.10.0','description':'RunDesk 0.11.0。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

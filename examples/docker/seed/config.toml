@@ -1,0 +1,4 @@
+cli_auth_credentials_store = "file"
+check_for_update_on_startup = false
+# Put common non-secret MCP configuration here, if desired.
+# Skills may be added as full directories under seed/skills/ before image build.

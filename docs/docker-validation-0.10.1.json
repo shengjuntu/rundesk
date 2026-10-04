@@ -1,0 +1,18 @@
+{
+  "mode": "fake Docker CLI; real lease supervisor; native demo JSONL; no real Docker or model",
+  "passed": 12,
+  "checks": [
+    "general assistant stays native",
+    "new app configures Docker and opens dedicated runtime page",
+    "creating environment metadata does not launch Docker",
+    "one app has two independent project environments",
+    "UI starts managed environment",
+    "real supervisor carries demo App Server JSONL with correct environment home",
+    "recreate preserves host data and resumes native thread",
+    "authentication points to selected project container",
+    "runtime page fits desktop and mobile",
+    "Docker failure is visible in the environment card",
+    "runtime route survives refresh",
+    "no uncaught browser errors"
+  ]
+}

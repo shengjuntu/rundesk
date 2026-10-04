@@ -23,23 +23,29 @@ type RuntimeNotice struct {
 	LastSeen  string `json:"lastSeen"`
 }
 type RuntimeStatus struct {
-	ID           string          `json:"id"`
-	InstanceID   string          `json:"instanceId"`
-	WorkspaceID  string          `json:"workspaceId"`
-	ConnectionID string          `json:"connectionId"`
-	ConnectedAt  string          `json:"connectedAt"`
-	ObservedAt   string          `json:"observedAt,omitempty"`
-	CodexHome    string          `json:"codexHome"`
-	UserAgent    string          `json:"userAgent,omitempty"`
-	Live         bool            `json:"live"`
-	Requested    *Permissions    `json:"requested,omitempty"`
-	Effective    map[string]any  `json:"effective,omitempty"`
-	Notices      []RuntimeNotice `json:"notices"`
+	ExecutionMode string          `json:"executionMode,omitempty"`
+	EnvironmentID string          `json:"environmentId,omitempty"`
+	ID            string          `json:"id"`
+	InstanceID    string          `json:"instanceId"`
+	WorkspaceID   string          `json:"workspaceId"`
+	ConnectionID  string          `json:"connectionId"`
+	ConnectedAt   string          `json:"connectedAt"`
+	ObservedAt    string          `json:"observedAt,omitempty"`
+	CodexHome     string          `json:"codexHome"`
+	UserAgent     string          `json:"userAgent,omitempty"`
+	Live          bool            `json:"live"`
+	Requested     *Permissions    `json:"requested,omitempty"`
+	Effective     map[string]any  `json:"effective,omitempty"`
+	Notices       []RuntimeNotice `json:"notices"`
 }
 
 func (m *Manager) beginRuntime(id string, w Workspace, i Instance) string {
 	key := store.ID()
 	v := RuntimeStatus{ID: id, InstanceID: i.ID, WorkspaceID: w.ID, ConnectionID: key, ConnectedAt: store.Now(), CodexHome: i.CodexHome, Notices: []RuntimeNotice{}}
+	v.ExecutionMode = i.Execution.normalized().Mode
+	if v.ExecutionMode == "docker" {
+		v.EnvironmentID = environmentID(i.ID, w.ID)
+	}
 	m.runtimeMu.Lock()
 	err := m.Store.Put("runtime", id, v)
 	m.runtimeMu.Unlock()

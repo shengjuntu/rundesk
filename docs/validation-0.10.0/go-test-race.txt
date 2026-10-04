@@ -1,0 +1,7 @@
+ok  	github.com/shengjuntu/rundesk/cmd/rundesk	1.023s
+ok  	github.com/shengjuntu/rundesk/internal/app	51.818s
+ok  	github.com/shengjuntu/rundesk/internal/containerruntime	1.536s
+ok  	github.com/shengjuntu/rundesk/internal/rpc	1.244s
+ok  	github.com/shengjuntu/rundesk/internal/store	1.035s
+ok  	github.com/shengjuntu/rundesk/internal/tracequery	1.038s
+?   	github.com/shengjuntu/rundesk/internal/web	[no test files]

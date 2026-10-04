@@ -202,6 +202,15 @@ func principal(r *http.Request) *ApplicationKey {
 	return k
 }
 func (s *Server) authorize(r *http.Request) (*http.Request, error) {
+	if s.Token == "" {
+		users, e := s.Manager.Users()
+		if e != nil {
+			return r, &apiError{Status: 503, Code: "storage_unavailable", Message: "无法检查用户配置；请检查数据目录和数据库状态", Cause: e}
+		}
+		if len(users) > 0 {
+			return r, failure(503, "administrator_token_required", "已有用户账号，必须配置 RUNDESK_TOKEN 后启动")
+		}
+	}
 	if auth := r.Header.Get("Authorization"); auth != "" {
 		secret, ok := strings.CutPrefix(auth, "Bearer ")
 		if !ok {
@@ -209,6 +218,13 @@ func (s *Server) authorize(r *http.Request) (*http.Request, error) {
 		}
 		if s.Token != "" && same(secret, s.Token) {
 			return r, nil
+		}
+		if strings.HasPrefix(secret, "rd_user_") {
+			p, e := s.Manager.authenticateUser(secret)
+			if e != nil {
+				return r, e
+			}
+			return withHuman(r, p), nil
 		}
 		key, e := s.Manager.authenticateApplication(secret)
 		if e != nil {
@@ -220,12 +236,22 @@ func (s *Server) authorize(r *http.Request) (*http.Request, error) {
 		return r, nil
 	}
 	c, e := r.Cookie("rundesk")
+	if e == nil && strings.HasPrefix(c.Value, "rd_browser_") {
+		p, e := s.Manager.authenticateUserCookie(c.Value)
+		if e != nil {
+			return r, e
+		}
+		return withHuman(r, p), nil
+	}
 	if e == nil && same(c.Value, s.cookie) {
 		return r, nil
 	}
 	return r, failure(401, "unauthorized", "需要登录")
 }
 func (s *Server) credentialStillValid(r *http.Request) bool {
+	if human(r) != nil {
+		return s.userStillValid(r)
+	}
 	k := principal(r)
 	if k == nil {
 		return true
@@ -256,7 +282,9 @@ func scheduleVisible(r *http.Request, s Schedule) bool {
 }
 func (s *Server) keyRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/whoami", func(w http.ResponseWriter, r *http.Request) {
-		if k := principal(r); k != nil {
+		if p := human(r); p != nil {
+			writeJSON(w, 200, map[string]any{"kind": "user", "user": p.User})
+		} else if k := principal(r); k != nil {
 			writeJSON(w, 200, map[string]any{"kind": "application", "credential": k})
 		} else {
 			writeJSON(w, 200, map[string]string{"kind": "administrator"})

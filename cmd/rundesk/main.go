@@ -16,10 +16,17 @@ import (
 	"time"
 
 	"github.com/shengjuntu/rundesk/internal/app"
+	"github.com/shengjuntu/rundesk/internal/containerruntime"
 	"github.com/shengjuntu/rundesk/internal/tracequery"
 )
 
 func main() {
+	if handled, e := containerruntime.Dispatch(os.Args[1:]); handled {
+		if e != nil {
+			log.Fatal(e)
+		}
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "__trace_mcp" {
 		if len(os.Args) != 5 {
 			log.Fatal("trace MCP requires database, source session, snapshot cursor")

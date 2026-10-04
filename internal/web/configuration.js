@@ -61,10 +61,10 @@ async function renderConfigurationOverview(target) {
   target.replaceChildren(
     el("section",{class:"configuration-intro"},el("p",{class:"eyebrow"},"YOUR ASSISTANT"),el("h3",{},contextTitle()),el("p",{},current.description||"为这个助手配置长期使用的模型、技能和工具。"),el("p",{class:"help"},`${count} 个关联会话 · 当前工作区：${work.name}`)),
     tiles,
-    el("p",{class:"configuration-scope"},"模型默认值用于新对话。技能与工具由当前助手或应用共享，项目配置也可能参与；会话中可查看实际运行情况。"),
+    el("p",{class:"configuration-scope"},current.execution?.mode==="docker"?"模型默认值用于新对话。Docker 应用的技能、MCP、认证和原生记忆按项目环境独立保存。":"模型默认值用于新对话。技能与工具由当前助手或应用共享，项目配置也可能参与；会话中可查看实际运行情况。"),
     el("div",{class:"actions"},scan,button("模型、认证与权限",()=>openTab("instances"))),
     inventory,
-    el("details",{class:"card integration-links"},el("summary",{},"开发者接入说明"),el("h3",{},"应用接入"),el("p",{},"应用与此 WebUI 使用 /api/v1。支持任务提交去重、事件续传和接收回执查询。"),el("a",{href:"/api/v1/openapi.json",target:"_blank",rel:"noopener"},"打开 OpenAPI 定义"),el("p",{class:"help"},"现有 /api 接口继续兼容。应用来源标签用于业务关联；本版仍使用后台 Token，不是独立应用权限。")),
+    el("details",{class:"card integration-links"},el("summary",{},"开发者接入说明"),el("h3",{},"应用接入"),el("p",{},"应用与此 WebUI 使用 /api/v1。支持任务提交去重、事件续传和接收回执查询。"),el("a",{href:"/api/v1/openapi.json",target:"_blank",rel:"noopener"},"打开 OpenAPI 定义"),el("p",{class:"help"},"现有 /api 接口继续兼容。应用可使用独立凭据，绑定应用与允许访问的项目；凭据在应用页面管理。")),
   );
 }
 async function openCapabilityDialog() {

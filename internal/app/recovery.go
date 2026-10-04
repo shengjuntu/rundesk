@@ -191,6 +191,9 @@ func (m *Manager) PrepareRecovery(id, expected string) (RecoveryPlan, error) {
 	if err != nil {
 		return p, err
 	}
+	if err = m.checkSessionExecution(s); err != nil {
+		return p, err
+	}
 	if expected == "" || s.RunID != expected {
 		return p, failure(409, "run_conflict", "任务已变化，请刷新后选择当前失败轮次")
 	}

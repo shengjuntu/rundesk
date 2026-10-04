@@ -63,6 +63,10 @@ func (m *Manager) Configuration(iid, wid string, probe bool) (map[string]any, er
 	if err != nil {
 		return nil, err
 	}
+	i, environment, err := m.effectiveInstance(i, w)
+	if err != nil {
+		return nil, err
+	}
 	count := 0
 	for _, session := range m.Sessions() {
 		if session.InstanceID == i.ID {
@@ -70,6 +74,9 @@ func (m *Manager) Configuration(iid, wid string, probe bool) (map[string]any, er
 		}
 	}
 	result := map[string]any{"instance": i, "workspace": map[string]string{"id": w.ID, "name": w.Name, "path": w.Path}, "sessionCount": count, "observedAt": store.Now(), "probed": probe, "errors": map[string]string{}}
+	if environment != nil {
+		result["environment"] = environment
+	}
 	if !probe {
 		return result, nil
 	}

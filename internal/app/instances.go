@@ -15,15 +15,16 @@ const DefaultInstance = "default"
 
 // An instance is a persistent configuration identity, not a single process.
 type Instance struct {
-	ID           string      `json:"id"`
-	Name         string      `json:"name"`
-	Description  string      `json:"description"`
-	DefaultModel string      `json:"defaultModel"`
-	Permissions  Permissions `json:"permissions"`
-	CodexHome    string      `json:"codexHome"`
-	Managed      bool        `json:"managed"`
-	Revision     int         `json:"revision"`
-	Created      string      `json:"created"`
+	Execution    ExecutionSpec `json:"execution"`
+	ID           string        `json:"id"`
+	Name         string        `json:"name"`
+	Description  string        `json:"description"`
+	DefaultModel string        `json:"defaultModel"`
+	Permissions  Permissions   `json:"permissions"`
+	CodexHome    string        `json:"codexHome"`
+	Managed      bool          `json:"managed"`
+	Revision     int           `json:"revision"`
+	Created      string        `json:"created"`
 }
 type InstancePatch struct {
 	Name         string       `json:"name"`
@@ -50,6 +51,7 @@ func (m *Manager) loadInstances() error {
 			return err
 		}
 		v.Permissions = v.Permissions.normalized()
+		v.Execution = v.Execution.normalized()
 		m.instances[v.ID] = &v
 	}
 	home := os.Getenv("CODEX_HOME")
@@ -73,6 +75,7 @@ func (m *Manager) loadInstances() error {
 		v = &Instance{ID: DefaultInstance, Name: "默认实例", Created: store.Now()}
 	}
 	v.CodexHome, v.Managed = home, false
+	v.Execution = ExecutionSpec{Mode: "local"}
 	v.Permissions = v.Permissions.normalized()
 	m.instances[v.ID] = v
 	if err := os.MkdirAll(home, 0700); err != nil {
@@ -124,6 +127,7 @@ func (m *Manager) CreateInstance(p InstancePatch) (Instance, error) {
 	}
 	id := store.ID()
 	v := Instance{ID: id, Name: strings.TrimSpace(p.Name), Description: p.Description, DefaultModel: strings.TrimSpace(p.DefaultModel), Managed: true, Created: store.Now(), CodexHome: filepath.Join(m.Data, "instances", id, "codex")}
+	v.Execution = ExecutionSpec{Mode: "local"}
 	v.Permissions = Permissions{}.normalized()
 	if p.Permissions != nil {
 		v.Permissions = p.Permissions.normalized()
@@ -174,6 +178,10 @@ func (m *Manager) skillRoot(wid string, opts []string) (string, string, error) {
 		return "", "", err
 	}
 	i, err := m.Instance(instanceID(opts))
+	if err != nil {
+		return "", "", err
+	}
+	i, _, err = m.effectiveInstance(i, w)
 	if err != nil {
 		return "", "", err
 	}

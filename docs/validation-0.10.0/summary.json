@@ -1,0 +1,23 @@
+{
+  "version": "0.10.0",
+  "goRace": "passed",
+  "goVet": "passed",
+  "builds": [
+    "linux-amd64-static",
+    "windows-amd64-cross-compiled"
+  ],
+  "browserChecks": {
+    "credentials-validation-0.10.0.json": 7,
+    "schedule-validation-0.10.0.json": 7,
+    "diagnostics-validation-0.10.0.json": 14,
+    "process-validation-0.10.0.json": 16,
+    "recovery-validation-0.10.0.json": 8,
+    "docker-validation-0.10.0.json": 12,
+    "queue-validation-0.10.0.json": 7,
+    "product-validation-0.10.0.json": 13
+  },
+  "browserTotal": 84,
+  "dockerTransport": "simulated CLI with real supervisor",
+  "realDockerTested": false,
+  "realModelTested": false
+}

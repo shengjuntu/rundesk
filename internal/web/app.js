@@ -144,6 +144,8 @@ function prettySize(n) {
       : n + " B";
 }
 async function boot() {
+  const identity=await api("/whoami");
+  if(identity.kind==="user"){location.replace("/member.html");return;}
   const meta = await api("/meta");
   state.demo = meta.demo;
   $("#toast").classList.add("hidden");

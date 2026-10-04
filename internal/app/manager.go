@@ -26,25 +26,27 @@ type Workspace struct {
 	Revision int    `json:"revision"`
 }
 type Session struct {
-	TaskID      string          `json:"taskId,omitempty"`
-	ID          string          `json:"id"`
-	WorkspaceID string          `json:"workspaceId"`
-	InstanceID  string          `json:"instanceId"`
-	Title       string          `json:"title"`
-	ThreadID    string          `json:"threadId"`
-	Model       string          `json:"model"`
-	Status      string          `json:"status"`
-	RunID       string          `json:"runId"`
-	TurnID      string          `json:"turnId"`
-	Error       string          `json:"error,omitempty"`
-	Created     string          `json:"created"`
-	Updated     string          `json:"updated"`
-	Pinned      bool            `json:"pinned"`
-	Archived    bool            `json:"archived"`
-	Source      SessionSource   `json:"source"`
-	TraceOrigin *TraceOrigin    `json:"traceOrigin,omitempty"`
-	Recovery    *RecoveryOrigin `json:"recovery,omitempty"`
-	Retry       *RetryNotice    `json:"retry,omitempty"`
+	ExecutionMode string          `json:"executionMode,omitempty"`
+	EnvironmentID string          `json:"environmentId,omitempty"`
+	TaskID        string          `json:"taskId,omitempty"`
+	ID            string          `json:"id"`
+	WorkspaceID   string          `json:"workspaceId"`
+	InstanceID    string          `json:"instanceId"`
+	Title         string          `json:"title"`
+	ThreadID      string          `json:"threadId"`
+	Model         string          `json:"model"`
+	Status        string          `json:"status"`
+	RunID         string          `json:"runId"`
+	TurnID        string          `json:"turnId"`
+	Error         string          `json:"error,omitempty"`
+	Created       string          `json:"created"`
+	Updated       string          `json:"updated"`
+	Pinned        bool            `json:"pinned"`
+	Archived      bool            `json:"archived"`
+	Source        SessionSource   `json:"source"`
+	TraceOrigin   *TraceOrigin    `json:"traceOrigin,omitempty"`
+	Recovery      *RecoveryOrigin `json:"recovery,omitempty"`
+	Retry         *RetryNotice    `json:"retry,omitempty"`
 }
 type Approval struct {
 	ID         string      `json:"id"`
@@ -80,6 +82,12 @@ type handle struct {
 	requests       map[string]Approval
 }
 type Manager struct {
+	userMu              sync.Mutex
+	executionMu         sync.RWMutex
+	environmentMu       sync.Mutex
+	environments        map[string]*Environment
+	environmentLeases   sync.Map
+	docker              dockerDriver
 	keyMu               sync.Mutex
 	scheduleMu          sync.Mutex
 	schedules           map[string]Schedule
@@ -123,7 +131,7 @@ func New(data, codex string, demo bool) (*Manager, error) {
 		return nil, e
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	m := &Manager{requestOwner: store.ID(), pendingRequests: map[string]bool{}, Store: s, Data: data, Codex: codex, Demo: demo, sessions: map[string]*Session{}, handles: map[string]*handle{}, workspaces: map[string]*Workspace{}, instances: map[string]*Instance{}, ctx: ctx, cancel: cancel}
+	m := &Manager{docker: dockerCLI{}, requestOwner: store.ID(), pendingRequests: map[string]bool{}, Store: s, Data: data, Codex: codex, Demo: demo, sessions: map[string]*Session{}, handles: map[string]*handle{}, workspaces: map[string]*Workspace{}, instances: map[string]*Instance{}, ctx: ctx, cancel: cancel}
 	fail := func(e error) (*Manager, error) { cancel(); s.Close(); return nil, e }
 	if e := m.loadInstances(); e != nil {
 		return fail(e)
@@ -191,6 +199,9 @@ func New(data, codex string, demo bool) (*Manager, error) {
 			return fail(e)
 		}
 	}
+	if e = m.loadEnvironments(); e != nil {
+		return fail(e)
+	}
 	if e = m.loadSchedules(); e != nil {
 		return fail(e)
 	}
@@ -223,6 +234,7 @@ func New(data, codex string, demo bool) (*Manager, error) {
 				return
 			case <-t.C:
 				m.reap()
+				m.reapEnvironments()
 			}
 		}
 	}()
@@ -343,7 +355,15 @@ func (m *Manager) prepareSession(wid, title, model, iid string, source SessionSo
 	if model == "" {
 		model = i.DefaultModel
 	}
-	s := Session{Source: source, TraceOrigin: origin, ID: store.ID(), InstanceID: i.ID, WorkspaceID: wid, Title: title, Model: model, Status: "idle", Created: store.Now(), Updated: store.Now()}
+	s := Session{ExecutionMode: i.Execution.normalized().Mode, Source: source, TraceOrigin: origin, ID: store.ID(), InstanceID: i.ID, WorkspaceID: wid, Title: title, Model: model, Status: "idle", Created: store.Now(), Updated: store.Now()}
+	if s.ExecutionMode == "docker" {
+		w, _ := m.Workspace(wid)
+		v, e := m.ensureEnvironment(i, w)
+		if e != nil {
+			return Session{}, e
+		}
+		s.EnvironmentID = v.ID
+	}
 	return s, nil
 }
 func (m *Manager) createSession(wid, title, model, iid string, source SessionSource, origin *TraceOrigin) (Session, error) {
@@ -450,6 +470,13 @@ func (m *Manager) command(w Workspace, i Instance) *exec.Cmd {
 
 // Caller holds h.op. A connection is reused across turns.
 func (m *Manager) connect(id string, w Workspace, h *handle, ids ...string) (*rpc.Client, error) {
+	m.executionMu.RLock()
+	defer m.executionMu.RUnlock()
+	if s, e := m.Session(id); e == nil {
+		if e = m.checkSessionExecution(s); e != nil {
+			return nil, e
+		}
+	}
 	if m.ctx.Err() != nil {
 		return nil, failure(503, "runtime_unavailable", "后台正在停止或事件记录已失效，未启动 Codex")
 	}
@@ -483,12 +510,19 @@ func (m *Manager) connect(id string, w Workspace, h *handle, ids ...string) (*rp
 	}
 	m.loaded.Add(1)
 	m.processMu.Unlock()
+	cmd, effective, cleanup, e := m.prepareCommand(w, i)
+	if e != nil {
+		m.loaded.Add(-1)
+		return nil, e
+	}
+	i = effective
 	runtimeKey := m.beginRuntime(id, w, i)
-	c, e := rpc.Start(m.command(w, i), func(msg rpc.Message) { m.onMessage(id, h, msg) }, func(dir string, msg rpc.Message) {
+	c, e = rpc.Start(cmd, func(msg rpc.Message) { m.onMessage(id, h, msg) }, func(dir string, msg rpc.Message) {
 		m.event(id, dir, msg.Method, msg)
 		m.observeRuntime(id, runtimeKey, dir, msg)
-	})
+	}, cleanup)
 	if e != nil {
+		cleanup()
 		m.loaded.Add(-1)
 		return nil, &rpc.TransportError{Op: "start", Cause: e}
 	}
@@ -743,6 +777,9 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 	}
 	s, e := m.Session(id)
 	if e != nil {
+		return s, e
+	}
+	if e = m.checkSessionExecution(s); e != nil {
 		return s, e
 	}
 	w, e := m.Workspace(s.WorkspaceID)

@@ -48,13 +48,22 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 	s.queueRoutes(mux)
 	s.scheduleRoutes(mux)
 	s.keyRoutes(mux)
+	s.environmentRoutes(mux)
+	s.imageRoutes(mux)
+	s.userRoutes(mux)
 	mux.HandleFunc("POST /api/login", s.login)
 	mux.HandleFunc("POST /api/logout", func(w http.ResponseWriter, r *http.Request) {
+		if p := human(r); p != nil && p.LoginID != "" {
+			if e := m.Store.Delete("user-login", p.LoginID); e != nil {
+				respond(w, nil, e)
+				return
+			}
+		}
 		http.SetCookie(w, &http.Cookie{Name: "rundesk", Value: "", Path: "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteStrictMode})
 		writeJSON(w, 200, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("GET /api/meta", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, map[string]any{"name": "RunDesk", "version": Version, "apiVersions": []string{"v1"}, "demo": m.Demo, "protocol": "Codex App Server JSONL", "capabilities": []string{"instances", "sessions", "trace", "events", "approvals", "skills", "mcp", "notes", "files", "api-v1", "idempotency", "configuration-summary", "application-metadata", "reply-feedback", "applications", "skill-bundles", "task-recovery", "native-retry-status", "task-queue", "schedules", "application-credentials"}})
+		writeJSON(w, 200, map[string]any{"name": "RunDesk", "version": Version, "apiVersions": []string{"v1"}, "demo": m.Demo, "protocol": "Codex App Server JSONL", "capabilities": []string{"instances", "sessions", "trace", "events", "approvals", "skills", "mcp", "notes", "files", "api-v1", "idempotency", "configuration-summary", "application-metadata", "reply-feedback", "applications", "skill-bundles", "task-recovery", "native-retry-status", "task-queue", "schedules", "application-credentials", "docker-environments", "image-catalog", "member-project-access"}})
 	})
 	mux.HandleFunc("GET /api/workspaces", func(w http.ResponseWriter, r *http.Request) {
 		if k := principal(r); k != nil {
@@ -258,7 +267,7 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 		writeErr(w, 404, failure(404, "not_found", "API 路径或方法不存在"))
 	})
 	mux.Handle("/", http.FileServerFS(web.Files))
-	return s.apiBoundary(s.guard(s.applicationGate(s.idempotent(mux))))
+	return s.apiBoundary(s.guard(s.userGate(s.applicationGate(s.idempotent(mux)))))
 }
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -343,6 +352,16 @@ func (s *Server) guard(next http.Handler) http.Handler {
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	var v struct{ Token string }
 	if !decode(w, r, &v) {
+		return
+	}
+	if strings.HasPrefix(v.Token, "rd_user_") {
+		cookie, e := s.Manager.loginUser(v.Token)
+		if e != nil {
+			respond(w, nil, e)
+			return
+		}
+		http.SetCookie(w, &http.Cookie{Name: "rundesk", Value: cookie, Path: "/", HttpOnly: true, Secure: r.TLS != nil || strings.HasPrefix(s.PublicOrigin, "https://"), SameSite: http.SameSiteStrictMode, MaxAge: 43200})
+		writeJSON(w, 200, map[string]bool{"ok": true})
 		return
 	}
 	if s.Token != "" && !same(v.Token, s.Token) {

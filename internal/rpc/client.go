@@ -40,22 +40,24 @@ func (e *TransportError) Error() string { return fmt.Sprintf("Codex App Server %
 func (e *TransportError) Unwrap() error { return e.Cause }
 
 type Client struct {
-	cmd       *exec.Cmd
-	in        io.WriteCloser
-	mu        sync.Mutex
-	writeGate chan struct{}
-	closing   atomic.Bool
-	exitErr   error
-	pending   map[string]chan Message
-	seq       atomic.Uint64
-	done      chan struct{}
-	once      sync.Once
-	onEvent   func(Message)
-	trace     func(string, Message)
+	cmd         *exec.Cmd
+	in          io.WriteCloser
+	mu          sync.Mutex
+	writeGate   chan struct{}
+	closing     atomic.Bool
+	exitErr     error
+	pending     map[string]chan Message
+	seq         atomic.Uint64
+	done        chan struct{}
+	once        sync.Once
+	onEvent     func(Message)
+	trace       func(string, Message)
+	cleanup     func()
+	cleanupOnce sync.Once
 }
 
 // Callbacks execute on the reader goroutine: they must not call Call synchronously.
-func Start(cmd *exec.Cmd, event func(Message), trace func(string, Message)) (*Client, error) {
+func Start(cmd *exec.Cmd, event func(Message), trace func(string, Message), cleanup ...func()) (*Client, error) {
 	in, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err
@@ -72,6 +74,9 @@ func Start(cmd *exec.Cmd, event func(Message), trace func(string, Message)) (*Cl
 		return nil, err
 	}
 	c := &Client{cmd: cmd, in: in, writeGate: make(chan struct{}, 1), pending: map[string]chan Message{}, done: make(chan struct{}), onEvent: event, trace: trace}
+	if len(cleanup) > 0 {
+		c.cleanup = cleanup[0]
+	}
 	if err = cmd.Start(); err != nil {
 		_ = in.Close()
 		_ = out.Close()
@@ -137,7 +142,14 @@ func Start(cmd *exec.Cmd, event func(Message), trace func(string, Message)) (*Cl
 	}()
 	return c, nil
 }
-func (c *Client) finish()               { c.once.Do(func() { close(c.done); _ = c.in.Close() }) }
+func (c *Client) release() {
+	c.cleanupOnce.Do(func() {
+		if c.cleanup != nil {
+			c.cleanup()
+		}
+	})
+}
+func (c *Client) finish()               { c.once.Do(func() { c.release(); close(c.done); _ = c.in.Close() }) }
 func (c *Client) Done() <-chan struct{} { return c.done }
 func (c *Client) Closing() bool         { return c.closing.Load() }
 func (c *Client) Err() error {
@@ -150,6 +162,7 @@ func (c *Client) Err() error {
 }
 func (c *Client) Close() {
 	c.closing.Store(true)
+	c.release()
 	if c.cmd.Process != nil {
 		_ = c.cmd.Process.Kill()
 	}
@@ -249,7 +262,7 @@ func (c *Client) Reply(id json.RawMessage, result any) error {
 	return c.Send(Message{ID: id, Result: b})
 }
 func (c *Client) Initialize(ctx context.Context) error {
-	_, err := c.Call(ctx, "initialize", map[string]any{"clientInfo": map[string]string{"name": "rundesk", "title": "RunDesk", "version": "0.8.4"}, "capabilities": map[string]bool{"experimentalApi": true}})
+	_, err := c.Call(ctx, "initialize", map[string]any{"clientInfo": map[string]string{"name": "rundesk", "title": "RunDesk", "version": "0.11.0"}, "capabilities": map[string]bool{"experimentalApi": true}})
 	if err != nil {
 		return err
 	}

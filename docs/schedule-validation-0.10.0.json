@@ -1,0 +1,13 @@
+{
+  "mode": "native demo mode, no model calls",
+  "passed": 7,
+  "checks": [
+    "explicit timezone preview returns five future occurrences",
+    "scheduled task template persists",
+    "disabled state survives reload",
+    "unsupported cron gets actionable inline error",
+    "mobile schedule layout fits",
+    "rule deletion works with explicit UI confirmation",
+    "no uncaught browser errors"
+  ]
+}
