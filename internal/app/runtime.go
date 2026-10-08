@@ -189,7 +189,17 @@ func (m *Manager) Runtime(id string) (RuntimeStatus, error) {
 	} else {
 		h.mu.Lock()
 		c := h.client
+		k := h.kun
 		h.mu.Unlock()
+		if k != nil {
+			select {
+			case <-k.Done():
+				v.Live = false
+			default:
+				v.Live = true
+			}
+			return v, nil
+		}
 		if c == nil {
 			v.Live = false
 		} else {

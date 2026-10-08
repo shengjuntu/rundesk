@@ -4,6 +4,7 @@ function renderCapabilityStrip() {
   const box=$("#capability-strip"); if(!box) return;
   const current=instance(), session=state.session;
   if(!current) {box.replaceChildren();return;}
+ const kun=(session?session.runtimeKind:current.agentRuntime?.kind)==="kun";if($("#kun-debug-open"))$("#kun-debug-open").classList.toggle("hidden",!kun);if($("#mode"))$("#mode").textContent=kun?"KUN":state.demo?"DEMO":"CODEX";
   const model=session ? (session.model || rdText("Codex 自动选择")) : ($("#model").value.trim() || current.defaultModel || rdText("Codex 默认模型"));
   const open=button(rdText("查看能力"),openCapabilityDialog,"capability-link");open.id="view-capabilities";
   box.replaceChildren(el("span",{class:"capability-instance"},contextTitle()),el("span",{class:"capability-model",title:model},model),open);

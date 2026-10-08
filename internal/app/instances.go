@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	p "github.com/shengjuntu/rundesk/internal/kunproto"
 	"github.com/shengjuntu/rundesk/internal/store"
 )
 
@@ -15,6 +16,7 @@ const DefaultInstance = "default"
 
 // An instance is a persistent configuration identity, not a single process.
 type Instance struct {
+	AgentRuntime p.Config      `json:"agentRuntime"`
 	Execution    ExecutionSpec `json:"execution"`
 	ID           string        `json:"id"`
 	Name         string        `json:"name"`

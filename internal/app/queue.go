@@ -393,9 +393,14 @@ func (m *Manager) releaseTaskConnection(t Task) {
 	}
 	h.mu.Lock()
 	c := h.client
+	k := h.kun
+	h.kun = nil
 	h.client = nil
 	h.thread = ""
 	h.mu.Unlock()
+	if k != nil {
+		k.Close()
+	}
 	if c != nil {
 		c.Close()
 		<-c.Done()
@@ -406,7 +411,15 @@ func (m *Manager) reserveProcess(id string, h *handle) error {
 	defer m.processMu.Unlock()
 	h.mu.Lock()
 	c := h.client
+	k := h.kun
 	h.mu.Unlock()
+	if k != nil {
+		select {
+		case <-k.Done():
+		default:
+			return nil
+		}
+	}
 	if c != nil && !c.Closing() {
 		select {
 		case <-c.Done():

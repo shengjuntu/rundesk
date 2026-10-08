@@ -189,7 +189,7 @@ function updateWorkspaceLabel() {
   $("#workspace-name").textContent = w?.name || rdText("默认项目");
   updateProductNavigation();
   localStorage.setItem("rundesk-instance", instance()?.id || "default");
-  if (!state.session) $("#model").value = instance()?.defaultModel || "";
+  if (!state.session) $("#model").value = instance()?.agentRuntime?.kind==="kun"?instance().agentRuntime.model:(instance()?.defaultModel || "");
   localStorage.setItem("rundesk-workspace", w?.id || "");
   if(instance()?.id==="default"&&!state.taskAppID)localStorage.setItem("rundesk-assistant-workspace",w?.id||"");
 }
@@ -314,7 +314,7 @@ async function selectSession(id) {
     if (
       event.method === "turn/started" ||
       event.method === "turn/completed" ||
-      event.method === "run/state" || event.method === "run/retry"
+      event.method === "run/state" || event.method === "run/retry" || event.method.startsWith("kun/")
     ) {
       safe(() => refreshRuntime(id));
       safe(refreshSessions);
@@ -415,6 +415,10 @@ function renderMessages() {
         text: ev.data.input.text,
         files: ev.data.input.files,
       });
+    } else if (ev.method === "kun/model.completed" && ev.data.data?.message?.content) {
+      items.push({_key:"kun:"+ev.id,type:"agentMessage",text:ev.data.data.message.content,_eventId:ev.id});
+    } else if (ev.method === "kun/control.queued" && ev.data.data?.command?.operation === "steer") {
+      items.push({_key:"kun-steer:"+ev.id,type:"user",text:ev.data.data.command.text,steering:true});
     } else if (ev.method === "run/steer") {
       items.push({
         _key: `steer:${ev.data.requestId || ev.id}`,
@@ -894,7 +898,9 @@ async function renderSettings() {
   setLoading(target);
   const tab = state.settingsTab;
   try {
-    if (tab === "overview") await renderConfigurationOverview(target);
+    if(instance()?.agentRuntime?.kind==="kun"&&["overview","instances"].includes(tab)) await renderKunSettings(target);
+    else if (tab === "overview") await renderConfigurationOverview(target);
+    else if (tab === "kun") await renderKunSettings(target);
     else if (tab === "instances") await renderAssistantSettings(target);
     else if (tab === "advanced") await renderInstances(target);
     else if (tab === "notes") renderNotes(target);

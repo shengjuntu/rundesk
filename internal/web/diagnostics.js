@@ -88,6 +88,9 @@ window.RunDeskDiagnostics = (() => {
       const message=response.ok?rdFormat("HTTP ${0}：预期 JSON，但收到其他内容",response.status):`HTTP ${response.status}：${summary|| (raw.trim()?rdText("服务端返回非标准错误响应"):rdText("服务端未提供错误内容"))}`;
       // The initial authentication challenge is normal; bad login and all other errors remain visible.
       if(response.status===401&&new URL(url,location.origin).pathname==="/api/v1/meta"){const error=Error(message);error.status=401;throw error;}
+      // A Kun worker may still be starting or already be idle-reclaimed. This is
+      // an expected inspector state; retain the error for its local UI only.
+      if(response.status===409&&info.code==="kun_offline"&&base.method==="GET"&&/\/kun\/state$/.test(new URL(url,location.origin).pathname)){const error=Error(summary||message);error.status=409;error.code=info.code;throw error;}
       throw failure(message,info);
     }
     return format==="text"?raw:data;

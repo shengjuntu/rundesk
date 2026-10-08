@@ -75,6 +75,8 @@ func (m *Manager) DeleteSession(id string) error {
 	}
 	h.mu.Lock()
 	c := h.client
+	k := h.kun
+	h.kun = nil
 	h.client = nil
 	h.thread = ""
 	h.requests = map[string]Approval{}
@@ -82,6 +84,9 @@ func (m *Manager) DeleteSession(id string) error {
 	if c != nil {
 		c.Close()
 		<-c.Done()
+	}
+	if k != nil {
+		k.Close()
 	}
 	if e = m.Store.DeleteSession(id); e != nil {
 		return e
@@ -115,6 +120,33 @@ func (m *Manager) Markdown(id string) (string, error) {
 				}
 				if json.Unmarshal(ev.Data, &v) == nil {
 					ordered = append(ordered, &message{"用户", v.Input.Text})
+				}
+				continue
+			}
+			if ev.Method == "kun/control.queued" {
+				var v struct {
+					Data struct {
+						Command struct {
+							Operation string `json:"operation"`
+							Text      string `json:"text"`
+						} `json:"command"`
+					} `json:"data"`
+				}
+				if json.Unmarshal(ev.Data, &v) == nil && v.Data.Command.Operation == "steer" {
+					ordered = append(ordered, &message{"用户", v.Data.Command.Text})
+				}
+				continue
+			}
+			if ev.Method == "kun/model.completed" {
+				var v struct {
+					Data struct {
+						Message struct {
+							Content string `json:"content"`
+						} `json:"message"`
+					} `json:"data"`
+				}
+				if json.Unmarshal(ev.Data, &v) == nil && v.Data.Message.Content != "" {
+					ordered = append(ordered, &message{"Kun", v.Data.Message.Content})
 				}
 				continue
 			}

@@ -68,6 +68,9 @@ func (m *Manager) SetExecution(iid string, revision int, spec ExecutionSpec) (In
 	if e != nil {
 		return i, e
 	}
+	if i.AgentRuntime.Kind == "kun" && spec.Mode != "local" {
+		return i, failure(400, "kun_local_only", "首版 Kun 仅支持本机 worker")
+	}
 	if i.Revision != revision {
 		return i, failure(409, "revision_conflict", "配置已变化，请刷新后重试")
 	}
@@ -118,6 +121,12 @@ func (m *Manager) checkSessionExecution(s Session) error {
 	i, e := m.Instance(s.InstanceID)
 	if e != nil {
 		return e
+	}
+	if runtimeKind(s.RuntimeKind) != runtimeKind(i.AgentRuntime.Kind) {
+		return failure(409, "session_runtime_changed", "此会话属于原 Agent 后端，请恢复原配置或新建会话")
+	}
+	if s.RuntimeKind == "kun" && i.Execution.normalized().Mode != "local" {
+		return failure(400, "kun_local_only", "首版 Kun 仅支持本机 worker")
 	}
 	mode := s.ExecutionMode
 	if mode == "" {

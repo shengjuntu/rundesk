@@ -31,3 +31,17 @@ Project code is MIT licensed. Go dependencies retain their own licenses. Corresp
 | modernc.org/token | v1.1.0 |
 
 Codex is an independently installed external executable and is not included in this distribution. The Go toolchain, test browser and Python/Node test tools are not redistributed. Go runtime license is included in `third_party/go-runtime/`.
+
+## Kun selected PiG source
+
+Kun incorporates the SSE decoder and a selected regression test from
+[MichaelKinsy/PiG](https://github.com/MichaelKinsy/PiG), commit
+`827932db70e545b34c3f1d9c04f58a70eacd3b28`, under MIT.
+
+Copyright Hewlett Packard Enterprise Development LP.
+Copyright (c) 2025 Mario Zechner (upstream Pi, as attributed by PiG).
+
+License texts: `LICENSES/PiG-MIT.txt` and `LICENSES/Pi-MIT.txt`.
+Exact file mapping, original hashes, and adaptations: `docs/UPSTREAM.md`.
+Thanks to PiG and Pi contributors. Neither project endorses Kun or RunDesk.
+PiG's embedded third-party browser assets and Node extensions are not included.

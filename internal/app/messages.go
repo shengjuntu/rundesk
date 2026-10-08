@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -41,6 +42,23 @@ func (m *Manager) Reply(sid string, eid int64) (Reply, error) {
 	}
 	if err != nil {
 		return Reply{}, err
+	}
+	if event.Method == "kun/model.completed" {
+		var v struct {
+			RunID    string `json:"runId"`
+			Sequence int64  `json:"sequence"`
+			Data     struct {
+				Message struct {
+					Content string `json:"content"`
+				} `json:"message"`
+			} `json:"data"`
+		}
+		if e := json.Unmarshal(event.Data, &v); e != nil {
+			return Reply{}, e
+		}
+		if v.Data.Message.Content != "" {
+			return Reply{SessionID: sid, EventID: eid, ItemID: fmt.Sprint(v.Sequence), TurnID: v.RunID, Text: v.Data.Message.Content, Time: event.Time}, nil
+		}
 	}
 	var data struct {
 		Params struct {

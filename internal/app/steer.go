@@ -43,6 +43,9 @@ func (m *Manager) Steer(id string, in SteerInput) (SteerReceipt, error) {
 	if err != nil {
 		return receipt, err
 	}
+	if s.RuntimeKind == "kun" {
+		return m.steerKun(s, in)
+	}
 	w, err := m.Workspace(s.WorkspaceID)
 	if err != nil {
 		return receipt, err

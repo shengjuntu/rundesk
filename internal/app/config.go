@@ -77,6 +77,21 @@ func safePath(p string) bool {
 	return p != "" && !strings.Contains(p, "\\") && !strings.ContainsRune(p, 0) && !filepath.IsAbs(p) && filepath.ToSlash(filepath.Clean(p)) == p && p != ".." && !strings.HasPrefix(p, "../")
 }
 func (m *Manager) Skills(wid string, ids ...string) (json.RawMessage, error) {
+	i, e := m.Instance(ids...)
+	if e != nil {
+		return nil, e
+	}
+	if i.AgentRuntime.Kind == "kun" {
+		w, e := m.Workspace(wid)
+		if e != nil {
+			return nil, e
+		}
+		skills, e := m.kunSkills(w, i)
+		if e != nil {
+			return nil, e
+		}
+		return json.Marshal(map[string]any{"data": []any{map[string]any{"cwd": w.Path, "skills": skills, "errors": []any{}}}})
+	}
 	w, e := m.Workspace(wid)
 	if e != nil {
 		return nil, e
@@ -147,6 +162,26 @@ func (m *Manager) ReadSkill(wid, name string, opts ...string) (string, error) {
 	return string(b), e
 }
 func (m *Manager) ToggleSkill(wid, path string, enabled bool, ids ...string) error {
+	i, e := m.Instance(ids...)
+	if e != nil {
+		return e
+	}
+	if i.AgentRuntime.Kind == "kun" {
+		w, e := m.Workspace(wid)
+		if e != nil {
+			return e
+		}
+		skills, e := m.kunSkills(w, i)
+		if e != nil {
+			return e
+		}
+		for _, sk := range skills {
+			if sk.Path == path {
+				return m.Store.Put("kun-skill-disabled", i.ID+":"+path, !enabled)
+			}
+		}
+		return errors.New("Skill 不存在")
+	}
 	configMu.Lock()
 	defer configMu.Unlock()
 	raw, e := m.Skills(wid, ids...)

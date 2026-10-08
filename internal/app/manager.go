@@ -14,6 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	kc "github.com/shengjuntu/rundesk/internal/adapters/kun"
 	"github.com/shengjuntu/rundesk/internal/rpc"
 	"github.com/shengjuntu/rundesk/internal/store"
 )
@@ -26,6 +27,7 @@ type Workspace struct {
 	Revision int    `json:"revision"`
 }
 type Session struct {
+	RuntimeKind   string          `json:"runtimeKind,omitempty"`
 	ExecutionMode string          `json:"executionMode,omitempty"`
 	EnvironmentID string          `json:"environmentId,omitempty"`
 	TaskID        string          `json:"taskId,omitempty"`
@@ -70,6 +72,7 @@ type Skill struct {
 	Path string `json:"path"`
 }
 type handle struct {
+	kun            *kc.Client
 	instanceID     string
 	permissionsKey string
 	op             sync.Mutex
@@ -83,6 +86,7 @@ type handle struct {
 	requests       map[string]Approval
 }
 type Manager struct {
+	Kun                 string
 	collabMu            sync.Mutex
 	a2aMu               sync.Mutex
 	libraryMu           sync.Mutex
@@ -368,9 +372,13 @@ func (m *Manager) prepareSession(wid, title, model, iid string, source SessionSo
 		return Session{}, err
 	}
 	if model == "" {
-		model = i.DefaultModel
+		if i.AgentRuntime.Kind == "kun" {
+			model = i.AgentRuntime.Model
+		} else {
+			model = i.DefaultModel
+		}
 	}
-	s := Session{ExecutionMode: i.Execution.normalized().Mode, Source: source, TraceOrigin: origin, ID: store.ID(), InstanceID: i.ID, WorkspaceID: wid, Title: title, Model: model, Status: "idle", Created: store.Now(), Updated: store.Now()}
+	s := Session{RuntimeKind: runtimeKind(i.AgentRuntime.Kind), ExecutionMode: i.Execution.normalized().Mode, Source: source, TraceOrigin: origin, ID: store.ID(), InstanceID: i.ID, WorkspaceID: wid, Title: title, Model: model, Status: "idle", Created: store.Now(), Updated: store.Now()}
 	if s.ExecutionMode == "docker" {
 		w, _ := m.Workspace(wid)
 		v, e := m.ensureEnvironment(i, w)
@@ -826,6 +834,17 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 	if active(s.Status) {
 		return s, failure(409, "session_busy", "该会话已有任务正在运行")
 	}
+	if s.RuntimeKind == "kun" {
+		for _, f := range in.Files {
+			switch strings.ToLower(filepath.Ext(f)) {
+			case ".png", ".jpg", ".jpeg", ".webp", ".gif":
+				return s, failure(400, "kun_text_only", "首版 Kun 不支持图像输入，请改用文本文件")
+			}
+		}
+	}
+	if s.RuntimeKind == "kun" && (recovery != nil || s.TraceOrigin != nil) {
+		return s, failure(400, "kun_recovery_unsupported", "首版 Kun 不支持原生 Codex 恢复或分析入口，请使用 Kun DevTools")
+	}
 	if recovery != nil {
 		if e = m.validateRecovery(s, h, recovery); e != nil {
 			return s, e
@@ -930,6 +949,10 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 }
 func (m *Manager) run(s Session, w Workspace, h *handle, in Input, recovery *RecoveryPlan) {
 	defer m.unreserveProcess(s.ID)
+	if s.RuntimeKind == "kun" {
+		m.runKun(s, w, h, in)
+		return
+	}
 	fail := func(e error) {
 		h.mu.Lock()
 		c := h.client
@@ -1141,6 +1164,10 @@ func (m *Manager) StopRun(id, expectedRunID string) error {
 		h.client.Close()
 	}
 	h.mu.Unlock()
+	if s.RuntimeKind == "kun" {
+		go m.stopKun(s, h)
+		return nil
+	}
 	go m.interrupt(id, h, s.RunID)
 	return nil
 }
@@ -1236,6 +1263,9 @@ func (m *Manager) ConfigCall(wid, method string, params any, ids ...string) (jso
 	if e != nil {
 		return nil, e
 	}
+	if i.AgentRuntime.Kind == "kun" {
+		return nil, failure(400, "kun_config_endpoint", "Kun 请使用 Agent 引擎配置；首版不支持 Codex 专用配置或 MCP")
+	}
 	id := "config-" + i.ID + "-" + wid
 	h, e := m.getHandle(id)
 	if e != nil {
@@ -1282,6 +1312,9 @@ func (m *Manager) reap() {
 			if h.client != nil {
 				h.client.Close()
 			}
+			if h.kun != nil {
+				h.kun.Close()
+			}
 			delete(m.handles, id)
 		}
 		h.mu.Unlock()
@@ -1299,8 +1332,12 @@ func (m *Manager) Close() {
 	m.mu.Unlock()
 	for _, h := range hs {
 		h.mu.Lock()
+		k := h.kun
 		c := h.client
 		h.mu.Unlock()
+		if k != nil {
+			k.Close()
+		}
 		if c != nil {
 			c.Close()
 			<-c.Done()

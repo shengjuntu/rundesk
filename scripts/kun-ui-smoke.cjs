@@ -1,0 +1,74 @@
+const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
+const {spawn}=require('child_process');
+const http=require('http');
+const fs=require('fs');
+const assert=require('assert');
+const path=require('node:path'),os=require('node:os');
+const root=path.resolve(__dirname,'..');
+const scratch=fs.mkdtempSync(path.join(os.tmpdir(),'rundesk-kun-ui-'));
+const pictures=path.join(root,'docs/screenshots/0.20.0');fs.mkdirSync(pictures,{recursive:true});
+(async()=>{
+ let calls=0,server,browser;const requests=[];const errors=[];
+ const model=http.createServer(async(req,res)=>{
+  let body='';for await(const part of req)body+=part;const data=JSON.parse(body);requests.push(data);calls++;
+  res.writeHead(200,{'Content-Type':'text/event-stream'});
+  const chunk=c=>res.write('data: '+JSON.stringify(c)+'\n\n');
+  if(calls===1){chunk({choices:[{delta:{tool_calls:[{index:0,id:'ui-write',function:{name:'write_file',arguments:JSON.stringify({path:'kun-ui-result.txt',content:'Kun independent worker verified'})}}]},finish_reason:'tool_calls'}]});}
+  else{chunk({choices:[{delta:{content:'已创建 kun-ui-result.txt，Kun 独立进程验证成功。'},finish_reason:'stop'}],usage:{prompt_tokens:90,completion_tokens:20,total_tokens:110}});}
+  res.end('data: [DONE]\n\n');
+ });
+ try{
+  await new Promise(r=>model.listen(0,'127.0.0.1',r));
+  server=spawn(root+'/bin/rundesk',['--data',scratch+'/kun-ui-data2','--listen','127.0.0.1:38730'],{env:{...process.env,CODEX_HOME:scratch+'/kun-ui-home2'},stdio:['ignore','ignore','pipe']});
+  await new Promise((res,rej)=>{server.stderr.once('data',res);server.once('error',rej)});
+  browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH,headless:true,args:['--no-sandbox']});
+  const page=await browser.newPage({viewport:{width:1440,height:1000}});
+  page.on('pageerror',e=>errors.push(e.message));
+  await page.addInitScript(()=>{localStorage.setItem('rundesk-language','zh');sessionStorage.setItem('rundesk-setup-dismissed','1');});
+  await page.goto('http://127.0.0.1:38730');
+  await page.locator('#settings-button').click();
+  await page.locator('[data-settings-tab="kun"]').click();
+  const form=page.locator('.kun-config');await form.locator('select').selectOption('kun');
+  await form.locator('label').filter({hasText:'基础地址'}).locator('input').fill('http://127.0.0.1:'+model.address().port+'/v1');
+  await form.locator('label').filter({hasText:'模型名称'}).locator('input').fill('kun-ui-fixture');
+  await form.locator('label').filter({hasText:'允许 Kun 写入'}).locator('input').check();
+  await form.locator('label').filter({hasText:'每次模型请求前'}).locator('input').check();
+  await form.locator('button[type="submit"]').click();
+  await page.waitForFunction(()=>document.querySelector('.kun-config [role=status]')?.textContent.includes('已保存'));
+  await page.screenshot({path:pictures+'/kun-settings.png'});
+  await page.locator('#close-settings').click();
+  await page.locator('#new-session').click();
+  await page.locator('#prompt').fill('请创建 kun-ui-result.txt 并说明结果。');await page.locator('#send').click();
+  await page.locator('#kun-debug-open').waitFor({state:'visible'});await page.locator('#kun-debug-open').click();
+  const dialog=page.locator('#kun-devtools');
+  await dialog.getByRole('button',{name:'Sources · 控制',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-detail')?.textContent.includes('"status": "paused"'));
+  assert.equal(calls,0,'breakpoint allowed model call');
+  await dialog.getByRole('button',{name:'单步',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-detail')?.textContent.includes('before_tool'));
+  assert.equal(calls,1);
+  await page.screenshot({path:pictures+'/kun-sources.png'});
+  await dialog.getByRole('button',{name:'单步',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-detail')?.textContent.includes('before_model'));
+  await dialog.locator('textarea').fill('最后用中文简短回答。');await dialog.getByRole('button',{name:'提交补充指令',exact:true}).click();
+  await dialog.getByRole('button',{name:'刷新记录',exact:true}).click();
+  await dialog.getByRole('button',{name:'继续',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-detail')?.textContent.includes('"status": "completed"'));
+  assert.equal(await dialog.locator('.diagnostics-inline').count(),0,'normal worker startup emitted an error banner');
+  assert.equal(calls,2);assert(requests[1].messages.some(m=>m.content==='最后用中文简短回答。'));
+  await dialog.getByRole('button',{name:'Elements · 上下文',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelectorAll('#kun-devtools .kun-call-list button').length===2);
+  await dialog.locator('.kun-call-list button').last().click();
+  await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-detail')?.textContent.includes('"schemaVersion": 1'));
+  await page.screenshot({path:pictures+'/kun-elements.png'});
+  await dialog.getByRole('button',{name:'Performance · 用量',exact:true}).click();assert((await dialog.locator('.kun-detail').innerText()).includes('110'));
+  await dialog.getByRole('button',{name:'关闭',exact:true}).click();
+  assert((await page.locator('#messages').innerText()).includes('Kun 独立进程验证成功'));
+  await page.reload();await page.waitForFunction(()=>document.querySelector('#messages')?.textContent.includes('Kun 独立进程验证成功'));
+  await page.setViewportSize({width:390,height:844});await page.locator('#kun-debug-open').click();
+  await page.screenshot({path:pictures+'/kun-mobile.png'});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false,'mobile overflow');
+  assert.deepEqual(errors,[],'browser errors');
+  const report={passed:true,modelCalls:calls,checks:['UI config','model/tool step boundaries','steer before next request','snapshot inspection','reported usage','reload persistence','mobile viewport'],pageErrors:errors};fs.writeFileSync(path.join(root,'docs/kun-ui-validation.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
+ }finally{if(browser)await browser.close();if(server&&server.exitCode===null&&server.signalCode===null){server.kill('SIGTERM');await new Promise(resolve=>server.once('exit',resolve));}model.closeAllConnections();model.close();fs.rmSync(scratch,{recursive:true,force:true});}
+})().catch(e=>{console.error(e);process.exitCode=1});

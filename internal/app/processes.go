@@ -32,7 +32,16 @@ func (m *Manager) Processes() []ProcessEntry {
 	for id, h := range hs {
 		h.mu.Lock()
 		c := h.client
+		k := h.kun
 		h.mu.Unlock()
+		if k != nil {
+			select {
+			case <-k.Done():
+			default:
+				session, _ := m.Session(id)
+				out = append(out, ProcessEntry{ProcessInfo: rpc.ProcessInfo{PID: k.PID(), CleanupMode: "managed-stdio"}, SessionID: id, InstanceID: session.InstanceID, WorkspaceID: session.WorkspaceID, Kind: "kun", ExecutionMode: "local"})
+			}
+		}
 		if c == nil {
 			continue
 		}

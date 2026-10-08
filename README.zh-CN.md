@@ -1,6 +1,6 @@
 # RunDesk
 
-**面向日常对话和应用 Agent 的轻量 Codex 工作台。**
+**面向日常对话和应用 Agent 的轻量 Agent 工作台。**
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
@@ -10,7 +10,15 @@
 
 ![RunDesk 对话界面](docs/screenshots/0.16.0/chat-zh.png)
 
-## 快速开始
+## Kun 内置引擎（0.20.0）
+
+Kun 与 RunDesk 同仓库、分进程运行。使用 Go 1.25.12+ 执行 `make build`，然后运行 `./bin/rundesk --data ./data`；在配置页的 **Agent 引擎** 中选择 Kun、设置模型服务并新建会话。Kun 不需要安装 Codex。
+
+首版提供 OpenAI 兼容文本模型、项目文件工具、显式 Skills、持久化上下文快照，以及 Network / Elements / Sources / Performance 调试入口。支持暂停、单步、文本补充和停止。MCP、插件、检查点重执行、分叉和轨迹编译尚未实现。
+
+详见 [Kun 使用与实现边界](docs/KUN.md)。选择性复制的 PiG 源码、固定版本及感谢声明见 [来源记录](docs/UPSTREAM.md)；MIT 许可与版权声明随源码保留。
+
+## Codex 快速开始
 
 1. 安装 Codex，完成登录或模型服务配置。参考 [Codex 官方文档](https://developers.openai.com/codex/cli/)。
 2. 解压发行包。在 Linux 中运行：

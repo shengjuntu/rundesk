@@ -62,6 +62,7 @@ func run() error {
 	addr := flag.String("listen", "127.0.0.1:3210", "HTTP listen address")
 	data := flag.String("data", defaultDataDir(base), "persistent data directory; reuses a v0.1 codex-base database when present")
 	codex := flag.String("codex", "codex", "Codex executable")
+	kun := flag.String("kun", "", "Kun executable (default: sibling kun binary)")
 	demo := flag.Bool("demo", false, "explicit simulation; no model calls, isolated demo data")
 	publicURL := flag.String("public-url", "", "exact public origin behind a reverse proxy, e.g. https://codex.example.com")
 	version := flag.Bool("version", false, "print RunDesk version")
@@ -107,6 +108,7 @@ func run() error {
 	if e != nil {
 		return e
 	}
+	m.Kun = *kun
 	defer m.Close()
 	server := &http.Server{Addr: *addr, Handler: app.NewHandler(m, token, local, *publicURL), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
 	listener, e := net.Listen("tcp", *addr)

@@ -1,3 +1,12 @@
+# 0.20.0 — Kun 0.1
+
+- Kun 独立 worker、共享仓库、JSONL 协议和 SQLite 状态/事件/快照。
+- OpenAI 兼容模型循环、工作区文本文件工具、显式 Skills 注入。
+- RunDesk 实例引擎配置、会话/队列/停止/补充指令和事件投影接入。
+- DevTools 首版 Network、Elements、Sources、Performance；断点、单步和状态版本校验。
+- 选择性复制 PiG SSE 源码和回归测试；保留 PiG / Pi MIT 声明并记录固定 commit 和文件哈希。
+- 需 Go 1.25.12+。MCP、插件、分叉和轨迹 JIT 尚未实现，详见 docs/KUN.md。
+
 # 0.15.0
 
 - 应用主动注册并复用旧实例；连接不覆盖后台配置。

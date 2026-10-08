@@ -133,7 +133,7 @@ func (s *Store) QueryEvents(session string, after int64, limit int, f EventFilte
 	}
 	switch f.Category {
 	case "tools":
-		query += " AND (instr(method,'commandExecution')>0 OR instr(method,'fileChange')>0 OR instr(method,'mcp')>0 OR instr(method,'/tool/')>0 OR json_extract(data,'$.params.item.type') IN ('commandExecution','mcpToolCall','fileChange','dynamicToolCall'))"
+		query += " AND (instr(method,'commandExecution')>0 OR instr(method,'fileChange')>0 OR instr(method,'mcp')>0 OR instr(method,'/tool/')>0 OR instr(method,'kun/tool.')>0 OR json_extract(data,'$.params.item.type') IN ('commandExecution','mcpToolCall','fileChange','dynamicToolCall'))"
 	case "approvals":
 		query += " AND (instr(method,'Approval')>0 OR instr(method,'approval/')>0 OR instr(method,'requestUserInput')>0 OR instr(method,'elicitation')>0)"
 	case "errors":

@@ -1,6 +1,6 @@
 # RunDesk
 
-**A lightweight workspace for Codex conversations and application agents.**
+**A lightweight workspace for agent conversations and application agents.**
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
@@ -10,7 +10,15 @@ Built with Go and plain HTML/JavaScript. Node.js is not required to run RunDesk 
 
 ![RunDesk conversation workspace](docs/screenshots/0.16.0/chat-en.png)
 
-## Quick start
+## Kun engine (0.20.0)
+
+Kun shares this repository with RunDesk and runs in a separate worker process. Build with Go 1.25.12+ using `make build`, then launch `./bin/rundesk --data ./data`. Open **Agent engine** in configuration, select Kun, configure an OpenAI-compatible endpoint/model, and create a new session. Codex is not required for Kun.
+
+This first implementation supports text model calls, workspace file tools, explicitly selected Skills, persisted context snapshots and Network / Elements / Sources / Performance inspection. Pause, step, supplemental instructions and cancellation are available. MCP, plugins, checkpoint continuation, forks and trajectory compilation are not implemented.
+
+See [Kun implementation and limits](docs/KUN.md). Thanks to PiG and Pi contributors: selected source files, pinned revision, adaptations and preserved MIT licenses are recorded in [UPSTREAM.md](docs/UPSTREAM.md).
+
+## Codex quick start
 
 1. Install Codex and configure its authentication or model provider. See the [official Codex CLI documentation](https://developers.openai.com/codex/cli/).
 2. Extract a RunDesk release. On Linux:
