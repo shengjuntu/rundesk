@@ -468,7 +468,7 @@ func (m *Manager) command(w Workspace, i Instance) *exec.Cmd {
 		exe, _ := os.Executable()
 		c = exec.Command(exe, "__demo_agent")
 	} else {
-		c = exec.Command(m.Codex, "app-server")
+		c = exec.Command(m.codexExecutable(), "app-server")
 	}
 	c.Dir = w.Path
 	// Preserve the service environment; only managed Codex state is redirected.

@@ -33,15 +33,15 @@ function replyButton(name, label, fn) {
   return el("button", {type:"button",class:"reply-action","aria-label":label,title:label,onclick:()=>safe(fn)},conversationIcon(name));
 }
 function toolSummary(summary,item) {
-  const title = {commandExecution:"命令执行",reasoning:"推理摘要",fileChange:"文件修改",mcpToolCall:"MCP 工具",webSearch:"网页搜索",plan:"计划",contextCompaction:"上下文压缩"}[item.type] || item.type;
+  const title = {commandExecution:rdText("命令执行"),reasoning:rdText("推理摘要"),fileChange:rdText("文件修改"),mcpToolCall:rdText("MCP 工具"),webSearch:rdText("网页搜索"),plan:rdText("计划"),contextCompaction:rdText("上下文压缩")}[item.type] || item.type;
   const status = item.status || (item._eventId ? "completed" : "inProgress");
-  const statusText = {inProgress:"进行中",completed:"已完成",failed:"失败",declined:"已拒绝"}[status] || status;
+  const statusText = {inProgress:rdText("进行中"),completed:rdText("已完成"),failed:rdText("失败"),declined:rdText("已拒绝")}[status] || status;
   let label = item.command || (item.type==="mcpToolCall" ? [item.server,item.tool].filter(Boolean).join(" / ") : "");
   if(item.type==="webSearch") label=item.query||item.action?.query||"";
   if(item.type==="fileChange") label=(item.changes||[]).map(c=>c.path).filter(Boolean).join("、");
   if(item.type==="reasoning") label=(item.summary||[]).map(p=>typeof p==="string"?p:p.text||"").join(" ");
   label=String(label).replace(/\s+/g," ").slice(0,100);
-  const description=[title,label,statusText,"展开或收起详情"].filter(Boolean).join(" · ");
+  const description=[title,label,statusText,rdText("展开或收起详情")].filter(Boolean).join(" · ");
   summary.title=description; summary.setAttribute("aria-label",description);
   if(!summary.firstElementChild) summary.append(el("span",{class:"tool-kind"},conversationIcon(item.type)),el("span",{class:"tool-label"}),el("span",{class:"tool-state"}));
   summary.children[1].textContent=label;
@@ -71,14 +71,14 @@ function renderAssistant(node,item) {
   if(item._eventId) node.dataset.eventId=item._eventId;
   if(item._eventId && !node.querySelector(".reply-actions")) {
     node.dataset.eventId=item._eventId;
-    const toolbar=el("div",{class:"reply-actions",role:"group","aria-label":"回复操作"});
-    const copy=replyButton("copy","复制回复",()=>copyReplyText(node._reply.text||""));copy.dataset.action="copy";
-    const up=replyButton("up","有帮助",()=>rateReply(node,"up"));up.dataset.rating="up";
-    const down=replyButton("down","有待改进",()=>rateReply(node,"down"));down.dataset.rating="down";
-    const note=replyButton("note","查看评价说明",()=>editReplyFeedback(node._reply));note.dataset.action="note";note.hidden=true;
-    const share=replyButton("share","分享回复",()=>shareReply(node._reply));share.dataset.action="share";
-    const read=replyButton("volume","朗读回复",()=>toggleReplySpeech(node));read.dataset.action="read";
-    const stop=replyButton("stop","停止朗读",stopReplySpeech);stop.dataset.action="stop";stop.hidden=true;
+    const toolbar=el("div",{class:"reply-actions",role:"group","aria-label":rdText("回复操作")});
+    const copy=replyButton("copy",rdText("复制回复"),()=>copyReplyText(node._reply.text||""));copy.dataset.action="copy";
+    const up=replyButton("up",rdText("有帮助"),()=>rateReply(node,"up"));up.dataset.rating="up";
+    const down=replyButton("down",rdText("有待改进"),()=>rateReply(node,"down"));down.dataset.rating="down";
+    const note=replyButton("note",rdText("查看评价说明"),()=>editReplyFeedback(node._reply));note.dataset.action="note";note.hidden=true;
+    const share=replyButton("share",rdText("分享回复"),()=>shareReply(node._reply));share.dataset.action="share";
+    const read=replyButton("volume",rdText("朗读回复"),()=>toggleReplySpeech(node));read.dataset.action="read";
+    const stop=replyButton("stop",rdText("停止朗读"),stopReplySpeech);stop.dataset.action="stop";stop.hidden=true;
     toolbar.append(copy,up,down,note,share,read,stop,el("span",{class:"speech-status",role:"status"}));
     node.append(toolbar);
   }
@@ -89,36 +89,36 @@ function updateReplyActions(node) {
   for(const btn of node.querySelectorAll("[data-rating]")) {
     const selected=replyState.ratings.get(item._eventId)?.rating===btn.dataset.rating;
     btn.setAttribute("aria-pressed",String(selected));btn.disabled=replyState.busy.has(item._eventId);
-    const label=btn.dataset.rating==="up"?"有帮助":"有待改进";
-    btn.setAttribute("aria-label",selected?`取消${label}评价`:label);btn.title=btn.getAttribute("aria-label");
+    const label=btn.dataset.rating==="up"?rdText("有帮助"):rdText("有待改进");
+    btn.setAttribute("aria-label",selected?rdFormat("取消${0}评价",label):label);btn.title=btn.getAttribute("aria-label");
   }
   const note=node.querySelector('[data-action="note"]');if(note)note.hidden=!replyState.ratings.get(item._eventId)?.comment;
   const read=node.querySelector('[data-action="read"]');if(!read) return;
   const supported=!!window.speechSynthesis && !!window.SpeechSynthesisUtterance;
   const current=speechReply.node===node;
-  const label=!supported?"此浏览器不支持朗读":current?(speechReply.paused?"继续朗读":"暂停朗读"):"朗读回复";
-  read.disabled=!supported;read.title=label+(supported?" · 浏览器语音，跳过代码块":"");read.setAttribute("aria-label",label);
+  const label=!supported?rdText("此浏览器不支持朗读"):current?(speechReply.paused?rdText("继续朗读"):rdText("暂停朗读")):rdText("朗读回复");
+  read.disabled=!supported;read.title=label+(supported?rdText(" · 浏览器语音，跳过代码块"):"");read.setAttribute("aria-label",label);
   const icon=current?(speechReply.paused?"play":"pause"):"volume";
   if(read.dataset.icon!==icon){read.replaceChildren(conversationIcon(icon));read.dataset.icon=icon;}
   node.querySelector('[data-action="stop"]').hidden=!current;
-  node.querySelector(".speech-status").textContent=current?(speechReply.paused?"已暂停":speechReply.started?"正在朗读":"准备朗读…"):"";
+  node.querySelector(".speech-status").textContent=current?(speechReply.paused?rdText("已暂停"):speechReply.started?rdText("正在朗读"):rdText("准备朗读…")):"";
 }
 function refreshReplyActions(){document.querySelectorAll("#messages .assistant").forEach(updateReplyActions);}
 async function copyReplyText(text) {
   try {
     if(!navigator.clipboard?.writeText) throw Error("unsupported");
-    await navigator.clipboard.writeText(text);toast("已复制");
+    await navigator.clipboard.writeText(text);toast(rdText("已复制"));
   } catch {
-    const dialog=replyDialog("复制内容");
-    const field=el("textarea",{class:"copy-fallback",readonly:true,"aria-label":"待复制的内容"});field.value=text;
-    dialog.append(el("p",{class:"help"},"浏览器未允许自动复制，请选中后使用系统的复制功能。"),field);
+    const dialog=replyDialog(rdText("复制内容"));
+    const field=el("textarea",{class:"copy-fallback",readonly:true,"aria-label":rdText("待复制的内容")});field.value=text;
+    dialog.append(el("p",{class:"help"},rdText("浏览器未允许自动复制，请选中后使用系统的复制功能。")),field);
     dialog.showModal();field.focus();field.select();
   }
 }
 function replyDialog(title) {
   replyState.dialog?.close();
   const dialog=el("dialog",{class:"reply-dialog","aria-labelledby":"reply-dialog-title"});
-  dialog.append(el("div",{class:"dialog-head"},el("h2",{id:"reply-dialog-title"},title),replyButton("close","关闭",()=>dialog.close())));
+  dialog.append(el("div",{class:"dialog-head"},el("h2",{id:"reply-dialog-title"},title),replyButton("close",rdText("关闭"),()=>dialog.close())));
   dialog.addEventListener("close",()=>{dialog.remove();if(replyState.dialog===dialog) replyState.dialog=null;});
   document.body.append(dialog);replyState.dialog=dialog;return dialog;
 }
@@ -130,14 +130,14 @@ async function rateReply(node,rating) {
   return editReplyFeedback(item, rating);
 }
 function editReplyFeedback(item, rating=replyState.ratings.get(item._eventId)?.rating||"down") {
-  const dialog=replyDialog("这条回复可以怎样改进？");
-  const field=el("textarea",{rows:4,maxlength:2000,placeholder:"说明原因（选填）","aria-label":"评价说明"});
+  const dialog=replyDialog(rdText("这条回复可以怎样改进？"));
+  const field=el("textarea",{rows:4,maxlength:2000,placeholder:rdText("说明原因（选填）"),"aria-label":rdText("评价说明")});
   field.value=replyState.ratings.get(item._eventId)?.comment||"";
-  const save=button("保存评价",async()=>{
+  const save=button(rdText("保存评价"),async()=>{
     save.disabled=true;
     try{await saveReplyFeedback(item,rating,field.value);dialog.close();} finally{save.disabled=false;}
   },"primary");
-  dialog.append(field,el("p",{class:"help"},"评价保存在此 RunDesk 中，供你回看。"),el("div",{class:"reply-dialog-actions"},button("取消",()=>dialog.close()),save));
+  dialog.append(field,el("p",{class:"help"},rdText("评价保存在此 RunDesk 中，供你回看。")),el("div",{class:"reply-dialog-actions"},button(rdText("取消"),()=>dialog.close()),save));
   dialog.showModal();field.focus();
 }
 async function saveReplyFeedback(item,rating,comment) {
@@ -147,24 +147,24 @@ async function saveReplyFeedback(item,rating,comment) {
   try {
     const value=await api(`/sessions/${item.sessionId}/messages/${item._eventId}/feedback`,{method:"PUT",body:{rating,comment}});
     if(state.selection!==selection) return;
-    replyState.ratings.set(item._eventId,value);toast(rating==="none"?"已取消评价":"评价已保存");
+    replyState.ratings.set(item._eventId,value);toast(rating==="none"?rdText("已取消评价"):rdText("评价已保存"));
   } finally {
     if(state.selection===selection){replyState.busy.delete(item._eventId);refreshReplyActions();}
   }
 }
 function shareReply(item) {
   // Preview is exactly the selected reply, without prompts, logs or account data.
-  const text=item.text||"", dialog=replyDialog("分享回复");
+  const text=item.text||"", dialog=replyDialog(rdText("分享回复"));
   const preview=markdown(text);preview.classList.add("share-preview");
-  const actions=el("div",{class:"reply-dialog-actions"},button("复制全文",()=>copyReplyText(text)),button("下载 Markdown",()=>{
+  const actions=el("div",{class:"reply-dialog-actions"},button(rdText("复制全文"),()=>copyReplyText(text)),button(rdText("下载 Markdown"),()=>{
     const url=URL.createObjectURL(new Blob([text],{type:"text/markdown;charset=utf-8"}));
     const link=el("a",{href:url,download:`rundesk-reply-${item._eventId}.md`});document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
   }));
-  const data={title:"RunDesk 回复",text};
-  if(navigator.share && (!navigator.canShare || navigator.canShare(data))) actions.append(button("系统分享",async()=>{
-    try {await navigator.share(data);} catch(e) {if(e.name!=="AbortError") throw Error("系统分享未完成，请使用复制或下载。");}
+  const data={title:rdText("RunDesk 回复"),text};
+  if(navigator.share && (!navigator.canShare || navigator.canShare(data))) actions.append(button(rdText("系统分享"),async()=>{
+    try {await navigator.share(data);} catch(e) {if(e.name!=="AbortError") throw Error(rdText("系统分享未完成，请使用复制或下载。"));}
   },"primary"));
-  dialog.append(el("p",{class:"help"},"预览本次分享的内容："),preview,actions);dialog.showModal();
+  dialog.append(el("p",{class:"help"},rdText("预览本次分享的内容：")),preview,actions);dialog.showModal();
 }
 const speechReply={node:null,paused:false,started:false,generation:0,utterance:null,timer:null};
 function stopReplySpeech() {
@@ -183,7 +183,7 @@ function toggleReplySpeech(node) {
   const body=node.firstElementChild.cloneNode(true);body.querySelectorAll(".code-block").forEach(n=>n.remove());
   body.querySelectorAll("br").forEach(n=>n.replaceWith("\n"));
   const text=[...body.children].map(n=>n.textContent).join("\n").trim();
-  if(!text){toast("这条回复没有可朗读的正文");return;}
+  if(!text){toast(rdText("这条回复没有可朗读的正文"));return;}
   const chunks=text.match(/[^。！？.!?\n]{1,180}[。！？.!?\n]?|[。！？.!?\n]/gu)||[];
   const generation=speechReply.generation;speechReply.node=node;
   const next=()=>{
@@ -193,9 +193,9 @@ function toggleReplySpeech(node) {
     speechReply.utterance=utterance;
     utterance.onstart=()=>{if(generation!==speechReply.generation)return;clearTimeout(speechReply.timer);speechReply.started=true;refreshReplyActions();};
     utterance.onend=()=>{if(generation!==speechReply.generation)return;clearTimeout(speechReply.timer);next();};
-    utterance.onerror=()=>{if(generation!==speechReply.generation)return;stopReplySpeech();toast("浏览器未能朗读，请检查系统语音是否可用。");};
+    utterance.onerror=()=>{if(generation!==speechReply.generation)return;stopReplySpeech();toast(rdText("浏览器未能朗读，请检查系统语音是否可用。"));};
     synth.speak(utterance);
-    speechReply.timer=setTimeout(()=>{if(generation===speechReply.generation&&!speechReply.paused){stopReplySpeech();toast("朗读未能启动，请检查系统语音是否可用。");}},15000);
+    speechReply.timer=setTimeout(()=>{if(generation===speechReply.generation&&!speechReply.paused){stopReplySpeech();toast(rdText("朗读未能启动，请检查系统语音是否可用。"));}},15000);
   };
   synth.resume();next();refreshReplyActions();
 }
@@ -206,9 +206,9 @@ function closeConversationSidebar(){
 }
 window.addEventListener("DOMContentLoaded",()=>{
   document.querySelector("#manage-instances").replaceChildren(conversationIcon("settings"));
-  document.querySelector("#manage-instances").setAttribute("aria-label","管理实例");
+  document.querySelector("#manage-instances").setAttribute("aria-label",rdText("管理实例"));
   const toggle=document.querySelector("#sidebar-toggle");toggle?.append(conversationIcon("menu"));
-  toggle?.addEventListener("click",()=>{const opened=document.body.classList.toggle("sidebar-open");toggle.setAttribute("aria-expanded",String(opened));document.querySelector("main").inert=opened;if(opened)document.querySelector("#sidebar-close").focus();});
+  toggle?.addEventListener("click",()=>{if(innerWidth>600){document.body.classList.toggle("history-collapsed");return;}const opened=document.body.classList.toggle("sidebar-open");toggle.setAttribute("aria-expanded",String(opened));document.querySelector("main").inert=opened;if(opened)document.querySelector("#sidebar-close").focus();});
   document.querySelector("#sidebar-close")?.addEventListener("click",()=>{closeConversationSidebar();toggle.focus();});
   document.querySelector("#sidebar-backdrop")?.addEventListener("click",closeConversationSidebar);
   matchMedia("(max-width:600px)").addEventListener("change",closeConversationSidebar);

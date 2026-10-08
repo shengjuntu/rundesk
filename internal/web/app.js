@@ -33,21 +33,21 @@ const state = {
 const active = (s) =>
   ["starting", "running", "waiting", "stopping"].includes(s);
 const statusLabel = {
-  idle: "就绪",
-  starting: "正在启动",
-  running: "正在运行",
-  waiting: "等待确认",
-  stopping: "正在停止",
-  completed: "已完成",
-  interrupted: "已停止",
-  failed: "运行失败",
+  idle: rdText("就绪"),
+  starting: rdText("正在启动"),
+  running: rdText("正在运行"),
+  waiting: rdText("等待确认"),
+  stopping: rdText("正在停止"),
+  completed: rdText("已完成"),
+  interrupted: rdText("已停止"),
+  failed: rdText("运行失败"),
 };
 let toastTimer;
 function toast(text) {
   const message=text instanceof Error?text.message:String(text);
   $("#toast").textContent = message;
   const diagnostic=text?.diagnosticId?{id:text.diagnosticId}:window.RunDeskDiagnostics?.recent(message);
-  if(diagnostic)$("#toast").append(button("查看详情",()=>RunDeskDiagnostics.open(diagnostic.id),"diagnostics-link"));
+  if(diagnostic)$("#toast").append(button(rdText("查看详情"),()=>RunDeskDiagnostics.open(diagnostic.id),"diagnostics-link"));
   $("#toast").classList.remove("hidden");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => $("#toast").classList.add("hidden"), 6500);
@@ -133,7 +133,7 @@ const wpath = (suffix) => "/workspaces/" + ws().id + suffix;
 const json = (x) => JSON.stringify(x, null, 2);
 function setLoading(target) {
   target.replaceChildren(
-    el("div", { class: "loading" }, "正在读取 Codex 配置…"),
+    el("div", { class: "loading" }, rdText("正在读取 Codex 配置…")),
   );
 }
 function prettySize(n) {
@@ -166,6 +166,8 @@ async function boot() {
   if (state.workspaces.some((w) => w.id === last)) $("#workspace").value = last;
   updateWorkspaceLabel();
   await refreshSessions();
+  await RunDeskSetup.maybeOpen();
+  if(await RunDeskLanguage.restoreDraft())return;
   const linkedSession=new URLSearchParams(location.search).get("session");
   if(linkedSession){const linked=await api("/sessions/"+encodeURIComponent(linkedSession));renderInstanceOptions(linked.instanceId);$("#workspace").value=linked.workspaceId;updateWorkspaceLabel();await refreshSessions();setProductPage("conversation");await selectSession(linked.id);return;}
   if (await restoreProductRoute()) return;
@@ -184,7 +186,7 @@ async function boot() {
 }
 function updateWorkspaceLabel() {
   const w = ws();
-  $("#workspace-name").textContent = w?.name || "默认项目";
+  $("#workspace-name").textContent = w?.name || rdText("默认项目");
   updateProductNavigation();
   localStorage.setItem("rundesk-instance", instance()?.id || "default");
   if (!state.session) $("#model").value = instance()?.defaultModel || "";
@@ -222,7 +224,7 @@ function resetConversation() {
   state.historyQuery = null;
   state.debugPaused = false;
   $("#event-search").disabled = false;
-  $("#event-pause").textContent = "暂停滚动";
+  $("#event-pause").textContent = rdText("暂停滚动");
   state.selection++;
   state.approvalSignature = null;
   if (state.stream) state.stream.close();
@@ -243,7 +245,7 @@ function resetConversation() {
   renderDebug();
 }
 async function newSession() {
-  if(instance()?.id!=="default"||state.taskAppID)throw Error("请从应用发起新的业务任务");
+  if(instance()?.id!=="default"||state.taskAppID)throw Error(rdText("请从应用发起新的业务任务"));
   const creationSelection=state.selection;
   const model = $("#model").value.trim();
   const s = await api("/sessions", {
@@ -251,7 +253,7 @@ async function newSession() {
     body: { workspaceId: ws().id, instanceId: instance().id, model },
   });
   await refreshSessions();
-  if(state.selection!==creationSelection)throw Error("会话已创建；页面已切换，消息尚未发送");
+  if(state.selection!==creationSelection)throw Error(rdText("会话已创建；页面已切换，消息尚未发送"));
   await selectSession(s.id);
   $("#prompt").focus();
   return s;
@@ -282,12 +284,12 @@ async function selectSession(id) {
   let streamDisconnected=false;
   stream.onopen = () => {
     streamDisconnected=false;
-    $("#connection").textContent = "后台已连接";
+    $("#connection").textContent = rdText("后台已连接");
   };
   stream.onerror = () => {
     if(state.session?.id!==id)return;
-    $("#connection").textContent = "正在重连…";
-    if(!streamDisconnected){streamDisconnected=true;RunDeskDiagnostics.record({kind:"stream",message:"事件连接中断，浏览器正在重连",method:"GET",url:`/api/v1/sessions/${id}/events?stream=1`,sessionId:id,instanceId:state.session.instanceId,workspaceId:state.session.workspaceId,note:"EventSource 未提供 HTTP 状态或响应正文。请结合请求错误和服务日志判断，不能仅据此认定 HTTP 500。"});}
+    $("#connection").textContent = rdText("正在重连…");
+    if(!streamDisconnected){streamDisconnected=true;RunDeskDiagnostics.record({kind:"stream",message:rdText("事件连接中断，浏览器正在重连"),method:"GET",url:`/api/v1/sessions/${id}/events?stream=1`,sessionId:id,instanceId:state.session.instanceId,workspaceId:state.session.workspaceId,note:rdText("EventSource 未提供 HTTP 状态或响应正文。请结合请求错误和服务日志判断，不能仅据此认定 HTTP 500。")});}
   };
   stream.onmessage = (e) => {
     if (state.session?.id !== id) return;
@@ -374,8 +376,8 @@ function markdown(text) {
       const lang = first >= 0 ? part.slice(0, first) : "";
       const code = first >= 0 ? part.slice(first + 1) : part;
       root.append(el("div", {class:"code-block"},
-        el("div", {class:"code-heading"}, el("span",{},lang.trim() || "代码"), replyButton("copy","复制代码",()=>copyReplyText(code))),
-        el("pre", { "aria-label": lang || "代码" }, el("code", {}, code))));
+        el("div", {class:"code-heading"}, el("span",{},lang.trim() || rdText("代码")), replyButton("copy",rdText("复制代码"),()=>copyReplyText(code))),
+        el("pre", { "aria-label": lang || rdText("代码") }, el("code", {}, code))));
       return;
     }
     for (const para of part.split(/\n\s*\n/)) {
@@ -528,7 +530,7 @@ function renderMessages() {
                 el(
                   "div",
                   { class: "help" },
-                  `附件：${item.files.map((path) => path.split("/").pop()+(state.deletedFilePaths?.includes(path)?"（文件已删除）":"")).join("、")}`,
+                  rdFormat("附件：${0}",item.files.map((path) => path.split("/").pop()+(state.deletedFilePaths?.includes(path)?rdText("（文件已删除）"):"")).join("、")),
                 ),
               ]
             : []),
@@ -536,7 +538,7 @@ function renderMessages() {
       else if (item.type === "agentMessage")
         renderAssistant(node, item);
       else if (item.type === "error") {
-        node.replaceChildren(document.createTextNode(item.text),button("查看错误详情",()=>{
+        node.replaceChildren(document.createTextNode(item.text),button(rdText("查看错误详情"),()=>{
           const event=state.events.find(e=>e.id===item.eventId),record=event&&RunDeskDiagnostics.captureEvent(event,state.session);
           RunDeskDiagnostics.open(record?.id);
         },"diagnostics-link"));
@@ -549,9 +551,9 @@ function renderMessages() {
         if (item.type === "commandExecution")
           text = [
             item.command,
-            item.cwd ? `工作目录：${item.cwd}` : "",
+            item.cwd ? rdFormat("工作目录：${0}",item.cwd) : "",
             item.aggregatedOutput,
-            item.exitCode != null ? `退出码：${item.exitCode}` : "",
+            item.exitCode != null ? rdFormat("退出码：${0}",item.exitCode) : "",
           ]
             .filter(Boolean)
             .join("\n\n");
@@ -565,21 +567,21 @@ function renderMessages() {
             el(
               "details",
               { class: "tool-raw" },
-              el("summary", {}, "原始数据"),
+              el("summary", {}, rdText("原始数据")),
               el("pre"),
             ),
           );
         const primary = content.firstElementChild;
         const display =
           text ||
-          (item.type === "reasoning" ? "暂无可显示的推理摘要" : json(payload));
+          (item.type === "reasoning" ? rdText("暂无可显示的推理摘要") : json(payload));
         if (primary.textContent !== display) primary.textContent = display;
         const raw = content.lastElementChild.lastElementChild;
         if (raw.textContent !== json(payload)) raw.textContent = json(payload);
       }
       if (item.type === "user" && item.steering)
         node.append(
-          el("div", { class: "help steer-label" }, "补充指令 · 已接收"),
+          el("div", { class: "help steer-label" }, rdText("补充指令 · 已接收")),
         );
       node._signature = signature;
     }
@@ -607,7 +609,7 @@ const LONG_TEXT_THRESHOLD = 8000;
 function stageLongText(text) {
   const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
   if (blob.size > 32 * 1024 * 1024)
-    throw Error("长文本超过 32 MiB，请拆分后发送");
+    throw Error(rdText("长文本超过 32 MiB，请拆分后发送"));
   const attachment = {
     name: `pasted-text-${Date.now()}-${state.uploads.length + 1}.txt`,
     text,
@@ -623,14 +625,14 @@ $("#prompt").addEventListener("paste", (event) => {
   if (!text || [...text].length < LONG_TEXT_THRESHOLD) return;
   event.preventDefault();
   if (state.sending) {
-    toast("正在发送，请稍后粘贴长文本");
+    toast(rdText("正在发送，请稍后粘贴长文本"));
     return;
   }
   try {
     stageLongText(text);
     const prompt = $("#prompt");
     prompt.setRangeText("", prompt.selectionStart, prompt.selectionEnd, "end");
-    toast("长文本已转为附件，可预览或移除后再发送");
+    toast(rdText("长文本已转为附件，可预览或移除后再发送"));
   } catch (err) {
     toast(err.message);
   }
@@ -643,11 +645,11 @@ async function sendMessage() {
   }
   const text =
     $("#prompt").value.trim() ||
-    (state.uploads.length ? "请阅读附件，并根据其中的内容和要求处理。" : "");
+    (state.uploads.length ? rdText("请阅读附件，并根据其中的内容和要求处理。") : "");
   if (!text) return;
-  if (state.session?.archived) throw Error("请先恢复已归档会话");
+  if (state.session?.archived) throw Error(rdText("请先恢复已归档会话"));
   if (["starting", "stopping"].includes(state.session?.status)) {
-    toast("任务正在启动或停止，请稍后发送");
+    toast(rdText("任务正在启动或停止，请稍后发送"));
     return;
   }
   const attachments = [...state.uploads],
@@ -662,7 +664,7 @@ async function sendMessage() {
   try {
     for (const attachment of attachments) {
       if (!attachment.path) {
-        $("#send-feedback").textContent = "正在上传长文本附件…";
+        $("#send-feedback").textContent = rdText("正在上传长文本附件…");
         const form = new FormData();
         form.append(
           "file",
@@ -678,10 +680,10 @@ async function sendMessage() {
       files.push(attachment.path);
     }
     if (state.selection !== sourceSelection || ws().id !== workspaceId)
-      throw Error("会话已切换，消息未发送");
+      throw Error(rdText("会话已切换，消息未发送"));
     if (!state.session) {
       const created=await newSession();
-      if(state.session?.id!==created.id)throw Error("会话已切换，消息尚未发送");
+      if(state.session?.id!==created.id)throw Error(rdText("会话已切换，消息尚未发送"));
       $("#prompt").value=draft;
       state.uploads = attachments;
       state.chosenSkills = skills;
@@ -693,10 +695,10 @@ async function sendMessage() {
     const retryStart=await hasPendingSubmission(`/sessions/${id}/turns`,body);
     const steering = active(state.session.status) && !retryStart;
     if (steering && !state.session.turnId)
-      throw Error("正在确认当前任务，请稍后发送");
+      throw Error(rdText("正在确认当前任务，请稍后发送"));
     $("#send-feedback").textContent = steering
-      ? "正在提交补充指令…"
-      : "正在发送…";
+      ? rdText("正在提交补充指令…")
+      : rdText("正在发送…");
     if (steering) {
       body.expectedTurnId = state.session.turnId;
       const signature = JSON.stringify([id, body]);
@@ -725,8 +727,8 @@ async function sendMessage() {
       );
       renderAttachments();
       $("#send-feedback").textContent = steering
-        ? "补充指令已接收，将由当前任务处理。"
-        : "已发送";
+        ? rdText("补充指令已接收，将由当前任务处理。")
+        : rdText("已发送");
     }
     await refreshSessions();
   } catch (err) {
@@ -734,7 +736,7 @@ async function sendMessage() {
       (!id || state.session?.id === id) &&
       (selection == null || state.selection === selection)
     )
-      $("#send-feedback").textContent = "发送未确认，输入已保留。";
+      $("#send-feedback").textContent = rdText("发送未确认，输入已保留。");
     throw err;
   } finally {
     state.sending = false;
@@ -749,7 +751,7 @@ function renderAttachments() {
         { class: "chip" },
         f.text != null
           ? button(
-              `▧ ${f.name} · ${f.chars.toLocaleString()} 字符`,
+              rdFormat("▧ ${0} · ${1} 字符",f.name,f.chars.toLocaleString()),
               () => {
                 $("#preview-title").textContent = f.name;
                 $("#preview-content").replaceChildren(
@@ -759,7 +761,7 @@ function renderAttachments() {
                         el(
                           "p",
                           { class: "help" },
-                          "预览仅显示前 20,000 个 UTF-16 单元；附件保留完整原文。",
+                          rdText("预览仅显示前 20,000 个 UTF-16 单元；附件保留完整原文。"),
                         ),
                       ]
                     : []),
@@ -801,7 +803,7 @@ async function uploadFiles(files) {
     if (wid === ws().id) state.uploads.push(result);
   }
   renderAttachments();
-  toast("附件已上传");
+  toast(rdText("附件已上传"));
 }
 async function refreshApprovals(id = state.session?.id) {
   if (!id) return;
@@ -836,10 +838,10 @@ function fileURL(path, preview = false) {
   );
 }
 async function previewFile(file) {
- if(file.deleted){toast("文件已删除");return;}
+ if(file.deleted){toast(rdText("文件已删除"));return;}
   $("#preview-title").textContent = file.name;
   const target = $("#preview-content");
-  target.replaceChildren(el("p", { class: "loading" }, "正在加载…"));
+  target.replaceChildren(el("p", { class: "loading" }, rdText("正在加载…")));
   $("#preview").showModal();
   const ext = file.name.split(".").pop().toLowerCase();
   if (["png", "jpg", "jpeg", "gif", "webp"].includes(ext)) {
@@ -864,9 +866,9 @@ async function previewFile(file) {
       el(
         "p",
         { class: "help" },
-        "该文件可下载后查看。HTML、SVG 等主动内容不在管理页面执行。",
+        rdText("该文件可下载后查看。HTML、SVG 等主动内容不在管理页面执行。"),
       ),
-      el("a", { href: fileURL(file.path) }, "下载文件 ↓"),
+      el("a", { href: fileURL(file.path) }, rdText("下载文件 ↓")),
     );
   }
 }
@@ -881,9 +883,9 @@ async function openSettings(tab = "overview") {
 async function renderSettings() {
   if(["skills","mcp"].includes(state.settingsTab)&&state.view!=="capability")return showCapabilityPage(state.settingsTab);
   const shared=instance()?.id==="default"&&!!state.taskAppID;
-  $("#settings-title").textContent=(shared?"通用助手（历史任务共享）":contextTitle())+" · 设置";
+  $("#settings-title").textContent=(shared?rdText("通用助手（历史任务共享）"):contextTitle())+rdText(" · 设置");
   $("#settings-eyebrow").textContent=instance()?.id==="default"?"ASSISTANT SETTINGS":"APPLICATION SETTINGS";
-  $("#settings-context").textContent=shared?"这条历史应用任务沿用通用助手配置；保存也影响通用助手。":`配置对象：${contextTitle()} · 当前项目：${ws()?.name||""}`;
+  $("#settings-context").textContent=shared?rdText("这条历史应用任务沿用通用助手配置；保存也影响通用助手。"):rdFormat("配置对象：${0} · 当前项目：${1}",contextTitle(),ws()?.name||"");
   const target = el("div");
   $(state.view==="capability"?"#capability-content":"#settings-content").replaceChildren(target);
   $$("[data-settings-tab]").forEach((b) =>
@@ -906,9 +908,9 @@ async function renderSettings() {
       el(
         "p",
         { class: "help" },
-        "检查 Codex 是否安装、登录，以及运行后台是否能找到 codex 可执行文件。",
+        rdText("检查 Codex 是否安装、登录，以及运行后台是否能找到 codex 可执行文件。"),
       ),
-      button("重试", renderSettings),
+      button(rdText("重试"), renderSettings),
     );
   }
 }
@@ -916,37 +918,37 @@ function renderNotes(target) {
   const w = ws();
   const input = el(
     "textarea",
-    { rows: 12, placeholder: "项目约定、偏好或持续需要遵循的背景…" },
+    { rows: 12, placeholder: rdText("项目约定、偏好或持续需要遵循的背景…") },
     w.notes || "",
   );
   target.replaceChildren(
     el(
       "div",
       { class: "card" },
-      el("h3", {}, "项目笔记"),
+      el("h3", {}, rdText("项目笔记")),
       el(
         "p",
         {},
-        "由你维护的持久笔记。每次提交任务时显式注入；调试台记录当时的内容和版本。Codex 原生上下文仍由 Codex 管理。",
+        rdText("由你维护的持久笔记。每次提交任务时显式注入；调试台记录当时的内容和版本。Codex 原生上下文仍由 Codex 管理。"),
       ),
       input,
       el(
         "div",
         { class: "actions" },
         button(
-          "保存笔记",
+          rdText("保存笔记"),
           async () => {
             const updated = await api("/workspaces/" + w.id + "/notes", {
               method: "PUT",
               body: { text: input.value, revision: w.revision },
             });
             Object.assign(w, updated);
-            toast(`已保存 · 版本 ${updated.revision}`);
+            toast(rdFormat("已保存 · 版本 ${0}",updated.revision));
             renderNotes(target);
           },
           "primary",
         ),
-        el("span", { class: "help" }, `版本 ${w.revision} · 最多 16 KiB`),
+        el("span", { class: "help" }, rdFormat("版本 ${0} · 最多 16 KiB",w.revision)),
       ),
     ),
   );
@@ -993,9 +995,9 @@ $("#workspace").onchange = () =>
   });
 $("#add-workspace").onclick = () =>
   safe(async () => {
-    const name = prompt("工作区名称");
+    const name = prompt(rdText("工作区名称"));
     if (!name) return;
-    const path = prompt("已有目录的绝对路径；留空会创建托管目录。", "");
+    const path = prompt(rdText("已有目录的绝对路径；留空会创建托管目录。"), "");
     if (path === null) return;
     const w = await api("/workspaces", {
       method: "POST",
@@ -1026,7 +1028,7 @@ $("#stop").onclick = () =>
     }
   });
 $("#nav-library").onclick=()=>RunDeskLibrary.open();
-$("#attach").onclick = () => {const wid=ws()?.id;RunDeskLibrary.menu(()=>$("#upload").click(),async f=>{if(ws()?.id!==wid)throw Error("项目已改变，请重新选择附件");const body=new FormData();body.append("libraryFileId",f.id);const result=await api(`/workspaces/${wid}/uploads`,{method:"POST",body});if(ws()?.id!==wid)return;state.uploads.push(result);renderAttachments();});};
+$("#attach").onclick = () => {const wid=ws()?.id;RunDeskLibrary.menu(()=>$("#upload").click(),async f=>{if(ws()?.id!==wid)throw Error(rdText("项目已改变，请重新选择附件"));const body=new FormData();body.append("libraryFileId",f.id);const result=await api(`/workspaces/${wid}/uploads`,{method:"POST",body});if(ws()?.id!==wid)return;state.uploads.push(result);renderAttachments();});};
 $("#upload").onchange = () =>
   safe(async () => {
     await uploadFiles([...$("#upload").files]);
@@ -1065,7 +1067,7 @@ $$("[data-settings-tab]").forEach(
 $("#export").onclick = () => {
   if (state.session)
     location.href = "/api/v1/sessions/" + state.session.id + "/export";
-  else toast("请先创建会话");
+  else toast(rdText("请先创建会话"));
 };
 document.onkeydown = (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === "j") {

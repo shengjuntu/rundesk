@@ -1,0 +1,10 @@
+**
+!Dockerfile
+!seed/
+!seed/**
+**/auth.json
+**/.env
+**/.env.*
+**/.git
+**/*.pem
+**/*.key

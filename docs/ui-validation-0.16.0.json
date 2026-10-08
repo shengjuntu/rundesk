@@ -1,0 +1,15 @@
+{
+  "checks": [
+    "history has more than 380px at 1366x768",
+    "setup checks distinguish demo results",
+    "language switch preserves unsent text",
+    "English persisted across reload; setup translated",
+    "application tasks precede collapsed configuration; app name remains original",
+    "base Docker template reachable from builds",
+    "localized task, trace and skill pages render after a real demo turn",
+    "mobile history drawer fits screen",
+    "secondary pages load with language selection",
+    "no browser exceptions"
+  ],
+  "passed": 10
+}

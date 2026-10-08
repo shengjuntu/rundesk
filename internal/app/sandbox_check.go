@@ -44,7 +44,7 @@ func sandboxSubcommand(help, platform string) ([]string, error) {
 func (m *Manager) diagnosticCommand(w Workspace, i Instance, args []string) (string, int, error) {
 	ctx, cancel := context.WithTimeout(m.ctx, 15*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, m.Codex, args...)
+	cmd := exec.CommandContext(ctx, m.codexExecutable(), args...)
 	cmd.Dir, cmd.Env = w.Path, m.command(w, i).Env
 	cmd.WaitDelay = 2 * time.Second
 	configureProbeProcess(cmd)
@@ -69,7 +69,7 @@ func (m *Manager) sandboxCheck(w Workspace, i Instance) Check {
 		c.Detail = "演示模式；未检查真实系统沙箱。"
 		return c
 	}
-	c.Command = []string{m.Codex, "sandbox", "--help"}
+	c.Command = []string{m.codexExecutable(), "sandbox", "--help"}
 	help, code, err := m.diagnosticCommand(w, i, []string{"sandbox", "--help"})
 	c.Output, c.ExitCode = help, &code
 	if err != nil {
@@ -90,7 +90,7 @@ func (m *Manager) sandboxCheck(w Workspace, i Instance) Check {
 	} else {
 		args = append(args, "/bin/echo", "rundesk-sandbox-ok")
 	}
-	c.Command = append([]string{m.Codex}, args...)
+	c.Command = append([]string{m.codexExecutable()}, args...)
 	out, code, err := m.diagnosticCommand(w, i, args)
 	c.Output, c.ExitCode, c.DurationMS = out, &code, time.Since(start).Milliseconds()
 	if err == nil && strings.Contains("\n"+strings.ReplaceAll(out, "\r\n", "\n")+"\n", "\nrundesk-sandbox-ok\n") {

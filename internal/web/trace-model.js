@@ -4,13 +4,15 @@
   else root.RunDeskTrace = factory();
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
+const rdText=globalThis.rdText||((value)=>value);
+const rdFormat=globalThis.rdFormat||((key,...values)=>key.replace(/\$\{(\d+)\}/g,(_,n)=>String(values[Number(n)]??"")));
   const TRACKS = [
-    ["input", "输入与回复"],
-    ["model", "可见模型阶段"],
-    ["tools", "命令与 MCP"],
-    ["approval", "审批与确认"],
-    ["context", "上下文与注入"],
-    ["system", "状态与异常"],
+    ["input", rdText("输入与回复")],
+    ["model", rdText("可见模型阶段")],
+    ["tools", rdText("命令与 MCP")],
+    ["approval", rdText("审批与确认")],
+    ["context", rdText("上下文与注入")],
+    ["system", rdText("状态与异常")],
   ];
   const bad = (s) =>
     [
@@ -84,7 +86,7 @@
       if (!r) {
         r = {
           id: "observed-" + e.id,
-          title: "已有原生事件",
+          title: rdText("已有原生事件"),
           start: ms(e.time),
           end: null,
           status: "unknown",
@@ -113,7 +115,7 @@
         title: e.method,
         body: "",
         refs: [e.id],
-        timeSource: "后台接收时间",
+        timeSource: rdText("后台接收时间"),
         point: true,
         ...info,
       };
@@ -180,7 +182,7 @@
             );
           const r = {
             id: d.runId || "run-" + e.id,
-            title: short(d.input?.text || "新运行", 160),
+            title: short(d.input?.text || rdText("新运行"), 160),
             start: t,
             lastObserved: t,
             end: null,
@@ -194,7 +196,7 @@
           this.current = r;
           r.inputRow = this.add(e, r, {
             track: "input",
-            title: "用户输入",
+            title: rdText("用户输入"),
             body: d.input?.text || "",
             detail: d.input,
           });
@@ -202,7 +204,7 @@
             this.add(e, r, {
               id: "notes-" + e.id,
               track: "context",
-              title: "项目笔记注入",
+              title: rdText("项目笔记注入"),
               body: d.notes,
               detail: { revision: d.notesRevision, cwd: d.cwd },
             });
@@ -210,9 +212,9 @@
             this.add(e, r, {
               id: "skills-" + e.id,
               track: "context",
-              title: "显式选中 Skills",
+              title: rdText("显式选中 Skills"),
               body: plain(d.input.skills),
-              note: "记录提交给 Codex 的技能，不代表已经执行。",
+              note: rdText("记录提交给 Codex 的技能，不代表已经执行。"),
             });
           continue;
         }
@@ -221,7 +223,7 @@
           case "run/steer":
             this.add(e, r, {
               track: "input",
-              title: "运行中补充指令 · 已接收",
+              title: rdText("运行中补充指令 · 已接收"),
               body: d.input?.text || "",
               detail: d.input,
             });
@@ -243,19 +245,19 @@
             r.refs.push(e.id);
             if (p.turn?.error)
               this.add(e, r, {
-                title: "运行失败",
+                title: rdText("运行失败"),
                 status: "failed",
                 body: plain(p.turn.error),
               });
             break;
           case "run/retry":
-            this.add(e, r, {title: d.willRetry ? "Codex 正在重试" : "重试状态已更新", body: "原生 Codex 通知；未新建任务轮次。"});
+            this.add(e, r, {title: d.willRetry ? rdText("Codex 正在重试") : rdText("重试状态已更新"), body: rdText("原生 Codex 通知；未新建任务轮次。")});
             break;
           case "run/state":
             this.closeRun(r, t, d.status || "unknown");
             if (d.error)
               this.add(e, r, {
-                title: "后台运行错误",
+                title: rdText("后台运行错误"),
                 status: "failed",
                 body: d.error,
               });
@@ -291,18 +293,18 @@
               }[type] || "system";
             const title =
               {
-                userMessage: "用户消息",
-                agentMessage: item.phase === "commentary" ? "阶段说明" : "助手回复",
-                reasoning: "可见推理",
+                userMessage: rdText("用户消息"),
+                agentMessage: item.phase === "commentary" ? rdText("阶段说明") : rdText("助手回复"),
+                reasoning: rdText("可见推理"),
                 commandExecution: short(item.command),
                 mcpToolCall:
-                  (item.server || "MCP") + " / " + (item.tool || "工具"),
-                dynamicToolCall: item.tool || "动态工具",
-                fileChange: "文件变更",
-                webSearch: "搜索",
-                imageView: "查看图像",
-                imageGeneration: "生成图像",
-                contextCompaction: "上下文压缩",
+                  (item.server || "MCP") + " / " + (item.tool || rdText("工具")),
+                dynamicToolCall: item.tool || rdText("动态工具"),
+                fileChange: rdText("文件变更"),
+                webSearch: rdText("搜索"),
+                imageView: rdText("查看图像"),
+                imageGeneration: rdText("生成图像"),
+                contextCompaction: rdText("上下文压缩"),
               }[type] || type;
             if (!row) {
               const native = ms(done ? p.completedAtMs : p.startedAtMs);
@@ -317,7 +319,7 @@
                 end: null,
                 point: false,
                 status: "running",
-                timeSource: native ? "原生事件时间" : "后台接收时间",
+                timeSource: native ? rdText("原生事件时间") : rdText("后台接收时间"),
                 incomplete: done,
               });
             }
@@ -352,8 +354,8 @@
               row.timeConflict = row.start != null && row.end < row.start;
               row.incomplete = row.start == null || row.timeConflict;
               row.endSource = ms(p.completedAtMs)
-                ? "原生事件时间"
-                : "后台接收时间";
+                ? rdText("原生事件时间")
+                : rdText("后台接收时间");
             }
             break;
           }
@@ -363,8 +365,8 @@
             const row = this.add(e, r, {
               id: "approval-" + d.id,
               track: "approval",
-              title: q.command ? short(q.command) : q.reason || "等待人工确认",
-              body: q.reason || "等待审批或用户输入",
+              title: q.command ? short(q.command) : q.reason || rdText("等待人工确认"),
+              body: q.reason || rdText("等待审批或用户输入"),
               detail: q,
               start: t,
               end: null,
@@ -397,9 +399,9 @@
                 : "accepted";
               row.body +=
                 (row.body ? "\n\n" : "") +
-                "决定：" +
+                rdText("决定：") +
                 plain(d.decision) +
-                (d.scope ? "\n范围：" + d.scope : "");
+                (d.scope ? rdText("\n范围：") + d.scope : "");
               this.ref(row, e);
             }
             break;
@@ -428,8 +430,8 @@
             )
               this.add(e, r, {
                 track: "context",
-                title: "上下文已压缩",
-                body: "接口只报告完成事件，未提供开始时间。",
+                title: rdText("上下文已压缩"),
+                body: rdText("接口只报告完成事件，未提供开始时间。"),
               });
             break;
           case "runtime/effective":
@@ -439,7 +441,7 @@
           case "configWarning":
           case "deprecationNotice":
             this.add(e, r, {
-              title: e.method === "configWarning" ? "配置告警" : "运行告警",
+              title: e.method === "configWarning" ? rdText("配置告警") : rdText("运行告警"),
               status: "warning",
               body:
                 p.message ||
@@ -448,11 +450,11 @@
             });
             break;
           case "library/error":
-            this.add(e,r,{title:"文件自动保存失败",status:"failed",body:plain(d.error)});
+            this.add(e,r,{title:rdText("文件自动保存失败"),status:"failed",body:plain(d.error)});
             break;
           case "error":
             this.add(e, r, {
-              title: p.willRetry ? "原生错误 · 将重试" : "运行错误",
+              title: p.willRetry ? rdText("原生错误 · 将重试") : rdText("运行错误"),
               status: p.willRetry ? "warning" : "failed",
               body: plain(p.error || p),
             });

@@ -198,8 +198,8 @@ func (m *Manager) CreateBuild(iid, name, dockerfile string, timeout int, noCache
 	if e != nil {
 		return v, e
 	}
-	if iid == DefaultInstance || i.Execution.normalized().Mode != "docker" {
-		return v, failure(409, "not_docker_application", "请先为应用启用 Docker")
+	if i.ID == DefaultInstance {
+		return v, failure(409, "not_docker_application", "请在专用应用中构建镜像")
 	}
 	name = strings.TrimSpace(name)
 	if len(name) > 120 {
@@ -292,8 +292,8 @@ func (m *Manager) StartBuild(iid, id string) (ImageBuild, error) {
 	if e != nil {
 		return v, e
 	}
-	if i.Execution.normalized().Mode != "docker" {
-		return v, failure(409, "not_docker_application", "应用已不是 Docker 模式")
+	if i.ID == DefaultInstance {
+		return v, failure(409, "not_docker_application", "请在专用应用中构建镜像")
 	}
 	v.Status = "queued"
 	v.Updated = store.Now()

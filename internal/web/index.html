@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="/users.css" />
     <link rel="stylesheet" href="/diagnostics.css" />
     <link rel="stylesheet" href="/recovery.css" />
-    <script defer src="/recovery.js"></script>
+    <script defer src="/i18n.js"></script><script defer src="/setup.js"></script><script defer src="/layout.js"></script><link rel="stylesheet" href="/layout.css"/><script defer src="/recovery.js"></script>
     <script defer src="/diagnostics.js"></script>
     <script defer src="/conversation.js"></script>
     <script defer src="/app.js"></script>
@@ -53,20 +53,18 @@
       </form>
     </div>
     <div class="shell" id="shell">
+      <aside class="global-rail" aria-label="主要功能"><a class="rail-brand" href="/" title="RunDesk"><span class="brandmark">r.</span></a>        <nav class="primary-nav" aria-label="主要功能">
+          <button id="nav-assistant" title="对话" aria-label="对话" class="selected" aria-current="page"><span class="nav-symbol"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M21 11a8 8 0 0 1-8 8H5l-3 3V11a9 9 0 0 1 19 0Z"/></svg></span><span class="rail-label">对话</span></button>
+          <button id="nav-tasks" title="任务" aria-label="任务"><span class="nav-symbol"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></svg></span><span class="rail-label">任务</span></button>
+          <button id="nav-applications" title="应用" aria-label="应用"><span class="nav-symbol"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="rail-label">应用</span><span id="application-count" class="nav-count"></span></button>
+          <a href="/collaboration.html" title="协作" aria-label="协作" class="nav-item"><span class="nav-symbol"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><path d="m10 8-4 8m8-8 4 8M8 19h8"/></svg></span><span class="rail-label">协作</span></a>
+          <button id="nav-library" title="我的文件" aria-label="我的文件" type="button" class="nav-item"><span class="nav-symbol"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 7h7l2-3h9v16H3Z"/><path d="M7 12h10M7 16h7"/></svg></span><span class="rail-label">我的文件</span></button>
+<button id="nav-users" title="用户与授权" aria-label="用户与授权"><span class="nav-symbol"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 6"/></svg></span><span class="rail-label">用户与授权</span></button>
+        </nav><div class="rail-bottom"><button id="system-setup" title="环境检查" aria-label="环境检查">⚙</button><button id="language-toggle" title="English / 中文" aria-label="English / 中文">EN</button></div></aside>
       <aside id="history-sidebar" class="sidebar" aria-label="助手与应用">
         <button id="sidebar-close" class="quiet sidebar-close" aria-label="关闭会话列表">关闭</button>
-        <a class="brand" href="/"
-          ><span class="brandmark">r.</span><strong>RunDesk</strong
-          ><small>0.15.0</small></a
-        >
-        <nav class="primary-nav" aria-label="主要功能">
-          <button id="nav-assistant" class="selected" aria-current="page"><span class="nav-symbol">◌</span>对话</button>
-          <button id="nav-tasks"><span class="nav-symbol"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></svg></span>任务</button>
-          <button id="nav-applications"><span class="nav-symbol">▦</span>应用<span id="application-count" class="nav-count"></span></button>
-          <a href="/collaboration.html" class="nav-item"><span class="nav-symbol">◇</span>协作</a>
-          <button id="nav-library" type="button" class="nav-item">▧　我的文件</button>
-<button id="nav-users"><span class="nav-symbol">♙</span>用户与授权</button>
-        </nav>
+<div class="history-heading"><strong>会话</strong><button id="history-collapse" class="quiet" title="收起会话列表" aria-label="收起会话列表">◧</button></div>
+
         <div class="hidden" aria-hidden="true"><select id="instance" tabindex="-1"></select><button id="manage-instances" tabindex="-1">高级配置</button></div>
         <p id="history-label" class="sidebar-label">通用助手</p>
         <div class="workspace">
@@ -95,7 +93,7 @@
             ><span id="session-count" class="muted"></span>
           </div>
         </div>
-        <nav id="session-list"></nav>
+        <nav id="session-list" aria-label="会话记录"></nav><div id="history-resize" role="separator" tabindex="0" aria-label="调整会话列表宽度" aria-orientation="vertical"></div>
         <button id="assistant-settings" class="sidebar-settings">助手设置<span>模型 · 技能 · 工具</span></button>
         <div class="sidebar-bottom">
           <span class="status-dot"></span

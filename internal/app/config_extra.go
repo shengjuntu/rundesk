@@ -236,7 +236,7 @@ func (m *Manager) Diagnostics(wid string, ids ...string) (any, error) {
 		if m.Demo {
 			return "演示协议模拟器；未检查真实 Codex", nil
 		}
-		path, e := exec.LookPath(m.Codex)
+		path, e := exec.LookPath(m.codexExecutable())
 		if e != nil {
 			return "", e
 		}

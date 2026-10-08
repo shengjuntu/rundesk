@@ -25,10 +25,10 @@ function renderSessions() {
         "p",
         { class: "empty" },
         query
-          ? "没有匹配的会话"
+          ? rdText("没有匹配的会话")
           : archived
-            ? "没有已归档会话"
-            : "从一个新对话开始",
+            ? rdText("没有已归档会话")
+            : rdText("从一个新对话开始"),
       ),
     );
 }
@@ -50,30 +50,30 @@ async function selectFirst() {
 function renderStatus() {
   renderCapabilityStrip();
   const s = state.session;
-  $("#session-title").textContent = s?.title || "新对话";
+  $("#session-title").textContent = s?.title || rdText("新对话");
   $("#run-status").textContent = s?.archived
-    ? "已归档"
-    : s?.retry && active(s.status) ? "Codex 正在重试" : statusLabel[s?.status] || s?.status || "就绪";
+    ? rdText("已归档")
+    : s?.retry && active(s.status) ? rdText("Codex 正在重试") : statusLabel[s?.status] || s?.status || rdText("就绪");
   $("#stop").classList.toggle("hidden", !active(s?.status));
   const transitioning = ["starting", "stopping"].includes(s?.status);
   const steering = active(s?.status) && !transitioning;
   $("#send").disabled =
     state.loadingSession || state.sending || transitioning || (steering && !s?.turnId) || !!s?.archived;
-  $("#send").title = steering ? "补充指令到当前任务" : "发送";
+  $("#send").title = steering ? rdText("补充指令到当前任务") : rdText("发送");
   $("#send").setAttribute("aria-label", $("#send").title);
   $("#send").classList.toggle("steering", steering);
-  $("#send").textContent = steering ? "补充" : "↑";
+  $("#send").textContent = steering ? rdText("补充") : "↑";
   $("#stop").disabled = s?.status === "stopping";
   $("#prompt").disabled = state.loadingSession || !!s?.archived;
   $("#prompt").placeholder = s?.archived
-    ? "从会话菜单恢复后，可继续对话。"
+    ? rdText("从会话菜单恢复后，可继续对话。")
     : steering
-      ? "补充要求或调整当前任务的方向…"
-      : "给 Codex 一个任务…";
+      ? rdText("补充要求或调整当前任务的方向…")
+      : rdText("给 Codex 一个任务…");
   $("#model").disabled = !!s;
   $("#session-menu").classList.toggle("hidden", !s);
-  $("#pin-session").textContent = s?.pinned ? "取消置顶" : "置顶";
-  $("#archive-session").textContent = s?.archived ? "恢复会话" : "归档";
+  $("#pin-session").textContent = s?.pinned ? rdText("取消置顶") : rdText("置顶");
+  $("#archive-session").textContent = s?.archived ? rdText("恢复会话") : rdText("归档");
   $("#archive-session").disabled = active(s?.status);
   $("#delete-session").disabled = active(s?.status);
   window.RunDeskTraceUI?.syncComposer();
@@ -86,7 +86,7 @@ function renderAnalysisBanner() {
   host.classList.toggle("hidden",!origin);
   if(!origin){host.replaceChildren();host._signature="";return;}
   const signature=json(origin);if(host._signature===signature)return;host._signature=signature;
-  host.replaceChildren(el("strong",{},"过程分析 · 独立会话"),el("span",{},`来源：${origin.title} · 截至 ${new Date(origin.capturedAt).toLocaleString()} 的记录`),button("查看原任务过程",()=>RunDeskTraceUI.openOrigin(origin),"quiet"),el("span",{},"只读轨迹工具仅用于此分析会话；沿用原配置的模型与认证。原任务单独运行。"));
+  host.replaceChildren(el("strong",{},rdText("过程分析 · 独立会话")),el("span",{},rdFormat("来源：${0} · 截至 ${1} 的记录",origin.title,new Date(origin.capturedAt).toLocaleString())),button(rdText("查看原任务过程"),()=>RunDeskTraceUI.openOrigin(origin),"quiet"),el("span",{},rdText("只读轨迹工具仅用于此分析会话；沿用原配置的模型与认证。原任务单独运行。")));
 }
 async function patchCurrent(patch) {
   if (!state.session) return;
@@ -128,7 +128,7 @@ function debugParams() {
 }
 async function searchEvents(more = false) {
   if (!state.session) {
-    toast("请先选择一个会话");
+    toast(rdText("请先选择一个会话"));
     return;
   }
   const id = state.session.id;
@@ -146,7 +146,7 @@ async function searchEvents(more = false) {
     state.historyMore = rows.length === 250;
     state.historyQuery = q.toString();
     state.debugPaused = false;
-    $("#event-pause").textContent = "暂停滚动";
+    $("#event-pause").textContent = rdText("暂停滚动");
     renderDebug();
   } finally {
     if (request === state.historyRequest) $("#event-search").disabled = false;
@@ -158,15 +158,15 @@ function renderDebug() {
   $("#event-controls").classList.toggle("hidden", state.tab !== "events");
   $("#event-count").textContent =
     state.history !== null && state.tab === "events"
-      ? `已查询 ${state.history.length} 条`
-      : `已载入 ${state.events.length} 条`;
+      ? rdFormat("已查询 ${0} 条",state.history.length)
+      : rdFormat("已载入 ${0} 条",state.events.length);
   if (state.tab === "events") {
     $("#event-mode").textContent =
       state.history !== null
-        ? "历史查询 · 按时间顺序 · 不随新事件变化"
+        ? rdText("历史查询 · 按时间顺序 · 不随新事件变化")
         : state.debugPaused
-          ? "已暂停显示；后台继续接收事件"
-          : "实时 · 显示最近 250 条";
+          ? rdText("已暂停显示；后台继续接收事件")
+          : rdText("实时 · 显示最近 250 条");
     if (state.debugPaused) return;
     const opened = new Set(
       [...box.querySelectorAll("details[open]")].map((n) => n.dataset.eventId),
@@ -206,10 +206,10 @@ function renderDebug() {
         ),
         el("pre", {}, json(ev)),
         button(
-          "复制事件 JSON",
+          rdText("复制事件 JSON"),
           async () => {
             await navigator.clipboard.writeText(json(ev));
-            toast("事件已复制");
+            toast(rdText("事件已复制"));
           },
           "event-copy",
         ),
@@ -222,13 +222,13 @@ function renderDebug() {
           "p",
           { class: "empty" },
           state.history !== null
-            ? "没有匹配的历史事件。"
-            : "发送一条消息，查看运行事件。",
+            ? rdText("没有匹配的历史事件。")
+            : rdText("发送一条消息，查看运行事件。"),
         ),
       );
     if (state.history !== null && state.historyMore)
       box.append(
-        button("加载更多历史事件", () => searchEvents(true), "query-more"),
+        button(rdText("加载更多历史事件"), () => searchEvents(true), "query-more"),
       );
   } else if (state.tab === "context") {
     const last = (method) => state.events.findLast((e) => e.method === method);
@@ -250,10 +250,10 @@ function renderDebug() {
           0,
           ((end ? new Date(end.time) : new Date()) - new Date(input.time)) /
             1000,
-        ).toFixed(1) + " 秒"
-      : "尚未运行";
+        ).toFixed(1) + rdText(" 秒")
+      : rdText("尚未运行");
     box.replaceChildren(
-      el("h3", {}, "本次运行"),
+      el("h3", {}, rdText("本次运行")),
       el(
         "pre",
         {},
@@ -266,27 +266,27 @@ function renderDebug() {
           elapsed,
         }),
       ),
-      el("h3", {}, "输入与项目笔记"),
-      el("pre", {}, input ? json(input.data) : "尚未运行"),
-      el("h3", {}, "实际提交的 turn/start"),
-      el("pre", {}, submitted ? json(submitted.data.params) : "尚未提交"),
-      el("h3", {}, "原生 Token 用量"),
+      el("h3", {}, rdText("输入与项目笔记")),
+      el("pre", {}, input ? json(input.data) : rdText("尚未运行")),
+      el("h3", {}, rdText("实际提交的 turn/start")),
+      el("pre", {}, submitted ? json(submitted.data.params) : rdText("尚未提交")),
+      el("h3", {}, rdText("原生 Token 用量")),
       el(
         "pre",
         {},
-        tokens ? json(tokens.data.params) : "接口尚未提供 Token 用量",
+        tokens ? json(tokens.data.params) : rdText("接口尚未提供 Token 用量"),
       ),
       el(
         "p",
         { class: "help" },
-        "total 是累计用量，last 是最近一轮的用量；均不代表完整上下文快照。耗时包含启动和等待审批。",
+        rdText("total 是累计用量，last 是最近一轮的用量；均不代表完整上下文快照。耗时包含启动和等待审批。"),
       ),
-      el("h3", {}, `原生上下文压缩 · ${compactions.length} 次`),
+      el("h3", {}, rdFormat("原生上下文压缩 · ${0} 次",compactions.length)),
       ...compactions.map((e) => el("pre", {}, json(e.data.params.item))),
     );
   } else {
     box.replaceChildren(
-      button("刷新文件", loadFiles, "quiet"),
+      button(rdText("刷新文件"), loadFiles, "quiet"),
       ...state.files.map((f) =>
         el(
           "div",
@@ -299,15 +299,15 @@ function renderDebug() {
             el(
               "div",
               { class: "row" },
-              button("预览", () => previewFile(f), "quiet"),
-              el("a", { href: fileURL(f.path) }, "下载 ↓"),
+              button(rdText("预览"), () => previewFile(f), "quiet"),
+              el("a", { href: fileURL(f.path) }, rdText("下载 ↓")),
             ),
           ),
         ),
       ),
     );
     if (!state.files.length)
-      box.append(el("p", { class: "empty" }, "产物目录中还没有文件。"));
+      box.append(el("p", { class: "empty" }, rdText("产物目录中还没有文件。")));
   }
 }
 
@@ -323,33 +323,33 @@ async function renderSkills(target) {
     "select",
     { id: "skill-scope" },
     el("option", { value: "instance" }, RunDeskEnvironments.scopeLabel()),
-    el("option", { value: "project" }, "项目技能 · 共享目录"),
+    el("option", { value: "project" }, rdText("项目技能 · 共享目录")),
   );
   const name = el("input", {
     type: "text",
     id: "skill-name",
-    placeholder: "例如 project-guide",
+    placeholder: rdText("例如 project-guide"),
   });
   const text = el(
     "textarea",
     { rows: 12, id: "skill-content" },
-    "---\nname: project-guide\ndescription: 本项目的工作约定\n---\n\n在修改代码前，先阅读 README，并说明验证方式。\n",
+    rdText("---\nname: project-guide\ndescription: 本项目的工作约定\n---\n\n在修改代码前，先阅读 README，并说明验证方式。\n"),
   );
   const list = el(
     "div",
     { class: "card" },
-    el("h3", {}, "Codex 发现的 Skills"),
+    el("h3", {}, rdText("Codex 发现的 Skills")),
     el(
       "p",
       {},
-      current.execution?.mode==="docker"?"当前应用、当前项目的独立技能目录。镜像中的标准技能首次初始化时补充，不覆盖已有文件。":"专用技能随助手或应用使用；项目技能在共享项目中可见。",
+      current.execution?.mode==="docker"?rdText("当前应用、当前项目的独立技能目录。镜像中的标准技能首次初始化时补充，不覆盖已有文件。"):rdText("专用技能随助手或应用使用；项目技能在共享项目中可见。"),
     ),
   );
   for (const sk of state.skills) {
     const toggle = el("input", {
       type: "checkbox",
       checked: sk.enabled !== false,
-      "aria-label": "启用 " + sk.name,
+      "aria-label": rdText("启用 ") + sk.name,
     });
     toggle.onchange = () =>
       safe(async () => {
@@ -359,7 +359,7 @@ async function renderSkills(target) {
             method: "POST",
             body: { path: sk.path, enabled: toggle.checked },
           });
-          toast("配置已保存；下次运行读取");
+          toast(rdText("配置已保存；下次运行读取"));
           await renderSettings();
         } catch (e) {
           toggle.checked = !toggle.checked;
@@ -369,7 +369,7 @@ async function renderSkills(target) {
         }
       });
     const use = button(
-      "用于下次消息",
+      rdText("用于下次消息"),
       () => {
         if (!state.chosenSkills.some((s) => s.path === sk.path))
           state.chosenSkills.push({ name: sk.name, path: sk.path });
@@ -379,9 +379,9 @@ async function renderSkills(target) {
       "quiet",
     );
     use.disabled = sk.enabled === false || !skillCanBeSelected();
-    if(!skillCanBeSelected())use.textContent="在任务中选用";
+    if(!skillCanBeSelected())use.textContent=rdText("在任务中选用");
     use.classList.add("skill-use");
-    const ops = el("div", { class: "skill-actions" }, use, el("label",{class:"skill-enable"},toggle,"启用"));
+    const ops = el("div", { class: "skill-actions" }, use, el("label",{class:"skill-enable"},toggle,rdText("启用")));
     const normalized = sk.path.replaceAll("\\", "/");
     const projectRoot = work.path.replaceAll("\\", "/") + "/.agents/skills/";
     const instanceRoot = current.codexHome.replaceAll("\\", "/") + "/skills/";
@@ -400,7 +400,7 @@ async function renderSkills(target) {
       const slug = sk.path.replaceAll("\\", "/").split("/").at(-2);
       ops.prepend(
         button(
-          "编辑",
+          rdText("编辑"),
           async () => {
             const v = await api(
               cp("/skills/" + encodeURIComponent(slug), skScope),
@@ -414,10 +414,10 @@ async function renderSkills(target) {
           "quiet",
         ),
       );
-      ops.append(button("目录",()=>openSkillDirectory(work.id,current.id,slug,skScope),"quiet"),button("导出 ZIP",()=>downloadSkillBundle(work.id,current.id,slug,skScope),"quiet"),button("移除",async()=>{
-        if(!confirm(`移除技能「${sk.name}」的完整目录？所有文件都会备份。`))return;
+      ops.append(button(rdText("目录"),()=>openSkillDirectory(work.id,current.id,slug,skScope),"quiet"),button(rdText("导出 ZIP"),()=>downloadSkillBundle(work.id,current.id,slug,skScope),"quiet"),button(rdText("移除"),async()=>{
+        if(!confirm(rdFormat("移除技能「${0}」的完整目录？所有文件都会备份。",sk.name)))return;
         const result=await api(cp("/skill-bundles/"+encodeURIComponent(slug),skScope),{method:"DELETE"});
-        state.chosenSkills=state.chosenSkills.filter(s=>s.path!==sk.path);renderAttachments();toast("完整目录已备份："+result.backupPath);await renderSettings();
+        state.chosenSkills=state.chosenSkills.filter(s=>s.path!==sk.path);renderAttachments();toast(rdText("完整目录已备份：")+result.backupPath);await renderSettings();
       },"quiet"));
     }
     list.append(
@@ -435,12 +435,12 @@ async function renderSkills(target) {
             managed
               ? skScope === "instance"
                 ? RunDeskEnvironments.scopeLabel()
-                : "项目技能 · 共享"
+                : rdText("项目技能 · 共享")
               : sk.scope === "system"
-                ? "Codex 内置"
-                : "其他来源",
+                ? rdText("Codex 内置")
+                : rdText("其他来源"),
           ),
-          el("details",{class:"skill-path"},el("summary",{},"查看文件位置"),el("small",{},sk.path)),
+          el("details",{class:"skill-path"},el("summary",{},rdText("查看文件位置")),el("small",{},sk.path)),
         ),
         ops,
       ),
@@ -448,7 +448,7 @@ async function renderSkills(target) {
   }
   if (!state.skills.length)
     list.append(
-      el("p", { class: "empty" }, "还没有可用技能。导入完整目录，或展开下方编辑器创建简单技能。"),
+      el("p", { class: "empty" }, rdText("还没有可用技能。导入完整目录，或展开下方编辑器创建简单技能。")),
     );
   const file = el("input", {
     type: "file",
@@ -460,11 +460,11 @@ async function renderSkills(target) {
     safe(async () => {
       const f = file.files[0];
       if (!f) return;
-      if (f.size > 256 * 1024) throw Error("SKILL.md 最多 256 KiB");
+      if (f.size > 256 * 1024) throw Error(rdText("SKILL.md 最多 256 KiB"));
       text.value = await f.text();
       const match = text.value.match(/^name:\s*["']?([\w-]+)/m);
       if (match) name.value = match[1];
-      toast("已载入编辑器，确认后点击保存。");
+      toast(rdText("已载入编辑器，确认后点击保存。"));
     });
   target.replaceChildren(
     skillBundleImporter(work.id,current.id),
@@ -473,15 +473,15 @@ async function renderSkills(target) {
     el(
       "div",
       { class: "card" },
-      el("h3", {}, "编辑 SKILL.md / 创建简单技能"),
+      el("h3", {}, rdText("编辑 SKILL.md / 创建简单技能")),
       el(
         "p",
         {},
-        "这里只编辑 SKILL.md；已有脚本、参考资料和模板会保留。完整技能请使用上方目录导入。",
+        rdText("这里只编辑 SKILL.md；已有脚本、参考资料和模板会保留。完整技能请使用上方目录导入。"),
       ),
-      el("label", { for: "skill-scope" }, "保存范围"),
+      el("label", { for: "skill-scope" }, rdText("保存范围")),
       scope,
-      el("label", { for: "skill-name" }, "目录名称"),
+      el("label", { for: "skill-name" }, rdText("目录名称")),
       name,
       el("label", { for: "skill-content" }, "SKILL.md"),
       text,
@@ -490,7 +490,7 @@ async function renderSkills(target) {
         "div",
         { class: "actions" },
         button(
-          "保存并重新扫描",
+          rdText("保存并重新扫描"),
           async () => {
             await api(
               cp(
@@ -502,13 +502,13 @@ async function renderSkills(target) {
                 body: { content: text.value.replaceAll("\r\n", "\n") },
               },
             );
-            toast("Skill 已保存");
+            toast(rdText("Skill 已保存"));
             await renderSettings();
           },
           "primary",
         ),
-        button("导入 SKILL.md", () => file.click()),
-        button("导出编辑内容", () =>
+        button(rdText("导入 SKILL.md"), () => file.click()),
+        button(rdText("导出编辑内容"), () =>
           downloadText(
             (name.value.trim() || "project") + "-SKILL.md",
             text.value,
@@ -528,23 +528,23 @@ async function renderMCP(target) {
   const name = el("input", {
     type: "text",
     id: "mcp-name",
-    placeholder: "例如 filesystem",
+    placeholder: rdText("例如 filesystem"),
   });
   const type = el(
     "select",
     { id: "mcp-type" },
-    el("option", { value: "stdio" }, "本地命令 · stdio"),
-    el("option", { value: "http" }, "远程服务 · HTTP"),
+    el("option", { value: "stdio" }, rdText("本地命令 · stdio")),
+    el("option", { value: "http" }, rdText("远程服务 · HTTP")),
   );
   const command = el("input", {
     type: "text",
     id: "mcp-command",
-    placeholder: "例如 npx / uvx / 可执行文件路径",
+    placeholder: rdText("例如 npx / uvx / 可执行文件路径"),
   });
   const args = el("textarea", {
     rows: 3,
     id: "mcp-args",
-    placeholder: "每行一个参数，不经过 shell 拆分",
+    placeholder: rdText("每行一个参数，不经过 shell 拆分"),
   });
   const env = el("textarea", { rows: 3, id: "mcp-env" }, "{}");
   const url = el("input", {
@@ -555,7 +555,7 @@ async function renderMCP(target) {
   const tokenEnv = el("input", {
     type: "text",
     id: "mcp-token-env",
-    placeholder: "例如 MCP_API_TOKEN（环境变量名）",
+    placeholder: rdText("例如 MCP_API_TOKEN（环境变量名）"),
   });
   const enabled = el("input", {
     type: "checkbox",
@@ -571,34 +571,34 @@ async function renderMCP(target) {
   const local = el(
     "div",
     {},
-    el("label", { for: "mcp-command" }, "启动命令"),
+    el("label", { for: "mcp-command" }, rdText("启动命令")),
     command,
-    el("label", { for: "mcp-args" }, "参数（每行一个）"),
+    el("label", { for: "mcp-args" }, rdText("参数（每行一个）")),
     args,
-    el("label", { for: "mcp-env" }, "环境变量 JSON"),
+    el("label", { for: "mcp-env" }, rdText("环境变量 JSON")),
     env,
   );
   const remote = el(
     "div",
     { class: "hidden" },
-    el("label", { for: "mcp-url" }, "MCP 地址"),
+    el("label", { for: "mcp-url" }, rdText("MCP 地址")),
     url,
-    el("label", { for: "mcp-token-env" }, "Bearer Token 的环境变量名"),
+    el("label", { for: "mcp-token-env" }, rdText("Bearer Token 的环境变量名")),
     tokenEnv,
   );
   const fields = el(
     "div",
     { class: "mcp-fields" },
-    el("label", { for: "mcp-type" }, "连接类型"),
+    el("label", { for: "mcp-type" }, rdText("连接类型")),
     type,
     local,
     remote,
-    el("label", {}, enabled, " 启用服务"),
+    el("label", {}, enabled, rdText(" 启用服务")),
   );
   const jsonPanel = el(
     "div",
     { class: "hidden" },
-    el("label", { for: "mcp-json" }, "完整配置 JSON"),
+    el("label", { for: "mcp-json" }, rdText("完整配置 JSON")),
     config,
   );
   let original = {};
@@ -655,8 +655,8 @@ async function renderMCP(target) {
   const list = el(
     "div",
     { class: "card" },
-    el("h3", {}, "MCP 工具配置"),
-    el("p", {class:"help"}, `正在编辑 ${contextTitle()} · ${RunDeskEnvironments.scopeLabel()}。${current.execution?.mode==="docker"?"此项目环境的 MCP 在容器中执行，其他项目独立配置。":"项目层配置可能覆盖这里的值。"}`),
+    el("h3", {}, rdText("MCP 工具配置")),
+    el("p", {class:"help"}, rdFormat("正在编辑 ${0} · ${1}。${2}",contextTitle(),RunDeskEnvironments.scopeLabel(),current.execution?.mode==="docker"?rdText("此项目环境的 MCP 在容器中执行，其他项目独立配置。"):rdText("项目层配置可能覆盖这里的值。"))),
 
   );
   const save = async (n, value, remove = false) => {
@@ -666,8 +666,8 @@ async function renderMCP(target) {
     });
     toast(
       r.reloadError
-        ? "已保存；重载失败：" + r.reloadError
-        : "已保存；下一轮任务会重载 MCP",
+        ? rdText("已保存；重载失败：") + r.reloadError
+        : rdText("已保存；下一轮任务会重载 MCP"),
     );
     await renderSettings();
   };
@@ -675,7 +675,7 @@ async function renderMCP(target) {
     const toggle = el("input", {
       type: "checkbox",
       checked: v.enabled !== false,
-      "aria-label": "启用 MCP " + n,
+      "aria-label": rdText("启用 MCP ") + n,
     });
     toggle.onchange = () =>
       safe(async () => {
@@ -704,7 +704,7 @@ async function renderMCP(target) {
           { class: "row" },
           toggle,
           button(
-            "编辑",
+            rdText("编辑"),
             () => {
               name.value = n;
               fill(v);
@@ -714,9 +714,9 @@ async function renderMCP(target) {
             "quiet",
           ),
           button(
-            "删除",
+            rdText("删除"),
             async () => {
-              if (confirm(`删除用户 MCP「${n}」？项目或托管层配置仍可能生效。`))
+              if (confirm(rdFormat("删除用户 MCP「${0}」？项目或托管层配置仍可能生效。",n)))
                 await save(n, undefined, true);
             },
             "quiet",
@@ -726,13 +726,13 @@ async function renderMCP(target) {
     );
   }
   if (!Object.keys(info.userServers || {}).length)
-    list.append(el("p", { class: "empty" }, "当前助手／应用还没有用户层 MCP 配置。"));
+    list.append(el("p", { class: "empty" }, rdText("当前助手／应用还没有用户层 MCP 配置。")));
   list.append(
     el(
       "div",
       { class: "actions" },
-      button("刷新状态", renderSettings),
-      button("导出配置 JSON", () => {
+      button(rdText("刷新状态"), renderSettings),
+      button(rdText("导出配置 JSON"), () => {
         location.href = "/api/v1" + cp("/mcp/export");
       }),
     ),
@@ -745,18 +745,18 @@ async function renderMCP(target) {
   const importText = el("textarea", {
     rows: 7,
     id: "mcp-import-json",
-    placeholder: "选择 RunDesk 导出的 JSON 文件；也可粘贴配置。",
+    placeholder: rdText("选择 RunDesk 导出的 JSON 文件；也可粘贴配置。"),
   });
   const overwrite = el("input", { type: "checkbox", id: "mcp-overwrite" });
   file.onchange = () =>
     safe(async () => {
       const f = file.files[0];
       if (!f) return;
-      if (f.size > 512 * 1024) throw Error("配置文件最多 512 KiB");
+      if (f.size > 512 * 1024) throw Error(rdText("配置文件最多 512 KiB"));
       importText.value = await f.text();
       const bundle = JSON.parse(importText.value);
       toast(
-        `已载入 ${Object.keys(bundle.servers || {}).length} 个服务，确认后点击导入。`,
+        rdFormat("已载入 ${0} 个服务，确认后点击导入。",Object.keys(bundle.servers || {}).length),
       );
     });
   target.replaceChildren(
@@ -764,27 +764,27 @@ async function renderMCP(target) {
     el(
       "div",
       { class: "card" },
-      el("h3", {}, "添加 / 编辑 MCP"),
-      el("label", { for: "mcp-name" }, "服务名称"),
+      el("h3", {}, rdText("添加 / 编辑 MCP")),
+      el("label", { for: "mcp-name" }, rdText("服务名称")),
       name,
       el(
         "label",
         { class: "mcp-editor-mode" },
         advanced,
-        " 使用完整 JSON 编辑",
+        rdText(" 使用完整 JSON 编辑"),
       ),
       fields,
       jsonPanel,
       el(
         "p",
         { class: "help" },
-        "已有密钥以 [redacted] 隐藏，保留它可沿用原值。MCP 命令在运行 Codex 的主机上执行。",
+        rdText("已有密钥以 [redacted] 隐藏，保留它可沿用原值。MCP 命令在运行 Codex 的主机上执行。"),
       ),
       el(
         "div",
         { class: "actions" },
         button(
-          "保存配置",
+          rdText("保存配置"),
           () =>
             save(
               name.value.trim(),
@@ -797,17 +797,17 @@ async function renderMCP(target) {
     el(
       "details",
       { class: "card mcp-import" },
-      el("summary", {}, "导入 MCP 配置"),
+      el("summary", {}, rdText("导入 MCP 配置")),
       el(
         "p",
         { class: "help" },
-        "合并导入，保留其他服务。env/http_headers 的密钥会隐藏；新环境需要补充。参数和 URL 中的敏感内容仍需自行检查。",
+        rdText("合并导入，保留其他服务。env/http_headers 的密钥会隐藏；新环境需要补充。参数和 URL 中的敏感内容仍需自行检查。"),
       ),
       file,
       importText,
-      el("label", {}, overwrite, " 允许覆盖同名服务"),
+      el("label", {}, overwrite, rdText(" 允许覆盖同名服务")),
       button(
-        "确认导入",
+        rdText("确认导入"),
         async () => {
           const bundle = JSON.parse(importText.value);
           const r = await api(cp("/mcp/import"), {
@@ -820,8 +820,8 @@ async function renderMCP(target) {
           });
           toast(
             r.reloadError
-              ? "配置已导入；重载失败：" + r.reloadError
-              : "配置已导入",
+              ? rdText("配置已导入；重载失败：") + r.reloadError
+              : rdText("配置已导入"),
           );
           await renderSettings();
         },
@@ -831,13 +831,13 @@ async function renderMCP(target) {
     el(
       "details",
       { class: "card" },
-      el("summary", {}, "连接状态与工具清单"),
+      el("summary", {}, rdText("连接状态与工具清单")),
       el("pre", {}, json(info.status)),
     ),
     el(
       "details",
       { class: "card" },
-      el("summary", {}, "有效配置与来源"),
+      el("summary", {}, rdText("有效配置与来源")),
       el(
         "pre",
         {},
@@ -850,13 +850,13 @@ async function renderMCP(target) {
 async function renderRuntime(target) {
   const cp = configPath(ws().id, instance().id);
   const result = el("div", { class: "runtime-checks" }),
-    raw = el("pre", {}, "点击下方按钮读取。");
+    raw = el("pre", {}, rdText("点击下方按钮读取。"));
   const check = button(
-    "运行连接诊断",
+    rdText("运行连接诊断"),
     async () => {
       check.disabled = true;
       result.replaceChildren(
-        el("p", { class: "loading" }, "正在检查可执行文件、工作区和原生接口…"),
+        el("p", { class: "loading" }, rdText("正在检查可执行文件、工作区和原生接口…")),
       );
       try {
         const r = await api(cp("/diagnostics"));
@@ -880,10 +880,10 @@ async function renderRuntime(target) {
                           : "muted",
                   },
                   {
-                    ok: "通过",
-                    error: "失败",
-                    warning: "警告",
-                    skipped: "未执行",
+                    ok: rdText("通过"),
+                    error: rdText("失败"),
+                    warning: rdText("警告"),
+                    skipped: rdText("未执行"),
                   }[c.status] || c.status,
                 ),
               ),
@@ -893,7 +893,7 @@ async function renderRuntime(target) {
                 ? el(
                     "details",
                     {},
-                    el("summary", {}, "命令与原始输出"),
+                    el("summary", {}, rdText("命令与原始输出")),
                     el(
                       "pre",
                       {},
@@ -921,11 +921,11 @@ async function renderRuntime(target) {
     el(
       "div",
       { class: "card" },
-      el("h3", {}, "连接诊断"),
+      el("h3", {}, rdText("连接诊断")),
       el(
         "p",
         {},
-        "检查工作区读写、Codex、沙箱实际执行及 App Server 接口，不调用模型。",
+        rdText("检查工作区读写、Codex、沙箱实际执行及 App Server 接口，不调用模型。"),
       ),
       check,
       result,
@@ -933,14 +933,14 @@ async function renderRuntime(target) {
     el(
       "div",
       { class: "card" },
-      el("h3", {}, "运行约定"),
-      el("p", {}, "工作区：" + ws().path),
+      el("h3", {}, rdText("运行约定")),
+      el("p", {}, rdText("工作区：") + ws().path),
       el(
         "p",
         {},
-        "单用户后台；workspace-write 沙箱、on-request 审批。浏览器关闭后任务继续；后台退出则中断当前运行。",
+        rdText("任务遵循当前助手或应用的沙箱与审批配置。浏览器关闭后任务继续；后台退出则中断当前运行。"),
       ),
-      button("读取可用模型", async () => {
+      button(rdText("读取可用模型"), async () => {
         const r = await api(cp("/models"));
         const models = r.data || [];
         $("#models").replaceChildren(
@@ -952,19 +952,19 @@ async function renderRuntime(target) {
             ),
           ),
         );
-        toast(`已载入 ${models.length} 个模型；新建会话前选择模型。`);
+        toast(rdFormat("已载入 ${0} 个模型；新建会话前选择模型。",models.length));
       }),
       el(
         "p",
         { class: "help" },
-        "模型与认证页可查看登录状态和登录命令。模型在创建会话时确定。",
+        rdText("模型与认证页可查看登录状态和登录命令。模型在创建会话时确定。"),
       ),
     ),
     el(
       "details",
       { class: "card" },
-      el("summary", {}, "Codex 有效配置"),
-      button("读取配置", async () => {
+      el("summary", {}, rdText("Codex 有效配置")),
+      button(rdText("读取配置"), async () => {
         raw.textContent = json(await api(cp("/config")));
       }),
       raw,
@@ -977,7 +977,7 @@ $("#session-scope").onchange = renderSessions;
 $("#rename-session").onclick = () =>
   safe(async () => {
     if (!state.session) return;
-    const title = prompt("会话名称", state.session.title);
+    const title = prompt(rdText("会话名称"), state.session.title);
     if (title !== null) await patchCurrent({ title });
   });
 $("#pin-session").onclick = () =>
@@ -989,7 +989,7 @@ $("#delete-session").onclick = () =>
     if (
       !state.session ||
       !confirm(
-        "删除此会话及 RunDesk 事件记录？原生 Codex 线程、上传文件和产物会保留。",
+        rdText("删除此会话及 RunDesk 事件记录？原生 Codex 线程、上传文件和产物会保留。"),
       )
     )
       return;
@@ -1021,12 +1021,12 @@ $("#event-live").onclick = () => {
   state.historyQuery = null;
   state.debugPaused = false;
   $("#event-search").disabled = false;
-  $("#event-pause").textContent = "暂停滚动";
+  $("#event-pause").textContent = rdText("暂停滚动");
   renderDebug();
 };
 $("#event-pause").onclick = () => {
   state.debugPaused = !state.debugPaused;
-  $("#event-pause").textContent = state.debugPaused ? "恢复滚动" : "暂停滚动";
+  $("#event-pause").textContent = state.debugPaused ? rdText("恢复滚动") : rdText("暂停滚动");
   renderDebug();
 };
 wireSuggestions();
@@ -1084,19 +1084,19 @@ async function renderInstances(target) {
     type: "text",
     value: current.defaultModel,
     list: "models",
-    placeholder: "留空使用 Codex 配置",
+    placeholder: rdText("留空使用 Codex 配置"),
   });
   const permissions = permissionEditor(current);
   const newName = el("input", {
     id: "new-instance-name",
     type: "text",
-    placeholder: "例如：视觉助手",
+    placeholder: rdText("例如：视觉助手"),
     maxlength: 160,
   });
   const account = el(
     "pre",
     { id: "instance-account" },
-    "点击读取当前实例的登录状态。",
+    rdText("点击读取当前实例的登录状态。"),
   );
   const shellQuote = (value) => "'" + value.replaceAll("'", "'\\''") + "'";
   const psQuote = (value) => "'" + value.replaceAll("'", "''") + "'";
@@ -1104,26 +1104,26 @@ async function renderInstances(target) {
     el(
       "div",
       { class: "card" },
-      el("label", { for: "settings-instance" }, "当前实例"),
+      el("label", { for: "settings-instance" }, rdText("当前实例")),
       select,
       el("h3", {}, current.name),
       el(
         "p",
         {},
         current.managed
-          ? "独立 Codex 配置目录；此实例可以在多个工作区创建会话。"
-          : "默认实例沿用启动 RunDesk 时的 CODEX_HOME 和原有会话。",
+          ? rdText("独立 Codex 配置目录；此实例可以在多个工作区创建会话。")
+          : rdText("默认实例沿用启动 RunDesk 时的 CODEX_HOME 和原有会话。"),
       ),
-      el("label", { for: "instance-name" }, "实例名称"),
+      el("label", { for: "instance-name" }, rdText("实例名称")),
       name,
-      el("label", { for: "instance-description" }, "用途说明"),
+      el("label", { for: "instance-description" }, rdText("用途说明")),
       description,
-      el("label", { for: "instance-model" }, "新会话默认模型"),
+      el("label", { for: "instance-model" }, rdText("新会话默认模型")),
       model,
-      button("读取可用模型", async()=>{const raw=await api(cp("/models"));$("#models").replaceChildren(...(raw.data||[]).map(m=>el("option",{value:m.id||m.model},m.displayName||m.id||m.model)));toast("已读取模型，选择后保存实例");}),
+      button(rdText("读取可用模型"), async()=>{const raw=await api(cp("/models"));$("#models").replaceChildren(...(raw.data||[]).map(m=>el("option",{value:m.id||m.model},m.displayName||m.id||m.model)));toast(rdText("已读取模型，选择后保存实例"));}),
       permissions.node,
       button(
-        "保存实例",
+        rdText("保存实例"),
         async () => {
           await api("/instances/" + current.id, {
             method: "PATCH",
@@ -1138,31 +1138,31 @@ async function renderInstances(target) {
           state.instances = await api("/instances");
           renderInstanceOptions(current.id);
           updateWorkspaceLabel();
-          toast("实例已保存；权限将在下一轮生效，默认模型用于新会话");
+          toast(rdText("实例已保存；权限将在下一轮生效，默认模型用于新会话"));
           await renderSettings();
         },
         "primary",
       ),
-      el("p", { class: "help" }, "配置目录：" + current.codexHome),
+      el("p", { class: "help" }, rdText("配置目录：") + current.codexHome),
       el(
         "p",
         { class: "help" },
-        "会话创建后固定绑定实例与工作区。实例共用本机操作系统用户；全局技能、项目文件和服务环境变量仍可能共享。",
+        rdText("会话创建后固定绑定实例与工作区。实例共用本机操作系统用户；全局技能、项目文件和服务环境变量仍可能共享。"),
       ),
     ),
     el(
       "div",
       { class: "card" },
-      el("h3", {}, "登录与重新加载"),
+      el("h3", {}, rdText("登录与重新加载")),
       el(
         "p",
         {},
-        "新实例需要配置凭据。请以运行后台的系统用户，在终端执行对应命令；登录完成后重新加载空闲连接。",
+        rdText("新实例需要配置凭据。请以运行后台的系统用户，在终端执行对应命令；登录完成后重新加载空闲连接。"),
       ),
       el(
         "details",
         {},
-        el("summary", {}, "Ubuntu / macOS 登录命令"),
+        el("summary", {}, rdText("Ubuntu / macOS 登录命令")),
         el(
           "pre",
           {},
@@ -1172,7 +1172,7 @@ async function renderInstances(target) {
       el(
         "details",
         {},
-        el("summary", {}, "Windows PowerShell 登录命令"),
+        el("summary", {}, rdText("Windows PowerShell 登录命令")),
         el(
           "pre",
           {},
@@ -1182,20 +1182,20 @@ async function renderInstances(target) {
       el(
         "p",
         { class: "help" },
-        "如后台使用 --codex 指定可执行文件，请将命令中的 codex 替换为该路径。凭据存储由 Codex 管理；使用系统密钥环时不保证账号隔离。",
+        rdText("如后台使用 --codex 指定可执行文件，请将命令中的 codex 替换为该路径。凭据存储由 Codex 管理；使用系统密钥环时不保证账号隔离。"),
       ),
       el(
         "div",
         { class: "actions" },
-        button("读取登录状态", async () => {
+        button(rdText("读取登录状态"), async () => {
           account.textContent = json(await api(cp("/account")));
         }),
-        button("重新加载空闲连接", async () => {
+        button(rdText("重新加载空闲连接"), async () => {
           const r = await api("/instances/" + current.id + "/reload", {
             method: "POST",
           });
           toast(
-            `已关闭 ${r.closedConnections} 个空闲连接，保留 ${r.busyConnections} 个忙碌连接`,
+            rdFormat("已关闭 ${0} 个空闲连接，保留 ${1} 个忙碌连接",r.closedConnections,r.busyConnections),
           );
           account.textContent = json(await api(cp("/account")));
         }),
@@ -1205,12 +1205,12 @@ async function renderInstances(target) {
     el(
       "div",
       { class: "card" },
-      el("h3", {}, "新建实例"),
-      el("p", {}, "创建独立配置目录，然后在 Skills 和 MCP 页配置这个助手。"),
-      el("label", { for: "new-instance-name" }, "名称"),
+      el("h3", {}, rdText("新建实例")),
+      el("p", {}, rdText("创建独立配置目录，然后在 Skills 和 MCP 页配置这个助手。")),
+      el("label", { for: "new-instance-name" }, rdText("名称")),
       newName,
       button(
-        "创建并切换",
+        rdText("创建并切换"),
         async () => {
           const created = await api("/instances", {
             method: "POST",
@@ -1220,7 +1220,7 @@ async function renderInstances(target) {
           renderInstanceOptions(created.id);
           await switchInstance();
           await renderSettings();
-          toast("已创建实例：" + created.name);
+          toast(rdText("已创建实例：") + created.name);
         },
         "primary",
       ),
