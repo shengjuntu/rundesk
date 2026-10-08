@@ -77,13 +77,29 @@ type DebugState struct {
 	Pause    *DebugPause    `json:"pause,omitempty"`
 }
 type DebugQuery struct {
-	Kind     string `json:"kind"`
-	Sequence int64  `json:"sequence,omitempty"`
+	Kind         string `json:"kind"`
+	Sequence     int64  `json:"sequence,omitempty"`
+	FromSequence int64  `json:"fromSequence,omitempty"`
 }
 
 func (q DebugQuery) Validate() error {
-	if q.Sequence < 0 {
+	if q.Sequence < 0 || q.FromSequence < 0 {
 		return fmt.Errorf("invalid snapshot sequence")
+	}
+	if q.Kind == "diff" {
+		if q.Sequence == 0 || q.FromSequence == 0 {
+			return fmt.Errorf("diff requires two fixed snapshot sequences")
+		}
+		return nil
+	}
+	if q.FromSequence != 0 {
+		return fmt.Errorf("fromSequence is only valid for diff")
+	}
+	if q.Kind == "evidence" {
+		if q.Sequence == 0 {
+			return fmt.Errorf("evidence requires a fixed event sequence")
+		}
+		return nil
 	}
 	switch q.Kind {
 	case "run", "context", "tools", "budget", "modules", "breakpoints", "actions":

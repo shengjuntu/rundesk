@@ -1,6 +1,6 @@
-# Kun 0.5 条件断点与结构化 Console
+# Kun 调试控制与 Console（0.6 更新）
 
-RunDesk 0.24.0 继续推进 K2。在既有单步、控制回执及检查点恢复上，增加四个安全边界的条件断点和无需模型的 Console。它没有 Go 源码行断点，也没有自然语言诊断 Agent。
+RunDesk 0.25.0 继续推进 K2。本版检查视图与快照差异见 [KUN-INSPECT.md](KUN-INSPECT.md)。在既有单步、控制回执及检查点恢复上，增加四个安全边界的条件断点和无需模型的 Console。它没有 Go 源码行断点，也没有自然语言诊断 Agent。
 
 ## 设置断点
 
@@ -37,9 +37,9 @@ RunDesk 0.24.0 继续推进 K2。在既有单步、控制回执及检查点恢�
 
 ## Console
 
-Console 与其余面板共用“固定快照 / 跟随现场”的选择。查询类型为运行状态、上下文、工具目录、预算、模块、断点与控制、动作账本。查询不会写事件、改变 revision、调用模型或工具，也不会把查询文字塞入目标会话。
+Console 与其余面板共用“固定快照 / 跟随现场”的选择。查询类型为运行状态、上下文、工具目录、预算、模块、断点与控制、动作账本及选定事件证据。查询不会写事件、改变 revision、调用模型或工具，也不会把查询文字塞入目标会话。
 
-上下文查询返回所选状态中的上下文，标记为 `state_context`，不暗示该状态已提交给模型。要检查实际模型请求，使用 Network/Elements 对应的模型开始快照。预算值对应返回的状态版本，不是即时计时器；未知 usage 不当作已知零费用。
+上下文查询在 `model.started` 快照返回实际 `model_request` 及原始请求证据；其余快照/现场返回 `state_context`，不暗示状态已经提交给模型。预算值对应返回的状态版本，不是即时计时器；未知 usage 不当作已知零费用。
 
 控制区先展示结构化提案，再执行原 `/kun/control` 协议。提案固定当前 runId、revision 和 requestId。查看历史时，控制仍明确针对当前运行；版本过期后须重新预览，不会自动换目标。只有显式选择“补充指令”并执行，才会向当前运行追加文本。
 
@@ -49,7 +49,7 @@ Console 与其余面板共用“固定快照 / 跟随现场”的选择。查询
 
 `GET /api/v1/sessions/{sid}/kun/query?kind=run&sequence=0`
 
-- 要求该会话 read 权限；kind 可为 run/context/tools/budget/modules/breakpoints/actions。
+- 要求该会话 read 权限；kind 可为 run/context/tools/budget/modules/breakpoints/actions/evidence/diff。evidence 要求正数 sequence；diff 同时要求正数 fromSequence 和 sequence，详细返回结构见 KUN-INSPECT.md。
 - sequence=0 或省略查询当前状态；正数查询同一会话的历史事件快照。负数、非法序号或未知类型拒绝。需要在线 worker；离线时仍可使用既有恢复检查入口打开日志，不自动恢复任务。
 - 返回 sessionId、runId、revision、sequence、kind、data；沿用宿主脱敏。
 
@@ -71,8 +71,8 @@ Console 与其余面板共用“固定快照 / 跟随现场”的选择。查询
 }
 ```
 
-Worker 协议 v5 新增 `query` 方法和控制 operation `set_breakpoints`；hello 声明 conditionalBreakpoints/debugQueries。RunDesk 和 Kun 必须同步升级。状态 schema 仍为 1，新增字段可选；旧快照可查，但旧引擎版本的检查点不跨版本恢复。
+Worker 协议 v6 扩展 `query` 的 evidence/diff 与 fromSequence；保留 v5 的 set_breakpoints。hello 声明 conditionalBreakpoints/debugQueries/snapshotDiff/eventEvidence。RunDesk 和 Kun 必须同步升级。状态 schema 仍为 1，新增字段可选；旧快照可查，但旧引擎版本的检查点不跨版本恢复。
 
 ## 仍待完成
 
-K2 具备基础条件断点、结构化 Console、单步/steer、控制幂等与安全检查点恢复，但不宣称完整 DevTools 验收。自然语言诊断、统一跨后端 DebugService/MCP 调试工具、同参数连续失败信号、上下文容量/费用/模块条件、完整图形化上下文树和浏览器/生产服务验收尚未完成。K3 分叉与可配置模块组合、K4 轨迹编译仍未实现。
+K2 具备基础条件断点、结构化 Console、单步/steer、控制幂等与安全检查点恢复，但不宣称完整 DevTools 验收。自然语言诊断、统一跨后端 DebugService/MCP 调试工具、同参数连续失败信号、上下文容量/费用/模块条件、高级上下文来源图、其余面板结构化和浏览器/生产服务验收尚未完成。K3 分叉与可配置模块组合、K4 轨迹编译仍未实现。

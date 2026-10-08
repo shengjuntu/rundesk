@@ -2,6 +2,7 @@ package kun
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	p "github.com/shengjuntu/rundesk/internal/kunproto"
 	"time"
@@ -143,6 +144,37 @@ func (e *Engine) Query(q p.DebugQuery) (p.DebugResult, error) {
 		data = map[string]any{"status": s.Status, "phase": s.Phase, "step": s.Step, "error": s.Error, "resumedFrom": s.ResumedFrom, "approval": s.Approval, "pause": s.Debug.Pause, "pendingCount": len(s.Pending)}
 	case "context":
 		data = map[string]any{"capture": "state_context", "messages": s.Messages, "skills": s.Skills, "toolDefinitions": s.ToolDefinitions}
+		if q.Sequence > 0 {
+			event, err := e.j.event(q.Sequence)
+			if err != nil {
+				return p.DebugResult{}, err
+			}
+			if event.Type == "kun/model.started" {
+				var payload struct {
+					Request json.RawMessage `json:"request"`
+				}
+				if err := json.Unmarshal(event.Data, &payload); err != nil {
+					return p.DebugResult{}, err
+				}
+				data = map[string]any{"capture": "model_request", "request": payload.Request, "skills": s.Skills, "evidence": event}
+			}
+		}
+	case "evidence":
+		event, err := e.j.event(q.Sequence)
+		if err != nil {
+			return p.DebugResult{}, err
+		}
+		data = event
+	case "diff":
+		from, err := e.j.snapshot(q.FromSequence)
+		if err != nil {
+			return p.DebugResult{}, err
+		}
+		diff, err := diffSnapshots(from, p.Snapshot{Sequence: q.Sequence, State: s})
+		if err != nil {
+			return p.DebugResult{}, err
+		}
+		data = diff
 	case "tools":
 		data = map[string]any{"definitions": s.ToolDefinitions, "mcpTools": s.MCPTools, "servers": s.MCP, "approvalPolicy": s.ApprovalPolicy}
 	case "budget":

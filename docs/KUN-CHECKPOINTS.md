@@ -1,6 +1,6 @@
-# Kun 安全检查点恢复（0.4 引入，0.5 更新）
+# Kun 安全检查点恢复（0.4 引入，0.6 更新）
 
-RunDesk 0.23.0 引入，0.24.0 保留 K2 中的“最近安全检查点显式继续”。它是同一会话中的新运行，不是任意历史回放、分叉或文件系统回滚。K2 尚未整体完成。
+RunDesk 0.23.0 引入，0.25.0 保留 K2 中的“最近安全检查点显式继续”。它是同一会话中的新运行，不是任意历史回放、分叉或文件系统回滚。K2 尚未整体完成。
 
 ## 使用
 
@@ -37,7 +37,7 @@ SQLite 在一次事务内写入状态、事件和最新安全检查点；在 `mo
 - `POST /api/v1/sessions/{sid}/kun/resume`：要求会话 run 权限及 `Idempotency-Key`，请求体为上述 `selection`。仍通过既有队列预留、并发和进程容量检查；接收前复核提交凭据。
 - `selection` 含 `sourceRunId`、`sequence`、`expectedStateRevision`、`workerEpoch`。它仅定位服务端保存的内容，不接受编辑消息、替换结果或注入配置。
 - 恢复中新发生的 MCP 逐次审批仍要求 approvals scope。应用不能检查或恢复其他应用会话。
-- Worker JSONL 协议 v5 新增 `checkpoint`；恢复通过 `start.resume` 提交。内核目录锁保证同一执行目录只运行一个受管 worker，epoch 防止重启后复用旧恢复选择；尚无分布式租约/daemon。
+- Worker JSONL 当前协议 v6 保留 `checkpoint`（v4 引入）；恢复通过 `start.resume` 提交。内核目录锁保证同一执行目录只运行一个受管 worker，epoch 防止重启后复用旧恢复选择；尚无分布式租约/daemon。
 - 来源在 `kun/run.started.data.resumedFrom`、状态 `resumedFrom` 及宿主 `run/input.kunResume` 中可查。正常事件游标继续递增，历史记录不覆盖。
 
 ## 未覆盖

@@ -10,14 +10,14 @@ Built with Go and plain HTML/JavaScript. Node.js is not required to run RunDesk 
 
 ![RunDesk conversation workspace](docs/screenshots/0.16.0/chat-en.png)
 
-## Kun engine (0.24.0)
+## Kun engine (0.25.0)
 
-Kun 0.5 adds typed conditional breakpoints before/after model and tool calls, optional debug pause deadlines, and a structured Console for read-only queries and explicit control proposals. Rules and hit counts persist through safe checkpoint recovery. Protocol v5 requires paired binaries. See [debug scope and limits](docs/KUN-DEBUG.md) and [checkpoint recovery](docs/KUN-CHECKPOINTS.md).
+Kun 0.6 adds paired call evidence, an ordered view of actual model input, and read-only snapshot comparisons with redacted, bounded previews. Conditional breakpoints, Console controls and safe checkpoint recovery remain available. Protocol v6 requires paired binaries. See [inspection and diff](docs/KUN-INSPECT.md), [debug controls](docs/KUN-DEBUG.md), and [plan progress](docs/KUN-PROGRESS.md).
 
 
 Kun shares this repository with RunDesk and runs in a separate worker process. Build with Go 1.25.12+ using `make build`, then launch `./bin/rundesk --data ./data`. Open **Agent engine** in configuration, select Kun, configure an OpenAI-compatible endpoint/model, and create a new session. Codex is not required for Kun.
 
-Kun 0.5 supports text model calls, workspace file tools, explicit Skills, and MCP over stdio or finite Streamable HTTP. Configure MCP in the existing tools page: rules default to per-call approval; an explicit always-allow rule applies to the next run. DevTools shows Network, Elements, Sources, Performance, Console, Layers and MCP state in Application. Pause, step, supplemental instructions and cancellation are available. Plugins, historical rollback, forks and trajectory compilation remain unimplemented.
+Kun 0.6 supports text model calls, workspace file tools, explicit Skills, and MCP over stdio or finite Streamable HTTP. Configure MCP in the existing tools page: rules default to per-call approval; an explicit always-allow rule applies to the next run. DevTools shows Network, Elements, Sources, Performance, Console, Layers and MCP state in Application. Pause, step, supplemental instructions and cancellation are available. Plugins, historical rollback, forks and trajectory compilation remain unimplemented.
 
 See [Kun implementation and limits](docs/KUN.md). Thanks to PiG and Pi contributors: selected source files, pinned revision, adaptations and preserved MIT licenses are recorded in [UPSTREAM.md](docs/UPSTREAM.md).
 

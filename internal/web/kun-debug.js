@@ -40,7 +40,7 @@ function kunPolicyEditor(initial={}){
 }
 
 function kunConsole({sid,getCurrent,getSelected,refresh}){
- const query=el("select",{},...Object.entries({run:"运行状态",context:"上下文",tools:"工具目录",budget:"预算",modules:"模块",breakpoints:"断点与控制",actions:"动作账本"}).map(([value,label])=>el("option",{value},label)));
+ const query=el("select",{},...Object.entries({run:"运行状态",context:"上下文",tools:"工具目录",budget:"预算",modules:"模块",breakpoints:"断点与控制",actions:"动作账本",evidence:"选定事件证据"}).map(([value,label])=>el("option",{value},label)));
  const target=el("p",{class:"help"}),feedback=el("p",{role:"status"}),history=el("div",{class:"kun-console-history"});
  const append=(title,data)=>{history.prepend(el("details",{open:true},el("summary",{},title),el("pre",{},JSON.stringify(data,null,2))));while(history.children.length>20)history.lastElementChild.remove();};
  const inspect=button("执行只读查询",async()=>{

@@ -6,7 +6,7 @@ const assert=require('assert');
 const path=require('node:path'),os=require('node:os');
 const root=path.resolve(__dirname,'..');
 const scratch=fs.mkdtempSync(path.join(os.tmpdir(),'rundesk-kun-ui-'));
-const pictures=path.join(root,'docs/screenshots/0.24.0');fs.mkdirSync(pictures,{recursive:true});
+const pictures=path.join(root,'docs/screenshots/0.25.0');fs.mkdirSync(pictures,{recursive:true});
 (async()=>{
  let calls=0,server,browser;const requests=[];const errors=[];
  const model=http.createServer(async(req,res)=>{
@@ -62,7 +62,18 @@ const pictures=path.join(root,'docs/screenshots/0.24.0');fs.mkdirSync(pictures,{
   await dialog.locator('.kun-call-list button').last().click();
   await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-detail')?.textContent.includes('"schemaVersion": 1'));
   await page.screenshot({path:pictures+'/kun-elements.png'});
-  const selectedSnapshot=JSON.parse(await dialog.locator('.kun-detail').innerText()).sequence;
+  const selectedSnapshot=Number(await dialog.locator('.kun-context').getAttribute('data-sequence'));
+  assert((await dialog.locator('.kun-context').innerText()).includes('实际模型请求'));
+  const messageDetails=dialog.locator('.kun-context-messages details').first();await messageDetails.locator('summary').first().click();
+  await dialog.getByRole('button',{name:'刷新记录',exact:true}).click();assert(await messageDetails.evaluate(n=>n.open),'refresh collapsed the open message');
+  const diff=dialog.locator('.kun-diff');await diff.locator('summary').first().click();
+  await diff.getByRole('button',{name:'设为比较起点',exact:true}).click();
+  await dialog.locator('.kun-call-list button').first().click();
+  await diff.getByRole('button',{name:'比较到所选快照',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('.kun-diff-result')?.textContent.includes('/messages'));
+  assert.equal(calls,2,'snapshot diff called provider');
+  await page.screenshot({path:pictures+'/kun-diff.png'});
+  await dialog.locator('.kun-call-list button').last().click();
   await dialog.getByRole('button',{name:'Layers · 模块',exact:true}).click();
   const layers=JSON.parse(await dialog.locator('.kun-detail').innerText());
   assert.equal(layers.sequence,selectedSnapshot);assert.equal(Object.keys(layers.modules).length,4);assert.equal(layers.harness.id,'tool-loop-v1');
@@ -114,6 +125,6 @@ const pictures=path.join(root,'docs/screenshots/0.24.0');fs.mkdirSync(pictures,{
   await page.screenshot({path:pictures+'/kun-mobile.png'});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false,'mobile overflow');
   assert.deepEqual(errors,[],'browser errors');
-  const report={passed:true,modelCalls:calls,checks:['UI config','model/tool step boundaries','steer before next request','snapshot inspection','reported usage','budget settings','four module states','fixed snapshot across panels and refresh','live inspection','conditional after-model breakpoint','Console read-only query and control proposal','explicit checkpoint recovery','reload persistence','mobile viewport'],pageErrors:errors};fs.writeFileSync(path.join(root,'docs/kun-ui-validation.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
+  const report={passed:true,modelCalls:calls,checks:['UI config','model/tool step boundaries','steer before next request','actual request context tree','snapshot diff','expanded details survive refresh','snapshot inspection','reported usage','budget settings','four module states','fixed snapshot across panels and refresh','live inspection','conditional after-model breakpoint','Console read-only query and control proposal','explicit checkpoint recovery','reload persistence','mobile viewport'],pageErrors:errors};fs.writeFileSync(path.join(root,'docs/kun-ui-validation.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
  }finally{if(browser)await browser.close();if(server&&server.exitCode===null&&server.signalCode===null){server.kill('SIGTERM');await new Promise(resolve=>server.once('exit',resolve));}model.closeAllConnections();model.close();fs.rmSync(scratch,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1});

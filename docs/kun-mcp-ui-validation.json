@@ -1,7 +1,7 @@
 {
-  "version": "0.24.0",
+  "version": "0.25.0",
   "status": "not_run",
   "passed": null,
-  "reason": "No Chromium executable in this validation environment. JavaScript syntax checked; updated Playwright script supplied.",
+  "reason": "No Chromium executable. Updated browser scenarios are supplied but not run. Node inspector logic regressions and JavaScript syntax checks passed; these do not validate browser layout.",
   "previousVersionEvidence": "kun-mcp-ui-validation-0.21.0.json"
 }

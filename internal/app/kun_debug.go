@@ -11,13 +11,21 @@ import (
 func (s *Server) kunDebugRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/sessions/{sid}/kun/query", func(w http.ResponseWriter, r *http.Request) {
 		q := p.DebugQuery{Kind: r.URL.Query().Get("kind")}
-		if value := r.URL.Query().Get("sequence"); value != "" {
-			seq, err := strconv.ParseInt(value, 10, 64)
+		for name, target := range map[string]*int64{"sequence": &q.Sequence, "fromSequence": &q.FromSequence} {
+			values := r.URL.Query()[name]
+			if len(values) == 0 {
+				continue
+			}
+			if len(values) != 1 {
+				respond(w, nil, failure(400, "invalid_debug_query", "重复快照参数"))
+				return
+			}
+			seq, err := strconv.ParseInt(values[0], 10, 64)
 			if err != nil || seq < 0 {
 				respond(w, nil, failure(400, "invalid_debug_query", "无效快照序号"))
 				return
 			}
-			q.Sequence = seq
+			*target = seq
 		}
 		if err := q.Validate(); err != nil {
 			respond(w, nil, failure(400, "invalid_debug_query", err.Error()))

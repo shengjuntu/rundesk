@@ -43,15 +43,28 @@ window.RunDeskKun={
   dialog=el("dialog",{id:"kun-devtools",class:"kun-devtools"});
   const title=el("h2",{},"Kun Agent DevTools");
   const close=button("关闭",()=>{dialog.close();dialog.remove();});
-  const summary=el("p",{class:"help"}),feedback=el("p",{role:"status"}),list=el("div",{class:"kun-call-list"}),detail=el("pre",{class:"kun-detail"});
+  const summary=el("p",{class:"help"}),feedback=el("p",{role:"status"}),list=el("div",{class:"kun-call-list"}),detail=el("div",{class:"kun-detail"});
   const tabs=el("div",{class:"tabs"}),controls=el("div",{class:"kun-controls"});
   let panel="network",current=null,selected=null,events=[],recoveryCheck=null;const snapshots=new Map();
   const inspectState=()=>selected?snapshots.get(selected.data.sequence)?.state:null;
-  const loadSelected=async()=>{if(selected&&!snapshots.has(selected.data.sequence)){try{snapshots.set(selected.data.sequence,await api("/sessions/"+sid+"/kun/snapshots/"+selected.data.sequence));}catch(e){feedback.textContent=e.message;}}};
-  const selectedDetail=event=>panel==="elements"?{runId:event.data.runId,sequence:event.data.sequence,request:event.data.data.request,snapshot:snapshots.get(event.data.sequence)??"点击步骤以读取持久化快照"}:event.data;
+  const loadSelected=async()=>{const event=selected;if(event&&!snapshots.has(event.data.sequence)){try{
+   snapshots.set(event.data.sequence,await api("/sessions/"+sid+"/kun/snapshots/"+event.data.sequence));
+   while(snapshots.size>12){const key=[...snapshots.keys()].find(k=>k!==selected?.data.sequence);if(key===undefined)break;snapshots.delete(key);}
+  }catch(e){if(selected===event)feedback.textContent=e.message;}}};
+  const selectEvent=async event=>{selected=event;redraw();await loadSelected();redraw();};
   const kinds={network:"Network · 调用",elements:"Elements · 上下文",sources:"Sources · 控制",performance:"Performance · 用量",application:"Application · MCP",layers:"Layers · 模块",console:"Console · 查询"};
+  let detailKey="";
   const redraw=()=>{
-   list.replaceChildren();detail.textContent="";
+   const key=panel+":"+(selected?.data.sequence||"live");
+   const same=key===detailKey;
+   const opened=same?[...detail.querySelectorAll("details")].map(d=>d.open):[];
+   const scroll=same?detail.scrollTop:0;
+   paint();
+   if(same)[...detail.querySelectorAll("details")].forEach((d,n)=>{d.open=!!opened[n];});
+   detail.scrollTop=scroll;detailKey=key;
+  };
+  const paint=()=>{
+   list.replaceChildren();detail.replaceChildren();diffView.update();
    summary.textContent=current?"状态："+current.status+" · "+current.phase+" · 版本 "+current.revision+" · 模型步骤 "+current.step:"历史记录";
    summary.textContent+=(selected?" · 固定快照 #"+selected.data.sequence:" · 跟随现场");
    const inspected=selected?inspectState():current;
@@ -64,30 +77,52 @@ window.RunDeskKun={
    if(panel==="application"){detail.textContent=inspected?JSON.stringify({sequence:selected?.data.sequence,servers:inspected.mcp||[],tools:inspected.mcpTools||[],approvalPolicy:inspected.approvalPolicy},null,2):"当前快照不可用；可在 Network 查看保留的 MCP 记录。";return;}
    if(panel==="layers"){detail.textContent=inspected?JSON.stringify({sequence:selected?.data.sequence,harness:inspected.harness,modules:inspected.modules,budget:inspected.budget},null,2):"请选择可用快照或启动 worker。";return;}
    if(panel==="performance"){
-    const rows=events.filter(e=>e.method==="kun/model.completed"||e.method==="kun/tool.completed"||e.method==="kun/mcp.response").map(e=>({type:e.method,runId:e.data.runId,...e.data.data}));
+    const rows=events.filter(e=>(!selected||e.data.sequence<=selected.data.sequence)).filter(e=>e.method==="kun/model.completed"||e.method==="kun/tool.completed"||e.method==="kun/mcp.response").map(e=>({type:e.method,runId:e.data.runId,...e.data.data}));
     detail.textContent=JSON.stringify({budget:inspected?.budget,selectedSequence:selected?.data.sequence,calls:rows.filter(r=>!selected||r.runId===selected.data.runId).map(r=>({type:r.type,runId:r.runId,step:r.step,durationMs:r.durationMs,usage:r.usage??"unknown",tool:r.call?.function?.name,server:r.server,method:r.method}))},null,2);return;
    }
-   const calls=events.filter(e=>panel==="elements"?e.method==="kun/model.started":/^kun\/(model|tool)\.(started|completed)$/.test(e.method)||/^kun\/mcp\.(request|response)$/.test(e.method));
-   for(const event of calls){
-    const data=event.data.data||{};
-    const b=button("#"+event.data.sequence+" · "+(data.call?.function?.name||(data.server?data.server+" / "+data.method:"模型 "+(data.step||"")))+" · "+event.method.split(".").pop(),async()=>{
-     selected=event;
-     await loadSelected();
-     redraw();
-    });b.classList.toggle("selected",selected?.id===event.id);list.append(b);
+   if(panel==="elements"){
+    for(const event of events.filter(e=>e.method==="kun/model.started")){
+     const b=button("#"+event.data.sequence+" · 模型 "+event.data.data.step+" · "+event.data.runId,()=>selectEvent(event));
+     b.classList.toggle("selected",selected?.data.sequence===event.data.sequence);list.append(b);
+    }
+    detail.append(kunRenderContext(selected,selected?snapshots.get(selected.data.sequence):null,current));return;
    }
-   if(selected)detail.textContent=JSON.stringify(selectedDetail(selected),null,2);
+   const rows=kunCallRows(selected&&!events.some(e=>e.data.sequence===selected.data.sequence)?[selected,...events]:events);
+   for(const row of rows){
+    const event=row.end||row.start;
+    const b=button("#"+event.data.sequence+" · "+kunCallName(row)+" · "+kunCallStatus(row)+" · "+row.runId,()=>selectEvent(event));
+    b.classList.toggle("selected",row.events.some(e=>e.data.sequence===selected?.data.sequence));list.append(b);
+   }
+   const row=selected&&rows.find(r=>r.events.some(e=>e.data.sequence===selected.data.sequence));
+   if(row){
+    detail.append(kunRenderCall(row,selected.data.sequence));
+    if(row.start)detail.append(button("查看请求快照 #"+row.start.data.sequence,()=>selectEvent(row.start)));
+    if(row.end)detail.append(button("查看结果快照 #"+row.end.data.sequence,()=>selectEvent(row.end)));
+   }else detail.append(el("p",{},"选择左侧调用，检查请求、结果及证据序号。"));
   };
   for(const [key,label]of Object.entries(kinds)){const b=button(label,async()=>{panel=key;await loadSelected();redraw();});b.dataset.panel=key;tabs.append(b);}
-  const refresh=async()=>{
-   feedback.textContent="";
-   let after=0;events=[];for(let page=0;page<20;page++){
-    const value=await api("/sessions/"+sid+"/events?after="+after+"&limit=1000");
-    const batch=Array.isArray(value)?value:value.events||value.items||[];
-    events.push(...batch.filter(e=>e.method.startsWith("kun/")));if(!batch.length||batch.length<1000)break;after=batch.at(-1).id;
-   }
-   try{current=await api("/sessions/"+sid+"/kun/state");}catch(e){current=null;feedback.textContent=e.message;}
-   redraw();
+  let refreshPending=null,lastEventId=0,historyLimited=false,retainedBytes=0;const eventSizes=new WeakMap();
+  const refresh=()=>{
+   if(refreshPending)return refreshPending;
+   refreshPending=(async()=>{
+    // Incremental host-event cursor; commit only complete fetches, and serialize
+    // manual/timer refreshes so an older response cannot rewind the cursor.
+    let after=lastEventId;const incoming=[];
+    for(let page=0;page<2;page++){
+     const value=await api("/sessions/"+sid+"/events?after="+after+"&limit=1000");
+     const batch=Array.isArray(value)?value:value.events||value.items||[];
+     if(!batch.length)break;
+     incoming.push(...batch.filter(e=>e.method.startsWith("kun/")));after=batch.at(-1).id;
+     if(batch.length<1000)break;
+    }
+    for(const event of incoming){const bytes=JSON.stringify(event).length*2;eventSizes.set(event,bytes);retainedBytes+=bytes;events.push(event);}lastEventId=after;
+    let trim=0;while(events.length-trim>1&&(events.length-trim>20000||retainedBytes>64*1024*1024)){retainedBytes-=eventSizes.get(events[trim++])||0;historyLimited=true;}
+    if(trim)events=events.slice(trim);
+    try{current=await api("/sessions/"+sid+"/kun/state");}catch(e){current=null;feedback.textContent=e.message;}
+    redraw();
+    if(historyLimited)summary.textContent+=" · 仅保留最近已加载事件（20000 条 / 64 MiB 上限），部分请求/结果可能缺失";
+   })().finally(()=>{refreshPending=null;});
+   return refreshPending;
   };
   for(const [op,label]of [["pause","暂停"],["resume","继续"],["step","单步"],["cancel","停止"],["approve","允许本次工具调用"],["reject","拒绝本次工具调用"]]){
    controls.append(button(label,async()=>{
@@ -106,6 +141,7 @@ window.RunDeskKun={
      policyStatus.textContent="规则已更新："+receipt.status+"。已有暂停需显式继续。";policyBase=null;await refresh();
     }catch(e){policyStatus.textContent=e.message;}
    }),policyStatus);
+  const diffView=kunDiffView({sid,getSelected:()=>selected});
   const consoleView=kunConsole({sid,getCurrent:()=>current,getSelected:()=>selected,refresh});
   const steer=el("textarea",{rows:"2",placeholder:"给当前运行补充文本指令"});
   const recoveryStatus=el("p",{role:"status",class:"help"});
@@ -129,7 +165,7 @@ window.RunDeskKun={
   controls.append(steer,button("提交补充指令",async()=>{
    if(!current)return;try{const v=await api("/sessions/"+sid+"/kun/control",{method:"POST",body:{requestId:crypto.randomUUID(),runId:current.runId,expectedStateRevision:current.revision,operation:"steer",text:steer.value}});feedback.textContent="补充指令："+v.status;steer.value="";}catch(e){feedback.textContent=e.message;}
   }));
-  dialog.append(el("div",{class:"dialog-head"},title,close),summary,tabs,button("刷新记录",refresh),button("跟随现场",()=>{selected=null;redraw();}),controls,consoleView.node,feedback,el("div",{class:"kun-inspector"},list,detail));
+  dialog.append(el("div",{class:"dialog-head"},title,close),summary,tabs,button("刷新记录",refresh),button("跟随现场",()=>{selected=null;redraw();}),controls,consoleView.node,feedback,diffView.node,el("div",{class:"kun-inspector"},list,detail));
   document.body.append(dialog);dialog.showModal();await refresh();
   let refreshing=false;
   const timer=setInterval(async()=>{if(!dialog.isConnected||!dialog.open){clearInterval(timer);return;}if(refreshing)return;refreshing=true;try{await refresh();}catch(e){feedback.textContent=e.message;}finally{refreshing=false;}},1500);

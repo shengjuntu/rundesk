@@ -15,6 +15,7 @@ import (
 	"time"
 
 	kc "github.com/shengjuntu/rundesk/internal/adapters/kun"
+	"github.com/shengjuntu/rundesk/internal/redaction"
 	"github.com/shengjuntu/rundesk/internal/rpc"
 	"github.com/shengjuntu/rundesk/internal/store"
 )
@@ -433,34 +434,9 @@ func redact(v any) any {
 	b, _ := json.Marshal(v)
 	var x any
 	_ = json.Unmarshal(b, &x)
-	var walk func(any) any
-	walk = func(x any) any {
-		switch t := x.(type) {
-		case map[string]any:
-			for k, v := range t {
-				if sensitiveField(k) {
-					t[k] = "[redacted]"
-				} else {
-					t[k] = walk(v)
-				}
-			}
-		case []any:
-			for i, v := range t {
-				t[i] = walk(v)
-			}
-		}
-		return x
-	}
-	return walk(x)
+	return redaction.Fields(x)
 }
-func sensitiveField(key string) bool {
-	key = strings.NewReplacer("_", "", "-", "").Replace(strings.ToLower(key))
-	switch key {
-	case "env", "httpheaders", "authorization", "accesstoken", "refreshtoken", "apikey", "password", "bearertoken", "idtoken":
-		return true
-	}
-	return false
-}
+func sensitiveField(key string) bool { return redaction.SensitiveField(key) }
 func (m *Manager) getHandle(id string) (*handle, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

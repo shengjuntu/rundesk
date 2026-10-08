@@ -132,3 +132,14 @@ func (j *journal) snapshot(seq int64) (p.Snapshot, error) {
 	}
 	return v, e
 }
+
+func (j *journal) event(seq int64) (p.Event, error) {
+	var raw []byte
+	err := j.db.QueryRow("SELECT data FROM events WHERE seq=?", seq).Scan(&raw)
+	var event p.Event
+	if err == nil {
+		err = json.Unmarshal(raw, &event)
+	}
+	event.Sequence = seq
+	return event, err
+}

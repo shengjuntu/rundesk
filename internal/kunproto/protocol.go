@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-const Version = 5
-const EngineVersion = "0.5.0"
+const Version = 6
+const EngineVersion = "0.6.0"
 const MaxMessage = 8 << 20
 
 type Envelope struct {

@@ -1,8 +1,8 @@
-# Kun 0.5 / RunDesk 0.24.0
+# Kun 0.6 / RunDesk 0.25.0
 
 在 0.2 的 MCP 基础上增加 K1 核心模块与执行约束。采用已确认的结构：**分进程、同仓库、选择性复制 PiG 源码并自主发展**。本版包含模型／工具循环、MCP 配置与审批、固定四模块、调用前参数校验、预算、运行记录、上下文检查和基础调试控制；不代表 KUN-DESIGN-v0.2 的所有阶段已经实现。
 
-固定模块与预算见 [K1 核心说明](KUN-K1-CORE.md)。安全续跑见 [检查点恢复](KUN-CHECKPOINTS.md)。本版新增 [条件断点与 Console](KUN-DEBUG.md)，变更见 [0.24.0 发布记录](RELEASE-0.24.0.md)。
+固定模块与预算见 [K1 核心说明](KUN-K1-CORE.md)。安全续跑见 [检查点恢复](KUN-CHECKPOINTS.md)。调试控制见 [条件断点与 Console](KUN-DEBUG.md)。本版新增 [调用证据、上下文树与差异](KUN-INSPECT.md)，阶段状态见 [开发进度](KUN-PROGRESS.md)，变更见 [0.25.0 发布记录](RELEASE-0.25.0.md)。
 
 ## 构建和启动
 
@@ -61,7 +61,7 @@ Kun 独占 `<data>/kun/sessions/<sessionId>/state.db`，RunDesk 的业务数据�
 | MCP | stdio、Streamable HTTP JSON/SSE；每轮固定服务、权限和工具定义 |
 | 会话 | 多轮文本历史；系统提示词按当前配置重新构建 |
 | Network | 模型请求体、完整模型结果、工具参数与结果，以及 MCP initialize / tools/list / tools/call 请求与响应、耗时（均受大小上限约束） |
-| Elements | 请求时的有效消息、工具定义，以及对应持久化状态快照 |
+| Elements | 有序消息、实际请求/状态上下文区分、技能来源、工具定义、折叠原始证据 |
 | Sources | 请求暂停、继续、执行一个模型／工具步骤、文本补充、停止、单次 MCP 允许/拒绝、最近检查点恢复、条件断点与暂停期限 |
 | Performance | 模型／工具耗时和服务实际报告的 token 用量；不推算未报告数据或价格 |
 | Application | MCP 服务状态、配置版本、工具映射与审批策略；可固定历史快照，尚无记忆存储视图 |
@@ -85,7 +85,7 @@ Kun 独占 `<data>/kun/sessions/<sessionId>/state.db`，RunDesk 的业务数据�
 - **显式恢复**：失联或停止后可检查最近安全检查点并新建 run 继续；在途结果未知时拒绝，参见 [恢复范围](KUN-CHECKPOINTS.md)。
 - **持久化失败**：停止 worker，RunDesk 结束当前任务并报告错误；不继续执行未被记录的下一步。
 
-DevTools 每 1.5 秒刷新。选中调用后固定其快照，Elements/Layers/Application 共用该选择，切换与刷新不跳回现场；点击“跟随现场”清除固定选择。Sources 始终明确控制当前运行，不能控制历史快照。Elements 点击模型步骤时读取该步骤快照。当前只查询仍在线 worker 的完整快照；worker 回收后，RunDesk 轨迹保留模型请求/响应和工具事件。重新启动同一会话 worker 后可查询旧快照。本版不提供独立离线数据库浏览器。界面每次最多加载 20,000 条会话事件；API 可继续分页。
+DevTools 每 1.5 秒刷新。选中调用后固定其快照，Elements/Layers/Application 共用该选择，切换与刷新不跳回现场；点击“跟随现场”清除固定选择。Sources 始终明确控制当前运行，不能控制历史快照。Elements 点击模型步骤时读取该步骤快照。当前只查询仍在线 worker 的完整快照；worker 回收后，RunDesk 轨迹保留模型请求/响应和工具事件。重新启动同一会话 worker 后可查询旧快照。本版不提供独立离线数据库浏览器。界面增量分页，每次刷新最多取 2 页；最多保留 20,000 条已加载 Kun 事件，另按 JSON 字符估算 64 MiB 截断，选中快照缓存最多 12 份。达到上限时明确提示部分证据可能缺失；API 可继续分页。Network/Elements 展开内容和滚动位置在刷新时保留；Performance 固定快照不展示未来事件。快照差异只读，见 KUN-INSPECT.md。
 
 删除 RunDesk 会话会关闭 worker，但保留其执行记录目录以便调查；本版没有自动清理这些目录的策略。状态与上下文默认保存在本机，包含任务内容；不要把真实 data 目录加入源码仓库。
 
@@ -166,7 +166,7 @@ Network 记录 initialize、tools/list、tools/call 的业务请求/响应和耗
 
 ## 协议与 API
 
-worker 协议版本 5，每行一个 JSON 对象；stdout 仅输出协议，stderr 输出诊断。方法包括 `hello`、`start`、`state`、`events`、`snapshot`、`control`、`checkpoint`、`query`；`start.resume` 用于显式恢复。`hello` 宣告 `resumeCheckpoint=true`、`fork=false`、`mcp=true`、`mcpApproval=true`。最大消息为 8 MiB。升级时同时更新 RunDesk 与 Kun；旧版 worker 的握手会被拒绝。状态记录 schema 保持 1，新增字段为可选，旧记录可读取，但不匹配当前引擎版本或缺少恢复清单的记录不允许恢复。
+worker 协议版本 6，每行一个 JSON 对象；stdout 仅输出协议，stderr 输出诊断。方法包括 `hello`、`start`、`state`、`events`、`snapshot`、`control`、`checkpoint`、`query`；`start.resume` 用于显式恢复。`hello` 宣告 `snapshotDiff=true`、`eventEvidence=true`、`resumeCheckpoint=true`、`fork=false`、`mcp=true`、`mcpApproval=true`。最大消息为 8 MiB。升级时同时更新 RunDesk 与 Kun；旧版 worker 的握手会被拒绝。状态记录 schema 保持 1，新增字段为可选，旧记录可读取，但不匹配当前引擎版本或缺少恢复清单的记录不允许恢复。
 
 HTTP 同时支持 `/api` 和 `/api/v1`：
 - `PUT /instances/{iid}/agent-runtime`：管理员提交 `{revision, config}`。

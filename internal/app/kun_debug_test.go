@@ -68,11 +68,35 @@ func TestKunDebugReadScopesAndControlProjection(t *testing.T) {
 	if calls.Load() != 0 {
 		t.Fatal("queries called provider")
 	}
+	// The same read/ownership gate covers exact evidence and two-snapshot diffs.
+	for _, query := range []string{"kind=evidence&sequence=1", "kind=diff&fromSequence=1&sequence=1"} {
+		response = appRequest(handler, "GET", path+"query?"+query, "", reader, "")
+		if response.Code != 200 {
+			t.Fatal(response.Code, response.Body.String())
+		}
+		response = appRequest(handler, "GET", path+"query?"+query, "", foreign, "")
+		if response.Code != 403 {
+			t.Fatal("foreign evidence exposed", response.Code)
+		}
+	}
+	response = appRequest(handler, "GET", path+"state", "", reader, "")
+	var unchanged p.State
+	json.Unmarshal(response.Body.Bytes(), &unchanged)
+	if unchanged.Revision != before.Revision || calls.Load() != 0 {
+		t.Fatal("inspection changed execution")
+	}
+	for _, query := range []string{"kind=evidence&sequence=999999", "kind=diff&fromSequence=999999&sequence=1"} {
+		response = appRequest(handler, "GET", path+"query?"+query, "", reader, "")
+		if response.Code != 409 {
+			t.Fatal(response.Code, response.Body.String())
+		}
+	}
+
 	response = appRequest(handler, "GET", path+"query?kind=context", "", foreign, "")
 	if response.Code != 403 {
 		t.Fatal("cross-app query allowed", response.Code)
 	}
-	for _, query := range []string{"kind=shell", "kind=run&sequence=-1", "kind=run&sequence=1foo"} {
+	for _, query := range []string{"kind=shell", "kind=run&sequence=-1", "kind=run&sequence=1foo", "kind=diff", "kind=diff&sequence=1", "kind=diff&sequence=0&fromSequence=1", "kind=diff&sequence=1&fromSequence=bad", "kind=run&fromSequence=1", "kind=evidence", "kind=evidence&sequence=1&sequence=2"} {
 		response = appRequest(handler, "GET", path+"query?"+query, "", reader, "")
 		if response.Code != 400 {
 			t.Fatal(response.Code, response.Body.String())
