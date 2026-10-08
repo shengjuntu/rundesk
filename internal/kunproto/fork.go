@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const ForkSchema = 1
+const ForkSchema = 2
 const MaxForkBytes = 4 << 20
 const MaxReplayRecords = 128
 
@@ -32,6 +32,7 @@ type ForkPoints struct {
 }
 type ForkExport struct {
 	Selection ForkSelection `json:"selection"`
+	Mode      string        `json:"mode,omitempty"`
 }
 type ReplayRecord struct {
 	Sequence      int64  `json:"sequence"`
@@ -44,6 +45,7 @@ type ReplayRecord struct {
 	Status        string `json:"status"`
 }
 type ForkBundle struct {
+	Mode            string         `json:"mode"`
 	Schema          int            `json:"schema"`
 	Selection       ForkSelection  `json:"selection"`
 	State           State          `json:"state"`
@@ -75,10 +77,14 @@ type ForkState struct {
 	ReplayTotal     int         `json:"replayTotal"`
 }
 type ForkStart struct {
+	ConfirmLive bool       `json:"confirmLive,omitempty"`
 	Origin      ForkOrigin `json:"origin"`
 	Bundle      ForkBundle `json:"bundle"`
 	Instruction string     `json:"instruction"`
 }
+
+func (f *ForkState) Hybrid() bool { return f != nil && f.Origin.Mode == "hybrid" }
+
 type ReplayEvidence struct {
 	Mode           string `json:"mode"`
 	SourceSequence int64  `json:"sourceSequence"`

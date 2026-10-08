@@ -255,6 +255,22 @@ func TestPlanActCheckpointAndHybridRetainPlan(t *testing.T) {
 	if plans.Load() != 1 || acts.Load() != 2 || s.Fork.InheritedStep != 1 || s.Budget.ReportedTokens != 14 {
 		t.Fatal(s, plans.Load(), acts.Load())
 	}
+	liveRecording, err := e.ExportFork(p.ForkExport{Selection: selection, Mode: "live"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	live := newTestEngine(t)
+	request := liveRequest(in, liveRecording, "live-plan")
+	if _, err = live.Start(request); err != nil {
+		t.Fatal(err)
+	}
+	waitKun(t, live, "paused")
+	checkpointControl(t, live, "resume")
+	s = waitKun(t, live, "completed")
+	if plans.Load() != 1 || acts.Load() != 3 || s.Fork.InheritedStep != 1 || s.Fork.Origin.Mode != "live" {
+		t.Fatal(s, plans.Load(), acts.Load())
+	}
+
 }
 
 func TestPlanActSteerFollowsAdvisoryPlan(t *testing.T) {

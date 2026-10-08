@@ -10,11 +10,11 @@ Built with Go and plain HTML/JavaScript. Node.js is not required to run RunDesk 
 
 ![RunDesk conversation workspace](docs/screenshots/0.16.0/chat-en.png)
 
-## Kun Plan-Act and Harness comparison (0.33.0)
+## Kun Live forks (0.34.0)
 
-RunDesk 0.33.0 adds the first K3-C slice: two validated built-in compositions, a real Plan-Act policy with one explicit planning call before acting, and read-only Harness comparison between fixed snapshots in one session. Planning cannot dispatch tools and uses the same model/time/token budgets. Completed plans and exact module versions survive checkpoint recovery and Hybrid forks. See [Harness compositions](docs/KUN-HARNESS.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md).
+RunDesk 0.34.0 adds the first Live runtime forks: create a fixed preview from a stopped Kun run, review the current workspace and pending actions, then explicitly confirm real execution in a new session. Live uses current project files and reconnects MCP with fresh configuration and approval checks. It can repeat writes and external effects; independent execution records do not isolate or roll back the workspace. See [runtime forks](docs/KUN-FORKS.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md).
 
-[K3-B Hybrid forks](docs/KUN-FORKS.md) and [K3-A offline recording experiments](docs/KUN-EXPERIMENTS.md) remain available. Live forks, in-run module changes, arbitrary plugins, cross-session benchmarks and K4 optimization remain unimplemented. Snapshot comparisons are descriptive, not evidence of optimization gains. Kun is now **0.9.0 / worker protocol v9**: upgrade both binaries together. Old 0.8 records remain inspectable, but checkpoints and forks cannot execute across the version boundary. Codex retains host-side read-only inspection and native analysis; internal stepping, conditional breakpoints and full context snapshots remain unavailable.
+[Hybrid forks](docs/KUN-FORKS.md), [offline recording experiments](docs/KUN-EXPERIMENTS.md), and [Plan-Act / Harness comparison](docs/KUN-HARNESS.md) remain available. Hybrid still stops on replay misses. In-run module changes, arbitrary plugins, cross-session benchmarks and K4 optimization remain unimplemented. Kun is now **0.10.0 / worker protocol v10**: upgrade both binaries together. Old records remain inspectable, but checkpoints and fork previews cannot execute across versions. Real browser and remote-service acceptance remain outstanding. Codex retains host-side read-only inspection and native analysis; internal stepping, conditional breakpoints and full context snapshots remain unavailable.
 
 ## Codex quick start
 

@@ -28,7 +28,7 @@ async function renderKunSettings(target){
  el("label",{},"运行后端",kind),el("label",{},"Kun 模块组合",harness),el("p",{class:"help"},"Plan-Act 每个新轮次先生成一份显式计划，规划禁用工具，额外调用计入模型次数、token 和活动时间预算。保存后下一次新轮次生效；当前运行和检查点续跑保留原组合。其余三个模块使用完整历史、参数校验和固定目录。"),endpoint.node,model.node,key.node,steps.node,timeout.node,toolBudget.node,tokenBudget.node,activeBudget.node,failureBudget.node,el("p",{class:"help"},"token 阈值按服务报告的用量，在下一动作前检查；不能保证当前请求不超额。启用后如服务未报告用量，将停止后续执行。费用暂不估算。"),el("label",{},"系统提示词",system),
  el("label",{class:"kun-check"},write,"允许 Kun 写入项目内文件（仅限制内置文件工具）"),
  el("label",{class:"kun-check"},pause,"每次模型请求前暂停，供调试检查"),
- el("p",{class:"help"},"MCP 在工具 MCP 页面配置；其权限独立于内置文件工具。支持安全边界 Hybrid 分叉；工具仅录制回放。当前不支持 Shell、图像模型、文件回滚、Live 分叉或轨迹编译。"),
+ el("p",{class:"help"},"MCP 在工具 MCP 页面配置；其权限独立于内置文件工具。支持 Hybrid 录制回放与需明确确认的 Live 真实分叉。当前不支持 Shell、图像模型、文件回滚或轨迹编译。"),
  debuggerConfig.node,el("button",{type:"submit",class:"primary"},"保存引擎配置"),status);
  form.onsubmit=async event=>{
   event.preventDefault();status.textContent="保存中…";
@@ -74,7 +74,7 @@ window.RunDeskKun={
    list.replaceChildren();detail.replaceChildren();diffView.update();updateControlButtons();
    dialog.dataset.panel=panel;list.classList.toggle("hidden",!["network","elements"].includes(panel));
    summary.textContent=current?"状态："+current.status+" · "+current.phase+" · 版本 "+current.revision+" · 模型步骤 "+current.step:"历史记录";
-   if(current?.fork)summary.textContent+=" · Hybrid · 工具仅回放";
+   if(current?.fork)summary.textContent+=current.fork.origin.mode==="live"?" · Live · 真实工具执行":" · Hybrid · 工具仅回放";
    if(historyLimited)summary.textContent+=" · 缓存已截断，部分事件可能缺失";
    if(historyPending)summary.textContent+=" · 正在补取历史事件";
    summary.textContent+=(selected?" · 固定快照 #"+selected.data.sequence:" · 跟随现场");
@@ -178,7 +178,7 @@ window.RunDeskKun={
   const consoleView=kunConsole({sid,getCurrent:()=>current,getSelected:()=>selected,refresh});
   const steer=el("textarea",{rows:"2",placeholder:"给当前运行补充文本指令"});
   const recoveryStatus=el("p",{role:"status",class:"help"});
-  const recoveryReasons={run_not_stopped:"当前运行尚未结束",run_still_closing:"运行正在关闭，请稍后重试",inflight_action_or_unapplied_control:"模型/工具结果未知，或有未应用指令",no_safe_checkpoint:"没有可用安全检查点（旧版本记录不能恢复）",runtime_manifest_changed:"配置、项目版本、凭据或技能已变化",checkpoint_incompatible:"引擎或模块版本不兼容",checkpoint_consumed:"检查点已使用",no_run:"会话没有运行记录"};
+  const recoveryReasons={live_use_new_fork:"Live 分支需重新创建固定预览",hybrid_use_new_fork:"Hybrid 分支需重新创建固定预览",run_not_stopped:"当前运行尚未结束",run_still_closing:"运行正在关闭，请稍后重试",inflight_action_or_unapplied_control:"模型/工具结果未知，或有未应用指令",no_safe_checkpoint:"没有可用安全检查点（旧版本记录不能恢复）",runtime_manifest_changed:"配置、项目版本、凭据或技能已变化",checkpoint_incompatible:"引擎或模块版本不兼容",checkpoint_consumed:"检查点已使用",no_run:"会话没有运行记录"};
   const recoverButton=button("从检查点继续",async()=>{
    if(controlBusy||!recoveryCheck?.eligible)return;controlBusy=true;updateControlButtons();
    try{const session=await api("/sessions/"+sid+"/kun/resume",{method:"POST",body:recoveryCheck.selection});
@@ -195,7 +195,7 @@ window.RunDeskKun={
     recoveryStatus.textContent=recoveryCheck.eligible?"可提交恢复：检查点 #"+recoveryCheck.selection.sequence+" · 待执行工具 "+recoveryCheck.pending+" · 已用工具调用 "+recoveryCheck.budget.toolCalls+"。保留既有工具结果，旧的一次性审批不复用。":"不能恢复："+(recoveryReasons[recoveryCheck.reason]||(recoveryCheck.reason.startsWith("budget_")?"执行预算已用尽："+recoveryCheck.reason.slice(7):recoveryCheck.reason));
    }catch(e){recoveryStatus.textContent=e.message;}
   }),recoverButton,recoveryStatus));
-  controls.append(button("预览 Hybrid 分叉",()=>window.RunDeskKunForks.open({sessionId:sid})));
+  controls.append(button("预览运行时分叉",()=>window.RunDeskKunForks.open({sessionId:sid})));
   const steerButton=button("提交补充指令",()=>{if(!steer.value.trim()){feedback.textContent="请输入补充指令。";return;}return sendControl("steer",steer.value);});
   controlButtons.set("steer",steerButton);controls.append(steer,steerButton);
   dialog.append(el("div",{class:"dialog-head"},title,close),summary,tabs,button("刷新记录",refresh),button("跟随现场",()=>{selected=null;redraw();}),controls,consoleView.node,feedback,diffView.node,el("div",{class:"kun-inspector"},list,detail));

@@ -1,6 +1,6 @@
 # K3-C 首批：内置组合、Plan-Act 与 Harness 对照
 
-对应 RunDesk 0.33.0 / Kun 0.9.0 / worker 协议 v9。K3-C 已有可运行的首批功能，Live 和运行中更换模块尚未实现。
+对应 RunDesk 0.34.0 / Kun 0.10.0 / worker 协议 v10。本页介绍 0.33 引入的内置组合与对照；0.34 另已实现 [Live 分叉首批](KUN-FORKS.md)，运行中更换模块尚未实现。
 
 ## 选择组合
 
@@ -29,7 +29,7 @@ harness 的 memory/planning/action/capability 字段可显式指定对应内置 
 
 每个普通新轮次只规划一次；工具反馈或 steer 不会自动触发重规划。规划前后的暂停/单步/断点沿用 before_model / after_model，模型事件携带 purpose=plan 或 act。规划调用计入 step、有效报告 token、活动时间和超时；模型次数设为 1 时可能只完成计划，随后因预算停止，不能当作任务完成。
 
-有效计划随安全检查点和 Hybrid 快照恢复；选中计划已完成的边界不会重复规划，选中规划前的边界会重新规划。继承预算、审批重置、目录校验和工具严格回放约束不变。恢复校验增加了所存 Harness 定义、四模块实现版本和 stateSchemaVersion 检查。Hybrid 添加说明消息时会相应移动计划的上下文插入位置。
+有效计划随安全检查点、Hybrid 和 Live 快照恢复；选中计划已完成的边界不会重复规划，选中规划前的边界会重新规划。继承预算、审批重置和目录校验约束不变；Hybrid 工具严格回放，Live 使用当前项目与真实工具。恢复校验增加了所存 Harness 定义、四模块实现版本和 stateSchemaVersion 检查。Hybrid / Live 添加说明消息时会相应移动计划的上下文插入位置。
 
 ## 检查与对照
 
@@ -41,6 +41,6 @@ Harness 对照在同一会话内读取两份明确选择的固定快照：在 Ne
 
 ## 兼容性和未完成项
 
-RunDesk 和 Kun 两个二进制需一起升级。Kun 0.8 及更早的检查点/分叉包不可在 0.9 直接续跑；历史仍可只读检查，先创建本版普通运行再生成新检查点或预览。默认 Tool Loop 的执行流程保持兼容。
+RunDesk 和 Kun 两个二进制需一起升级。Kun 0.9 及更早的检查点/分叉包不可在 0.10 直接续跑；历史仍可只读检查，先创建本版普通运行再生成新检查点或预览。默认 Tool Loop 的执行流程保持兼容。
 
-尚未实现 Live、运行中切换组合、更多 Memory/Action/Capability 实现、自动重规划、任意模块插件、跨会话 Harness 基准，以及 K4 的候选/IR/守卫/去优化/独立验证集。真实浏览器和真实远程服务验收仍待完成。证据见 [验证记录](KUN-VALIDATION.md)，整体状态见 [开发进度](KUN-PROGRESS.md)。
+尚未实现运行中切换组合、更多 Memory/Action/Capability 实现、自动重规划、任意模块插件、跨会话 Harness 基准，以及 K4 的候选/IR/守卫/去优化/独立验证集。真实浏览器和真实远程服务验收仍待完成。证据见 [验证记录](KUN-VALIDATION.md)，整体状态见 [开发进度](KUN-PROGRESS.md)。

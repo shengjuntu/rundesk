@@ -1,12 +1,16 @@
 {
-  "version": "0.33.0",
+  "version": "0.34.0",
   "passed": true,
-  "javascriptFiles": 64,
-  "nodeInteractionSuites": 4,
+  "javascriptFiles": 65,
+  "nodeInteractionSuites": 5,
   "openapiPaths": 150,
   "openapiOperations": 180,
   "uniqueParameters": true,
   "harnessConfigSchema": true,
-  "dependenciesUnchangedFrom": "0.32.0",
+  "livePreviewSchema": true,
+  "modeBinding": true,
+  "liveConfirmationSchema": true,
+  "forkAdminOperations": 5,
+  "dependenciesUnchangedFrom": "0.33.0",
   "browserAcceptance": "not_run"
 }

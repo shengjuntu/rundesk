@@ -73,4 +73,4 @@
 | 差异页 | 默认及最多 16 条 |
 | 原文分块 | 默认 4,000，最多 16,000 个 Unicode 字符；JSON 响应最多 4 MiB |
 
-离线记录实验首版仅 Kun 来源，不支持 Codex 记录编辑。当前 0.33 另有 [K3-B Hybrid](KUN-FORKS.md) 和 [K3-C Plan-Act / 内置组合 / Harness 对照](KUN-HARNESS.md)，独立于此处的记录编辑。Live、运行中换模块以及 K4 候选生成/验证/IR 尚未实现。验证见 [KUN-VALIDATION.md](KUN-VALIDATION.md)，完成度见 [KUN-PROGRESS.md](KUN-PROGRESS.md)。
+离线记录实验首版仅 Kun 来源，不支持 Codex 记录编辑。当前 0.34 另有 [K3-B/C Hybrid 与 Live](KUN-FORKS.md) 和 [K3-C Plan-Act / 内置组合 / Harness 对照](KUN-HARNESS.md)，独立于此处的记录编辑。运行中换模块以及 K4 候选生成/验证/IR 尚未实现。验证见 [KUN-VALIDATION.md](KUN-VALIDATION.md)，完成度见 [KUN-PROGRESS.md](KUN-PROGRESS.md)。

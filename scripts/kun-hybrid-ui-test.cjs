@@ -30,7 +30,7 @@ const root=path.resolve(__dirname,'..');vm.runInContext(fs.readFileSync(root+'/i
 const buttons=d=>d.querySelectorAll('button'),byText=(d,text)=>buttons(d).find(n=>n.textContent===text),field=(d,name)=>[...d.querySelectorAll('input'),...d.querySelectorAll('textarea'),...d.querySelectorAll('select')].find(n=>n.attrs['aria-label']===name);
 (async()=>{
  let d=ctx.window.RunDeskKunForks.open({sessionId:'source'});await flush();assert.equal(writes.length,0);assert.equal(field(d,'安全分叉边界').value,8);
- field(d,'Hybrid 分支标题').value='Experiment';field(d,'分支补充指令').value='new instruction';await byText(d,'生成固定预览').click();
+ field(d,'分支标题').value='Experiment';field(d,'分支补充指令').value='new instruction';await byText(d,'生成固定预览').click();
  assert.equal(created,1);assert.equal(started,0);assert.deepEqual(writes[0].body,{sessionId:'source',title:'Experiment',instruction:'new instruction',selection:{sourceRunId:'original',through:40,expectedStateRevision:99,workerEpoch:'epoch',sequence:8}});
  assert(d.textContent.includes('未命中立即停止'));assert(d.textContent.includes('继承模型调用'));assert.equal(d.querySelectorAll('img').length,0);assert.equal(d.querySelectorAll('script').length,0);
  const staleButton=byText(d,'启动或打开 Hybrid 分支');field(d,'分支补充指令').value='edited';field(d,'分支补充指令').emit('input');await staleButton.click();assert.equal(started,0,'edited preview was started');
@@ -42,6 +42,6 @@ const buttons=d=>d.querySelectorAll('button'),byText=(d,text)=>buttons(d).find(n
  // Closing while start is pending never navigates away from a later selection.
  delayed=deferred();const last=byText(d,'启动或打开 Hybrid 分支').click();d.close();delayed.resolve({id:'target-two'});await last;delayed=null;assert.deepEqual(selected,['target-one']);
  assert(writes.every(v=>v.path==='/kun-forks'||/^\/kun-forks\/[^/]+\/start$/.test(v.path)),'dialog controlled source');
- const report={version:'0.33.0',passed:true,scope:'Node DOM stub + shipped view code; browser layout not tested',checks:['preview does not start models','fixed source selection and expected hash','edits invalidate preview','duplicate start click guarded','literal text rendering','stale preview response ignored','closing dialog suppresses late navigation','no source control routes']};
+ const report={version:'0.34.0',passed:true,scope:'Node DOM stub + shipped view code; browser layout not tested',checks:['preview does not start models','fixed source selection and expected hash','edits invalidate preview','duplicate start click guarded','literal text rendering','stale preview response ignored','closing dialog suppresses late navigation','no source control routes']};
  fs.writeFileSync(root+'/docs/kun-hybrid-ui-validation.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
 })().catch(e=>{console.error(e);process.exitCode=1});

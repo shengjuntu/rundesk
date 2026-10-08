@@ -832,7 +832,7 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 	}
 	if s.KunFork != nil || in.KunFork != nil {
 		if s.KunFork == nil || in.KunFork == nil || in.KunFork.PreviewID != s.KunFork.PreviewID || s.RunID != "" || len(in.Files) > 0 || len(in.Skills) > 0 || in.KunResume != nil || recovery != nil {
-			return s, failure(409, "hybrid_single_run", "Hybrid 会话只允许固定预览的首次启动；重试实验请创建新分叉")
+			return s, failure(409, "hybrid_single_run", "分叉会话只允许固定预览的首次启动；重试实验请创建新分叉")
 		}
 	}
 	if in.KunResume != nil {

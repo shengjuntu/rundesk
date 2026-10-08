@@ -25,7 +25,7 @@ function kunRenderCall(row,sequence){
  if(!visible)return el("p",{},"此快照尚无调用证据。");
  const a=visible.start?.data,d=a?.data||{},b=visible.end?.data,r=b?.data||{};
  const node=el("section",{class:"kun-call-evidence"},el("h3",{},kunCallName(visible)),
-  kunFacts([["运行",row.runId],["结果",kunCallStatus(visible)],["请求事件",a?"#"+a.sequence:"未保留 / 未派发"],["结果事件",b?"#"+b.sequence:"此快照尚未记录"],["耗时",r.durationMs==null?"未知":r.durationMs+" ms"]]));
+  kunFacts([["运行",row.runId],["执行模式",(d.executionMode||r.executionMode)==="live"?"Live · 真实执行":(d.executionMode||r.executionMode)==="hybrid"?"Hybrid · 工具仅回放":"普通 / 旧记录"],["结果",kunCallStatus(visible)],["请求事件",a?"#"+a.sequence:"未保留 / 未派发"],["结果事件",b?"#"+b.sequence:"此快照尚未记录"],["耗时",r.durationMs==null?"未知":r.durationMs+" ms"]]));
  if(row.kind==="model"){
   node.append(kunFacts([["模型",d.request?.model],["输入消息",d.request?.messages?.length],["工具定义",d.request?.tools?.length],["服务报告用量",r.usage==null?"未知":kunPretty(r.usage)]]));
   if(b)node.append(el("h4",{},r.purpose==="plan"?"显式计划（未执行）":"模型回答"),el("pre",{},r.message?.content||"（无文本回答）"),kunRaw("模型工具调用",r.message?.tool_calls||[]));

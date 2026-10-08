@@ -1,9 +1,11 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -15,30 +17,46 @@ import (
 
 	kc "github.com/shengjuntu/rundesk/internal/adapters/kun"
 	p "github.com/shengjuntu/rundesk/internal/kunproto"
+	"github.com/shengjuntu/rundesk/internal/redaction"
 	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 type KunForkInput struct {
+	Mode        string          `json:"mode,omitempty"`
 	SessionID   string          `json:"sessionId"`
 	Selection   p.ForkSelection `json:"selection"`
 	Title       string          `json:"title"`
 	Instruction string          `json:"instruction"`
 }
 type KunForkPreview struct {
-	ID              string         `json:"id"`
-	Title           string         `json:"title"`
-	CreatedAt       string         `json:"createdAt"`
-	Hash            string         `json:"hash"`
-	Origin          p.ForkOrigin   `json:"origin"`
-	TargetSessionID string         `json:"targetSessionId"`
-	Instruction     string         `json:"instruction"`
-	Phase           string         `json:"phase"`
-	Step            int            `json:"step"`
-	Pending         int            `json:"pending"`
-	Budget          p.BudgetUsage  `json:"budget"`
-	Limits          p.BudgetLimits `json:"limits"`
-	MaxSteps        int            `json:"maxSteps"`
-	RecordCount     int            `json:"recordCount"`
+	Live            *KunLivePreview `json:"live,omitempty"`
+	ID              string          `json:"id"`
+	Title           string          `json:"title"`
+	CreatedAt       string          `json:"createdAt"`
+	Hash            string          `json:"hash"`
+	Origin          p.ForkOrigin    `json:"origin"`
+	TargetSessionID string          `json:"targetSessionId"`
+	Instruction     string          `json:"instruction"`
+	Phase           string          `json:"phase"`
+	Step            int             `json:"step"`
+	Pending         int             `json:"pending"`
+	Budget          p.BudgetUsage   `json:"budget"`
+	Limits          p.BudgetLimits  `json:"limits"`
+	MaxSteps        int             `json:"maxSteps"`
+	RecordCount     int             `json:"recordCount"`
+}
+type KunLiveToolPreview struct {
+	CallID           string `json:"callId"`
+	Name             string `json:"name"`
+	ArgumentsPreview string `json:"argumentsPreview"`
+	Truncated        bool   `json:"truncated"`
+}
+type KunLivePreview struct {
+	Workspace      string               `json:"workspace"`
+	AllowWrite     bool                 `json:"allowWrite"`
+	ApprovalPolicy string               `json:"approvalPolicy"`
+	MCPTools       int                  `json:"mcpTools"`
+	PendingTools   []KunLiveToolPreview `json:"pendingTools"`
 }
 type kunForkDraft struct {
 	Preview    KunForkPreview `json:"preview"`
@@ -46,7 +64,10 @@ type kunForkDraft struct {
 	ConfigHash string         `json:"configHash"`
 	Bundle     p.ForkBundle   `json:"bundle"`
 }
-type kunForkInput struct{ PreviewID string }
+type kunForkInput struct {
+	PreviewID   string
+	ConfirmLive bool
+}
 
 func forkDigest(v any) string { return fmt.Sprintf("%x", sha256.Sum256(p.JSON(v))) }
 func forkDraftHash(d kunForkDraft) string {
@@ -82,7 +103,7 @@ func (m *Manager) forkSource(sid string, fn func(Session, Workspace, *kc.Client)
 		return err
 	}
 	if s.RuntimeKind != "kun" || s.TraceOrigin != nil || s.KunFork != nil {
-		return failure(409, "fork_source_unsupported", "仅普通 Kun 会话可作为 Hybrid 来源")
+		return failure(409, "fork_source_unsupported", "仅普通 Kun 会话可作为分叉来源")
 	}
 	if err = m.checkSessionExecution(s); err != nil {
 		return err
@@ -133,6 +154,12 @@ func (m *Manager) KunForkPoints(sid string, offset, limit int) (p.ForkPoints, er
 }
 func (m *Manager) CreateKunFork(in KunForkInput) (KunForkPreview, error) {
 	var out KunForkPreview
+	if in.Mode == "" {
+		in.Mode = "hybrid"
+	}
+	if in.Mode != "hybrid" && in.Mode != "live" {
+		return out, failure(400, "fork_mode_invalid", "分叉模式必须为 hybrid 或 live")
+	}
 	if err := experimentTitle(in.Title); err != nil {
 		return out, err
 	}
@@ -147,10 +174,10 @@ func (m *Manager) CreateKunFork(in KunForkInput) (KunForkPreview, error) {
 		ctx, cancel := context.WithTimeout(m.ctx, 15*time.Second)
 		defer cancel()
 		var b p.ForkBundle
-		if err := c.Call(ctx, "fork.export", p.ForkExport{Selection: in.Selection}, &b); err != nil {
+		if err := c.Call(ctx, "fork.export", p.ForkExport{Selection: in.Selection, Mode: in.Mode}, &b); err != nil {
 			return failure(409, "fork_export_rejected", err.Error())
 		}
-		if b.State.SessionID != s.ID || b.State.RunID != s.RunID || b.Selection != in.Selection || b.Schema != p.ForkSchema || b.ContentHash != p.ForkHash(b) || len(p.JSON(b)) > p.MaxForkBytes {
+		if b.Mode != in.Mode || b.State.SessionID != s.ID || b.State.RunID != s.RunID || b.Selection != in.Selection || b.Schema != p.ForkSchema || b.ContentHash != p.ForkHash(b) || len(p.JSON(b)) > p.MaxForkBytes {
 			return failure(409, "fork_integrity", "分叉记录身份或指纹不一致")
 		}
 		// Check the original configuration locally, without connecting MCP. Do not
@@ -202,7 +229,7 @@ func (m *Manager) CreateKunFork(in KunForkInput) (KunForkPreview, error) {
 			return failure(409, "fork_backend_changed", "当前实例不再使用本地 Kun")
 		}
 		id := store.ID()
-		origin := p.ForkOrigin{PreviewID: id, SessionID: s.ID, RunID: s.RunID, Sequence: b.Selection.Sequence, Through: b.Selection.Through, BundleHash: b.ContentHash, Mode: "hybrid"}
+		origin := p.ForkOrigin{PreviewID: id, SessionID: s.ID, RunID: s.RunID, Sequence: b.Selection.Sequence, Through: b.Selection.Through, BundleHash: b.ContentHash, Mode: in.Mode}
 		target.KunFork = &origin
 		configHash, err := m.forkHostConfigHash(target, w)
 		if err != nil {
@@ -212,6 +239,24 @@ func (m *Manager) CreateKunFork(in KunForkInput) (KunForkPreview, error) {
 			return failure(409, "fork_configuration_changed", "生成预览时配置已变化，请重新读取来源")
 		}
 		out = KunForkPreview{ID: id, Title: in.Title, CreatedAt: store.Now(), Origin: origin, TargetSessionID: target.ID, Instruction: in.Instruction, Phase: b.State.Phase, Step: b.State.Step, Pending: len(b.State.Pending), Budget: b.State.Budget, Limits: b.State.Config.Budget, MaxSteps: b.State.Config.MaxSteps, RecordCount: len(b.Records)}
+		if in.Mode == "live" {
+			out.Live = &KunLivePreview{Workspace: workspace, AllowWrite: cfg.AllowWrite, ApprovalPolicy: b.State.ApprovalPolicy, MCPTools: len(b.State.MCPTools), PendingTools: []KunLiveToolPreview{}}
+			for _, call := range b.State.Pending {
+				var args any
+				decoder := json.NewDecoder(bytes.NewBufferString(call.Function.Arguments))
+				decoder.UseNumber()
+				preview := "（参数不可解析，请检查来源快照）"
+				if decoder.Decode(&args) == nil {
+					preview = string(p.JSON(redaction.Fields(args)))
+				}
+				runes := []rune(preview)
+				truncated := len(runes) > 2048
+				if truncated {
+					preview = string(runes[:2048])
+				}
+				out.Live.PendingTools = append(out.Live.PendingTools, KunLiveToolPreview{CallID: call.ID, Name: call.Function.Name, ArgumentsPreview: preview, Truncated: truncated})
+			}
+		}
 		draft := kunForkDraft{Preview: out, Target: target, ConfigHash: configHash, Bundle: b}
 		out.Hash = forkDraftHash(draft)
 		draft.Preview = out
@@ -222,14 +267,14 @@ func (m *Manager) CreateKunFork(in KunForkInput) (KunForkPreview, error) {
 func (m *Manager) kunForkDraft(id string) (kunForkDraft, error) {
 	var d kunForkDraft
 	if err := m.Store.Get("kun_fork_bundle", id, &d); err != nil {
-		return d, failure(404, "fork_not_found", "Hybrid 预览不存在")
+		return d, failure(404, "fork_not_found", "分叉预览不存在")
 	}
 	if d.Preview.ID != id || d.Preview.Hash != forkDraftHash(d) || d.Bundle.ContentHash != p.ForkHash(d.Bundle) || d.Target.KunFork == nil || *d.Target.KunFork != d.Preview.Origin || d.Target.ID != d.Preview.TargetSessionID {
-		return d, failure(409, "fork_integrity", "Hybrid 记录指纹不一致")
+		return d, failure(409, "fork_integrity", "分叉记录指纹不一致")
 	}
 	return d, nil
 }
-func (m *Manager) StartKunFork(id, expected string) (Session, error) {
+func (m *Manager) StartKunFork(id, expected string, confirmLive bool) (Session, error) {
 	m.kunForkMu.Lock()
 	defer m.kunForkMu.Unlock()
 	d, err := m.kunForkDraft(id)
@@ -238,6 +283,9 @@ func (m *Manager) StartKunFork(id, expected string) (Session, error) {
 	}
 	if expected == "" || expected != d.Preview.Hash {
 		return Session{}, failure(409, "fork_preview_changed", "预览指纹不一致")
+	}
+	if d.Preview.Origin.Mode == "live" && !confirmLive {
+		return Session{}, failure(400, "fork_live_confirmation_required", "请先核对 Live 预览并明确确认真实工具执行及重复副作用")
 	}
 	var deleted struct {
 		SessionID string `json:"sessionId"`
@@ -264,6 +312,11 @@ func (m *Manager) StartKunFork(id, expected string) (Session, error) {
 	if current != d.ConfigHash {
 		return Session{}, failure(409, "fork_configuration_changed", "预览后配置已变化，请重新创建预览")
 	}
+	if d.Preview.Origin.Mode == "live" {
+		if _, _, _, err = m.kunLiveInputs(d.Target, w, d.Bundle); err != nil {
+			return Session{}, err
+		}
+	}
 	if _, err = m.Session(d.Target.ID); err != nil {
 		m.mu.Lock()
 		if err = m.Store.Put("session", d.Target.ID, d.Target); err == nil {
@@ -275,18 +328,22 @@ func (m *Manager) StartKunFork(id, expected string) (Session, error) {
 			return Session{}, err
 		}
 	}
-	return m.start(d.Target.ID, Input{Text: "启动 Hybrid 分叉实验（模型重算，工具录制回放）", KunFork: &kunForkInput{PreviewID: id}}, nil)
+	text := "启动 Hybrid 分叉实验（模型重算，工具录制回放）"
+	if d.Preview.Origin.Mode == "live" {
+		text = "启动已确认的 Live 分叉（真实工具执行，当前项目文件与 MCP，可能重复来源副作用）"
+	}
+	return m.start(d.Target.ID, Input{Text: text, KunFork: &kunForkInput{PreviewID: id, ConfirmLive: confirmLive}}, nil)
 }
 func (m *Manager) kunForkStartRequest(s Session, w Workspace, in Input, cfg p.Config, key string) (p.Start, error) {
 	if in.KunFork == nil || s.KunFork == nil || in.KunFork.PreviewID != s.KunFork.PreviewID || len(in.Files) > 0 || len(in.Skills) > 0 || in.KunResume != nil {
-		return p.Start{}, failure(409, "hybrid_start_only", "Hybrid 只接受固定预览的首次启动")
+		return p.Start{}, failure(409, "hybrid_start_only", "分叉只接受固定预览的首次启动")
 	}
 	d, err := m.kunForkDraft(in.KunFork.PreviewID)
 	if err != nil {
 		return p.Start{}, err
 	}
 	if d.Target.ID != s.ID || *s.KunFork != d.Preview.Origin {
-		return p.Start{}, failure(409, "fork_target_mismatch", "Hybrid 目标不一致")
+		return p.Start{}, failure(409, "fork_target_mismatch", "分叉目标不一致")
 	}
 	current, err := m.forkHostConfigHash(s, w)
 	if err != nil {
@@ -294,6 +351,16 @@ func (m *Manager) kunForkStartRequest(s Session, w Workspace, in Input, cfg p.Co
 	}
 	if current != d.ConfigHash || forkDigest(cfg) != forkDigest(d.Bundle.State.Config) {
 		return p.Start{}, failure(409, "fork_configuration_changed", "启动前配置已变化")
+	}
+	if d.Preview.Origin.Mode == "live" {
+		if !in.KunFork.ConfirmLive {
+			return p.Start{}, failure(400, "fork_live_confirmation_required", "Live 启动需要明确确认")
+		}
+		skills, servers, revision, err := m.kunLiveInputs(s, w, d.Bundle)
+		if err != nil {
+			return p.Start{}, err
+		}
+		return p.Start{SessionID: s.ID, RunID: s.RunID, Input: in.Text, Workspace: w.Path, Config: cfg, APIKey: key, Skills: skills, MCP: servers, ContextRevision: revision, ApprovalPolicy: d.Bundle.State.ApprovalPolicy, Fork: &p.ForkStart{Origin: d.Preview.Origin, Bundle: d.Bundle, Instruction: d.Preview.Instruction, ConfirmLive: true}}, nil
 	}
 	workspace := filepath.Join(m.Data, "kun", "sessions", s.ID, "hybrid-workspace")
 	if err = os.MkdirAll(workspace, 0700); err != nil {
@@ -357,13 +424,14 @@ func (s *Server) kunForkRoutes(mux *http.ServeMux) {
 		var out KunForkPreview
 		err := s.Manager.Store.Get("kun_fork_preview", r.PathValue("fid"), &out)
 		if err != nil {
-			err = failure(404, "fork_not_found", "Hybrid 预览不存在")
+			err = failure(404, "fork_not_found", "分叉预览不存在")
 		}
 		debugRespond(w, out, err)
 	})
 	mux.HandleFunc("POST /api/kun-forks/{fid}/start", func(w http.ResponseWriter, r *http.Request) {
 		var in struct {
 			ExpectedHash string `json:"expectedHash"`
+			ConfirmLive  bool   `json:"confirmLive"`
 		}
 		if !decode(w, r, &in) {
 			return
@@ -372,7 +440,7 @@ func (s *Server) kunForkRoutes(mux *http.ServeMux) {
 			respond(w, nil, failure(400, "fork_hash_required", "请先生成并检查预览"))
 			return
 		}
-		out, err := s.Manager.StartKunFork(r.PathValue("fid"), in.ExpectedHash)
+		out, err := s.Manager.StartKunFork(r.PathValue("fid"), in.ExpectedHash, in.ConfirmLive)
 		respond(w, out, err)
 	})
 }

@@ -68,7 +68,7 @@ function renderStatus() {
   $("#send").textContent = steering ? rdText("补充") : "↑";
   $("#stop").disabled = s?.status === "stopping";
   $("#prompt").disabled = forkFinished || state.loadingSession || !!s?.archived;
-  $("#prompt").placeholder = forkFinished ? "Hybrid 已结束；请从来源创建新预览。" : s?.archived
+  $("#prompt").placeholder = forkFinished ? "分叉已结束；请从来源创建新预览。" : s?.archived
     ? rdText("从会话菜单恢复后，可继续对话。")
     : steering
       ? rdText("补充要求或调整当前任务的方向…")
@@ -87,7 +87,7 @@ function renderStatus() {
 function renderAnalysisBanner() {
   const host=$("#analysis-banner"),fork=state.session?.kunFork,origin=state.session?.traceOrigin;
   if(fork){host.classList.remove("hidden");const signature=json(fork);if(host._signature===signature)return;host._signature=signature;
-   host.replaceChildren(el("strong",{},"Hybrid · 独立分支"),el("span",{},"模型重新调用；工具仅回放录制结果，未执行真实工具。来源边界 #"+fork.sequence),button("查看固定预览",()=>RunDeskKunForks.open({previewId:fork.previewId}),"quiet"));return;}
+   host.replaceChildren(el("strong",{},fork.mode==="live"?"Live · 真实执行分支":"Hybrid · 独立分支"),el("span",{},(fork.mode==="live"?"工具访问当前项目和真实 MCP；可能重复来源副作用，文件不会回滚。来源边界 #":"模型重新调用；工具仅回放录制结果，未执行真实工具。来源边界 #")+fork.sequence),button("查看固定预览",()=>RunDeskKunForks.open({previewId:fork.previewId}),"quiet"));return;}
 
   host.classList.toggle("hidden",!origin);
   if(!origin){host.replaceChildren();host._signature="";return;}

@@ -649,7 +649,7 @@ $("#prompt").addEventListener("paste", (event) => {
 });
 async function sendMessage() {
   if (state.sending) return;
-  if(state.session?.kunFork&&!active(state.session.status)){toast("Hybrid 已结束；请从来源创建新预览。");return;}
+  if(state.session?.kunFork&&!active(state.session.status)){toast("分叉已结束；请从来源创建新预览。");return;}
   if (diagnosticTextOnly() && (state.uploads.length || state.chosenSkills.length)) {toast("此会话只接收文本，请移除附件和技能。");return;}
   if (!diagnosticTextOnly() && [...$("#prompt").value].length >= LONG_TEXT_THRESHOLD) {
     stageLongText($("#prompt").value);

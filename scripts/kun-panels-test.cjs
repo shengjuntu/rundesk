@@ -57,6 +57,11 @@ for(const name of ['kun-inspect.js','kun-panels.js','kun-debug.js','kun.js'])vm.
 
 // Pure data/view regressions, including missing/zero usage and a pinned cutoff.
 const selected=records[5],seen=[];
+const liveFork={...clone(old),fork:{origin:{mode:'live',sequence:3},inheritedStep:0,inheritedBudget:{toolCalls:0,reportedTokens:0},replayCursor:0,replayTotal:0}};
+const livePerformance=context.kunRenderPerformance(liveFork,null,records,()=>{});assert(livePerformance.textContent.includes('继承 + 新执行'));assert(livePerformance.textContent.includes('新增工具是真实执行'));assert(!livePerformance.textContent.includes('没有外部工具调用'));
+const liveApplication=context.kunRenderApplication(liveFork,null,records,()=>{},()=>{});assert(liveApplication.textContent.includes('Live'));assert(!liveApplication.textContent.includes('没有连接真实 MCP'));
+const banner=el('div');context.wireSuggestions=()=>{};context.$=()=>banner;context.json=JSON.stringify;context.state.session.kunFork={mode:'live',sequence:3};vm.runInContext(fs.readFileSync(path.join(__dirname,'../internal/web/manage.js'),'utf8'),context);context.renderAnalysisBanner();assert(banner.textContent.includes('Live · 真实执行分支'));assert(!banner.textContent.includes('未执行真实工具'));delete context.state.session.kunFork;
+
 assert.equal(context.kunScopedEvents(records,old,selected).length,6);
 const performance=context.kunRenderPerformance(old,selected,records,e=>seen.push(e));
 assert(!performance.textContent.includes('123456789'));assert(!performance.textContent.includes('99999'));

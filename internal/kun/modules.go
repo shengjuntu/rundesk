@@ -171,7 +171,7 @@ type toolResult struct {
 // This is the single side-effect gateway. Validation, approval, budget reservation,
 // and the durable dispatched record must precede it in Engine.
 func (e *Engine) executeAction(ctx context.Context, intent toolIntent, call p.ToolCall) (toolResult, error) {
-	if e.state.Fork != nil {
+	if e.state.Fork != nil && e.state.Fork.Origin.Mode != "live" {
 		return toolResult{}, fmt.Errorf("Hybrid prohibits live tool execution")
 	}
 	if e.state.Diagnostic != nil {

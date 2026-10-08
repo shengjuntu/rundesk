@@ -237,15 +237,14 @@ notices 按 source+message 合并次数，每个连接最多保留 32 条、单�
 WebUI 的补充按钮发送到当前轮次，停止按钮调用原有 stop 接口。此版未加入下一轮消息队列。
 
 
-## Hybrid 安全分叉（0.32.0）
+## Hybrid / Live 安全分叉（当前 0.34.0）
 
-管理员可使用 `/kun-forks/sources/{sid}` 读取最近已停止普通 Kun 轮次的安全边界，`POST /kun-forks` 生成固定预览，`POST /kun-forks/{fid}/start` 携带 `expectedHash` 显式启动独立 Hybrid 会话。两个 POST 都要求 `Idempotency-Key`。`GET /kun-forks` 和 `GET /kun-forks/{fid}` 读取公开预览；私有执行包不经 HTTP 返回。
+管理员用 `/kun-forks/sources/{sid}` 读取最近已停止普通 Kun 轮次的安全边界，`POST /kun-forks` 以 `mode=hybrid|live`（省略为 hybrid）生成固定预览。`POST /kun-forks/{fid}/start` 携带 `expectedHash` 启动固定目标，Live 还必须明确传入 `confirmLive=true`。两个 POST 都要求 `Idempotency-Key`。`GET /kun-forks` 省略 instruction 和 live 动作详情；详情接口仅返回公开预览及有界脱敏的待处理参数，不返回私有执行包或历史模型/工具正文。
 
-Hybrid 后续模型重新调用，工具严格录制回放，未命中停止；不执行真实工具。每份预览只运行一次，重复启动返回相同目标，删除目标后不能重新创建。普通新轮次和恢复拒绝。应用/成员凭据无权调用这些入口。完整字段、限额与版本约束见 [KUN-FORKS.md](KUN-FORKS.md) 及 OpenAPI。
-
+Hybrid 后续模型重算，工具严格回放，未命中停止。Live 使用当前项目文件及真实工具，重新校验技能、MCP 配置/凭据与目录，旧的一次性审批不复用；可能重复外部副作用，不回滚文件。待处理工具参数保持原样，补充指令在下一次模型请求前应用。每份预览只运行一次，重复启动返回相同目标，删除后不能重建；普通新轮次和恢复拒绝。应用/成员凭据无权调用这 5 个操作。完整字段、限额与版本约束见 [KUN-FORKS.md](KUN-FORKS.md) 及 OpenAPI。
 
 ## Kun 内置组合（0.33.0）
 
-原 `PUT /instances/{iid}/agent-runtime` 的 `config.harness` 新增可选字段 `loopPolicy`、`memory`、`planning`、`action`、`capability`。省略选默认 Tool Loop；`{"loopPolicy":"plan-act-v1"}` 选择 Plan-Act 并补齐 explicit-plan-v1。仅接受已注册的两套组合，不兼容/未知 ID 拒绝。新普通轮次才读取新组合，恢复/Hybrid 不换配置。详细约束见 [KUN-HARNESS.md](KUN-HARNESS.md)。
+原 `PUT /instances/{iid}/agent-runtime` 的 `config.harness` 新增可选字段 `loopPolicy`、`memory`、`planning`、`action`、`capability`。省略选默认 Tool Loop；`{"loopPolicy":"plan-act-v1"}` 选择 Plan-Act 并补齐 explicit-plan-v1。仅接受已注册的两套组合，不兼容/未知 ID 拒绝。新普通轮次才读取新组合，恢复/Hybrid/Live 不换配置。详细约束见 [KUN-HARNESS.md](KUN-HARNESS.md)。
 
-`kun/model.started` 和 `kun/model.completed` 增加 `data.purpose=plan|act`，旧事件没有此字段时仍按原回复处理。规划结果保存在模块快照，不能作为完成回复执行反馈操作。Harness 对比使用两次既有只读 `GET /sessions/{sid}/kun/snapshots/{sequence}`，不新增路由；版本升级为 worker v9 / Kun 0.9.0。
+`kun/model.started` 和 `kun/model.completed` 增加 `data.purpose=plan|act`，旧事件没有此字段时仍按原回复处理。规划结果保存在模块快照，不能作为完成回复执行反馈操作。Harness 对比使用两次既有只读 `GET /sessions/{sid}/kun/snapshots/{sequence}`，不新增路由；当前版本为 worker v10 / Kun 0.10.0。

@@ -2,7 +2,7 @@
 const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
 const {spawn}=require('node:child_process'),http=require('node:http'),fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 (async()=>{
- const root=path.resolve(__dirname,'..'),temp=fs.mkdtempSync(path.join(os.tmpdir(),'rd-diagnosis-')),pictures=path.join(root,'docs/screenshots/0.33.0');fs.mkdirSync(pictures,{recursive:true});
+ const root=path.resolve(__dirname,'..'),temp=fs.mkdtempSync(path.join(os.tmpdir(),'rd-diagnosis-')),pictures=path.join(root,'docs/screenshots/0.34.0');fs.mkdirSync(pictures,{recursive:true});
  const base='http://127.0.0.1:38735',errors=[],requests=[],checks=[],modelRequests=[];let browser,host,model,source,through,cited;let sourceCalls=0;
  const pause=ms=>new Promise(r=>setTimeout(r,ms));
  const api=async(p,body,method)=>{const response=await fetch(base+'/api/v1'+p,{method:method||(body?'POST':'GET'),headers:{'Content-Type':'application/json','Idempotency-Key':crypto.randomUUID()},body:body?JSON.stringify(body):undefined});assert(response.ok,await response.clone().text());return response.json()};
@@ -55,7 +55,7 @@ const {spawn}=require('node:child_process'),http=require('node:http'),fs=require
   await review.getByRole('button',{name:'预览当前控制目标'}).click();await review.locator('p[role=status]').filter({hasText:'来源轮次已结束或改变'}).waitFor();assert(await review.getByRole('button',{name:'确认发送到来源运行'}).isDisabled());
   assert(!requests.some(r=>r.method==='POST'&&r.url.includes('/sessions/'+source.id+'/')),'UI bypassed review endpoint');assert.deepEqual(errors,[]);
 
-  const report={version:'0.33.0',passed:true,scope:'real Chromium + RunDesk + Kun worker + local model fixture; no real provider',modelCalls:modelRequests.length,sourceModelCalls:sourceCalls,checks,pageErrors:errors};fs.writeFileSync(root+'/docs/kun-diagnostic-ui-validation.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
+  const report={version:'0.34.0',passed:true,scope:'real Chromium + RunDesk + Kun worker + local model fixture; no real provider',modelCalls:modelRequests.length,sourceModelCalls:sourceCalls,checks,pageErrors:errors};fs.writeFileSync(root+'/docs/kun-diagnostic-ui-validation.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
  }finally{
   await browser?.close();if(host&&host.exitCode===null){const exited=new Promise(r=>host.once('exit',r));host.kill();await Promise.race([exited,pause(5000)]);if(host.exitCode===null)host.kill('SIGKILL')}
   if(model)await new Promise(r=>model.close(r));fs.rmSync(temp,{recursive:true,force:true});

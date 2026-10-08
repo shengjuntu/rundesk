@@ -153,6 +153,13 @@ func (e *Engine) ExportFork(in p.ForkExport) (p.ForkBundle, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	var out p.ForkBundle
+	mode := in.Mode
+	if mode == "" {
+		mode = "hybrid"
+	}
+	if mode != "hybrid" && mode != "live" {
+		return out, fmt.Errorf("unsupported fork mode")
+	}
 	if err := e.forkSourceLocked(); err != nil {
 		return out, err
 	}
@@ -181,6 +188,14 @@ func (e *Engine) ExportFork(in p.ForkExport) (p.ForkBundle, error) {
 	if s.SessionID != e.state.SessionID || s.RunID != q.SourceRunID || !checkpointSafe(s) || s.Manifest.EngineVersion != p.EngineVersion || !compatibleHarness(s) {
 		return out, fmt.Errorf("not a compatible safe fork boundary")
 	}
+	out = p.ForkBundle{Schema: p.ForkSchema, Mode: mode, Selection: q, State: s, CatalogHash: catalogFingerprint(s), EnvironmentHash: fingerprint(s.Manifest), Records: []p.ReplayRecord{}}
+	if mode == "live" {
+		out.ContentHash = p.ForkHash(out)
+		if len(p.JSON(out)) > p.MaxForkBytes {
+			return out, fmt.Errorf("fork bundle exceeds 4 MiB")
+		}
+		return out, nil
+	}
 	catalog, err := e.modules.capability.Build(s)
 	if err != nil {
 		return out, err
@@ -198,7 +213,6 @@ func (e *Engine) ExportFork(in p.ForkExport) (p.ForkBundle, error) {
 		return out, err
 	}
 	defer rows.Close()
-	out = p.ForkBundle{Schema: p.ForkSchema, Selection: q, State: s, CatalogHash: catalogFingerprint(s), EnvironmentHash: fingerprint(s.Manifest), Records: []p.ReplayRecord{}}
 	for rows.Next() {
 		var seq int64
 		var raw []byte
@@ -245,14 +259,34 @@ func (e *Engine) forkLocked(in p.Start, hash string) (p.State, error) {
 	b := f.Bundle
 	s := clone(b.State)
 	o := f.Origin
-	if e.state.SessionID != "" || in.Resume != nil || in.Diagnostic != nil || len(in.MCP) > 0 || len(in.Skills) > 0 {
-		return p.State{}, fmt.Errorf("Hybrid requires an empty session and no live tool configuration")
+	live := o.Mode == "live"
+	if e.state.SessionID != "" || in.Resume != nil || in.Diagnostic != nil || (!live && (len(in.MCP) > 0 || len(in.Skills) > 0)) {
+		return p.State{}, fmt.Errorf("fork requires an empty session; Hybrid prohibits live tool configuration")
 	}
-	if b.Schema != p.ForkSchema || b.ContentHash != p.ForkHash(b) || len(p.JSON(b)) > p.MaxForkBytes || len(b.Records) > p.MaxReplayRecords || !checkpointSafe(s) || s.Manifest.EngineVersion != p.EngineVersion || !compatibleHarness(s) || s.Manifest.ConfigHash != fingerprint(s.Config) || b.CatalogHash != catalogFingerprint(s) || b.EnvironmentHash != fingerprint(s.Manifest) {
-		return p.State{}, fmt.Errorf("invalid or incompatible Hybrid recording")
+	if b.Schema != p.ForkSchema || b.Mode != o.Mode || (b.Mode != "hybrid" && b.Mode != "live") || b.ContentHash != p.ForkHash(b) || len(p.JSON(b)) > p.MaxForkBytes || len(b.Records) > p.MaxReplayRecords || (live && len(b.Records) > 0) || !checkpointSafe(s) || s.Manifest.EngineVersion != p.EngineVersion || !compatibleHarness(s) || s.Manifest.ConfigHash != fingerprint(s.Config) || b.CatalogHash != catalogFingerprint(s) || b.EnvironmentHash != fingerprint(s.Manifest) {
+		return p.State{}, fmt.Errorf("invalid or incompatible fork recording")
 	}
-	if o.Mode != "hybrid" || o.PreviewID == "" || o.SessionID != s.SessionID || o.SessionID == in.SessionID || o.RunID != s.RunID || o.BundleHash != b.ContentHash || o.Sequence != b.Selection.Sequence || o.Through != b.Selection.Through || o.RunID != b.Selection.SourceRunID || fingerprint(in.Config) != fingerprint(s.Config) || in.ApprovalPolicy != s.ApprovalPolicy || utf8.RuneCountInString(f.Instruction) > 16000 {
-		return p.State{}, fmt.Errorf("Hybrid source or configuration mismatch")
+	if o.PreviewID == "" || o.SessionID != s.SessionID || o.SessionID == in.SessionID || o.RunID != s.RunID || o.BundleHash != b.ContentHash || o.Sequence != b.Selection.Sequence || o.Through != b.Selection.Through || o.RunID != b.Selection.SourceRunID || fingerprint(in.Config) != fingerprint(s.Config) || in.ApprovalPolicy != s.ApprovalPolicy || utf8.RuneCountInString(f.Instruction) > 16000 {
+		return p.State{}, fmt.Errorf("fork source or configuration mismatch")
+	}
+	if live {
+		if !f.ConfirmLive {
+			return p.State{}, fmt.Errorf("Live fork requires explicit execution confirmation")
+		}
+		manifest := e.manifest(in)
+		manifest.HarnessHash = fingerprint(s.Harness)
+		if fingerprint(manifest) != fingerprint(s.Manifest) {
+			return p.State{}, fmt.Errorf("Live fork workspace, skills, authorization or runtime configuration changed")
+		}
+		next := "model"
+		if len(s.Pending) > 0 {
+			next = "tool"
+		} else if f.Instruction == "" && e.modules.policy.Next(s) == "complete" {
+			next = "complete"
+		}
+		if reason := budgetReason(s, next); reason != "" {
+			return p.State{}, budgetError(reason)
+		}
 	}
 	last := b.Selection.Sequence
 	for _, r := range b.Records {
@@ -265,20 +299,41 @@ func (e *Engine) forkLocked(in p.Start, hash string) (p.State, error) {
 	s.Fork = &p.ForkState{Origin: o, InheritedStep: s.Step, InheritedBudget: s.Budget, ReplayTotal: len(b.Records)}
 	s.SessionID, s.RunID, s.Revision, s.Status, s.Error = in.SessionID, in.RunID, 1, "running", ""
 	s.ResumedFrom = nil
-	s.Approval = nil
+	s.Approval = nil // A source decision never authorizes a new external call.
 	s.Queued = nil
 	s.Debug.Pause = nil
-	// Empty maps are omitted from persisted JSON; make them writable again.
 	if s.Actions == nil {
 		s.Actions = map[string]string{}
 	}
 	if s.Debug.Hits == nil {
 		s.Debug.Hits = map[string]int{}
 	}
-	// Keep the recorded catalog; its write/MCP entries are simulations only.
-	for n := range s.MCP {
-		s.MCP[n].Status = "recorded"
-		s.MCP[n].Error = ""
+	preamble := "This is a RunDesk Hybrid experiment. Tool results are recorded simulations, not current observations or executed actions. Report that distinction. A replay miss stops the run; never claim a simulated write happened."
+	if live {
+		s.Phase = "restoring"
+		s.ToolDefinitions = nil
+		for _, definition := range toolDefinitions(in.Config.AllowWrite) {
+			s.ToolDefinitions = append(s.ToolDefinitions, p.JSON(definition))
+		}
+		s.MCPTools = nil
+		s.MCP = nil
+		for _, spec := range in.MCP {
+			transport := "stdio"
+			if spec.URL != "" {
+				transport = "streamable-http"
+			}
+			s.MCP = append(s.MCP, p.MCPStatus{Name: spec.Name, Revision: spec.Revision, Transport: transport, Status: "pending"})
+		}
+		capability := s.Modules["capability"]
+		capability.Phase = "pending"
+		capability.Data = p.JSON(map[string]any{})
+		s.Modules["capability"] = capability
+		preamble = "This is a RunDesk Live fork. Earlier context and tool results are historical observations, not the current external world. No files or external systems were rolled back. Future tools execute against the CURRENT workspace and services, using current authorization; effects from the source may be repeated. Pending tool arguments are unchanged. Save new deliverables under outputs/" + in.SessionID + "/ unless the task explicitly addresses an existing file. Report new results separately from inherited observations."
+	} else {
+		for n := range s.MCP {
+			s.MCP[n].Status = "recorded"
+			s.MCP[n].Error = ""
+		}
 	}
 	if s.Harness.ID == "plan-act-v1" && s.Modules["planning"].Phase == "ready" {
 		var plan planData
@@ -288,14 +343,17 @@ func (e *Engine) forkLocked(in p.Start, hash string) (p.State, error) {
 		module.Data = p.JSON(plan)
 		s.Modules["planning"] = module
 	}
-	s.Messages = append([]p.Message{{Role: "system", Content: "This is a RunDesk Hybrid experiment. Tool results are recorded simulations, not current observations or executed actions. Report that distinction. A replay miss stops the run; never claim a simulated write happened."}}, s.Messages...)
+	s.Messages = append([]p.Message{{Role: "system", Content: preamble}}, s.Messages...)
 	if strings.TrimSpace(f.Instruction) != "" {
 		s.Queued = []p.Control{{RequestID: in.RunID + "-fork-instruction", RunID: in.RunID, ExpectedRevision: 1, Operation: "steer", Text: f.Instruction}}
 	}
 	e.state = s
-	e.forkTape = &b
+	e.forkTape = nil
+	if !live {
+		e.forkTape = &b
+	}
 	e.expectedCatalog = b.CatalogHash
-	if _, err := e.j.commit(s, "kun/run.started", map[string]any{"fork": s.Fork, "instruction": f.Instruction}, in.RunID, hash, nil); err != nil {
+	if _, err := e.j.commit(s, "kun/run.started", map[string]any{"fork": s.Fork, "instruction": f.Instruction, "liveConfirmed": live && f.ConfirmLive}, in.RunID, hash, nil); err != nil {
 		e.state = previous
 		e.forkTape = nil
 		e.expectedCatalog = ""
@@ -331,4 +389,11 @@ func (e *Engine) replayTool(call p.ToolCall, intent toolIntent) error {
 	evidence := &p.ReplayEvidence{Mode: "recorded", SourceSequence: r.Sequence, Position: f.ReplayCursor, BundleHash: e.forkTape.ContentHash, RecordedStatus: r.Status, Executed: false}
 	f.ReplayCursor++
 	return e.finishTool(call, intent, toolResult{Output: r.Output, IsError: r.IsError, Replay: evidence}, "replayed", 0)
+}
+
+func forkExecutionMode(s p.State) string {
+	if s.Fork != nil {
+		return s.Fork.Origin.Mode
+	}
+	return "ordinary"
 }

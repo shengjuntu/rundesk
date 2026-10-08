@@ -184,7 +184,7 @@ func (e *Engine) Start(in p.Start) (out p.State, startErr error) {
 		return p.State{}, err
 	}
 	if e.state.Fork != nil {
-		return p.State{}, fmt.Errorf("Hybrid sessions are single-run; create a new fork to retry")
+		return p.State{}, fmt.Errorf("Fork sessions are single-run; create a new fork to retry")
 	}
 	if p.Active(e.state.Status) || e.state.Status == "completing" {
 		return p.State{}, fmt.Errorf("session already running")
@@ -528,7 +528,7 @@ func (e *Engine) loop(ctx context.Context) {
 			purpose := modelPurpose(e.state)
 			e.state.Step++
 			e.state.Phase = "model"
-			if failure = e.record("kun/model.started", map[string]any{"step": e.state.Step, "purpose": purpose, "request": requestBody(e.state)}); failure != nil {
+			if failure = e.record("kun/model.started", map[string]any{"step": e.state.Step, "purpose": purpose, "executionMode": forkExecutionMode(e.state), "request": requestBody(e.state)}); failure != nil {
 				e.mu.Unlock()
 				return
 			}
@@ -567,7 +567,7 @@ func (e *Engine) loop(ctx context.Context) {
 				}
 			}
 			e.state.Phase = "after_model"
-			data := map[string]any{"step": s.Step, "purpose": purpose, "message": result.Message, "usage": result.Usage, "durationMs": time.Since(started).Milliseconds()}
+			data := map[string]any{"step": s.Step, "purpose": purpose, "executionMode": forkExecutionMode(e.state), "message": result.Message, "usage": result.Usage, "durationMs": time.Since(started).Milliseconds()}
 			if planErr != nil {
 				data["error"] = planErr.Error()
 				data["status"] = "rejected"
@@ -617,7 +617,7 @@ func (e *Engine) loop(ctx context.Context) {
 			}
 			intent, validationErr := e.modules.action.Validate(call, e.catalog)
 			if validationErr != nil {
-				if e.state.Fork != nil {
+				if e.state.Fork.Hybrid() {
 					failure = e.replayTool(call, toolIntent{})
 					e.mu.Unlock()
 					return
@@ -634,7 +634,7 @@ func (e *Engine) loop(ctx context.Context) {
 			}
 			e.moduleState("action", "validated", map[string]any{"callId": call.ID, "tool": intent.Name, "schemaHash": intent.SchemaHash, "argumentsHash": fingerprint(call.Function.Arguments)})
 			failure = e.record("kun/tool.validated", e.state.Modules["action"])
-			hybrid := e.state.Fork != nil
+			hybrid := e.state.Fork.Hybrid()
 			e.mu.Unlock()
 			if failure != nil {
 				return
@@ -688,7 +688,7 @@ func (e *Engine) loop(ctx context.Context) {
 			if intent.MCP != nil {
 				metadata = map[string]string{"server": intent.MCP.Server, "tool": intent.MCP.Name}
 			}
-			failure = e.record("kun/tool.started", map[string]any{"call": call, "step": e.state.Step, "mcp": metadata})
+			failure = e.record("kun/tool.started", map[string]any{"call": call, "executionMode": forkExecutionMode(e.state), "step": e.state.Step, "mcp": metadata})
 			e.mu.Unlock()
 			if failure != nil {
 				return

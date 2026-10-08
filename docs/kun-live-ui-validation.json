@@ -1,0 +1,17 @@
+{
+  "version": "0.34.0",
+  "passed": true,
+  "scope": "Node DOM stub + shipped dialog; no browser/layout acceptance",
+  "checks": [
+    "Hybrid remains default",
+    "Live preview fixes selected mode",
+    "current workspace and pending actions visible",
+    "unconfirmed start makes no request",
+    "mode edits invalidate preview and consent",
+    "fresh preview resets confirmation",
+    "duplicate start guarded",
+    "fixed hash and confirmLive sent together",
+    "reopened preview requires fresh explicit confirmation",
+    "literal content is not HTML"
+  ]
+}

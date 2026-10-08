@@ -156,7 +156,7 @@ func TestHybridHostLifecycle(t *testing.T) {
 	if err = m.DeleteSession(branch.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = m.StartKunFork(preview.ID, preview.Hash); err == nil {
+	if _, err = m.StartKunFork(preview.ID, preview.Hash, false); err == nil {
 		t.Fatal("deleted target resurrected")
 	}
 	if _, err = m.Session(branch.ID); err == nil {
@@ -173,10 +173,10 @@ func TestHybridHostLifecycle(t *testing.T) {
 	}
 	defer m2.Close()
 	m2.Kun = binary
-	if _, err = m2.StartKunFork(preview.ID, preview.Hash); err == nil {
+	if _, err = m2.StartKunFork(preview.ID, preview.Hash, false); err == nil {
 		t.Fatal("restart lost deletion tombstone")
 	}
-	restarted, err := m2.StartKunFork(later.ID, later.Hash)
+	restarted, err := m2.StartKunFork(later.ID, later.Hash, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +190,7 @@ func TestHybridHostLifecycle(t *testing.T) {
 	if _, err = m2.SetAgentRuntime(instance.ID, instance.Revision, cfg); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = m2.StartKunFork(drift.ID, drift.Hash); err == nil {
+	if _, err = m2.StartKunFork(drift.ID, drift.Hash, false); err == nil {
 		t.Fatal("config drift allowed")
 	}
 	if calls.Load() != 6 {

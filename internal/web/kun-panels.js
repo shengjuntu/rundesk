@@ -47,7 +47,7 @@ function kunRenderSources(s,selected,events,navigate){
  const node=kunPanel("当前运行控制状态","sources-state",s,null);
  node.append(el("p",{class:"help"},"控制目标始终是当前运行。"+(selected?"历史选择仍固定在 #"+selected.data.sequence+"，不会成为控制目标。":"")));
  if(!s){node.append(el("p",{},"当前状态不可用，可检查恢复条件或查看保留事件。"));return node;}
- if(s.fork)node.append(el("p",{class:"experiment-mode"},"Hybrid · 工具仅录制回放 · 未命中停止"),kunFacts([["来源边界",s.fork.origin.sequence],["录制进度",s.fork.replayCursor+" / "+s.fork.replayTotal],["新增模型调用",s.step-s.fork.inheritedStep]]));
+ if(s.fork)node.append(el("p",{class:"experiment-mode"},s.fork.origin.mode==="live"?"Live · 真实工具执行 · 当前项目和外部服务":"Hybrid · 工具仅录制回放 · 未命中停止"),kunFacts([["来源边界",s.fork.origin.sequence],["录制进度",s.fork.origin.mode==="live"?"不使用录制":s.fork.replayCursor+" / "+s.fork.replayTotal],["新增模型调用",s.step-s.fork.inheritedStep]]));
  const scoped=kunScopedEvents(events,s,null),pause=s.debug?.pause;
  node.append(kunFacts([["状态",kunStateLabel(s.status)],["阶段",s.phase],["模型步骤",s.step],["待派发工具",s.pending?.length??0],["断点规则版本",s.debug?.revision],["预算停止原因",s.budget?.stopReason||"无已记录原因"]]));
  if(s.error)node.append(el("p",{class:"kun-signal"},"运行错误："+s.error));
@@ -84,12 +84,12 @@ function kunRenderPerformance(s,selected,events,navigate){
  const node=kunPanel("运行用量与耗时","performance",s,selected),hasBudget=!!s?.harness?.id&&!!s?.budget,budget=hasBudget?s.budget:{},limits=hasBudget?s.config?.budget||{}:{};
  if(s&&!hasBudget)node.append(el("p",{class:"help"},"此记录缺少预算模块标识，累计预算按未知显示，兼容旧快照。"));
  if(!s)node.append(el("p",{class:"help"},"此时点的状态不可用；下面仅展示已加载事件，无法给出累计预算。"));
- node.append(el("div",{class:"kun-metrics"},kunMetric("已发起模型调用",s?.step,s?.config?.maxSteps),kunMetric(s?.fork?"工具预算（继承 + 回放）":"已派发工具",budget.toolCalls,limits.maxToolCalls),
+ node.append(el("div",{class:"kun-metrics"},kunMetric("已发起模型调用",s?.step,s?.config?.maxSteps),kunMetric(s?.fork?(s.fork.origin.mode==="live"?"工具预算（继承 + 新执行）":"工具预算（继承 + 回放）"):"已派发工具",budget.toolCalls,limits.maxToolCalls),
   kunMetric("已报告 token",budget.reportedTokens,limits.maxTotalTokens,String,true),kunMetric("活动时间",budget.activeMillis,kunNumber(limits.maxActiveSeconds)===null?null:limits.maxActiveSeconds*1000,kunMillis),
   kunMetric("连续工具失败",budget.consecutiveFailures,limits.maxConsecutiveFailures)),
   kunFacts([["人工等待时间",kunMillis(budget.waitMillis)],["未报告有效用量的已完成模型调用",budget.unreportedModelCalls],["预算停止原因",budget.stopReason||"无已记录原因"],["费用", "未估算"]]),
   el("p",{class:"help"},"累计值来自上述状态版本；当前状态中的活动/等待计时不保证实时刷新。token 仅包含有效报告，缺失部分未知；阈值不保证当前请求不超额。调用耗时彼此可能嵌套，不能相加当作总运行时间。"));
- if(s?.fork)node.append(el("h4",{},"分支新增用量"),kunFacts([["继承模型调用",s.fork.inheritedStep],["新增模型调用",s.step-s.fork.inheritedStep],["继承已报告 token",s.fork.inheritedBudget.reportedTokens],["新增已报告 token",budget.reportedTokens-s.fork.inheritedBudget.reportedTokens],["回放工具结果",s.fork.replayCursor],["本分支真实工具调用",0]]),el("p",{class:"help"},"上述预算总量包含来源检查点的用量；回放消耗工具预算，但没有外部工具调用。"));
+ if(s?.fork)node.append(el("h4",{},"分支新增用量"),kunFacts([["继承模型调用",s.fork.inheritedStep],["新增模型调用",s.step-s.fork.inheritedStep],["继承已报告 token",s.fork.inheritedBudget.reportedTokens],["新增已报告 token",budget.reportedTokens-s.fork.inheritedBudget.reportedTokens],["回放工具结果",s.fork.replayCursor],["本分支真实工具调用",s.fork.origin.mode==="live"?budget.toolCalls-s.fork.inheritedBudget.toolCalls:0]]),el("p",{class:"help"},s.fork.origin.mode==="live"?"预算总量包含继承用量；本分支的新增工具是真实执行，外部状态未回滚。":"上述预算总量包含来源检查点的用量；回放消耗工具预算，但没有外部工具调用。"));
  const scoped=kunScopedEvents(events,s,selected);
  for(const [kind,label,method]of [["model","模型","kun/model.completed"],["tool","工具","kun/tool.completed"],["mcp","MCP 交换（可能嵌套于工具调用）","kun/mcp.response"]]){
   const all=scoped.filter(e=>e.method===method),rows=all.slice(-200).reverse();
@@ -102,7 +102,8 @@ function kunRenderApplication(s,selected,events,navigate,showSources){
  const node=kunPanel("MCP 服务与审批","application",s,selected);
  if(!s){node.append(el("p",{},"此时点的状态不可用；可在 Network 查看保留事件。"));return node;}
  const scoped=kunScopedEvents(events,s,selected);
- if(s.fork)node.append(el("p",{class:"experiment-mode"},"Hybrid 固定目录 · 没有连接真实 MCP；下列审批配置仅为来源记录，回放不会请求或复用真实执行审批。"));
+ if(s.fork?.origin.mode==="live")node.append(el("p",{class:"experiment-mode"},"Live · MCP 按当前配置重新连接并核对目录；来源的一次性审批不复用，成功派发的工具是真实调用。"));
+ if(s.fork&&s.fork.origin.mode!=="live")node.append(el("p",{class:"experiment-mode"},"Hybrid 固定目录 · 没有连接真实 MCP；下列审批配置仅为来源记录，回放不会请求或复用真实执行审批。"));
  node.append(kunFacts([["本轮交互策略",s.approvalPolicy==="never"?"禁止询问：需要逐次审批的调用将拒绝":s.approvalPolicy||"允许逐次询问"]]),
   el("p",{class:"help"},"这是所选运行已捕获的目录。修改配置后下一轮才生效。内置文件写权限与 MCP 权限独立；此处只显示本轮目录工具，未列出的工具不等于已允许。"));
  const servers=s.mcp||[];
@@ -151,7 +152,7 @@ function kunRenderLayers(s,selected,events,navigate){
 
 function kunRenderHarnessComparison(from,to){
  const a=from.state,b=to.state;
- const mode=s=>s.fork?"Hybrid · 工具仅录制回放":s.resumedFrom?"检查点续跑（累计预算）":"普通轮次";
+ const mode=s=>s.fork?(s.fork.origin.mode==="live"?"Live · 真实工具执行":"Hybrid · 工具仅录制回放"):s.resumedFrom?"检查点续跑（累计预算）":"普通轮次";
  const version=v=>v?`${v.id} / ${v.version} / schema ${v.stateSchemaVersion}`:"未记录";
  const rows=[
   ["固定快照",from.sequence,to.sequence],["运行",a.runId,b.runId],["状态 / 阶段",a.status+" / "+a.phase,b.status+" / "+b.phase],

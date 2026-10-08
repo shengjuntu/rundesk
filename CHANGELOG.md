@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.34.0
+
+- First K3-C Live forks: mode-bound immutable preview, explicit confirmation, independent session/run and real tools against the current project workspace. No filesystem rollback or isolation; source execution records remain unchanged.
+- Re-read Skills and resolved MCP credentials, validate configuration and inherited budgets, reconnect and compare the exact tool catalog, discard historical one-time approval decisions. Pending tool arguments stay fixed; additional instructions apply before the next model request.
+- Keep Hybrid strictly replay-only, preserve Plan-Act state and inherited budgets in both fork modes, reject ordinary continuation/nested forks, and retain one-target duplicate-submission protection and deletion tombstones.
+- UI previews show workspace, permissions and bounded pending arguments; mode changes invalidate previews and Live confirmation. Debug panels distinguish actual tool dispatch from replay.
+- Kun 0.10.0 / protocol v10 / fork schema 2. Upgrade both binaries; old records remain readable but checkpoints and fork previews cannot execute across versions. No new runtime dependencies or API paths.
+- Full Go tests, vet, focused race, five Node interaction suites, CLI/protocol and Linux/Windows builds passed. Real browser and remote-service acceptance remain outstanding. In-run module replacement, cross-session benchmarks and K4 are pending.
+
 ## 0.33.0
 
 - K3-C initial slice: Plan-Act makes one explicit, tool-disabled planning call before the existing action loop, using shared budgets and debugger boundaries.

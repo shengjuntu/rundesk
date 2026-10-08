@@ -1,4 +1,4 @@
-> 实现进度：RunDesk 0.33.0 / Kun 0.9 在 K3-A 离线记录实验、K3-B 安全 Hybrid 基础上，增加 K3-C 首批 Plan-Act、两套内置组合及 Harness 固定快照对照。Live、运行中换模块及 K4 尚未实现；真实服务和本版真实浏览器验收未完成。逐阶段证据见 [KUN-PROGRESS.md](KUN-PROGRESS.md)，范围见 [KUN-HARNESS.md](KUN-HARNESS.md)。
+> 实现进度：RunDesk 0.34.0 / Kun 0.10 已有 K3-A 离线记录实验、K3-B 安全 Hybrid，以及 K3-C 首批 Plan-Act、两套内置组合、Harness 固定快照对照和 Live 真实执行分叉。运行中换模块及 K4 尚未实现；真实服务和本版真实浏览器验收未完成。逐阶段证据见 [KUN-PROGRESS.md](KUN-PROGRESS.md)，Live 范围见 [KUN-FORKS.md](KUN-FORKS.md)。
 
 # Kun + Agent DevTools：RunDesk 内置 Agent Loop 与调试器设计
 

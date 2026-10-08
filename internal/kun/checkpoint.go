@@ -69,7 +69,10 @@ func (e *Engine) checkpointLocked() (p.CheckpointCheck, p.State, error) {
 		return check, p.State{}, nil
 	}
 	if e.state.Fork != nil {
-		return block("hybrid_use_new_fork")
+		if e.state.Fork.Hybrid() {
+			return block("hybrid_use_new_fork")
+		}
+		return block("live_use_new_fork")
 	}
 	if e.state.Diagnostic != nil {
 		return block("diagnostic_session_use_followup")
