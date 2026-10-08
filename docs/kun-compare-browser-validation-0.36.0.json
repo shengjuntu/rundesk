@@ -1,0 +1,12 @@
+{
+  "version": "0.36.0",
+  "scope": "real RunDesk/Kun, local HTTP model fixture and Chromium; no remote service acceptance",
+  "modelCalls": 6,
+  "checks": [
+    "real HTTP source/Hybrid/Live comparisons with inherited/new accounting and dispatch/replay separation"
+  ],
+  "pageErrors": [],
+  "passed": false,
+  "browserStatus": "blocked",
+  "reason": "Chromium process singleton socket() failed: Operation not permitted"
+}

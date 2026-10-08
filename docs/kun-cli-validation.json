@@ -1,7 +1,7 @@
 {
-  "version": "0.36.0",
-  "rundesk": "RunDesk 0.36.0",
-  "kun": "Kun 0.11.0",
+  "version": "0.37.0",
+  "rundesk": "RunDesk 0.37.0",
+  "kun": "Kun 0.12.0",
   "hello": {
     "capabilities": {
       "argumentValidation": true,
@@ -12,6 +12,7 @@
       "eventEvidence": true,
       "fork": true,
       "forkHybrid": true,
+      "forkHypothesis": true,
       "forkLive": true,
       "harnessComposition": true,
       "inspect": true,
@@ -28,10 +29,11 @@
       "step": true
     },
     "engine": "kun",
-    "engineVersion": "0.11.0",
+    "engineVersion": "0.12.0",
     "pid": 6,
-    "protocolVersion": 11
+    "protocolVersion": 12
   },
+  "oldProtocolRejected": true,
   "passed": true,
   "scope": "CLI versions and worker hello/EOF; Debug MCP covered by Go tests"
 }

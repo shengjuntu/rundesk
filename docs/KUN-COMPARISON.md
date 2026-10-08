@@ -1,6 +1,6 @@
-# K3：来源与分支对照（RunDesk 0.36.0）
+# K3：来源与分支对照（RunDesk 0.37.0）
 
-从同一安全点比较来源后续执行与 Hybrid/Live 分支，也可比较两个同源分支。只读宿主数据库，不启动或恢复 worker、不调用模型/MCP、不读写项目文件。Kun 仍为 0.11.0、协议 v11、分叉格式 2；0.35 已生成的同版本预览可直接用于对照。
+从同一安全点比较来源后续执行与 Hybrid/Live 分支，也可比较两个同源分支。只读宿主数据库，不启动或恢复 worker、不调用模型/MCP、不读写项目文件。本版 Kun 为 0.12.0、协议 v12、分叉格式 3。对照仍可读取原版本固定预览与保留日志，不启动旧执行状态。
 
 ## 使用
 
@@ -19,7 +19,8 @@
 | 已报告 token | model.completed 的有效 total_tokens，或同时存在的 prompt_tokens+completion_tokens；缺失、无效或调用没有完成均标记不完整 |
 | 活动/等待时间 | 完整结束事件预算减去安全点的继承预算；字段缺失、记录不完整或数值倒退时为未知；不使用浏览器计时器 |
 | 工具派发 | tool.started 的真实派发记录，不包含 Hybrid 录制回放；派发不等于副作用成功 |
-| 回放 | tool.completed 的明确 replay 证据，executed=false |
+| 原录制回放 | tool.completed 的 mode=recorded、executed=false；不含人工假设 |
+| 假设替换 | mode=hypothetical、executed=false；核对固定替换指纹，单独计数并链接使用事件 |
 | 失败结果 | 真实失败或录制的失败结果，须结合当前侧执行模式理解 |
 | 拒绝 | 审批拒绝或参数校验拒绝，没有据此推断真实调用 |
 | 未见结果 | 已派发但该固定范围没有完成记录；可能仍在运行或结果未知 |
@@ -43,8 +44,10 @@
 
 响应只含明确选出的摘要字段，不返回私有分叉包、系统提示词、完整消息历史、工具参数或工具输出。回复文本沿用宿主脱敏记录；任意自由文本中的敏感信息无法保证自动识别。API 的 through 是宿主事件 ID，baseline.sequence/through 是来源 worker 序号，不可混用。
 
+假设分支额外显示父预览、位置/指纹和 applied/not_reached/unknown，只有完整连续结束且未见使用才标记 not_reached。具体语义见 [KUN-HYPOTHESES.md](KUN-HYPOTHESES.md)。
+
 ## 当前不包括
 
 这不是同条件评测基准：分支说明、补充指令、不同模型输出及外部世界变化都可能影响结果。Live 使用当时的当前项目/服务；Hybrid 回放历史结果。界面明确标出模式、指令或 Harness 不同，缺失不按零，没有质量分数、实际账单、节省比例或优化成功结论。
 
-暂不支持任意会话对照、改变分支固定 Harness、产物文件内容对比、自动实验调度、独立验证集评分、记录编辑假设导入 Hybrid 或 K4 优化。当前阶段与验证见 KUN-PROGRESS.md、KUN-VALIDATION.md。
+暂不支持任意会话对照、改变分支固定 Harness、产物文件内容对比、自动实验调度、独立验证集评分、K3-A 脱敏记录假设导入 Hybrid（0.37 支持直接从权威录制创建单条替换） 或 K4 优化。当前阶段与验证见 KUN-PROGRESS.md、KUN-VALIDATION.md。

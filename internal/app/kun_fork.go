@@ -29,21 +29,22 @@ type KunForkInput struct {
 	Instruction string          `json:"instruction"`
 }
 type KunForkPreview struct {
-	Live            *KunLivePreview `json:"live,omitempty"`
-	ID              string          `json:"id"`
-	Title           string          `json:"title"`
-	CreatedAt       string          `json:"createdAt"`
-	Hash            string          `json:"hash"`
-	Origin          p.ForkOrigin    `json:"origin"`
-	TargetSessionID string          `json:"targetSessionId"`
-	Instruction     string          `json:"instruction"`
-	Phase           string          `json:"phase"`
-	Step            int             `json:"step"`
-	Pending         int             `json:"pending"`
-	Budget          p.BudgetUsage   `json:"budget"`
-	Limits          p.BudgetLimits  `json:"limits"`
-	MaxSteps        int             `json:"maxSteps"`
-	RecordCount     int             `json:"recordCount"`
+	Hypothesis      *p.ReplayHypothesis `json:"hypothesis,omitempty"`
+	Live            *KunLivePreview     `json:"live,omitempty"`
+	ID              string              `json:"id"`
+	Title           string              `json:"title"`
+	CreatedAt       string              `json:"createdAt"`
+	Hash            string              `json:"hash"`
+	Origin          p.ForkOrigin        `json:"origin"`
+	TargetSessionID string              `json:"targetSessionId"`
+	Instruction     string              `json:"instruction"`
+	Phase           string              `json:"phase"`
+	Step            int                 `json:"step"`
+	Pending         int                 `json:"pending"`
+	Budget          p.BudgetUsage       `json:"budget"`
+	Limits          p.BudgetLimits      `json:"limits"`
+	MaxSteps        int                 `json:"maxSteps"`
+	RecordCount     int                 `json:"recordCount"`
 }
 type KunLiveToolPreview struct {
 	CallID           string `json:"callId"`
@@ -272,6 +273,9 @@ func (m *Manager) kunForkDraft(id string) (kunForkDraft, error) {
 	if d.Preview.ID != id || d.Preview.Hash != forkDraftHash(d) || d.Bundle.ContentHash != p.ForkHash(d.Bundle) || d.Target.KunFork == nil || *d.Target.KunFork != d.Preview.Origin || d.Target.ID != d.Preview.TargetSessionID {
 		return d, failure(409, "fork_integrity", "分叉记录指纹不一致")
 	}
+	if p.ValidateHypothesis(d.Bundle) != nil || forkDigest(d.Preview.Hypothesis) != forkDigest(d.Bundle.Hypothesis) {
+		return d, failure(409, "fork_integrity", "假设替换内容与固定录制不一致")
+	}
 	return d, nil
 }
 func (m *Manager) StartKunFork(id, expected string, confirmLive bool) (Session, error) {
@@ -301,6 +305,9 @@ func (m *Manager) StartKunFork(id, expected string, confirmLive bool) (Session, 
 	if err == nil && s.RunID != "" {
 		return s, nil
 	}
+	if d.Bundle.Schema != p.ForkSchema || d.Bundle.State.Manifest == nil || d.Bundle.State.Manifest.EngineVersion != p.EngineVersion {
+		return Session{}, failure(409, "fork_runtime_incompatible", "旧版本预览仅供查看；请用当前 Kun 重新运行来源并创建预览")
+	}
 	w, err := m.Workspace(d.Target.WorkspaceID)
 	if err != nil {
 		return Session{}, err
@@ -329,6 +336,9 @@ func (m *Manager) StartKunFork(id, expected string, confirmLive bool) (Session, 
 		}
 	}
 	text := "启动 Hybrid 分叉实验（模型重算，工具录制回放）"
+	if d.Preview.Hypothesis != nil {
+		text = "启动 Hybrid 假设分叉（模型重算，单条输出按固定假设替换，工具不真实执行）"
+	}
 	if d.Preview.Origin.Mode == "live" {
 		text = "启动已确认的 Live 分叉（真实工具执行，当前项目文件与 MCP，可能重复来源副作用）"
 	}

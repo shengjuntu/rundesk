@@ -23,38 +23,50 @@ type KunCompareReply struct {
 	Sequence   int64  `json:"sequence"`
 }
 type KunCompareTool struct {
-	Name       string `json:"name"`
-	Dispatched int    `json:"dispatched"`
-	Replayed   int    `json:"replayed"`
-	Failed     int    `json:"failed"`
-	Declined   int    `json:"declined"`
-	Unsettled  int    `json:"unsettled"`
+	Hypothetical int    `json:"hypothetical"`
+	Name         string `json:"name"`
+	Dispatched   int    `json:"dispatched"`
+	Replayed     int    `json:"replayed"`
+	Failed       int    `json:"failed"`
+	Declined     int    `json:"declined"`
+	Unsettled    int    `json:"unsettled"`
 }
 type KunCompareSide struct {
-	PreviewID          string           `json:"previewId,omitempty"`
-	SessionID          string           `json:"sessionId"`
-	RunID              string           `json:"runId"`
-	Mode               string           `json:"mode"`
-	Through            int64            `json:"through"`
-	AfterSequence      int64            `json:"afterSequence"`
-	LastSequence       int64            `json:"lastSequence"`
-	EventCount         int              `json:"eventCount"`
-	FirstEventID       int64            `json:"firstEventId"`
-	LastEventID        int64            `json:"lastEventId"`
-	Complete           bool             `json:"complete"`
-	Status             string           `json:"status"`
-	Harness            p.Harness        `json:"harness"`
-	ModelCalls         int              `json:"modelCalls"`
-	PlanningCalls      int              `json:"planningCalls"`
-	ModelCompletions   int              `json:"modelCompletions"`
-	ReportedTokens     int64            `json:"reportedTokens"`
-	UsageMissing       int              `json:"usageMissing"`
-	TokenUsageComplete bool             `json:"tokenUsageComplete"`
-	ActiveMillis       *int64           `json:"activeMillis"`
-	WaitMillis         *int64           `json:"waitMillis"`
-	Tools              []KunCompareTool `json:"tools"`
-	LastReply          *KunCompareReply `json:"lastReply"`
-	Warnings           []string         `json:"warnings"`
+	Hypothesis         *KunCompareHypothesis `json:"hypothesis,omitempty"`
+	PreviewID          string                `json:"previewId,omitempty"`
+	SessionID          string                `json:"sessionId"`
+	RunID              string                `json:"runId"`
+	Mode               string                `json:"mode"`
+	Through            int64                 `json:"through"`
+	AfterSequence      int64                 `json:"afterSequence"`
+	LastSequence       int64                 `json:"lastSequence"`
+	EventCount         int                   `json:"eventCount"`
+	FirstEventID       int64                 `json:"firstEventId"`
+	LastEventID        int64                 `json:"lastEventId"`
+	Complete           bool                  `json:"complete"`
+	Status             string                `json:"status"`
+	Harness            p.Harness             `json:"harness"`
+	ModelCalls         int                   `json:"modelCalls"`
+	PlanningCalls      int                   `json:"planningCalls"`
+	ModelCompletions   int                   `json:"modelCompletions"`
+	ReportedTokens     int64                 `json:"reportedTokens"`
+	UsageMissing       int                   `json:"usageMissing"`
+	TokenUsageComplete bool                  `json:"tokenUsageComplete"`
+	ActiveMillis       *int64                `json:"activeMillis"`
+	WaitMillis         *int64                `json:"waitMillis"`
+	Tools              []KunCompareTool      `json:"tools"`
+	LastReply          *KunCompareReply      `json:"lastReply"`
+	Warnings           []string              `json:"warnings"`
+}
+type KunCompareHypothesis struct {
+	ParentPreviewID    string `json:"parentPreviewId"`
+	Hash               string `json:"hash"`
+	Position           int    `json:"position"`
+	SourceSequence     int64  `json:"sourceSequence"`
+	OriginalOutputHash string `json:"originalOutputHash"`
+	OutputHash         string `json:"outputHash"`
+	Status             string `json:"status"`
+	EventID            int64  `json:"eventId,omitempty"`
 }
 type KunCompareDelta struct {
 	ModelCalls     *int64 `json:"modelCalls"`
@@ -170,6 +182,9 @@ func reduceKunComparison(side KunCompareSide, events []store.Event, baseline p.S
 					return side, failure(409, "comparison_origin_mismatch", "分支记录与固定来源不一致")
 				}
 				identity = true
+				if side.Hypothesis != nil && data.Fork.HypothesisHash != side.Hypothesis.Hash {
+					return side, failure(409, "comparison_hypothesis_mismatch", "启动记录与假设指纹不一致")
+				}
 			}
 		case "kun/model.started":
 			side.Status = "in_progress"
@@ -209,7 +224,18 @@ func reduceKunComparison(side KunCompareSide, events []store.Event, baseline p.S
 		case "kun/tool.completed":
 			v := tool(data.Call.Function.Name)
 			if data.Status == "replayed" && data.Replay != nil && !data.Replay.Executed {
-				v.Replayed++
+				if data.Replay.Mode == "hypothetical" {
+					h := side.Hypothesis
+					if h == nil || h.EventID != 0 || data.Replay.HypothesisHash != h.Hash || data.Replay.Position != h.Position || data.Replay.SourceSequence != h.SourceSequence || data.Replay.OriginalOutputHash != h.OriginalOutputHash || data.Replay.OutputHash != h.OutputHash || origin == nil || data.Replay.BundleHash != origin.BundleHash {
+						return side, failure(409, "comparison_hypothesis_mismatch", "工具回放记录与假设指纹不一致")
+					}
+					h.Status, h.EventID = "applied", host.ID
+					v.Hypothetical++
+				} else if data.Replay.Mode == "recorded" {
+					v.Replayed++
+				} else {
+					contiguous = false
+				}
 				if data.Replay.RecordedStatus == "failed" {
 					v.Failed++
 				}
@@ -254,6 +280,12 @@ func reduceKunComparison(side KunCompareSide, events []store.Event, baseline p.S
 		}
 	}
 	side.Complete = contiguous && identity && terminal && (expectedEnd == 0 || last == expectedEnd)
+	if side.Hypothesis != nil {
+		if side.Complete && side.Hypothesis.EventID == 0 {
+			side.Hypothesis.Status = "not_reached"
+		}
+		side.Warnings = append(side.Warnings, "此分支包含人工假设输出；仅 applied 表示已记录使用，not_reached 表示完整记录中未使用，unknown 表示当前记录不足以判断。")
+	}
 	side.TokenUsageComplete = side.Complete && side.ModelCalls == side.ModelCompletions && side.UsageMissing == 0
 	if side.Complete && endBudget != nil {
 		if endBudget.ActiveMillis != nil && *endBudget.ActiveMillis >= baseline.Budget.ActiveMillis {
@@ -285,6 +317,9 @@ func (m *Manager) kunCompareSide(ctx context.Context, d kunForkDraft, source boo
 	if !source {
 		side.SessionID, side.RunID, side.Mode, side.AfterSequence, side.PreviewID = d.Target.ID, "", d.Preview.Origin.Mode, 0, d.Preview.ID
 		end, origin = 0, &d.Preview.Origin
+		if h := d.Bundle.Hypothesis; h != nil {
+			side.Hypothesis = &KunCompareHypothesis{ParentPreviewID: h.ParentPreviewID, Hash: p.HypothesisHash(*h), Position: h.Position, SourceSequence: h.SourceSequence, OriginalOutputHash: h.OriginalOutputHash, OutputHash: h.OutputHash, Status: "unknown"}
+		}
 	}
 	upper, events, err := m.Store.KunCompareEvents(ctx, side.SessionID, side.RunID, through, side.AfterSequence, end)
 	if err != nil {

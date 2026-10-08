@@ -10,17 +10,23 @@ Built with Go and plain HTML/JavaScript. Node.js is not required to run RunDesk 
 
 ![RunDesk conversation workspace](docs/screenshots/0.16.0/chat-en.png)
 
+## Kun hypothetical tool results (0.37.0)
+
+Create a new Hybrid preview with one user-authored tool output, review its complete replacement, then explicitly recompute the model branch. The original private recording is retained; tool identity, arguments, order, success/error status and inherited budgets stay fixed. Hypothetical results have distinct execution evidence and comparison counts, including whether the selected assumption was used.
+
+Requires **Kun 0.12.0 / worker protocol v12 / fork schema 3**. Upgrade both binaries. Older records remain inspectable, but old checkpoints/previews cannot execute or become assumptions across engine versions. See the [hypothesis guide](docs/KUN-HYPOTHESES.md), [release notes](docs/RELEASE-0.37.0.md), [validation](docs/KUN-VALIDATION.md) and [development progress](docs/KUN-PROGRESS.md). Browser/remote-service acceptance and independently scored benchmarks remain pending.
+
 ## Kun source and fork comparison (0.36.0)
 
 RunDesk 0.36.0 adds read-only source/fork and same-checkpoint fork/fork comparisons. Both host event cursors are fixed, inherited usage is separate, and new model/planning calls, reported tokens, active/wait time and real/replayed tools are shown alongside bounded reply previews and evidence links. Missing logs or usage suppress affected deltas. Inspection never starts a worker, calls models/tools or reads project files.
 
-This is descriptive inspection; scored cross-session benchmarks and K4 optimization remain pending. Kun stays at 0.11.0 / protocol v11 with the same 0.35 compatibility. See [comparison guide](docs/KUN-COMPARISON.md) and [validation](docs/KUN-VALIDATION.md).
+This is descriptive inspection; scored cross-session benchmarks and K4 optimization remain pending. The 0.36 release retained the 0.35 engine; the 0.37 compatibility change is described above. See [comparison guide](docs/KUN-COMPARISON.md) and [validation](docs/KUN-VALIDATION.md).
 
 ## Kun runtime Harness switching (0.35.0)
 
 RunDesk 0.35.0 lets administrators switch an ordinary Kun run between Tool Loop and Plan-Act at a safe pause before a model request. Layers provides a fixed preview with a reason and exact state revision. Applying keeps the run paused, resets planning state, preserves history, permissions and spent budgets, and records a new Harness revision. Recovery and forks preserve the effective composition; a new ordinary run uses the configured default. See [Harness guide](docs/KUN-HARNESS.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md).
 
-[Hybrid and Live forks](docs/KUN-FORKS.md) and [offline recording experiments](docs/KUN-EXPERIMENTS.md) remain available. Live uses current files and services; Hybrid stops on replay misses. Arbitrary module plugins, broader state migrations, cross-session benchmarks and K4 optimization remain unimplemented. Kun is now **0.11.0 / worker protocol v11**: upgrade both binaries together. Old records remain inspectable, but checkpoints and fork previews cannot execute across versions. Real browser and remote-service acceptance remain outstanding. Codex retains host-side read-only inspection and native analysis; internal stepping, conditional breakpoints and full context snapshots remain unavailable.
+[Hybrid and Live forks](docs/KUN-FORKS.md) and [offline recording experiments](docs/KUN-EXPERIMENTS.md) remain available. Live uses current files and services; Hybrid stops on replay misses. Arbitrary module plugins, broader state migrations, cross-session benchmarks and K4 optimization remain unimplemented. Kun is now **0.12.0 / worker protocol v12**: upgrade both binaries together. Old records remain inspectable, but checkpoints and fork previews cannot execute across versions. Real browser and remote-service acceptance remain outstanding. Codex retains host-side read-only inspection and native analysis; internal stepping, conditional breakpoints and full context snapshots remain unavailable.
 
 ## Codex quick start
 

@@ -247,7 +247,7 @@ Hybrid 后续模型重算，工具严格回放，未命中停止。Live 使用�
 
 原 `PUT /instances/{iid}/agent-runtime` 的 `config.harness` 新增可选字段 `loopPolicy`、`memory`、`planning`、`action`、`capability`。省略选默认 Tool Loop；`{"loopPolicy":"plan-act-v1"}` 选择 Plan-Act 并补齐 explicit-plan-v1。仅接受已注册的两套组合，不兼容/未知 ID 拒绝。新普通轮次才读取新组合，恢复/Hybrid/Live 不换配置。详细约束见 [KUN-HARNESS.md](KUN-HARNESS.md)。
 
-`kun/model.started` 和 `kun/model.completed` 增加 `data.purpose=plan|act`，旧事件没有此字段时仍按原回复处理。规划结果保存在模块快照，不能作为完成回复执行反馈操作。Harness 对比使用两次既有只读 `GET /sessions/{sid}/kun/snapshots/{sequence}`，不新增路由；当前版本为 worker v11 / Kun 0.11.0。
+`kun/model.started` 和 `kun/model.completed` 增加 `data.purpose=plan|act`，旧事件没有此字段时仍按原回复处理。规划结果保存在模块快照，不能作为完成回复执行反馈操作。Harness 对比使用两次既有只读 `GET /sessions/{sid}/kun/snapshots/{sequence}`，不新增路由；当前版本为 worker v12 / Kun 0.12.0。
 
 ## Kun 当前运行组合切换（0.35.0）
 
@@ -260,3 +260,9 @@ Hybrid 后续模型重算，工具严格回放，未命中停止。Live 使用�
 `GET /kun-forks/comparisons/{fid}` 仅管理员可用；旧 `/api` 与 `/api/v1` 共用相同实现。可选 `against` 为另一同基线预览；默认比较来源后续执行和 fid 的目标分支。`leftThrough`、`rightThrough` 是固定宿主事件上界，须保留零值；与 worker sequence 不同。
 
 查询只读宿主数据库，不启动 worker/模型/MCP、不读项目文件。返回继承预算、两侧新增用量、工具真实派发/回放计数及有界回复；日志或用量缺失时相关差值为 null。未知/重复参数 400，不同基线/无效上界 409，载荷超限 413。说明与上限见 [KUN-COMPARISON.md](KUN-COMPARISON.md)。
+
+## 单条工具结果假设（0.37.0）
+
+`GET /api/v1/kun-forks/recordings/{fid}` 读取当前版本未修改 Hybrid 的有界录制摘要；`POST /api/v1/kun-forks/{fid}/hypotheses` 接收 `{expectedHash, position, recordHash, output, reason, title}` 和 `Idempotency-Key`，创建独立不可变假设预览。原录制不变，不启动执行。随后核对固定全文，用原 start 接口和新 hash 显式启动。
+
+output 必须存在、可为空，最多 64 KiB UTF-8；reason 最多 1000 字符。Live、叠加替换、旧引擎预览拒绝。对照区分 `replayed`（原录制）与 `hypothetical`，返回假设指纹、applied/not_reached/unknown 及使用事件。仅管理员，成员/应用默认拒绝。详情见 [KUN-HYPOTHESES.md](KUN-HYPOTHESES.md)。

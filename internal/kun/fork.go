@@ -269,6 +269,9 @@ func (e *Engine) forkLocked(in p.Start, hash string) (p.State, error) {
 	if o.PreviewID == "" || o.SessionID != s.SessionID || o.SessionID == in.SessionID || o.RunID != s.RunID || o.BundleHash != b.ContentHash || o.Sequence != b.Selection.Sequence || o.Through != b.Selection.Through || o.RunID != b.Selection.SourceRunID || fingerprint(in.Config) != fingerprint(s.Config) || in.ApprovalPolicy != s.ApprovalPolicy || utf8.RuneCountInString(f.Instruction) > 16000 {
 		return p.State{}, fmt.Errorf("fork source or configuration mismatch")
 	}
+	if err := p.ValidateHypothesis(b); err != nil {
+		return p.State{}, err
+	}
 	if err := e.restoreStateModules(s); err != nil {
 		return p.State{}, err
 	}
@@ -300,6 +303,9 @@ func (e *Engine) forkLocked(in p.Start, hash string) (p.State, error) {
 	}
 	previous := e.state
 	s.Fork = &p.ForkState{Origin: o, InheritedStep: s.Step, InheritedBudget: s.Budget, ReplayTotal: len(b.Records)}
+	if b.Hypothesis != nil {
+		s.Fork.HypothesisHash = p.HypothesisHash(*b.Hypothesis)
+	}
 	s.SessionID, s.RunID, s.Revision, s.Status, s.Error = in.SessionID, in.RunID, 1, "running", ""
 	s.ResumedFrom = nil
 	s.Approval = nil // A source decision never authorizes a new external call.
@@ -312,6 +318,9 @@ func (e *Engine) forkLocked(in p.Start, hash string) (p.State, error) {
 		s.Debug.Hits = map[string]int{}
 	}
 	preamble := "This is a RunDesk Hybrid experiment. Tool results are recorded simulations, not current observations or executed actions. Report that distinction. A replay miss stops the run; never claim a simulated write happened."
+	if h := b.Hypothesis; h != nil {
+		preamble += fmt.Sprintf(" This experiment also substitutes a USER-AUTHORED HYPOTHETICAL output at replay position %d (source sequence %d). If reached, that output is a counterfactual assumption, not the original recording or a verified observation. Identify conclusions that depend on it. Hypothesis fingerprint: %s.", h.Position+1, h.SourceSequence, s.Fork.HypothesisHash)
+	}
 	if live {
 		s.Phase = "restoring"
 		s.ToolDefinitions = nil
@@ -390,8 +399,15 @@ func (e *Engine) replayTool(call p.ToolCall, intent toolIntent) error {
 	}
 	e.state.Budget.ToolCalls++
 	evidence := &p.ReplayEvidence{Mode: "recorded", SourceSequence: r.Sequence, Position: f.ReplayCursor, BundleHash: e.forkTape.ContentHash, RecordedStatus: r.Status, Executed: false}
+	output := r.Output
+	if h := e.forkTape.Hypothesis; h != nil && h.Position == f.ReplayCursor {
+		output = h.Output
+		evidence.Mode = "hypothetical"
+		evidence.HypothesisHash = p.HypothesisHash(*h)
+		evidence.OriginalOutputHash, evidence.OutputHash = h.OriginalOutputHash, h.OutputHash
+	}
 	f.ReplayCursor++
-	return e.finishTool(call, intent, toolResult{Output: r.Output, IsError: r.IsError, Replay: evidence}, "replayed", 0)
+	return e.finishTool(call, intent, toolResult{Output: output, IsError: r.IsError, Replay: evidence}, "replayed", 0)
 }
 
 func forkExecutionMode(s p.State) string {

@@ -1,8 +1,8 @@
-> 0.36 新增 [来源/分支与同源分支对照](KUN-COMPARISON.md)，只读已保留的宿主日志；引擎、分叉格式及执行约束不变。
+> 0.36 已有 [同基线跨会话对照](KUN-COMPARISON.md)；0.37 新增 [单条工具输出假设与 Hybrid 重算](KUN-HYPOTHESES.md)，仍保留原录制并禁止真实工具派发。
 
 # K3-B/C：Hybrid 与 Live 运行时分叉
 
-当前需要 RunDesk 0.35.0、Kun 0.11.0、worker 协议 v11、fork schema 2。管理员可从**最近已停止的普通 Kun 运行**中选择安全边界，生成绑定模式的固定预览，再启动独立执行分支。Hybrid 首批在 0.32 引入，Live 首批在 0.34 引入；这不代表 K3 已完整验收。0.35 已有普通运行安全点组合切换；更多模块迁移、跨会话基准和 K4 尚未实现。
+当前需要 RunDesk 0.37.0、Kun 0.12.0、worker 协议 v12、fork schema 3。管理员可从**最近已停止的普通 Kun 运行**中选择安全边界，生成绑定模式的固定预览，再启动独立执行分支。Hybrid 首批在 0.32 引入，Live 首批在 0.34 引入；这不代表 K3 已完整验收。0.35 已有普通运行安全点组合切换；更多模块迁移、跨会话基准和 K4 尚未实现。
 
 ## 三种实验的区别
 
@@ -53,7 +53,7 @@ worker 清空历史的一次性审批决定和原 MCP 连接状态，重新连�
 
 Hybrid 不发现或连接 MCP，不执行文件工具，不请求真实执行审批。工具网关另有禁止真实派发的保护。匹配要求同时满足：引擎/环境/目录指纹、工具身份和 schema、规范化参数、下一条录制位置；不向后搜索，也不只按名字匹配。未命中以 `replay_miss` 停止，没有 Live 回退。
 
-参数规范化忽略对象键次序与空白，保留 JSON 大整数精度，拒绝重复键、非对象和尾随内容；`1` 与 `1.0` 保守视为不同。只接受已保存的 succeeded/failed 执行结果，不把审批拒绝、参数拒绝或未知结果当作录制。回放事件含来源序号、位置、原状态、bundleHash 和 `executed=false`。工具预算照常消耗，但不是外部调用；分支可以提前结束并留下未使用录制。
+参数规范化忽略对象键次序与空白，保留 JSON 大整数精度，拒绝重复键、非对象和尾随内容；`1` 与 `1.0` 保守视为不同。原录制只接受已保存的 succeeded/failed 执行结果，不把审批拒绝、参数拒绝或未知结果当作录制。回放事件含来源序号、位置、原状态、bundleHash 和 `executed=false`。工具预算照常消耗，但不是外部调用；分支可以提前结束并留下未使用录制。
 
 ## 数据和接口
 
@@ -71,10 +71,12 @@ Live 公开详情只增加工作区、权限及待处理动作摘要；参数中
 | `GET /api/v1/kun-forks/{fid}` | 完整公开预览 |
 | `POST /api/v1/kun-forks/{fid}/start` | `{expectedHash, confirmLive?}`；Live 必须 confirmLive=true；启动/返回固定目标 |
 
-两个 POST 要求 `Idempotency-Key`。这 5 个操作仅管理员开放，应用 key、成员 runner/viewer 及成员代理入口拒绝；不接受客户端注入 bundle 或新目标。启动仍受宿主并发、进程容量和执行环境检查；HTTP 接收成功不代表执行成功，应查看目标状态。hello 为 `fork=true, forkHybrid=true, forkLive=true`。
+上述两个 POST 要求 `Idempotency-Key`。上述操作仅管理员开放，应用 key、成员 runner/viewer 及成员代理入口拒绝；不接受客户端注入 bundle 或新目标。启动仍受宿主并发、进程容量和执行环境检查；HTTP 接收成功不代表执行成功，应查看目标状态。hello 为 `fork=true, forkHybrid=true, forkLive=true, forkHypothesis=true`。
+
+0.37 另有管理员录制摘要 GET 和假设子预览 POST；后者也要求 Idempotency-Key。假设详情显示用户填写的完整 output/reason，列表省略这两项，具体边界与证据见 [KUN-HYPOTHESES.md](KUN-HYPOTHESES.md)。
 
 ## 版本和验收
 
-升级时同时更新 RunDesk、Kun 并结束旧 worker。Kun 0.10 及更早的执行记录仍可查看，检查点和分叉预览不能跨到 0.11 执行；先完成本版普通运行，再生成新检查点或预览。
+升级时同时更新 RunDesk、Kun 并结束旧 worker。Kun 0.11 及更早的执行记录仍可查看，检查点和分叉预览不能跨到 0.12 执行；先完成本版普通运行，再生成新检查点或预览。
 
 本地内核、实际 worker/HTTP fixture、权限/审批、专项 race 和 Node DOM 交互通过。真实浏览器、真实 Codex/远程模型/MCP、Windows 实机和生产压力未验收；不要把本地桩测试等同真实业务效果。详见 [验证记录](KUN-VALIDATION.md) 与 [开发进度](KUN-PROGRESS.md)。

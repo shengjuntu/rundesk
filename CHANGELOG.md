@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.37.0
+
+- Add immutable, single-output hypotheses derived from fixed Hybrid recordings; retain original tape and bind parent, record and replacement fingerprints. Creating previews never starts execution.
+- Add administrator record-review GET and idempotent hypothesis POST. Bounded/redacted display snippets, complete replacement review, explicit empty output, 64 KiB UTF-8 limit and reason required.
+- Worker validates the overlay, preserves strict matching/error status/budgets, labels counterfactual model context and writes hypothetical replay evidence; replay misses never fall back to Live.
+- Inspector and same-baseline comparisons separate real dispatch, original replay and hypothetical substitution, with applied/not_reached/unknown status and event evidence.
+- Kun 0.12.0 / protocol v12 / fork schema 3; upgrade both binaries. Prior engine previews/checkpoints remain read-only. No new dependencies. Real browser/remote-service/production acceptance and scored benchmarks remain outstanding.
+
 ## 0.36.0
 
 - Add administrator-only source/fork and same-checkpoint fork/fork comparisons using retained host logs. Reads never start or resume workers, call providers/MCP, read project files or modify execution.

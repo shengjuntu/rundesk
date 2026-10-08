@@ -1,21 +1,20 @@
 {
-  "version": "0.36.0",
-  "kunVersion": "0.11.0",
-  "protocolVersion": 11,
-  "forkSchema": 2,
+  "version": "0.37.0",
+  "kunVersion": "0.12.0",
+  "protocolVersion": 12,
+  "forkSchema": 3,
   "date": "2026-10-08",
   "passed": true,
   "scope": "local core/protocol/HTTP/Node tests and compilation; not full product acceptance",
   "goVersion": "go1.25.12",
   "checks": {
-    "goTestAll": "passed",
+    "goTestAll": "passed; app 78.507s",
     "goVet": "passed",
-    "focusedRace": "passed: TestKunCompar*, TestHybridHostLifecycle, TestLiveHostConfirmation*, TestHybridAuthorization* in app/store",
+    "focusedRace": "passed: TestHypothesis*, TestHybrid*, TestKunHypothesis*, TestKunCompar* in kun/kunproto/app",
     "linuxAmd64": "rundesk and kun built",
-    "node": "69 syntax files and 7 interaction suites passed",
-    "realHTTP": "real host/worker plus local model: source, Hybrid, Live comparisons; 6 total model calls, reads add none",
-    "windowsAmd64": "rundesk and kun cross-compiled; no Windows runtime test",
-    "finalTargetedRegression": "TestKunCompar* passed after resume-status correction; Linux/Windows host rebuilt"
+    "node": "72 syntax files and 8 interaction suites passed",
+    "realHTTP": "real host/worker with local model: source, recorded Hybrid and hypothetical Hybrid; 6 total model calls; 1 assumed result observed; reads add none",
+    "windowsAmd64": "rundesk and kun cross-compiled; no Windows runtime test"
   },
   "notAccepted": [
     "real browser layout/focus/mobile behavior",
@@ -23,5 +22,5 @@
     "Windows runtime",
     "production workload"
   ],
-  "browserNote": "Chromium launch blocked: process singleton socket() failed: Operation not permitted."
+  "browserNote": "No new browser attempt. Prior release Chromium process singleton socket() failed: Operation not permitted; DOM tests are not browser acceptance."
 }

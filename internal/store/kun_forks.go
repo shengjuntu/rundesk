@@ -6,7 +6,7 @@ import (
 )
 
 func (s *Store) KunForkPreviews(ctx context.Context, offset, limit int) ([]json.RawMessage, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT json_remove(data,'$.instruction','$.live') FROM objects WHERE kind='kun_fork_preview' ORDER BY rowid DESC LIMIT ? OFFSET ?`, limit+1, offset)
+	rows, err := s.db.QueryContext(ctx, `SELECT json_remove(data,'$.instruction','$.live','$.hypothesis.output','$.hypothesis.reason') FROM objects WHERE kind='kun_fork_preview' ORDER BY rowid DESC LIMIT ? OFFSET ?`, limit+1, offset)
 	if err != nil {
 		return nil, err
 	}

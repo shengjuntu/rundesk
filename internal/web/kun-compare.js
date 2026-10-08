@@ -24,7 +24,8 @@ window.RunDeskKunCompare=(()=>{
   for(const [name,side]of [['左侧',a],['右侧',b]]){
    const col=el('section',{},el('h4',{},name+' · '+modes[side.mode]));
    for(const warning of side.warnings)col.append(el('p',{class:'help'},warning));
-   col.append(el('h4',{},'工具结果（已记录）'),table(['工具','真实派发','回放','失败结果','拒绝','未见结果'],side.tools.map(t=>[t.name,t.dispatched,t.replayed,t.failed,t.declined,t.unsettled])));
+   if(side.hypothesis){const h=side.hypothesis;col.append(el('p',{class:'experiment-mode'},'人工假设 · '+({applied:'已记录使用',not_reached:'完整记录中未使用',unknown:'当前记录不足以判断'}[h.status]||'未知')),kunFacts([['父预览',h.parentPreviewId],['来源结果','#'+h.sourceSequence],['假设指纹',h.hash]]));if(h.eventId)col.append(button('查看假设结果事件 #'+h.eventId,()=>openEvidence(side,h.eventId)));}
+   col.append(el('h4',{},'工具结果（已记录）'),table(['工具','真实派发','原录制回放','假设替换','失败结果','拒绝','未见结果'],side.tools.map(t=>[t.name,t.dispatched,t.replayed,t.hypothetical??0,t.failed,t.declined,t.unsettled])));
    if(!side.tools.length)col.append(el('p',{},'此范围没有工具记录。'));
    col.append(el('h4',{},'最后一条新增回复'));
    if(side.lastReply){const r=side.lastReply;col.append(el('pre',{},r.text),el('p',{class:'help'},`${r.characters} 字符${r.truncated?' · 已截断，完整内容见事件':''} · 文本指纹 ${r.hash}`),button('查看'+name+'回复事件 #'+r.eventId,()=>openEvidence(side,r.eventId)));}

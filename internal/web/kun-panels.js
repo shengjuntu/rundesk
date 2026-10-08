@@ -47,7 +47,7 @@ function kunRenderSources(s,selected,events,navigate){
  const node=kunPanel("当前运行控制状态","sources-state",s,null);
  node.append(el("p",{class:"help"},"控制目标始终是当前运行。"+(selected?"历史选择仍固定在 #"+selected.data.sequence+"，不会成为控制目标。":"")));
  if(!s){node.append(el("p",{},"当前状态不可用，可检查恢复条件或查看保留事件。"));return node;}
- if(s.fork)node.append(el("p",{class:"experiment-mode"},s.fork.origin.mode==="live"?"Live · 真实工具执行 · 当前项目和外部服务":"Hybrid · 工具仅录制回放 · 未命中停止"),kunFacts([["来源边界",s.fork.origin.sequence],["录制进度",s.fork.origin.mode==="live"?"不使用录制":s.fork.replayCursor+" / "+s.fork.replayTotal],["新增模型调用",s.step-s.fork.inheritedStep]]));
+ if(s.fork)node.append(el("p",{class:"experiment-mode"},s.fork.origin.mode==="live"?"Live · 真实工具执行 · 当前项目和外部服务":s.fork.hypothesisHash?"Hybrid · 含人工假设输出 · 未命中停止":"Hybrid · 工具仅录制回放 · 未命中停止"),kunFacts([["来源边界",s.fork.origin.sequence],["录制进度",s.fork.origin.mode==="live"?"不使用录制":s.fork.replayCursor+" / "+s.fork.replayTotal],["新增模型调用",s.step-s.fork.inheritedStep]]));
  const scoped=kunScopedEvents(events,s,null),pause=s.debug?.pause;
  node.append(kunFacts([["状态",kunStateLabel(s.status)],["阶段",s.phase],["模型步骤",s.step],["待派发工具",s.pending?.length??0],["断点规则版本",s.debug?.revision],["预算停止原因",s.budget?.stopReason||"无已记录原因"]]));
  if(s.error)node.append(el("p",{class:"kun-signal"},"运行错误："+s.error));

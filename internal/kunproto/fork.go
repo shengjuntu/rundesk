@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const ForkSchema = 2
+const ForkSchema = 3
 const MaxForkBytes = 4 << 20
 const MaxReplayRecords = 128
 
@@ -45,14 +45,15 @@ type ReplayRecord struct {
 	Status        string `json:"status"`
 }
 type ForkBundle struct {
-	Mode            string         `json:"mode"`
-	Schema          int            `json:"schema"`
-	Selection       ForkSelection  `json:"selection"`
-	State           State          `json:"state"`
-	CatalogHash     string         `json:"catalogHash"`
-	EnvironmentHash string         `json:"environmentHash"`
-	Records         []ReplayRecord `json:"records"`
-	ContentHash     string         `json:"contentHash"`
+	Hypothesis      *ReplayHypothesis `json:"hypothesis,omitempty"`
+	Mode            string            `json:"mode"`
+	Schema          int               `json:"schema"`
+	Selection       ForkSelection     `json:"selection"`
+	State           State             `json:"state"`
+	CatalogHash     string            `json:"catalogHash"`
+	EnvironmentHash string            `json:"environmentHash"`
+	Records         []ReplayRecord    `json:"records"`
+	ContentHash     string            `json:"contentHash"`
 }
 
 func ForkHash(b ForkBundle) string {
@@ -70,6 +71,7 @@ type ForkOrigin struct {
 	Mode       string `json:"mode"`
 }
 type ForkState struct {
+	HypothesisHash  string      `json:"hypothesisHash,omitempty"`
 	Origin          ForkOrigin  `json:"origin"`
 	InheritedStep   int         `json:"inheritedStep"`
 	InheritedBudget BudgetUsage `json:"inheritedBudget"`
@@ -86,10 +88,13 @@ type ForkStart struct {
 func (f *ForkState) Hybrid() bool { return f != nil && f.Origin.Mode == "hybrid" }
 
 type ReplayEvidence struct {
-	Mode           string `json:"mode"`
-	SourceSequence int64  `json:"sourceSequence"`
-	Position       int    `json:"position"`
-	BundleHash     string `json:"bundleHash"`
-	RecordedStatus string `json:"recordedStatus"`
-	Executed       bool   `json:"executed"`
+	HypothesisHash     string `json:"hypothesisHash,omitempty"`
+	OriginalOutputHash string `json:"originalOutputHash,omitempty"`
+	OutputHash         string `json:"outputHash,omitempty"`
+	Mode               string `json:"mode"`
+	SourceSequence     int64  `json:"sourceSequence"`
+	Position           int    `json:"position"`
+	BundleHash         string `json:"bundleHash"`
+	RecordedStatus     string `json:"recordedStatus"`
+	Executed           bool   `json:"executed"`
 }

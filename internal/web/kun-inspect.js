@@ -19,7 +19,7 @@ function kunPretty(value){return typeof value==="string"?value:JSON.stringify(va
 function kunRaw(label,value){return el("details",{class:"kun-raw"},el("summary",{},label),el("pre",{},kunPretty(value)));}
 function kunFacts(pairs){return el("dl",{class:"kun-facts"},...pairs.flatMap(([k,v])=>[el("dt",{},k),el("dd",{},String(v??"未记录"))]));}
 function kunCallName(row){const d=(row.start||row.end)?.data.data||{};return row.kind==="model"?(d.purpose==="plan"?"规划模型":"执行模型")+" · 步骤 "+d.step:row.kind==="tool"?"工具 · "+d.call?.function?.name:"MCP · "+d.server+" / "+d.method;}
-function kunCallStatus(row){const d=row.end?.data.data;return d?.replay?.mode==="recorded"?"录制回放（未执行）":!d?"结果未记录":d.error||d.isError?"失败":d.status||"已返回";}
+function kunCallStatus(row){const d=row.end?.data.data;return d?.replay?.mode==="hypothetical"?"人工假设回放（未执行）":d?.replay?.mode==="recorded"?"录制回放（未执行）":!d?"结果未记录":d.error||d.isError?"失败":d.status||"已返回";}
 function kunRenderCall(row,sequence){
  const visible=kunCallRows(row.events.filter(e=>e.data.sequence<=sequence))[0];
  if(!visible)return el("p",{},"此快照尚无调用证据。");
@@ -31,8 +31,9 @@ function kunRenderCall(row,sequence){
   if(b)node.append(el("h4",{},r.purpose==="plan"?"显式计划（未执行）":"模型回答"),el("pre",{},r.message?.content||"（无文本回答）"),kunRaw("模型工具调用",r.message?.tool_calls||[]));
  }else if(row.kind==="tool"){
   node.append(kunFacts([["调用 ID",(d.call||r.call)?.id],["状态",r.status||"结果未记录"]]),kunRaw("工具参数",(d.call||r.call)?.function?.arguments));
-  if(r.replay)node.append(el("p",{class:"experiment-mode"},"录制回放 · 未执行真实工具"),kunFacts([["来源序号",r.replay.sourceSequence],["录制位置",r.replay.position+1],["原始结果",r.replay.recordedStatus]]));
-  if(b)node.append(el("h4",{},r.replay?"录制输出":"工具输出"),el("pre",{},r.output||"（空输出）"));
+  if(r.replay)node.append(el("p",{class:"experiment-mode"},r.replay.mode==="hypothetical"?"人工假设回放 · 未执行真实工具":"录制回放 · 未执行真实工具"),kunFacts([["来源序号",r.replay.sourceSequence],["录制位置",r.replay.position+1],["原始结果",r.replay.recordedStatus]]));
+  if(r.replay?.mode==="hypothetical")node.append(kunFacts([["假设指纹",r.replay.hypothesisHash],["原输出指纹",r.replay.originalOutputHash],["替换输出指纹",r.replay.outputHash]]));
+  if(b)node.append(el("h4",{},r.replay?.mode==="hypothetical"?"假设输出":r.replay?"录制输出":"工具输出"),el("pre",{},r.output||"（空输出）"));
  }else{
   node.append(kunFacts([["交换 ID",d.exchangeId??r.exchangeId],["服务器",d.server||r.server],["方法",d.method||r.method]]),kunRaw("MCP 参数",d.params));
   if(b)node.append(el("h4",{},r.error?"MCP 错误":"MCP 结果"),el("pre",{},kunPretty(r.error||r.result)));

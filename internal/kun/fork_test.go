@@ -112,7 +112,7 @@ func TestHybridForkRecordingAndMissIsolation(t *testing.T) {
 		name string
 		mode int32
 		fail bool
-	}{{"matched", 0, false}, {"arguments", 1, true}, {"order", 2, true}, {"exhausted", 3, true}} {
+	}{{"matched", 0, false}, {"arguments", 1, true}, {"order", 2, true}, {"exhausted", 3, true}, {"hypothesis", 0, false}, {"hypothesis-empty", 0, false}, {"hypothesis-miss", 1, true}} {
 		t.Run(test.name, func(t *testing.T) {
 			mode.Store(test.mode)
 			engine, err := Open(filepath.Join(t.TempDir(), "branch.db"))
@@ -121,6 +121,19 @@ func TestHybridForkRecordingAndMissIsolation(t *testing.T) {
 			}
 			defer engine.Close()
 			request := makeRequest(bundle, test.name)
+			hypothetical := strings.HasPrefix(test.name, "hypothesis")
+			if hypothetical {
+				b := request.Fork.Bundle
+				r := b.Records[0]
+				output := "assumed result <script>"
+				if test.name == "hypothesis-empty" {
+					output = ""
+				}
+				b.Hypothesis = &p.ReplayHypothesis{ParentPreviewID: "parent", ParentHash: strings.Repeat("a", 64), ParentBundleHash: b.ContentHash, Position: 0, SourceSequence: r.Sequence, RecordHash: p.ReplayRecordHash(r), OriginalOutputHash: p.TextHash(r.Output), OutputHash: p.TextHash(output), Output: output, Reason: "controlled counterfactual"}
+				b.ContentHash = p.ForkHash(b)
+				request.Fork.Bundle = b
+				request.Fork.Origin.BundleHash = b.ContentHash
+			}
 			if _, err = engine.Start(request); err != nil {
 				t.Fatal(err)
 			}
@@ -136,7 +149,7 @@ func TestHybridForkRecordingAndMissIsolation(t *testing.T) {
 				}
 				seen := false
 				for _, message := range state.Messages {
-					if message.Role == "tool" && strings.Contains(message.Content, "recorded input") {
+					if message.Role == "tool" && ((!hypothetical && strings.Contains(message.Content, "recorded input")) || (hypothetical && message.Content == request.Fork.Bundle.Hypothesis.Output)) {
 						seen = true
 					}
 				}
@@ -154,6 +167,7 @@ func TestHybridForkRecordingAndMissIsolation(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			seenHypothesis := 0
 			for _, ev := range events {
 				if ev.Type == "kun/tool.started" || ev.Type == "kun/mcp.connecting" {
 					t.Fatal("live dispatch", ev.Type)
@@ -161,6 +175,26 @@ func TestHybridForkRecordingAndMissIsolation(t *testing.T) {
 				if ev.Type == "kun/tool.completed" && !strings.Contains(string(ev.Data), `"executed":false`) {
 					t.Fatal("unmarked replay", string(ev.Data))
 				}
+				if ev.Type == "kun/tool.completed" {
+					var data struct {
+						Replay *p.ReplayEvidence `json:"replay"`
+						Output string            `json:"output"`
+					}
+					json.Unmarshal(ev.Data, &data)
+					if data.Replay != nil && data.Replay.Mode == "hypothetical" {
+						seenHypothesis++
+						h := request.Fork.Bundle.Hypothesis
+						if h == nil || data.Replay.HypothesisHash != p.HypothesisHash(*h) || data.Output != h.Output || data.Replay.OutputHash != h.OutputHash || data.Replay.OriginalOutputHash != h.OriginalOutputHash {
+							t.Fatal("bad hypothetical evidence", data)
+						}
+					}
+				}
+			}
+			if hypothetical && !test.fail && (seenHypothesis != 1 || state.Fork.HypothesisHash == "" || !strings.Contains(state.Messages[0].Content, "USER-AUTHORED HYPOTHETICAL")) {
+				t.Fatal("missing hypothetical evidence", seenHypothesis)
+			}
+			if test.name == "hypothesis-miss" && seenHypothesis != 0 {
+				t.Fatal("miss used hypothesis")
 			}
 			calls := branchCalls.Load()
 			if _, err = engine.Start(request); err != nil || branchCalls.Load() != calls {
@@ -226,6 +260,11 @@ func TestHybridForkRecordingAndMissIsolation(t *testing.T) {
 		{"schema", func(r *p.Start) { r.Fork.Bundle.Schema++ }},
 		{"live_mcp", func(r *p.Start) { r.MCP = []p.MCPServer{mcpSpec("http://localhost:9/mcp")} }},
 		{"config", func(r *p.Start) { r.Config.MaxSteps++ }},
+		{"overlay", func(r *p.Start) {
+			r.Fork.Bundle.Hypothesis = &p.ReplayHypothesis{Position: 0, Output: "tampered"}
+			r.Fork.Bundle.ContentHash = p.ForkHash(r.Fork.Bundle)
+			r.Fork.Origin.BundleHash = r.Fork.Bundle.ContentHash
+		}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			e := newTestEngine(t)

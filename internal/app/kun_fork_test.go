@@ -209,7 +209,7 @@ func TestHybridAuthorizationDefaultDeny(t *testing.T) {
 	h := NewHandler(m, userTestAdmin, true)
 	for _, token := range []string{code, viewer, key} {
 		for _, prefix := range []string{"/api", "/api/v1", "/api/v1/member/" + user.Grants[0].ID} {
-			for _, route := range []struct{ method, path string }{{"GET", "/kun-forks"}, {"POST", "/kun-forks"}, {"GET", "/kun-forks/id"}, {"GET", "/kun-forks/comparisons/id"}, {"POST", "/kun-forks/id/start"}, {"GET", "/kun-forks/sources/" + source.ID}} {
+			for _, route := range []struct{ method, path string }{{"GET", "/kun-forks"}, {"POST", "/kun-forks"}, {"GET", "/kun-forks/id"}, {"GET", "/kun-forks/comparisons/id"}, {"GET", "/kun-forks/recordings/id"}, {"POST", "/kun-forks/id/hypotheses"}, {"POST", "/kun-forks/id/start"}, {"GET", "/kun-forks/sources/" + source.ID}} {
 				r := appRequest(h, route.method, prefix+route.path, `{}`, token, "hybrid-denied")
 				if r.Code != 403 {
 					t.Fatal(fmt.Sprint(route), prefix, r.Code)

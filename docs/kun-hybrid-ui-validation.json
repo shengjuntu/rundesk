@@ -1,5 +1,5 @@
 {
-  "version": "0.36.0",
+  "version": "0.37.0",
   "passed": true,
   "scope": "Node DOM stub + shipped view code; browser layout not tested",
   "checks": [
@@ -10,6 +10,7 @@
     "literal text rendering",
     "stale preview response ignored",
     "closing dialog suppresses late navigation",
-    "no source control routes"
+    "no source control routes",
+    "hypothesis child becomes current preview; explicit start uses child hash"
   ]
 }

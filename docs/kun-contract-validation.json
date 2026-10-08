@@ -1,13 +1,11 @@
 {
-  "version": "0.36.0",
+  "version": "0.37.0",
   "passed": true,
-  "javascriptFiles": 69,
-  "nodeInteractionSuites": 7,
-  "openapiPaths": 151,
-  "openapiOperations": 181,
+  "javascriptFiles": 72,
+  "nodeInteractionSuites": 8,
+  "openapiPaths": 153,
+  "openapiOperations": 183,
   "uniqueParameters": true,
-  "comparisonSchema": true,
-  "comparisonAdministratorOnly": true,
-  "dependenciesUnchangedFrom": "0.35.0",
-  "browserAcceptance": "blocked"
+  "hypothesisSchemasAndIdempotency": true,
+  "noNewDependencies": true
 }

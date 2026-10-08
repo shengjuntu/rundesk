@@ -19,14 +19,15 @@ const origin={sessionId:'source',runId:'original',sequence:8,through:40,bundleHa
 const preview=id=>({id,title:id==='one'?'<img onerror=alert(1)>':id,hash:'hash-'+id,origin:{...origin,previewId:id},targetSessionId:'target-'+id,instruction:'literal <script>text</script>',phase:'before_model',step:0,pending:0,budget:{toolCalls:0,reportedTokens:0},limits:{maxToolCalls:64},maxSteps:4,recordCount:2});
 let writes=[],reads=[],delayed=null,started=0,selected=[],created=0;
 const api=async(p,o={})=>{
+ if(o.method==='POST'&&p.endsWith('/hypotheses')){writes.push({path:p,body:structuredClone(o.body)});return {...preview('hyp-child'),hypothesis:{parentPreviewId:'one',parentHash:'hash-one',recordHash:'record-hash',output:o.body.output,reason:o.body.reason,position:0,sourceSequence:12}}}
  if(o.method==='POST'){writes.push({path:p,body:structuredClone(o.body)});if(p==='/kun-forks'){created++;return preview('one')}started++;if(delayed)return delayed.promise;return {id:'target-one'}}
- reads.push(p);if(p.includes('/sources/'))return {selection:{sourceRunId:'original',through:40,expectedStateRevision:99,workerEpoch:'epoch'},items:[{sequence:8,phase:'before_model',step:0,pending:0}],nextOffset:1,hasMore:false};
+ reads.push(p);if(p.includes('/recordings/'))return {previewId:'one',previewHash:'hash-one',items:[{position:0,sequence:12,tool:'read_file',status:'succeeded',recordHash:'record-hash',outputHash:'output-hash',preview:'original',outputBytes:8,redacted:false,truncated:false}]};if(p.includes('/sources/'))return {selection:{sourceRunId:'original',through:40,expectedStateRevision:99,workerEpoch:'epoch'},items:[{sequence:8,phase:'before_model',step:0,pending:0}],nextOffset:1,hasMore:false};
  if(p.includes('?'))return {items:[preview('one'),preview('two')],hasMore:false,nextOffset:2};
  if(p==='/kun-forks/one'&&delayed)return delayed.promise;
  return preview(p.split('/').at(-1));
 };
-const ctx=vm.createContext({window:{},document,el,button,api,encodeURIComponent,URLSearchParams,JSON,console,state:{},toast(){},refreshSessions:async()=>{},selectSession:async id=>selected.push(id)});
-const root=path.resolve(__dirname,'..');vm.runInContext(fs.readFileSync(root+'/internal/web/kun-inspect.js','utf8'),ctx);vm.runInContext(fs.readFileSync(root+'/internal/web/kun-forks.js','utf8'),ctx);
+const ctx=vm.createContext({window:{},document,el,button,api,encodeURIComponent,URLSearchParams,TextEncoder,JSON,console,state:{},toast(){},refreshSessions:async()=>{},selectSession:async id=>selected.push(id)});
+const root=path.resolve(__dirname,'..');vm.runInContext(fs.readFileSync(root+'/internal/web/kun-inspect.js','utf8'),ctx);vm.runInContext(fs.readFileSync(root+'/internal/web/kun-hypothesis.js','utf8'),ctx);vm.runInContext(fs.readFileSync(root+'/internal/web/kun-forks.js','utf8'),ctx);
 const buttons=d=>d.querySelectorAll('button'),byText=(d,text)=>buttons(d).find(n=>n.textContent===text),field=(d,name)=>[...d.querySelectorAll('input'),...d.querySelectorAll('textarea'),...d.querySelectorAll('select')].find(n=>n.attrs['aria-label']===name);
 (async()=>{
  let d=ctx.window.RunDeskKunForks.open({sessionId:'source'});await flush();assert.equal(writes.length,0);assert.equal(field(d,'安全分叉边界').value,8);
@@ -41,7 +42,8 @@ const buttons=d=>d.querySelectorAll('button'),byText=(d,text)=>buttons(d).find(n
  const old=first.click();await second.click();delayed.resolve(preview('one'));await old;delayed=null;assert.equal(d.querySelector('main').querySelector('h3').textContent,'two');
  // Closing while start is pending never navigates away from a later selection.
  delayed=deferred();const last=byText(d,'启动或打开 Hybrid 分支').click();d.close();delayed.resolve({id:'target-two'});await last;delayed=null;assert.deepEqual(selected,['target-one']);
- assert(writes.every(v=>v.path==='/kun-forks'||/^\/kun-forks\/[^/]+\/start$/.test(v.path)),'dialog controlled source');
- const report={version:'0.36.0',passed:true,scope:'Node DOM stub + shipped view code; browser layout not tested',checks:['preview does not start models','fixed source selection and expected hash','edits invalidate preview','duplicate start click guarded','literal text rendering','stale preview response ignored','closing dialog suppresses late navigation','no source control routes']};
+ d=ctx.window.RunDeskKunForks.open({previewId:'one'});await flush();await byText(d,'读取可替换结果').click();field(d,'替换理由').value='controlled assumption';field(d,'完整假设输出').value='new output';const before=started;await byText(d,'保存假设固定预览').click();assert.equal(started,before);assert(d.textContent.includes('固定替换全文'));assert(d.textContent.includes('new output'));await byText(d,'启动或打开 Hybrid 分支').click();assert.equal(writes.at(-1).path,'/kun-forks/hyp-child/start');assert.equal(writes.at(-1).body.expectedHash,'hash-hyp-child');
+ assert(writes.every(v=>v.path==='/kun-forks'||/^\/kun-forks\/[^/]+\/(?:start|hypotheses)$/.test(v.path)),'dialog controlled source');
+ const report={version:'0.37.0',passed:true,scope:'Node DOM stub + shipped view code; browser layout not tested',checks:['preview does not start models','fixed source selection and expected hash','edits invalidate preview','duplicate start click guarded','literal text rendering','stale preview response ignored','closing dialog suppresses late navigation','no source control routes','hypothesis child becomes current preview; explicit start uses child hash']};
  fs.writeFileSync(root+'/docs/kun-hybrid-ui-validation.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
 })().catch(e=>{console.error(e);process.exitCode=1});

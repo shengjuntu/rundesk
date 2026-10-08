@@ -37,7 +37,7 @@ SQLite 在一次事务内写入状态、事件和最新安全检查点；在 `mo
 - `POST /api/v1/sessions/{sid}/kun/resume`：要求会话 run 权限及 `Idempotency-Key`，请求体为上述 `selection`。仍通过既有队列预留、并发和进程容量检查；接收前复核提交凭据。
 - `selection` 含 `sourceRunId`、`sequence`、`expectedStateRevision`、`workerEpoch`。它仅定位服务端保存的内容，不接受编辑消息、替换结果或注入配置。
 - 恢复中新发生的 MCP 逐次审批仍要求 approvals scope。应用不能检查或恢复其他应用会话。
-- Worker JSONL 当前协议 v11 保留 `checkpoint`（v4 引入）；恢复通过 `start.resume` 提交。内核目录锁保证同一执行目录只运行一个受管 worker，epoch 防止重启后复用旧恢复选择；尚无分布式租约/daemon。
+- Worker JSONL 当前协议 v12 保留 `checkpoint`（v4 引入）；恢复通过 `start.resume` 提交。内核目录锁保证同一执行目录只运行一个受管 worker，epoch 防止重启后复用旧恢复选择；尚无分布式租约/daemon。
 - 来源在 `kun/run.started.data.resumedFrom`、状态 `resumedFrom` 及宿主 `run/input.kunResume` 中可查。正常事件游标继续递增，历史记录不覆盖。
 
 ## 未覆盖

@@ -147,7 +147,7 @@ func TestKunComparisonToolExecutionAndReplay(t *testing.T) {
 	}{
 		{"tool.started", map[string]any{"call": call("real")}},
 		{"tool.completed", map[string]any{"call": call("real"), "status": "failed"}},
-		{"tool.completed", map[string]any{"call": call("replayed"), "status": "replayed", "replay": p.ReplayEvidence{RecordedStatus: "succeeded"}}},
+		{"tool.completed", map[string]any{"call": call("replayed"), "status": "replayed", "replay": p.ReplayEvidence{Mode: "recorded", RecordedStatus: "succeeded"}}},
 		{"tool.completed", map[string]any{"call": call("denied"), "status": "declined"}},
 		{"tool.started", map[string]any{"call": call("unknown")}},
 		{"run.finished", map[string]any{"status": "interrupted"}},

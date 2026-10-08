@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Application API",
-    "version": "0.36.0",
-    "description": "RunDesk 0.36.0：Kun 0.11 / 协议 v11；来源与分支跨会话固定日志对照；普通运行安全点 Harness 切换与迁移记录；Live 固定预览、明确确认与当前工具真实执行；Plan-Act 显式规划、两套内置模块组合与 Harness 固定快照对照； 安全检查点独立 Hybrid 分支，模型重算、工具严格录制回放、未命中停止；K3-A 离线记录基线、不可变实验分支、保守失效与谱系差异；建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。"
+    "version": "0.37.0",
+    "description": "RunDesk 0.37.0：Kun 0.12 / 协议 v12 / fork schema 3；固定单条工具输出假设与可审核 Hybrid 重算、不可变谱系与原录制保留、假设使用证据；来源与分支跨会话固定日志对照；普通运行安全点 Harness 切换与迁移记录；Live 固定预览、明确确认与当前工具真实执行；Plan-Act 显式规划、两套内置模块组合与 Harness 固定快照对照； 安全检查点独立 Hybrid 分支，模型重算、工具严格录制回放、未命中停止；K3-A 离线记录基线、不可变实验分支、保守失效与谱系差异；建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。"
   },
   "servers": [
     {
@@ -9700,7 +9700,7 @@
           }
         },
         "x-administrator-only": true,
-        "description": "只读管理员接口，不启动/恢复 worker，不连接模型/MCP，不读取项目文件。默认左侧为来源安全点之后至预览 through 的执行，右侧为目标分支；against 可指定同一来源、快照与截止的另一预览。不比较任意会话。leftThrough/rightThrough 是各自宿主日志上界，省略时固定当前值，重复查询应保留响应值（含零）；不是 worker 序号。完整且已结束的日志才计算调用差值；用量缺失、结束预算缺失或记录缺口时返回 null，不按零计算。区分真实工具派发/回放/失败/拒绝/未见结果；最后新增回复最多 2048 Unicode 字符，带事件证据。继承用量单列。没有任务质量评分、实际费用、优化收益结论、文件产物对比或外部环境快照。每侧最多 4096 事件、32 MiB 总载荷、8 MiB 单事件，超限返回 413；全响应最多 4 MiB。"
+        "description": "只读管理员接口，不启动/恢复 worker，不连接模型/MCP，不读取项目文件。默认左侧为来源安全点之后至预览 through 的执行，右侧为目标分支；against 可指定同一来源、快照与截止的另一预览。不比较任意会话。leftThrough/rightThrough 是各自宿主日志上界，省略时固定当前值，重复查询应保留响应值（含零）；不是 worker 序号。完整且已结束的日志才计算调用差值；用量缺失、结束预算缺失或记录缺口时返回 null，不按零计算。区分真实工具派发/原录制回放/人工假设替换/失败/拒绝/未见结果；假设包含指纹和 applied/not_reached/unknown 及使用事件；最后新增回复最多 2048 Unicode 字符，带事件证据。继承用量单列。没有任务质量评分、实际费用、优化收益结论、文件产物对比或外部环境快照。每侧最多 4096 事件、32 MiB 总载荷、8 MiB 单事件，超限返回 413；全响应最多 4 MiB。"
       }
     },
     "/sessions/{sid}/kun/query": {
@@ -9964,7 +9964,7 @@
           }
         },
         "x-administrator-only": true,
-        "description": "K3-B/C，仅管理员。来源为普通 Kun 最近已停止轮次的兼容安全边界；不支持 Codex、诊断或嵌套分叉。mode 省略为 hybrid，支持 live；固定预览绑定模式与哈希，不调用模型/MCP。Live start 必须 confirmLive=true，使用当前项目文件、重新解析技能/MCP 凭据并校验配置，重连并核对工具目录；旧的一次性审批不复用，允许重复真实副作用，不回滚文件或外部服务。已有待处理工具沿用原参数，补充指令在下一次模型请求前应用。Hybrid 工具按严格录制匹配，未命中停止，不回退 Live。继承预算和上下文；每份预览只创建一个独立单次运行，重复返回同一会话，删除后不重建。普通新轮次、检查点续跑及嵌套分叉拒绝。HTTP 不收发私有执行包；列表省略指令和 Live 动作详情，详情只含有界脱敏参数预览，不返回历史模型/工具正文。"
+        "description": "K3-B/C，仅管理员。来源为普通 Kun 最近已停止轮次的兼容安全边界；不支持 Codex、诊断或嵌套分叉。mode 省略为 hybrid，支持 live；固定预览绑定模式与哈希，不调用模型/MCP。Live start 必须 confirmLive=true，使用当前项目文件、重新解析技能/MCP 凭据并校验配置，重连并核对工具目录；旧的一次性审批不复用，允许重复真实副作用，不回滚文件或外部服务。已有待处理工具沿用原参数，补充指令在下一次模型请求前应用。Hybrid 工具按严格录制匹配，未命中停止，不回退 Live。继承预算和上下文；每份预览只创建一个独立单次运行，重复返回同一会话，删除后不重建。普通新轮次、检查点续跑及嵌套分叉拒绝。HTTP 不收发私有执行包；列表省略指令、Live 动作详情及假设 output/reason。假设详情包含用户填写的替换全文，录制摘要须单独读取有界节选。"
       }
     },
     "/kun-forks": {
@@ -10048,7 +10048,7 @@
           }
         },
         "x-administrator-only": true,
-        "description": "K3-B/C，仅管理员。来源为普通 Kun 最近已停止轮次的兼容安全边界；不支持 Codex、诊断或嵌套分叉。mode 省略为 hybrid，支持 live；固定预览绑定模式与哈希，不调用模型/MCP。Live start 必须 confirmLive=true，使用当前项目文件、重新解析技能/MCP 凭据并校验配置，重连并核对工具目录；旧的一次性审批不复用，允许重复真实副作用，不回滚文件或外部服务。已有待处理工具沿用原参数，补充指令在下一次模型请求前应用。Hybrid 工具按严格录制匹配，未命中停止，不回退 Live。继承预算和上下文；每份预览只创建一个独立单次运行，重复返回同一会话，删除后不重建。普通新轮次、检查点续跑及嵌套分叉拒绝。HTTP 不收发私有执行包；列表省略指令和 Live 动作详情，详情只含有界脱敏参数预览，不返回历史模型/工具正文。",
+        "description": "K3-B/C，仅管理员。来源为普通 Kun 最近已停止轮次的兼容安全边界；不支持 Codex、诊断或嵌套分叉。mode 省略为 hybrid，支持 live；固定预览绑定模式与哈希，不调用模型/MCP。Live start 必须 confirmLive=true，使用当前项目文件、重新解析技能/MCP 凭据并校验配置，重连并核对工具目录；旧的一次性审批不复用，允许重复真实副作用，不回滚文件或外部服务。已有待处理工具沿用原参数，补充指令在下一次模型请求前应用。Hybrid 工具按严格录制匹配，未命中停止，不回退 Live。继承预算和上下文；每份预览只创建一个独立单次运行，重复返回同一会话，删除后不重建。普通新轮次、检查点续跑及嵌套分叉拒绝。HTTP 不收发私有执行包；列表省略指令、Live 动作详情及假设 output/reason。假设详情包含用户填写的替换全文，录制摘要须单独读取有界节选。",
         "requestBody": {
           "required": true,
           "content": {
@@ -10199,7 +10199,7 @@
           }
         },
         "x-administrator-only": true,
-        "description": "K3-B/C，仅管理员。来源为普通 Kun 最近已停止轮次的兼容安全边界；不支持 Codex、诊断或嵌套分叉。mode 省略为 hybrid，支持 live；固定预览绑定模式与哈希，不调用模型/MCP。Live start 必须 confirmLive=true，使用当前项目文件、重新解析技能/MCP 凭据并校验配置，重连并核对工具目录；旧的一次性审批不复用，允许重复真实副作用，不回滚文件或外部服务。已有待处理工具沿用原参数，补充指令在下一次模型请求前应用。Hybrid 工具按严格录制匹配，未命中停止，不回退 Live。继承预算和上下文；每份预览只创建一个独立单次运行，重复返回同一会话，删除后不重建。普通新轮次、检查点续跑及嵌套分叉拒绝。HTTP 不收发私有执行包；列表省略指令和 Live 动作详情，详情只含有界脱敏参数预览，不返回历史模型/工具正文。"
+        "description": "K3-B/C，仅管理员。来源为普通 Kun 最近已停止轮次的兼容安全边界；不支持 Codex、诊断或嵌套分叉。mode 省略为 hybrid，支持 live；固定预览绑定模式与哈希，不调用模型/MCP。Live start 必须 confirmLive=true，使用当前项目文件、重新解析技能/MCP 凭据并校验配置，重连并核对工具目录；旧的一次性审批不复用，允许重复真实副作用，不回滚文件或外部服务。已有待处理工具沿用原参数，补充指令在下一次模型请求前应用。Hybrid 工具按严格录制匹配，未命中停止，不回退 Live。继承预算和上下文；每份预览只创建一个独立单次运行，重复返回同一会话，删除后不重建。普通新轮次、检查点续跑及嵌套分叉拒绝。HTTP 不收发私有执行包；列表省略指令、Live 动作详情及假设 output/reason。假设详情包含用户填写的替换全文，录制摘要须单独读取有界节选。"
       }
     },
     "/kun-forks/{fid}": {
@@ -10281,7 +10281,7 @@
           }
         },
         "x-administrator-only": true,
-        "description": "K3-B/C，仅管理员。来源为普通 Kun 最近已停止轮次的兼容安全边界；不支持 Codex、诊断或嵌套分叉。mode 省略为 hybrid，支持 live；固定预览绑定模式与哈希，不调用模型/MCP。Live start 必须 confirmLive=true，使用当前项目文件、重新解析技能/MCP 凭据并校验配置，重连并核对工具目录；旧的一次性审批不复用，允许重复真实副作用，不回滚文件或外部服务。已有待处理工具沿用原参数，补充指令在下一次模型请求前应用。Hybrid 工具按严格录制匹配，未命中停止，不回退 Live。继承预算和上下文；每份预览只创建一个独立单次运行，重复返回同一会话，删除后不重建。普通新轮次、检查点续跑及嵌套分叉拒绝。HTTP 不收发私有执行包；列表省略指令和 Live 动作详情，详情只含有界脱敏参数预览，不返回历史模型/工具正文。"
+        "description": "K3-B/C，仅管理员。来源为普通 Kun 最近已停止轮次的兼容安全边界；不支持 Codex、诊断或嵌套分叉。mode 省略为 hybrid，支持 live；固定预览绑定模式与哈希，不调用模型/MCP。Live start 必须 confirmLive=true，使用当前项目文件、重新解析技能/MCP 凭据并校验配置，重连并核对工具目录；旧的一次性审批不复用，允许重复真实副作用，不回滚文件或外部服务。已有待处理工具沿用原参数，补充指令在下一次模型请求前应用。Hybrid 工具按严格录制匹配，未命中停止，不回退 Live。继承预算和上下文；每份预览只创建一个独立单次运行，重复返回同一会话，删除后不重建。普通新轮次、检查点续跑及嵌套分叉拒绝。HTTP 不收发私有执行包；列表省略指令、Live 动作详情及假设 output/reason。假设详情包含用户填写的替换全文，录制摘要须单独读取有界节选。"
       }
     },
     "/kun-forks/{fid}/start": {
@@ -10373,7 +10373,7 @@
           }
         },
         "x-administrator-only": true,
-        "description": "K3-B/C，仅管理员。来源为普通 Kun 最近已停止轮次的兼容安全边界；不支持 Codex、诊断或嵌套分叉。mode 省略为 hybrid，支持 live；固定预览绑定模式与哈希，不调用模型/MCP。Live start 必须 confirmLive=true，使用当前项目文件、重新解析技能/MCP 凭据并校验配置，重连并核对工具目录；旧的一次性审批不复用，允许重复真实副作用，不回滚文件或外部服务。已有待处理工具沿用原参数，补充指令在下一次模型请求前应用。Hybrid 工具按严格录制匹配，未命中停止，不回退 Live。继承预算和上下文；每份预览只创建一个独立单次运行，重复返回同一会话，删除后不重建。普通新轮次、检查点续跑及嵌套分叉拒绝。HTTP 不收发私有执行包；列表省略指令和 Live 动作详情，详情只含有界脱敏参数预览，不返回历史模型/工具正文。",
+        "description": "K3-B/C，仅管理员。来源为普通 Kun 最近已停止轮次的兼容安全边界；不支持 Codex、诊断或嵌套分叉。mode 省略为 hybrid，支持 live；固定预览绑定模式与哈希，不调用模型/MCP。Live start 必须 confirmLive=true，使用当前项目文件、重新解析技能/MCP 凭据并校验配置，重连并核对工具目录；旧的一次性审批不复用，允许重复真实副作用，不回滚文件或外部服务。已有待处理工具沿用原参数，补充指令在下一次模型请求前应用。Hybrid 工具按严格录制匹配，未命中停止，不回退 Live。继承预算和上下文；每份预览只创建一个独立单次运行，重复返回同一会话，删除后不重建。普通新轮次、检查点续跑及嵌套分叉拒绝。HTTP 不收发私有执行包；列表省略指令、Live 动作详情及假设 output/reason。假设详情包含用户填写的替换全文，录制摘要须单独读取有界节选。",
         "requestBody": {
           "required": true,
           "content": {
@@ -10391,6 +10391,260 @@
                 },
                 "required": [
                   "expectedHash"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kun-forks/recordings/{fid}": {
+      "get": {
+        "operationId": "get_kun_forks_recordings_fid",
+        "summary": "Kun 固定录制的单条假设替换",
+        "parameters": [
+          {
+            "name": "fid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "previewId": {
+                      "type": "string"
+                    },
+                    "previewHash": {
+                      "type": "string"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/KunReplayReview"
+                      }
+                    }
+                  },
+                  "required": [
+                    "previewId",
+                    "previewHash",
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "缺少字段、无效文本/标题、同值替换、未知字段/参数或幂等 Key。"
+          },
+          "403": {
+            "description": "仅管理员可读写假设预览。"
+          },
+          "404": {
+            "description": "父预览不存在。"
+          },
+          "409": {
+            "description": "父指纹或录制指纹不符、版本不兼容、Live 或已有假设。"
+          },
+          "413": {
+            "description": "新分叉包超过 4 MiB，或响应超限。"
+          }
+        },
+        "x-administrator-only": true,
+        "description": "仅当前版本、未含假设的 Hybrid 预览。GET 返回最多 128 条有界摘要，每条最多 2048 Unicode 字符，JSON 常见敏感字段脱敏；自由文本不保证脱敏。recordHash 绑定完整原录制，节选不是可执行原文。POST 必须 expectedHash/position/recordHash/title/reason/output（空字符串有效，缺省或 null 无效）；UTF-8 输出最多 64 KiB；拒绝与原文相同的替换。保存独立不可变子预览，原工具顺序、身份、参数、成功/失败状态、继承预算和指令不变；不启动会话、worker、模型或工具。随后通过原 start 接口核对固定 child hash 启动。保留原始 tape，并将替换标为 hypothetical/ executed=false。未命中停止；禁止 Live、叠加替换、导入 K3-A 脱敏实验。"
+      }
+    },
+    "/kun-forks/{fid}/hypotheses": {
+      "post": {
+        "operationId": "post_kun_forks_fid_hypotheses",
+        "summary": "Kun 固定录制的单条假设替换",
+        "parameters": [
+          {
+            "name": "fid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            },
+            "description": "每个逻辑操作唯一。相同请求重试必须复用，不能将 Key 用于不同请求。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KunForkPreview"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "缺少字段、无效文本/标题、同值替换、未知字段/参数或幂等 Key。"
+          },
+          "403": {
+            "description": "仅管理员可读写假设预览。"
+          },
+          "404": {
+            "description": "父预览不存在。"
+          },
+          "409": {
+            "description": "父指纹或录制指纹不符、版本不兼容、Live 或已有假设。"
+          },
+          "413": {
+            "description": "新分叉包超过 4 MiB，或响应超限。"
+          }
+        },
+        "x-administrator-only": true,
+        "description": "仅当前版本、未含假设的 Hybrid 预览。GET 返回最多 128 条有界摘要，每条最多 2048 Unicode 字符，JSON 常见敏感字段脱敏；自由文本不保证脱敏。recordHash 绑定完整原录制，节选不是可执行原文。POST 必须 expectedHash/position/recordHash/title/reason/output（空字符串有效，缺省或 null 无效）；UTF-8 输出最多 64 KiB；拒绝与原文相同的替换。保存独立不可变子预览，原工具顺序、身份、参数、成功/失败状态、继承预算和指令不变；不启动会话、worker、模型或工具。随后通过原 start 接口核对固定 child hash 启动。保留原始 tape，并将替换标为 hypothetical/ executed=false。未命中停止；禁止 Live、叠加替换、导入 K3-A 脱敏实验。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedHash": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "position": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 127
+                  },
+                  "recordHash": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "output": {
+                    "type": "string",
+                    "description": "完整替换文本，可为空；UTF-8 字节数最多 65536。"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  }
+                },
+                "required": [
+                  "expectedHash",
+                  "position",
+                  "recordHash",
+                  "output",
+                  "reason",
+                  "title"
                 ],
                 "additionalProperties": false
               }
@@ -20318,9 +20572,107 @@
         ],
         "additionalProperties": false
       },
+      "KunReplayHypothesis": {
+        "type": "object",
+        "properties": {
+          "parentPreviewId": {
+            "type": "string"
+          },
+          "parentHash": {
+            "type": "string"
+          },
+          "parentBundleHash": {
+            "type": "string"
+          },
+          "recordHash": {
+            "type": "string"
+          },
+          "originalOutputHash": {
+            "type": "string"
+          },
+          "outputHash": {
+            "type": "string"
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 127
+          },
+          "sourceSequence": {
+            "type": "integer"
+          },
+          "output": {
+            "type": "string",
+            "description": "完整替换文本，可为空；UTF-8 字节数最多 65536。"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "parentPreviewId",
+          "parentHash",
+          "parentBundleHash",
+          "recordHash",
+          "originalOutputHash",
+          "outputHash",
+          "position",
+          "sourceSequence",
+          "output",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "KunHypothesisSummary": {
+        "type": "object",
+        "properties": {
+          "parentPreviewId": {
+            "type": "string"
+          },
+          "parentHash": {
+            "type": "string"
+          },
+          "parentBundleHash": {
+            "type": "string"
+          },
+          "recordHash": {
+            "type": "string"
+          },
+          "originalOutputHash": {
+            "type": "string"
+          },
+          "outputHash": {
+            "type": "string"
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 127
+          },
+          "sourceSequence": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "parentPreviewId",
+          "parentHash",
+          "parentBundleHash",
+          "recordHash",
+          "originalOutputHash",
+          "outputHash",
+          "position",
+          "sourceSequence"
+        ],
+        "additionalProperties": false
+      },
       "KunForkPreview": {
         "type": "object",
         "properties": {
+          "hypothesis": {
+            "$ref": "#/components/schemas/KunReplayHypothesis"
+          },
           "live": {
             "$ref": "#/components/schemas/KunLivePreview"
           },
@@ -20389,6 +20741,9 @@
       "KunForkSummary": {
         "type": "object",
         "properties": {
+          "hypothesis": {
+            "$ref": "#/components/schemas/KunHypothesisSummary"
+          },
           "id": {
             "type": "string"
           },
@@ -20449,6 +20804,9 @@
       "KunForkState": {
         "type": "object",
         "properties": {
+          "hypothesisHash": {
+            "type": "string"
+          },
           "origin": {
             "$ref": "#/components/schemas/KunForkOrigin"
           },
@@ -20471,6 +20829,59 @@
           "inheritedBudget",
           "replayCursor",
           "replayTotal"
+        ],
+        "additionalProperties": false
+      },
+      "KunReplayReview": {
+        "type": "object",
+        "properties": {
+          "position": {
+            "type": "integer"
+          },
+          "sequence": {
+            "type": "integer"
+          },
+          "tool": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "succeeded",
+              "failed"
+            ]
+          },
+          "recordHash": {
+            "type": "string"
+          },
+          "outputHash": {
+            "type": "string"
+          },
+          "outputBytes": {
+            "type": "integer"
+          },
+          "preview": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "redacted": {
+            "type": "boolean"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "position",
+          "sequence",
+          "tool",
+          "status",
+          "recordHash",
+          "outputHash",
+          "outputBytes",
+          "preview",
+          "redacted",
+          "truncated"
         ],
         "additionalProperties": false
       },
@@ -20519,6 +20930,9 @@
           "replayed": {
             "type": "integer"
           },
+          "hypothetical": {
+            "type": "integer"
+          },
           "failed": {
             "type": "integer"
           },
@@ -20533,15 +20947,63 @@
           "name",
           "dispatched",
           "replayed",
+          "hypothetical",
           "failed",
           "declined",
           "unsettled"
         ],
         "additionalProperties": false
       },
+      "KunCompareHypothesis": {
+        "type": "object",
+        "properties": {
+          "parentPreviewId": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "originalOutputHash": {
+            "type": "string"
+          },
+          "outputHash": {
+            "type": "string"
+          },
+          "position": {
+            "type": "integer"
+          },
+          "sourceSequence": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "applied",
+              "not_reached",
+              "unknown"
+            ]
+          },
+          "eventId": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "parentPreviewId",
+          "hash",
+          "originalOutputHash",
+          "outputHash",
+          "position",
+          "sourceSequence",
+          "status"
+        ],
+        "additionalProperties": false
+      },
       "KunCompareSide": {
         "type": "object",
         "properties": {
+          "hypothesis": {
+            "$ref": "#/components/schemas/KunCompareHypothesis"
+          },
           "previewId": {
             "type": "string"
           },
