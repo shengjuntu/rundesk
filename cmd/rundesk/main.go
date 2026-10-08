@@ -17,6 +17,7 @@ import (
 
 	"github.com/shengjuntu/rundesk/internal/app"
 	"github.com/shengjuntu/rundesk/internal/containerruntime"
+	"github.com/shengjuntu/rundesk/internal/servicelock"
 	"github.com/shengjuntu/rundesk/internal/tracequery"
 )
 
@@ -96,13 +97,12 @@ func run() error {
 		return e
 	}
 	lock := filepath.Join(*data, "server.lock")
-	lf, e := os.OpenFile(lock, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	guard, e := servicelock.Acquire(lock)
 	if e != nil {
-		return fmt.Errorf("无法取得数据目录锁 %s（确认旧进程已停止后才可删除残留锁）: %w", lock, e)
+		return fmt.Errorf("data directory lock %s: %w", lock, e)
 	}
-	_, _ = fmt.Fprintf(lf, "pid=%d\n", os.Getpid())
-	_ = lf.Close()
-	defer os.Remove(lock)
+	defer guard.Close()
+
 	m, e := app.New(*data, *codex, *demo)
 	if e != nil {
 		return e
@@ -118,9 +118,11 @@ func run() error {
 	log.Printf("RunDesk http://%s · demo=%v · data=%s", listener.Addr(), *demo, *data)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	runtimeFailure := false
 	select {
 	case <-ctx.Done():
 	case <-m.Done():
+		runtimeFailure = true
 		log.Print("运行管理器停止；请检查日志和磁盘空间")
 	case e = <-errc:
 		if e != nil && e != http.ErrServerClosed {
@@ -132,6 +134,9 @@ func run() error {
 	defer cancel()
 	if e = server.Shutdown(shutdown); e != nil {
 		_ = server.Close()
+	}
+	if runtimeFailure {
+		return fmt.Errorf("runtime manager stopped unexpectedly; inspect the journal before resuming interrupted work")
 	}
 	return nil
 }

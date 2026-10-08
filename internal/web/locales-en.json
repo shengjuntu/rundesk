@@ -1394,5 +1394,17 @@
   "未取得用量的轮次": "Runs without usage",
   "此范围没有保留的执行或用量记录。": "No retained run or usage records in this range.",
   "按累计值的已观测增量统计，不是费用或硬性配额。缺失字段显示未知；缓存输入与推理输出不重复加到总数。": "Observed increments of cumulative counters, not costs or enforced quotas. Missing fields remain unknown. Cached input and reasoning output are not added to totals again.",
-  "日期采用浏览器本地时区，包含结束日期。token 按收到事件的时间归属；轮次按启动时间筛选。删除会话会移除对应统计。": "Dates use your browser timezone and include the end date. Tokens follow event receipt time; runs follow start time. Deleting a conversation removes its statistics."
+  "日期采用浏览器本地时区，包含结束日期。token 按收到事件的时间归属；轮次按启动时间筛选。删除会话会移除对应统计。": "Dates use your browser timezone and include the end date. Tokens follow event receipt time; runs follow start time. Deleting a conversation removes its statistics.",
+  "运行进程": "Runtime processes",
+  "刷新进程": "Refresh processes",
+  "独立进程组清理": "Private process-group cleanup",
+  "仅清理直接进程": "Direct-process cleanup only",
+  "这里只列出 RunDesk 管理的 App Server 连接；不枚举全部子进程、构建进程或 MCP 测试进程。Docker 行的 PID 属于宿主机 docker exec，容器内仍由执行租约负责。": "This list covers managed App Server connections, not every descendant, build or MCP test process. Docker rows show the host docker-exec PID; container execution remains lease-managed.",
+  "会话连接": "Conversation connection",
+  "关闭中": "Closing",
+  "已连接": "Connected",
+  "启动时间：": "Started: ",
+  "查看会话": "View conversation",
+  "当前没有已登记的 App Server 连接。": "No registered App Server connections.",
+  "Linux / macOS 在关闭连接时清理其进程组。自行脱离进程组的后台服务不在此保证内；生产部署使用系统服务管理器。Windows 当前不保证子孙进程清理。": "Linux / macOS clean up the connection process group. Detached background services are outside this guarantee; use an OS service manager in production. Windows descendant cleanup is not guaranteed."
 }

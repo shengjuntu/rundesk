@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"sync"
 	"sync/atomic"
@@ -40,49 +41,79 @@ func (e *TransportError) Error() string { return fmt.Sprintf("Codex App Server %
 func (e *TransportError) Unwrap() error { return e.Cause }
 
 type Client struct {
-	cmd         *exec.Cmd
-	in          io.WriteCloser
-	mu          sync.Mutex
-	writeGate   chan struct{}
-	closing     atomic.Bool
-	exitErr     error
-	pending     map[string]chan Message
-	seq         atomic.Uint64
-	done        chan struct{}
-	once        sync.Once
-	onEvent     func(Message)
-	trace       func(string, Message)
-	cleanup     func()
-	cleanupOnce sync.Once
+	cmd          *exec.Cmd
+	in           io.WriteCloser
+	mu           sync.Mutex
+	writeGate    chan struct{}
+	closing      atomic.Bool
+	exitErr      error
+	pending      map[string]chan Message
+	seq          atomic.Uint64
+	done         chan struct{}
+	once         sync.Once
+	onEvent      func(Message)
+	trace        func(string, Message)
+	cleanup      func()
+	cleanupOnce  sync.Once
+	killOnce     sync.Once
+	started      time.Time
+	cleanupError string
 }
 
 // Callbacks execute on the reader goroutine: they must not call Call synchronously.
 func Start(cmd *exec.Cmd, event func(Message), trace func(string, Message), cleanup ...func()) (*Client, error) {
+	if err := prepareProcess(cmd); err != nil {
+		return nil, err
+	}
 	in, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err
 	}
-	out, err := cmd.StdoutPipe()
+	// Own the output pipes so Wait cannot discard buffered final frames.
+	out, outWriter, err := os.Pipe()
 	if err != nil {
-		_ = in.Close()
+		in.Close()
 		return nil, err
 	}
-	stderr, err := cmd.StderrPipe()
+	stderr, errWriter, err := os.Pipe()
 	if err != nil {
-		_ = in.Close()
-		_ = out.Close()
+		in.Close()
+		out.Close()
+		outWriter.Close()
 		return nil, err
 	}
+	cmd.Stdout, cmd.Stderr = outWriter, errWriter
 	c := &Client{cmd: cmd, in: in, writeGate: make(chan struct{}, 1), pending: map[string]chan Message{}, done: make(chan struct{}), onEvent: event, trace: trace}
 	if len(cleanup) > 0 {
 		c.cleanup = cleanup[0]
 	}
 	if err = cmd.Start(); err != nil {
-		_ = in.Close()
-		_ = out.Close()
-		_ = stderr.Close()
+		in.Close()
+		out.Close()
+		outWriter.Close()
+		stderr.Close()
+		errWriter.Close()
 		return nil, err
 	}
+	c.started = time.Now().UTC()
+	outWriter.Close()
+	errWriter.Close()
+	waited := make(chan error, 1)
+	go func() {
+		e := cmd.Wait()
+		// Parent exit must also release descendants that inherited stdout/stderr.
+		c.kill()
+		c.release()
+		waited <- e
+		timer := time.NewTimer(time.Second)
+		defer timer.Stop()
+		select {
+		case <-c.done:
+		case <-timer.C:
+		}
+		out.Close()
+		stderr.Close()
+	}()
 	stderrDone := make(chan struct{})
 	go func() {
 		defer close(stderrDone)
@@ -124,11 +155,13 @@ func Start(cmd *exec.Cmd, event func(Message), trace func(string, Message), clea
 			readErr = &TransportError{Op: "read", Cause: s.Err()}
 		}
 		if readErr != nil {
-			_ = cmd.Process.Kill()
+			c.kill()
 		}
-		waitErr := cmd.Wait()
-		_ = stderr.Close()
+		c.kill()
+		waitErr := <-waited
 		<-stderrDone
+		out.Close()
+		stderr.Close()
 		if readErr == nil {
 			if waitErr == nil {
 				waitErr = io.EOF
@@ -160,12 +193,41 @@ func (c *Client) Err() error {
 	}
 	return &TransportError{Op: "closed", Cause: io.ErrClosedPipe}
 }
+
+type ProcessInfo struct {
+	PID          int    `json:"pid"`
+	StartedAt    string `json:"startedAt"`
+	CleanupMode  string `json:"cleanupMode"`
+	Closing      bool   `json:"closing"`
+	Exited       bool   `json:"exited"`
+	CleanupError string `json:"cleanupError,omitempty"`
+}
+
+func (c *Client) ProcessInfo() ProcessInfo {
+	c.mu.Lock()
+	errText := c.cleanupError
+	c.mu.Unlock()
+	exited := false
+	select {
+	case <-c.done:
+		exited = true
+	default:
+	}
+	return ProcessInfo{PID: c.cmd.Process.Pid, StartedAt: c.started.Format(time.RFC3339Nano), CleanupMode: CleanupMode, Closing: c.closing.Load(), Exited: exited, CleanupError: errText}
+}
+func (c *Client) kill() {
+	c.killOnce.Do(func() {
+		if e := killProcess(c.cmd); e != nil && !errors.Is(e, os.ErrProcessDone) {
+			c.mu.Lock()
+			c.cleanupError = e.Error()
+			c.mu.Unlock()
+		}
+	})
+}
 func (c *Client) Close() {
 	c.closing.Store(true)
 	c.release()
-	if c.cmd.Process != nil {
-		_ = c.cmd.Process.Kill()
-	}
+	c.kill()
 	_ = c.in.Close()
 }
 func (c *Client) Send(m Message) error {

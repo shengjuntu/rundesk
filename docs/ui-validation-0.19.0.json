@@ -1,0 +1,10 @@
+{
+  "checks": [
+    "second server rejected while first holds kernel lock",
+    "server restarts after SIGKILL without deleting lock file",
+    "registry exposes active configured connection and group cleanup mode",
+    "Chinese/English process view and mobile layout; no browser exceptions",
+    "registered App Server processes are gone after SIGTERM shutdown"
+  ],
+  "passed": 5
+}

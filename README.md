@@ -112,9 +112,9 @@ Frontend assets and the Docker template are embedded in the executable. Rebuild 
 
 Stop the service and back up the existing data directory and Codex configuration before replacing binaries. Keep the same `--data` location. Existing applications and conversations are preserved.
 
-Version **0.18.0** adds application/project usage reporting based on retained execution events. It retains the bilingual interface and environment setup introduced in 0.16. Technical logs and user/model content remain in their original language. Some legacy detailed diagnostic messages retain their original wording.
+Version **0.19.0** improves native process cleanup, adds kernel-backed data locks, a runtime-process view and a systemd example. It retains the bilingual interface and environment setup introduced in 0.16. Technical logs and user/model content remain in their original language. Some legacy detailed diagnostic messages retain their original wording.
 
-This release was checked with automated Go tests and browser scenarios. The packaged Docker template has not been built against a real Docker engine in the development environment; real model/provider and container deployments require local verification. See [release notes](docs/RELEASE-0.18.0.md).
+This release was checked with automated Go tests and browser scenarios. The packaged Docker template has not been built against a real Docker engine in the development environment; real model/provider and container deployments require local verification. See [release notes](docs/RELEASE-0.19.0.md).
 
 [License](LICENSE)
 
@@ -130,7 +130,7 @@ Direct tests run with RunDesk's service identity, outside Codex's sandbox and ap
 
 This capability already existed before 0.17. Send a stable `Idempotency-Key` (8–128 characters) for each logical POST to `/api/v1/tasks`, `/sessions`, `/sessions/{id}/turns`, or `/workspaces/{id}/mcp-tests`. Retry the **same request with the same key**; changed content returns 409. Keys are scoped to the authenticated caller. `Idempotency-Replayed: true` identifies a persisted acknowledgement, not current task status. Inspect `GET /api/v1/requests/{key}` or the task resource after a timeout. An interrupted acknowledgement can return `request_unconfirmed`; reconcile actual effects instead of changing keys and resubmitting. This is duplicate-submission protection, not an exactly-once guarantee for external tools.
 
-[Capability status and next steps](docs/CAPABILITY-STATUS-0.18.0.md)
+[Capability status and next steps](docs/CAPABILITY-STATUS-0.19.0.md)
 
 ## Usage by application and project (0.18)
 
@@ -141,3 +141,13 @@ Counters are **observed positive increments** of `thread/tokenUsage/updated.toke
 Token increments belong to event receipt time. Runs belong to their start time; status is the latest recorded status before the selected end. “Reported” means a run has a usable total snapshot, not that all usage was reported. Details expose missing counters, unknown baselines and regressions. Events arriving late or spanning a reporting boundary can shift attribution between periods.
 
 The report reads retained session events only. Deleting sessions removes their usage; outside-Codex work and MCP direct tests are not measured. It does not infer CPU, storage or monetary cost. Queries are bounded to 10 seconds and 200,000 relevant lifecycle events; an exceeded limit returns an error instead of a partial total. This is an initial single-host observability view, not a scalable billing ledger.
+
+## Service operation and process cleanup (0.19)
+
+**Tasks → Runtime processes** lists managed App Server connections with PID, application/project, start time and cleanup scope. `GET /api/v1/processes` is administrator-only. It does not enumerate every OS descendant, build or MCP-test process. Docker entries identify the host docker-exec client; existing container leases remain responsible for in-container execution.
+
+On Linux/macOS each RPC connection owns a private process group. Closing the connection, malformed protocol or parent exit terminates that group. Buffered output is drained with a one-second bound after parent exit, preventing descendant-held pipes from hanging shutdown. This can end background commands started by that Codex connection. Processes that call setsid/change groups, privileged processes or remote services are outside this guarantee. Abruptly killing RunDesk itself cannot run its cleanup code. Windows currently terminates the direct App Server process only; Job Objects are not implemented.
+
+The standalone server now uses an OS-held data-directory lock (Linux/macOS flock, Windows LockFileEx). It is released when the process exits, including crashes. **The persistent `server.lock` file is normal: never delete it while a server may be running.** Existing v0.18-and-earlier locks are not overwritten: stop the old service; normal shutdown removes its old lock. Only if an old-format stale file remains, confirm the old server has stopped and remove that file once. Downgrading also requires stopping v0.19 before removing its persistent lock. Use local filesystems with working kernel-lock semantics, not an unverified shared/network filesystem.
+
+A [bilingual systemd user-service example](examples/systemd/README.md) configures restart-on-failure and service-cgroup cleanup. Review its data path and environment before installation; nothing is installed automatically. Interrupted tasks are not automatically replayed when the service restarts.

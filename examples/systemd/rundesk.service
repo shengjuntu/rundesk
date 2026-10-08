@@ -1,0 +1,19 @@
+[Unit]
+Description=RunDesk Agent workspace
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h
+EnvironmentFile=-%h/.config/rundesk/environment
+# Change --data to the existing absolute data directory when upgrading.
+# Set PATH in the environment file if Codex is installed by a user-level Node manager.
+ExecStart=%h/.local/bin/rundesk --listen 127.0.0.1:3210 --data %h/.local/state/rundesk
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+TimeoutStopSec=30
+UMask=0077
+
+[Install]
+WantedBy=default.target
