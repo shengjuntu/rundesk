@@ -6,7 +6,7 @@ const assert=require('assert');
 const path=require('node:path'),os=require('node:os');
 const root=path.resolve(__dirname,'..');
 const scratch=fs.mkdtempSync(path.join(os.tmpdir(),'rundesk-kun-ui-'));
-const pictures=path.join(root,'docs/screenshots/0.21.0');fs.mkdirSync(pictures,{recursive:true});
+const pictures=path.join(root,'docs/screenshots/0.22.0');fs.mkdirSync(pictures,{recursive:true});
 (async()=>{
  let calls=0,server,browser;const requests=[];const errors=[];
  const model=http.createServer(async(req,res)=>{
@@ -33,6 +33,7 @@ const pictures=path.join(root,'docs/screenshots/0.21.0');fs.mkdirSync(pictures,{
   await form.locator('label').filter({hasText:'模型名称'}).locator('input').fill('kun-ui-fixture');
   await form.locator('label').filter({hasText:'允许 Kun 写入'}).locator('input').check();
   await form.locator('label').filter({hasText:'每次模型请求前'}).locator('input').check();
+  await form.locator('label').filter({hasText:'每轮最多工具调用次数'}).locator('input').fill('7');
   await form.locator('button[type="submit"]').click();
   await page.waitForFunction(()=>document.querySelector('.kun-config [role=status]')?.textContent.includes('已保存'));
   await page.screenshot({path:pictures+'/kun-settings.png'});
@@ -61,6 +62,15 @@ const pictures=path.join(root,'docs/screenshots/0.21.0');fs.mkdirSync(pictures,{
   await dialog.locator('.kun-call-list button').last().click();
   await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-detail')?.textContent.includes('"schemaVersion": 1'));
   await page.screenshot({path:pictures+'/kun-elements.png'});
+  const selectedSnapshot=JSON.parse(await dialog.locator('.kun-detail').innerText()).sequence;
+  await dialog.getByRole('button',{name:'Layers · 模块',exact:true}).click();
+  const layers=JSON.parse(await dialog.locator('.kun-detail').innerText());
+  assert.equal(layers.sequence,selectedSnapshot);assert.equal(Object.keys(layers.modules).length,4);assert.equal(layers.harness.id,'tool-loop-v1');
+  await dialog.getByRole('button',{name:'刷新记录',exact:true}).click();assert.equal(JSON.parse(await dialog.locator('.kun-detail').innerText()).sequence,selectedSnapshot);
+  await page.screenshot({path:pictures+'/kun-layers.png'});
+  await dialog.getByRole('button',{name:'Application · MCP',exact:true}).click();assert.equal(JSON.parse(await dialog.locator('.kun-detail').innerText()).sequence,selectedSnapshot);
+  await dialog.getByRole('button',{name:'跟随现场',exact:true}).click();
+  await dialog.getByRole('button',{name:'Layers · 模块',exact:true}).click();assert.equal(JSON.parse(await dialog.locator('.kun-detail').innerText()).budget.toolCalls,1);
   await dialog.getByRole('button',{name:'Performance · 用量',exact:true}).click();assert((await dialog.locator('.kun-detail').innerText()).includes('110'));
   await dialog.getByRole('button',{name:'关闭',exact:true}).click();
   assert((await page.locator('#messages').innerText()).includes('Kun 独立进程验证成功'));
@@ -69,6 +79,6 @@ const pictures=path.join(root,'docs/screenshots/0.21.0');fs.mkdirSync(pictures,{
   await page.screenshot({path:pictures+'/kun-mobile.png'});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false,'mobile overflow');
   assert.deepEqual(errors,[],'browser errors');
-  const report={passed:true,modelCalls:calls,checks:['UI config','model/tool step boundaries','steer before next request','snapshot inspection','reported usage','reload persistence','mobile viewport'],pageErrors:errors};fs.writeFileSync(path.join(root,'docs/kun-ui-validation.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
+  const report={passed:true,modelCalls:calls,checks:['UI config','model/tool step boundaries','steer before next request','snapshot inspection','reported usage','budget settings','four module states','fixed snapshot across panels and refresh','live inspection','reload persistence','mobile viewport'],pageErrors:errors};fs.writeFileSync(path.join(root,'docs/kun-ui-validation.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
  }finally{if(browser)await browser.close();if(server&&server.exitCode===null&&server.signalCode===null){server.kill('SIGTERM');await new Promise(resolve=>server.once('exit',resolve));}model.closeAllConnections();model.close();fs.rmSync(scratch,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1});

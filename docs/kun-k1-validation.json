@@ -1,0 +1,22 @@
+{
+  "release": "0.22.0",
+  "engine": "0.3.0",
+  "date": "2026-10-05",
+  "environment": {
+    "os": "linux",
+    "arch": "amd64",
+    "go": "1.25.12"
+  },
+  "checks": {
+    "go_test_all": "passed",
+    "kun_mcp_race": "passed",
+    "go_vet": "passed",
+    "javascript_syntax_49_files": "passed",
+    "linux_builds": "passed",
+    "windows_cross_builds": "passed",
+    "browser": "not_run",
+    "windows_runtime": "not_run",
+    "production_model_mcp": "not_run"
+  },
+  "scope": "K1 core reinforcement, not complete K1/K2 acceptance"
+}

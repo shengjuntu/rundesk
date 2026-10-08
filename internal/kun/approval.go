@@ -17,6 +17,7 @@ func (e *Engine) approveMCP(ctx context.Context, tool p.MCPTool, call p.ToolCall
 		e.mu.Unlock()
 		return false, nil
 	}
+	e.setWaiting(true)
 	e.state.Approval = &p.ToolApproval{CallID: call.ID, Server: tool.Server, Tool: tool.Name, Arguments: call.Function.Arguments}
 	e.state.Status = "paused"
 	e.state.Phase = "approval"
@@ -36,6 +37,7 @@ func (e *Engine) approveMCP(ctx context.Context, tool p.MCPTool, call p.ToolCall
 			return false, fmt.Errorf("MCP approval state lost")
 		}
 		if a.Decision != "" {
+			e.setWaiting(false)
 			allowed := a.Decision == "approve"
 			e.state.Approval = nil
 			e.state.Status = "running"

@@ -1,4 +1,4 @@
-> 实现进度：RunDesk 0.20.0 已包含 Kun 0.1 基础循环和调试控制。本文保留完整目标设计；当前已实现能力及差异以 [KUN.md](KUN.md) 为准。
+> 实现进度：RunDesk 0.22.0 / Kun 0.3 已实现基础循环、MCP、固定四模块、参数校验及预算；K1 尚缺真实服务验收等项目，K2 检查点继续仍未实现。本文保留完整目标设计；当前已实现能力及差异以 [KUN.md](KUN.md) 为准。
 
 # Kun + Agent DevTools：RunDesk 内置 Agent Loop 与调试器设计
 

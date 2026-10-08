@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "modelCalls": 2,
+  "checks": [
+    "UI config",
+    "model/tool step boundaries",
+    "steer before next request",
+    "snapshot inspection",
+    "reported usage",
+    "reload persistence",
+    "mobile viewport"
+  ],
+  "pageErrors": []
+}

@@ -25,7 +25,11 @@ func requestBody(s p.State) map[string]any {
 	if len(s.ToolDefinitions) == 0 {
 		definitions = toolDefinitions(s.Config.AllowWrite)
 	}
-	return map[string]any{"model": s.Config.Model, "messages": s.Messages, "tools": definitions, "stream": true}
+	body := map[string]any{"model": s.Config.Model, "messages": s.Messages, "tools": definitions, "stream": true}
+	if s.Config.Budget.MaxTotalTokens > 0 {
+		body["stream_options"] = map[string]bool{"include_usage": true}
+	}
+	return body
 }
 func modelCall(ctx context.Context, s p.State, key string) (completion, error) {
 	result := completion{Message: p.Message{Role: "assistant"}}

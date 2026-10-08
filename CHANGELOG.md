@@ -1,3 +1,12 @@
+# 0.22.0 — Kun 0.3 / K1 核心补强
+
+- 固定 Memory/Planning/Action/Capability 接口与可序列化模块状态，tool-loop-v1 和 Provider 接口；没有额外规划模型调用。
+- 内置工具/MCP 统一执行入口；参数验证先于审批与派发。支持有界 JSON Schema 2020-12 子集，本地引用，不支持的关键字明确拒绝。
+- 独立工具调用数、活动时间、连续工具失败与可选已报告 token 阈值；审批/调试等待单列，超限阻止后续动作。
+- Layers 基础模块检查、配置预算表单；固定历史快照在 Elements/Layers/Application 间保留，Sources 控制当前运行。
+- worker 协议升级为 3，Kun 0.3.0；状态 schema 仍为 1，旧记录可检查。无新生产依赖。
+- 尚无检查点恢复/分叉、摘要压缩、费用预算或生产模型/MCP 验收，不宣称 K1/K2 全量完成。
+
 # 0.21.0 — Kun 0.2 / MCP
 
 - Kun 每轮独立连接 MCP：stdio、Streamable HTTP JSON/SSE、分页发现、工具过滤和稳定别名。

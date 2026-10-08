@@ -61,7 +61,7 @@ func TestKunProcessConversationAndDebugHTTP(t *testing.T) {
 	}))
 	defer provider.Close()
 	i, _ := m.Instance()
-	cfg := p.Config{Kind: "kun", Endpoint: provider.URL + "/v1", Model: "fixture", APIKeyEnv: "KUN_TEST_API_KEY", MaxSteps: 4, TimeoutSeconds: 5, AllowWrite: true, PauseBeforeModel: true}
+	cfg := p.Config{Budget: p.BudgetLimits{MaxToolCalls: 8, MaxActiveSeconds: 60, MaxConsecutiveFailures: 2}, Kind: "kun", Endpoint: provider.URL + "/v1", Model: "fixture", APIKeyEnv: "KUN_TEST_API_KEY", MaxSteps: 4, TimeoutSeconds: 5, AllowWrite: true, PauseBeforeModel: true}
 	if _, err = m.SetAgentRuntime(i.ID, i.Revision, cfg); err != nil {
 		t.Fatal(err)
 	}

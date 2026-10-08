@@ -1,14 +1,7 @@
 {
-  "passed": true,
-  "modelCalls": 2,
-  "checks": [
-    "UI config",
-    "model/tool step boundaries",
-    "steer before next request",
-    "snapshot inspection",
-    "reported usage",
-    "reload persistence",
-    "mobile viewport"
-  ],
-  "pageErrors": []
+  "version": "0.22.0",
+  "status": "not_run",
+  "passed": null,
+  "reason": "No Chromium executable in this validation environment. JavaScript syntax checked; updated Playwright script supplied.",
+  "previousVersionEvidence": "kun-ui-validation-0.21.0.json"
 }

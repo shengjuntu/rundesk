@@ -10,11 +10,14 @@ Built with Go and plain HTML/JavaScript. Node.js is not required to run RunDesk 
 
 ![RunDesk conversation workspace](docs/screenshots/0.16.0/chat-en.png)
 
-## Kun engine (0.21.0)
+## Kun engine (0.22.0)
+
+Kun 0.3 adds fixed Memory/Planning/Action/Capability contracts, a single tool dispatch path, bounded JSON Schema argument validation, execution budgets, and a basic Layers inspector. Protocol v3 requires paired binaries. See [K1 core scope](docs/KUN-K1-CORE.md); checkpoint resume and forks remain unsupported.
+
 
 Kun shares this repository with RunDesk and runs in a separate worker process. Build with Go 1.25.12+ using `make build`, then launch `./bin/rundesk --data ./data`. Open **Agent engine** in configuration, select Kun, configure an OpenAI-compatible endpoint/model, and create a new session. Codex is not required for Kun.
 
-Kun 0.2 supports text model calls, workspace file tools, explicit Skills, and MCP over stdio or finite Streamable HTTP. Configure MCP in the existing tools page: rules default to per-call approval; an explicit always-allow rule applies to the next run. DevTools shows Network, Elements, Sources, Performance and MCP state in Application. Pause, step, supplemental instructions and cancellation are available. Plugins, checkpoint continuation, forks and trajectory compilation remain unimplemented.
+Kun 0.3 supports text model calls, workspace file tools, explicit Skills, and MCP over stdio or finite Streamable HTTP. Configure MCP in the existing tools page: rules default to per-call approval; an explicit always-allow rule applies to the next run. DevTools shows Network, Elements, Sources, Performance and MCP state in Application. Pause, step, supplemental instructions and cancellation are available. Plugins, checkpoint continuation, forks and trajectory compilation remain unimplemented.
 
 See [Kun implementation and limits](docs/KUN.md). Thanks to PiG and Pi contributors: selected source files, pinned revision, adaptations and preserved MIT licenses are recorded in [UPSTREAM.md](docs/UPSTREAM.md).
 

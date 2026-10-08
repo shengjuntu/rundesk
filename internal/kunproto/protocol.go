@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-const Version = 2
-const EngineVersion = "0.2.0"
+const Version = 3
+const EngineVersion = "0.3.0"
 const MaxMessage = 8 << 20
 
 type Envelope struct {
@@ -23,18 +23,20 @@ type Envelope struct {
 	Event   *Event          `json:"event,omitempty"`
 }
 type Config struct {
-	Kind             string `json:"kind"`
-	Endpoint         string `json:"endpoint"`
-	Model            string `json:"model"`
-	APIKeyEnv        string `json:"apiKeyEnv,omitempty"`
-	SystemPrompt     string `json:"systemPrompt,omitempty"`
-	MaxSteps         int    `json:"maxSteps"`
-	TimeoutSeconds   int    `json:"timeoutSeconds"`
-	AllowWrite       bool   `json:"allowWrite"`
-	PauseBeforeModel bool   `json:"pauseBeforeModel"`
+	Budget           BudgetLimits `json:"budget"`
+	Kind             string       `json:"kind"`
+	Endpoint         string       `json:"endpoint"`
+	Model            string       `json:"model"`
+	APIKeyEnv        string       `json:"apiKeyEnv,omitempty"`
+	SystemPrompt     string       `json:"systemPrompt,omitempty"`
+	MaxSteps         int          `json:"maxSteps"`
+	TimeoutSeconds   int          `json:"timeoutSeconds"`
+	AllowWrite       bool         `json:"allowWrite"`
+	PauseBeforeModel bool         `json:"pauseBeforeModel"`
 }
 
 func (c Config) Normalized() Config {
+	c.Budget = c.Budget.Normalized()
 	if c.Kind == "" {
 		c.Kind = "codex"
 	}
@@ -53,6 +55,9 @@ func (c Config) Validate() error {
 	}
 	if c.Kind == "codex" {
 		return nil
+	}
+	if err := c.Budget.Validate(); err != nil {
+		return err
 	}
 	u, e := url.Parse(c.Endpoint)
 	if e != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
@@ -116,25 +121,28 @@ type Receipt struct {
 	Revision  int64  `json:"revision"`
 }
 type State struct {
-	ToolDefinitions []json.RawMessage `json:"toolDefinitions,omitempty"`
-	MCP             []MCPStatus       `json:"mcp,omitempty"`
-	MCPTools        []MCPTool         `json:"mcpTools,omitempty"`
-	Approval        *ToolApproval     `json:"approval,omitempty"`
-	ApprovalPolicy  string            `json:"approvalPolicy,omitempty"`
-	Queued          []Control         `json:"queuedControls,omitempty"`
-	Schema          int               `json:"schemaVersion"`
-	SessionID       string            `json:"sessionId"`
-	RunID           string            `json:"runId"`
-	Revision        int64             `json:"revision"`
-	Status          string            `json:"status"`
-	Phase           string            `json:"phase"`
-	Step            int               `json:"step"`
-	Messages        []Message         `json:"messages"`
-	Pending         []ToolCall        `json:"pending,omitempty"`
-	Actions         map[string]string `json:"actions,omitempty"`
-	Config          Config            `json:"config"`
-	Skills          []Skill           `json:"skills,omitempty"`
-	Error           string            `json:"error,omitempty"`
+	Harness         Harness                `json:"harness"`
+	Modules         map[string]ModuleState `json:"modules,omitempty"`
+	Budget          BudgetUsage            `json:"budget"`
+	ToolDefinitions []json.RawMessage      `json:"toolDefinitions,omitempty"`
+	MCP             []MCPStatus            `json:"mcp,omitempty"`
+	MCPTools        []MCPTool              `json:"mcpTools,omitempty"`
+	Approval        *ToolApproval          `json:"approval,omitempty"`
+	ApprovalPolicy  string                 `json:"approvalPolicy,omitempty"`
+	Queued          []Control              `json:"queuedControls,omitempty"`
+	Schema          int                    `json:"schemaVersion"`
+	SessionID       string                 `json:"sessionId"`
+	RunID           string                 `json:"runId"`
+	Revision        int64                  `json:"revision"`
+	Status          string                 `json:"status"`
+	Phase           string                 `json:"phase"`
+	Step            int                    `json:"step"`
+	Messages        []Message              `json:"messages"`
+	Pending         []ToolCall             `json:"pending,omitempty"`
+	Actions         map[string]string      `json:"actions,omitempty"`
+	Config          Config                 `json:"config"`
+	Skills          []Skill                `json:"skills,omitempty"`
+	Error           string                 `json:"error,omitempty"`
 }
 type Event struct {
 	Sequence  int64           `json:"sequence"`

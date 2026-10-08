@@ -15,6 +15,10 @@ import (
 )
 
 type Engine struct {
+	modules        modules
+	catalog        *toolCatalog
+	clock          time.Time
+	waiting        bool
 	mcpSpecs       []p.MCPServer
 	connections    map[string]*mcpConnection
 	secrets        []string
@@ -41,7 +45,7 @@ func Open(path string) (*Engine, error) {
 		j.db.Close()
 		return nil, e
 	}
-	v := &Engine{j: j, state: s, wake: make(chan struct{}, 1), fatal: make(chan error, 1)}
+	v := &Engine{modules: defaultModules(), j: j, state: s, wake: make(chan struct{}, 1), fatal: make(chan error, 1)}
 	if p.Active(s.Status) {
 		// Recovery is inspection-only. An unfinished external action is never retried.
 		for id, status := range v.state.Actions {
@@ -88,6 +92,9 @@ func (e *Engine) Snapshot(seq int64) (p.Snapshot, error) {
 }
 func (e *Engine) Fatal() <-chan error { return e.fatal }
 func (e *Engine) record(kind string, data any) error {
+	if !e.clock.IsZero() {
+		e.tick(time.Now())
+	}
 	e.state.Revision++
 	_, err := e.j.commit(e.state, kind, data, "", "", nil)
 	if err != nil {
@@ -174,6 +181,11 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 	previousState := clone(e.state)
 	e.state = p.State{Schema: 1, SessionID: in.SessionID, RunID: in.RunID, Revision: e.state.Revision + 1, Status: "running", Phase: "before_model", Config: in.Config, Skills: in.Skills, Actions: map[string]string{}, Messages: append([]p.Message{{Role: "system", Content: prompt}}, kept...)}
 	e.state.Messages = append(e.state.Messages, p.Message{Role: "user", Content: in.Input})
+	e.state.Harness = e.modules.harness()
+	e.state.Modules = map[string]p.ModuleState{}
+	for name, version := range e.state.Harness.Modules {
+		e.state.Modules[name] = p.ModuleState{Implementation: version, Phase: "pending", Data: p.JSON(map[string]any{})}
+	}
 	e.state.ApprovalPolicy = in.ApprovalPolicy
 	for _, definition := range toolDefinitions(in.Config.AllowWrite) {
 		e.state.ToolDefinitions = append(e.state.ToolDefinitions, p.JSON(definition))
@@ -213,6 +225,7 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 		}
 	}
 	sort.Slice(e.secrets, func(i, j int) bool { return len(e.secrets[i]) > len(e.secrets[j]) })
+	e.clock, e.waiting = time.Now(), false
 	e.pause, e.single = in.Config.PauseBeforeModel, false
 	ctx, cancel := context.WithCancel(context.Background())
 	e.cancel = cancel
@@ -332,6 +345,7 @@ func (e *Engine) boundary(ctx context.Context, phase string) error {
 	}
 	shouldPause := e.pause || (phase == "before_model" && e.state.Config.PauseBeforeModel)
 	if shouldPause {
+		e.setWaiting(true)
 		e.pause = true
 		e.state.Status = "paused"
 		if err := e.record("kun/run.paused", map[string]string{"phase": phase}); err != nil {
@@ -347,6 +361,7 @@ func (e *Engine) boundary(ctx context.Context, phase string) error {
 		e.mu.Lock()
 		paused := e.pause
 		if !paused {
+			e.setWaiting(false)
 			err := e.applyQueued(phase, false)
 			e.mu.Unlock()
 			return err
@@ -371,6 +386,7 @@ func (e *Engine) loop(ctx context.Context) {
 		e.closeMCP()
 		e.mu.Lock()
 		defer e.mu.Unlock()
+		e.setWaiting(false)
 		e.state.Approval = nil
 		for n := range e.state.MCP {
 			if e.state.MCP[n].Status != "failed" {
@@ -398,10 +414,15 @@ func (e *Engine) loop(ctx context.Context) {
 			e.state.Status = "completed"
 		}
 		_ = e.applyQueued("", true)
-		_ = e.record("kun/run.finished", map[string]any{"status": e.state.Status, "error": e.state.Error})
+		_ = e.record("kun/run.finished", map[string]any{"status": e.state.Status, "error": e.state.Error, "budget": e.state.Budget})
+		e.clock = time.Time{}
 		e.secrets = nil
 	}()
-	if failure = e.discoverMCP(ctx); failure != nil {
+	failure = e.discoverMCP(ctx)
+	if failure = e.activeFailure(failure); failure != nil {
+		return
+	}
+	if failure = e.prepareCatalog(); failure != nil {
 		return
 	}
 	for {
@@ -409,14 +430,12 @@ func (e *Engine) loop(ctx context.Context) {
 			return
 		}
 		e.mu.Lock()
-		if e.state.Step >= e.state.Config.MaxSteps {
+		if failure = e.checkBudget("model"); failure != nil {
 			e.mu.Unlock()
-			failure = fmt.Errorf("model step budget exhausted")
 			return
 		}
-		if len(p.JSON(e.state)) > 2<<20 {
+		if failure = e.prepareContext(); failure != nil {
 			e.mu.Unlock()
-			failure = fmt.Errorf("context exceeds 2 MiB; start a new session")
 			return
 		}
 		e.state.Step++
@@ -429,7 +448,10 @@ func (e *Engine) loop(ctx context.Context) {
 		key := e.key
 		e.mu.Unlock()
 		started := time.Now()
-		result, err := modelCall(ctx, s, key)
+		callCtx, callCancel := e.activeContext(ctx)
+		result, err := e.modules.provider.Complete(callCtx, s, key)
+		callCancel()
+		err = e.activeFailure(err)
 		if err != nil {
 			failure = err
 			return
@@ -442,6 +464,7 @@ func (e *Engine) loop(ctx context.Context) {
 				return
 			}
 		}
+		absorbUsage(&e.state.Budget, result.Usage)
 		e.state.Messages = append(e.state.Messages, result.Message)
 		e.state.Pending = result.Message.ToolCalls
 		e.state.Phase = "after_model"
@@ -452,21 +475,15 @@ func (e *Engine) loop(ctx context.Context) {
 		if e.single {
 			e.pause = true
 		}
-		hasTools := len(e.state.Pending) > 0
-		hasSteer := false
-		for _, c := range e.state.Queued {
-			if c.Operation == "steer" {
-				hasSteer = true
-			}
-		}
-		if !hasTools && !hasSteer {
+		nextPhase := e.modules.policy.Next(clone(e.state))
+		if nextPhase == "complete" {
 			e.state.Status = "completing"
 		} // Close admission before deciding to finish.
 		e.mu.Unlock()
 		if failure != nil {
 			return
 		}
-		if !hasTools && !hasSteer {
+		if nextPhase == "complete" {
 			return
 		}
 		for {
@@ -481,25 +498,34 @@ func (e *Engine) loop(ctx context.Context) {
 			}
 			e.mu.Lock()
 			call := e.state.Pending[0]
-			tool, isMCP := e.mcpTool(call.Function.Name)
+			if failure = e.checkBudget("tool"); failure != nil {
+				e.mu.Unlock()
+				return
+			}
+			intent, validationErr := e.modules.action.Validate(call, e.catalog)
+			if validationErr != nil {
+				failure = e.finishTool(call, intent, toolResult{Output: validationErr.Error(), IsError: true}, "rejected", 0)
+				e.mu.Unlock()
+				if failure != nil {
+					return
+				}
+				continue
+			}
+			e.moduleState("action", "validated", map[string]any{"callId": call.ID, "tool": intent.Name, "schemaHash": intent.SchemaHash, "argumentsHash": fingerprint(call.Function.Arguments)})
+			failure = e.record("kun/tool.validated", e.state.Modules["action"])
 			e.mu.Unlock()
-			if isMCP {
+			if failure != nil {
+				return
+			}
+			if intent.MCP != nil {
 				var allowed bool
-				allowed, failure = e.approveMCP(ctx, tool, call)
+				allowed, failure = e.approveMCP(ctx, *intent.MCP, call)
 				if failure != nil {
 					return
 				}
 				if !allowed {
-					output := "MCP tool was denied by the user or approval policy. No external call was made."
 					e.mu.Lock()
-					e.state.Actions[call.ID] = "declined"
-					e.state.Messages = append(e.state.Messages, p.Message{Role: "tool", ToolCallID: call.ID, Content: output})
-					e.state.Pending = e.state.Pending[1:]
-					e.state.Phase = "after_tool"
-					failure = e.record("kun/tool.completed", map[string]any{"call": call, "output": output, "isError": true, "status": "declined", "durationMs": 0, "step": e.state.Step, "mcp": map[string]string{"server": tool.Server, "tool": tool.Name}})
-					if e.single {
-						e.pause = true
-					}
+					failure = e.finishTool(call, intent, toolResult{Output: "MCP tool was denied by the user or approval policy. No external call was made.", IsError: true}, "declined", 0)
 					e.mu.Unlock()
 					if failure != nil {
 						return
@@ -508,54 +534,39 @@ func (e *Engine) loop(ctx context.Context) {
 				}
 			}
 			e.mu.Lock()
-			if failure = ctx.Err(); failure != nil {
+			if failure = ctx.Err(); failure == nil {
+				failure = e.checkBudget("tool")
+			}
+			if failure != nil {
 				e.mu.Unlock()
 				return
 			}
 			e.state.Phase = "tool"
 			e.state.Actions[call.ID] = "dispatched"
+			e.state.Budget.ToolCalls++
 			metadata := map[string]string{}
-			if isMCP {
-				metadata = map[string]string{"server": tool.Server, "tool": tool.Name}
+			if intent.MCP != nil {
+				metadata = map[string]string{"server": intent.MCP.Server, "tool": intent.MCP.Name}
 			}
 			failure = e.record("kun/tool.started", map[string]any{"call": call, "step": e.state.Step, "mcp": metadata})
-			workspace, allow := e.workspace, e.state.Config.AllowWrite
 			e.mu.Unlock()
 			if failure != nil {
 				return
 			}
 			started := time.Now()
-			var output string
-			var raw json.RawMessage
-			var err error
-			var isError bool
-			if isMCP {
-				output, raw, isError, err = e.callMCP(ctx, tool, call)
-				// A lost reply is not a failed action. End the run instead of inviting an automatic retry.
-				if err != nil {
-					failure = fmt.Errorf("MCP %s/%s outcome unknown: %w", tool.Server, tool.Name, err)
-					return
-				}
-			} else {
-				output, err = executeTool(workspace, allow, call)
-				isError = err != nil
-				if isError {
-					output = err.Error()
-				}
+			toolCtx, toolCancel := e.activeContext(ctx)
+			out, err := e.executeAction(toolCtx, intent, call)
+			toolCancel()
+			if err != nil {
+				failure = e.activeFailure(fmt.Errorf("tool %s outcome unknown: %w", call.Function.Name, err))
+				return
 			}
 			e.mu.Lock()
 			status := "succeeded"
-			if isError {
+			if out.IsError {
 				status = "failed"
 			}
-			e.state.Actions[call.ID] = status
-			e.state.Messages = append(e.state.Messages, p.Message{Role: "tool", ToolCallID: call.ID, Content: output})
-			e.state.Pending = e.state.Pending[1:]
-			e.state.Phase = "after_tool"
-			failure = e.record("kun/tool.completed", map[string]any{"call": call, "output": output, "isError": isError, "durationMs": time.Since(started).Milliseconds(), "step": e.state.Step, "mcp": metadata, "result": raw})
-			if e.single {
-				e.pause = true
-			}
+			failure = e.finishTool(call, intent, out, status, time.Since(started))
 			e.mu.Unlock()
 			if failure != nil {
 				return

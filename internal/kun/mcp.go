@@ -159,7 +159,8 @@ func (e *Engine) discoverMCP(ctx context.Context) error {
 		}
 		if err == nil {
 			e.connections[spec.Name] = &mcpConnection{spec, client}
-			startCtx, cancel := context.WithTimeout(ctx, time.Duration(spec.StartupTimeout*float64(time.Second)))
+			activeCtx, activeCancel := e.activeContext(ctx)
+			startCtx, cancel := context.WithTimeout(activeCtx, time.Duration(spec.StartupTimeout*float64(time.Second)))
 			params := map[string]any{"protocolVersion": "2025-11-25", "capabilities": map[string]any{}, "clientInfo": map[string]string{"name": "kun", "version": p.EngineVersion}}
 			var raw json.RawMessage
 			raw, err = e.mcpRequest(startCtx, spec.Name, "initialize", params, func(c context.Context) (json.RawMessage, error) { return client.Initialize(c, "kun", p.EngineVersion) })
@@ -178,6 +179,7 @@ func (e *Engine) discoverMCP(ctx context.Context) error {
 				tools, err = e.listMCPTools(startCtx, spec, client)
 			}
 			cancel()
+			activeCancel()
 			if err == nil {
 				e.mu.Lock()
 				if len(e.state.MCPTools)+len(tools) > 128 {
