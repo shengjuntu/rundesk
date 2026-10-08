@@ -112,9 +112,9 @@ Frontend assets and the Docker template are embedded in the executable. Rebuild 
 
 Stop the service and back up the existing data directory and Codex configuration before replacing binaries. Keep the same `--data` location. Existing applications and conversations are preserved.
 
-Version **0.19.0** improves native process cleanup, adds kernel-backed data locks, a runtime-process view and a systemd example. It retains the bilingual interface and environment setup introduced in 0.16. Technical logs and user/model content remain in their original language. Some legacy detailed diagnostic messages retain their original wording.
+Version **0.19.1** adds application/project ownership checks for file downloads and submitted attachments. Uploads without recorded ownership must be uploaded again through the application/member endpoint; administrators retain access. It includes the native process cleanup, kernel-backed data locks, runtime-process view and systemd example from 0.19.0. It retains the bilingual interface and environment setup introduced in 0.16. Technical logs and user/model content remain in their original language. Some legacy detailed diagnostic messages retain their original wording.
 
-This release was checked with automated Go tests and browser scenarios. The packaged Docker template has not been built against a real Docker engine in the development environment; real model/provider and container deployments require local verification. See [release notes](docs/RELEASE-0.19.0.md).
+This patch is checked with automated Go tests; the interface is unchanged from the browser-validated 0.19.0 release. The packaged Docker template has not been built against a real Docker engine in the development environment; real model/provider and container deployments require local verification. See [release notes](docs/RELEASE-0.19.1.md).
 
 [License](LICENSE)
 
@@ -130,7 +130,7 @@ Direct tests run with RunDesk's service identity, outside Codex's sandbox and ap
 
 This capability already existed before 0.17. Send a stable `Idempotency-Key` (8–128 characters) for each logical POST to `/api/v1/tasks`, `/sessions`, `/sessions/{id}/turns`, or `/workspaces/{id}/mcp-tests`. Retry the **same request with the same key**; changed content returns 409. Keys are scoped to the authenticated caller. `Idempotency-Replayed: true` identifies a persisted acknowledgement, not current task status. Inspect `GET /api/v1/requests/{key}` or the task resource after a timeout. An interrupted acknowledgement can return `request_unconfirmed`; reconcile actual effects instead of changing keys and resubmitting. This is duplicate-submission protection, not an exactly-once guarantee for external tools.
 
-[Capability status and next steps](docs/CAPABILITY-STATUS-0.19.0.md)
+[Capability status and next steps](docs/CAPABILITY-STATUS-0.19.1.md)
 
 ## Usage by application and project (0.18)
 

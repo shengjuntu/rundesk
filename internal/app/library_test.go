@@ -55,11 +55,28 @@ func TestPersonalLibraryOwnershipAndDeletion(t *testing.T) {
 	if r.Code != 200 || strings.Contains(r.Body.String(), "notes.txt") {
 		t.Fatal("foreign list", r.Body.String())
 	}
-	attached, e := m.AttachPersonal(u.ID, f.ID, shared.WorkspaceID)
-	if e != nil {
+	var attachBody bytes.Buffer
+	form := multipart.NewWriter(&attachBody)
+	if e := form.WriteField("libraryFileId", f.ID); e != nil {
 		t.Fatal(e)
 	}
+	if e := form.Close(); e != nil {
+		t.Fatal(e)
+	}
+	req := httptest.NewRequest("POST", "http://localhost/api/v1/member/"+u.Grants[0].ID+"/workspaces/"+shared.WorkspaceID+"/uploads", &attachBody)
+	req.Header.Set("Authorization", "Bearer "+code)
+	req.Header.Set("Content-Type", form.FormDataContentType())
+	r = httptest.NewRecorder()
+	h.ServeHTTP(r, req)
+	if r.Code != 200 {
+		t.Fatal(r.Code, r.Body.String())
+	}
+	attached := object(t, r)
 	p := attached["path"].(string)
+	r = appRequest(h, "GET", "/api/v1/member/"+u.Grants[0].ID+"/workspaces/"+shared.WorkspaceID+"/file?path="+p, "", code, "")
+	if r.Code != 200 {
+		t.Fatal("own attachment unavailable", r.Code, r.Body.String())
+	}
 	ws, _ := m.Workspace(shared.WorkspaceID)
 	b, e := os.ReadFile(filepath.Join(ws.Path, p))
 	if e != nil || string(b) != "private research" {

@@ -478,6 +478,9 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		v, e := s.Manager.AttachPersonal(personalOwner(r), id, ws.ID)
+		if e == nil {
+			e = s.recordUploadAccess(r, ws.ID, v["path"].(string))
+		}
 		respond(w, v, e)
 		return
 	}
@@ -530,6 +533,11 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, e)
 		return
 	}
+	if e = s.recordUploadAccess(r, ws.ID, path); e != nil {
+		_ = root.Remove(path)
+		respond(w, nil, e)
+		return
+	}
 	result := map[string]any{"path": path, "name": name, "size": n}
 	if owner := personalOwner(r); owner != "" {
 		f, e := s.Manager.saveUploaded(owner, ws.ID, path, name)
@@ -551,6 +559,10 @@ func (s *Server) file(w http.ResponseWriter, r *http.Request) {
 	ws, e := s.Manager.Workspace(r.PathValue("wid"))
 	if e != nil {
 		writeErr(w, 404, e)
+		return
+	}
+	if e = s.checkFileAccess(r, ws.ID, p); e != nil {
+		writeErr(w, 403, e)
 		return
 	}
 	if e = s.Manager.libraryPathDeleted(ws.ID, p); e != nil {

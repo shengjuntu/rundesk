@@ -88,7 +88,7 @@ func (s *Server) checkApplication(r *http.Request, k *ApplicationKey) error {
 			switch p[0] {
 			case "tasks":
 				var v TaskSpec
-				return rewriteBody(r, &v, func() error { return normalizeTask(k, &v) })
+				return rewriteBody(r, &v, func() error { return s.normalizeApplicationTask(r, k, &v) })
 			case "sessions":
 				var v struct {
 					WorkspaceID   string          `json:"workspaceId"`
@@ -113,7 +113,7 @@ func (s *Server) checkApplication(r *http.Request, k *ApplicationKey) error {
 			case "schedules":
 				if k.scope("schedules") {
 					var v ScheduleSpec
-					return rewriteBody(r, &v, func() error { return normalizeTask(k, &v.Task) })
+					return rewriteBody(r, &v, func() error { return s.normalizeApplicationTask(r, k, &v.Task) })
 				}
 			}
 		}
@@ -177,7 +177,7 @@ func (s *Server) checkApplication(r *http.Request, k *ApplicationKey) error {
 				Spec     ScheduleSpec `json:"spec"`
 				Revision int          `json:"revision"`
 			}
-			return rewriteBody(r, &v, func() error { return normalizeTask(k, &v.Spec.Task) })
+			return rewriteBody(r, &v, func() error { return s.normalizeApplicationTask(r, k, &v.Spec.Task) })
 		}
 	case "sessions":
 		item, e := m.Session(p[1])
@@ -211,7 +211,13 @@ func (s *Server) checkApplication(r *http.Request, k *ApplicationKey) error {
 		if method == "POST" && k.scope("run") {
 			if len(p) == 3 {
 				switch p[2] {
-				case "turns", "steer", "stop", "recover":
+				case "turns":
+					var in Input
+					return rewriteBody(r, &in, func() error { return s.checkInputFiles(r, item.WorkspaceID, in) })
+				case "steer":
+					var in SteerInput
+					return rewriteBody(r, &in, func() error { return s.checkInputFiles(r, item.WorkspaceID, in.Input) })
+				case "stop", "recover":
 					return nil
 				}
 			}
