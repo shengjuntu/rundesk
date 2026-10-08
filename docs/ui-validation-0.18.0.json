@@ -1,0 +1,11 @@
+{
+  "checks": [
+    "two applications grouped; cumulative fixture snapshots counted once",
+    "Chinese summary and demo label",
+    "JSON export contains counters without prompts",
+    "application filter",
+    "English and mobile layout",
+    "no browser exceptions"
+  ],
+  "passed": 6
+}

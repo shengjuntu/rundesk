@@ -112,9 +112,9 @@ Frontend assets and the Docker template are embedded in the executable. Rebuild 
 
 Stop the service and back up the existing data directory and Codex configuration before replacing binaries. Keep the same `--data` location. Existing applications and conversations are preserved.
 
-Version **0.17.0** adds a direct MCP test workbench, saved-result replay and idempotent test calls. It retains the bilingual interface and environment setup introduced in 0.16. Technical logs and user/model content remain in their original language. Some legacy detailed diagnostic messages retain their original wording.
+Version **0.18.0** adds application/project usage reporting based on retained execution events. It retains the bilingual interface and environment setup introduced in 0.16. Technical logs and user/model content remain in their original language. Some legacy detailed diagnostic messages retain their original wording.
 
-This release was checked with automated Go tests and browser scenarios. The packaged Docker template has not been built against a real Docker engine in the development environment; real model/provider and container deployments require local verification. See [release notes](docs/RELEASE-0.17.0.md).
+This release was checked with automated Go tests and browser scenarios. The packaged Docker template has not been built against a real Docker engine in the development environment; real model/provider and container deployments require local verification. See [release notes](docs/RELEASE-0.18.0.md).
 
 [License](LICENSE)
 
@@ -130,4 +130,14 @@ Direct tests run with RunDesk's service identity, outside Codex's sandbox and ap
 
 This capability already existed before 0.17. Send a stable `Idempotency-Key` (8–128 characters) for each logical POST to `/api/v1/tasks`, `/sessions`, `/sessions/{id}/turns`, or `/workspaces/{id}/mcp-tests`. Retry the **same request with the same key**; changed content returns 409. Keys are scoped to the authenticated caller. `Idempotency-Replayed: true` identifies a persisted acknowledgement, not current task status. Inspect `GET /api/v1/requests/{key}` or the task resource after a timeout. An interrupted acknowledgement can return `request_unconfirmed`; reconcile actual effects instead of changing keys and resubmitting. This is duplicate-submission protection, not an exactly-once guarantee for external tools.
 
-[Capability status and next steps](docs/CAPABILITY-STATUS-0.17.0.md)
+[Capability status and next steps](docs/CAPABILITY-STATUS-0.18.0.md)
+
+## Usage by application and project (0.18)
+
+Open **Tasks → Usage**. Pick dates (browser timezone, inclusive end date), application and project. The administrator-only `GET /api/v1/usage` API uses an inclusive `from` and exclusive `to` in RFC3339, with a maximum 366-day window. Export the displayed snapshot as JSON.
+
+Counters are **observed positive increments** of `thread/tokenUsage/updated.tokenUsage.total`, deduplicated per configuration identity and native thread. The first snapshot of a newly started thread is counted; an unknown/resumed baseline is excluded until another snapshot establishes an increment. Lower counters are flagged and ignored, not treated as a new spend period. Cached input and reasoning output are subsets, not additional totals. Missing fields remain `null`/Unknown. These are provider/runtime-reported observations, not prices, billing records, context occupancy or enforced quotas.
+
+Token increments belong to event receipt time. Runs belong to their start time; status is the latest recorded status before the selected end. “Reported” means a run has a usable total snapshot, not that all usage was reported. Details expose missing counters, unknown baselines and regressions. Events arriving late or spanning a reporting boundary can shift attribution between periods.
+
+The report reads retained session events only. Deleting sessions removes their usage; outside-Codex work and MCP direct tests are not measured. It does not infer CPU, storage or monetary cost. Queries are bounded to 10 seconds and 200,000 relevant lifecycle events; an exceeded limit returns an error instead of a partial total. This is an initial single-host observability view, not a scalable billing ledger.

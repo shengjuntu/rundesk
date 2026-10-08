@@ -38,7 +38,8 @@ func Open(path string) (*Store, error) {
 	_, e = db.Exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;
  CREATE TABLE IF NOT EXISTS objects(kind TEXT NOT NULL,id TEXT NOT NULL,data BLOB NOT NULL, PRIMARY KEY(kind,id));
  CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY AUTOINCREMENT,session TEXT NOT NULL,time TEXT NOT NULL,direction TEXT NOT NULL,method TEXT NOT NULL,data BLOB NOT NULL);
- CREATE INDEX IF NOT EXISTS events_session ON events(session,id);`)
+ CREATE INDEX IF NOT EXISTS events_session ON events(session,id);
+ CREATE INDEX IF NOT EXISTS events_method_id ON events(method,id);`)
 	if e != nil {
 		db.Close()
 		return nil, e
