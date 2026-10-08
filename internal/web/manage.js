@@ -50,6 +50,8 @@ async function selectFirst() {
 function renderStatus() {
   renderCapabilityStrip();
   const s = state.session;
+  const diagnosticOnly=s?.runtimeKind==="kun"&&!!s.traceOrigin;
+  $("#attach").disabled=diagnosticOnly;$("#skill-picker").disabled=diagnosticOnly;
   $("#session-title").textContent = s?.title || rdText("新对话");
   $("#run-status").textContent = s?.archived
     ? rdText("已归档")
@@ -69,7 +71,7 @@ function renderStatus() {
     ? rdText("从会话菜单恢复后，可继续对话。")
     : steering
       ? rdText("补充要求或调整当前任务的方向…")
-      : rdText("给 Codex 一个任务…");
+      : s?.traceOrigin ? "询问固定来源证据…" : s?.runtimeKind === "kun" ? "给 Kun 一个任务…" : rdText("给 Codex 一个任务…");
   $("#model").disabled = !!s;
   $("#session-menu").classList.toggle("hidden", !s);
   $("#pin-session").textContent = s?.pinned ? rdText("取消置顶") : rdText("置顶");
@@ -86,7 +88,7 @@ function renderAnalysisBanner() {
   host.classList.toggle("hidden",!origin);
   if(!origin){host.replaceChildren();host._signature="";return;}
   const signature=json(origin);if(host._signature===signature)return;host._signature=signature;
-  host.replaceChildren(el("strong",{},rdText("过程分析 · 独立会话")),el("span",{},rdFormat("来源：${0} · 截至 ${1} 的记录",origin.title,new Date(origin.capturedAt).toLocaleString())),button(rdText("查看原任务过程"),()=>RunDeskTraceUI.openOrigin(origin),"quiet"),el("span",{},rdText("只读轨迹工具仅用于此分析会话；沿用原配置的模型与认证。原任务单独运行。")));
+  host.replaceChildren(el("strong",{},rdText("过程分析 · 独立会话")),el("span",{},rdFormat("来源：${0} · 截至 ${1} 的记录",origin.title,new Date(origin.capturedAt).toLocaleString())),button(rdText("查看原任务过程"),async()=>{const source=await api("/sessions/"+encodeURIComponent(origin.sessionId));RunDeskDebug.open(source,{runId:origin.runId,through:origin.through});},"quiet"),el("span",{},rdText("固定来源证据；沿用配置的模型与认证，用量记在本诊断会话。建议不会自动执行，原任务单独运行。")));
 }
 async function patchCurrent(patch) {
   if (!state.session) return;

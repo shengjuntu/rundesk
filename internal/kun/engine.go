@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	p "github.com/shengjuntu/rundesk/internal/kunproto"
+	"github.com/shengjuntu/rundesk/internal/tracequery"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -16,6 +17,7 @@ import (
 )
 
 type Engine struct {
+	trace           *tracequery.Reader
 	epoch           string
 	expectedCatalog string
 	modules         modules
@@ -155,6 +157,9 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 	if in.ApprovalPolicy != "on-request" && in.ApprovalPolicy != "never" {
 		return p.State{}, fmt.Errorf("unsupported MCP approval policy")
 	}
+	if err := validateDiagnostic(in, e.state); err != nil {
+		return p.State{}, err
+	}
 	safe := in
 	safe.APIKey = ""
 	safe.MCP = append([]p.MCPServer(nil), in.MCP...)
@@ -190,6 +195,24 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 	if in.Resume != nil {
 		return e.resumeLocked(in, hash)
 	}
+	var reader *tracequery.Reader
+	if in.Diagnostic != nil {
+		var err error
+		reader, err = tracequery.Open(in.Diagnostic.SnapshotPath, in.Diagnostic.SessionID, in.Diagnostic.Through)
+		if err != nil {
+			return p.State{}, err
+		}
+		if _, err = reader.Call("trace_statistics", tracequery.Args{RunID: in.Diagnostic.RunID}); err != nil {
+			reader.Close()
+			return p.State{}, err
+		}
+	}
+	accepted := false
+	defer func() {
+		if !accepted && reader != nil {
+			reader.Close()
+		}
+	}()
 	e.expectedCatalog = ""
 	history := e.state.Messages
 	// Rebuild system context from the effective config; preserve completed conversation messages.
@@ -200,11 +223,18 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 		}
 	}
 	prompt := "You are Kun, the RunDesk agent. Use the provided tools when needed. Paths are workspace-relative. Report tool failures honestly.\n" + in.Config.SystemPrompt
+	if in.Diagnostic != nil {
+		prompt = diagnosticInstructions(in.Diagnostic.DiagnosticScope)
+	}
 	for _, sk := range in.Skills {
 		prompt += "\n<skill name=" + sk.Name + " hash=" + sk.Hash + ">\n" + sk.Content + "\n</skill>"
 	}
 	previousState := clone(e.state)
 	e.state = p.State{Schema: 1, SessionID: in.SessionID, RunID: in.RunID, Revision: e.state.Revision + 1, Status: "running", Phase: "before_model", Config: in.Config, Skills: in.Skills, Actions: map[string]string{}, Messages: append([]p.Message{{Role: "system", Content: prompt}}, kept...)}
+	if in.Diagnostic != nil {
+		scope := in.Diagnostic.DiagnosticScope
+		e.state.Diagnostic = &scope
+	}
 	e.state.Messages = append(e.state.Messages, p.Message{Role: "user", Content: in.Input})
 	e.state.Debug = p.DebugState{Revision: 1, Policy: in.Config.Debug, Hits: map[string]int{}}
 	e.state.Harness = e.modules.harness()
@@ -214,7 +244,11 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 		e.state.Modules[name] = p.ModuleState{Implementation: version, Phase: "pending", Data: p.JSON(map[string]any{})}
 	}
 	e.state.ApprovalPolicy = in.ApprovalPolicy
-	for _, definition := range toolDefinitions(in.Config.AllowWrite) {
+	definitions := toolDefinitions(in.Config.AllowWrite)
+	if in.Diagnostic != nil {
+		definitions = diagnosticDefinitions()
+	}
+	for _, definition := range definitions {
 		e.state.ToolDefinitions = append(e.state.ToolDefinitions, p.JSON(definition))
 	}
 	for _, spec := range in.MCP {
@@ -232,6 +266,8 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 		e.state.Status = "failed"
 		return p.State{}, err
 	}
+	e.trace = reader
+	accepted = true
 	e.launchLocked(in)
 	return clone(e.state), nil
 }
@@ -394,6 +430,10 @@ func (e *Engine) loop(ctx context.Context) {
 		wasCanceled := ctx.Err() != nil
 		e.cancel()
 		e.closeMCP()
+		if e.trace != nil {
+			e.trace.Close()
+			e.trace = nil
+		}
 		e.mu.Lock()
 		defer e.mu.Unlock()
 		e.setWaiting(false)

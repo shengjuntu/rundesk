@@ -50,4 +50,4 @@ Sources 以当前在线状态为目标，即使其他面板固定在历史快照
 
 非调用列表面板使用完整检查宽度。自动刷新按模块、工具和内容身份恢复展开项；滚动位置保留，避免新增记录将展开状态套到另一条。数据表在窄屏容器内横向滚动。
 
-这些是代码实现范围。当前环境无 Chromium，浏览器交互和布局尚未实测；模拟 DOM 执行真实入口只验证数据/交互语义。验证记录见 [KUN-VALIDATION.md](KUN-VALIDATION.md)，完整阶段状态见 [KUN-PROGRESS.md](KUN-PROGRESS.md)。
+这些面板于 0.26.0 实现，0.28.0 起已执行真实 Chromium 回归，模型与 MCP 使用本地 fixture；真实服务仍待验收。验证记录见 [KUN-VALIDATION.md](KUN-VALIDATION.md)，完整阶段状态见 [KUN-PROGRESS.md](KUN-PROGRESS.md)。

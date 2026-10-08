@@ -27,7 +27,7 @@ func checkpointUnsafe(s p.State) bool {
 	return false
 }
 func checkpointSafe(s p.State) bool {
-	if s.Manifest == nil || s.Modules["capability"].Phase != "ready" || checkpointUnsafe(s) {
+	if s.Diagnostic != nil || s.Manifest == nil || s.Modules["capability"].Phase != "ready" || checkpointUnsafe(s) {
 		return false
 	}
 	switch s.Phase {
@@ -67,6 +67,9 @@ func (e *Engine) checkpointLocked() (p.CheckpointCheck, p.State, error) {
 	block := func(reason string) (p.CheckpointCheck, p.State, error) {
 		check.Reason = reason
 		return check, p.State{}, nil
+	}
+	if e.state.Diagnostic != nil {
+		return block("diagnostic_session_use_followup")
 	}
 	if e.closed {
 		return block("worker_closed")

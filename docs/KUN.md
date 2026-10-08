@@ -1,8 +1,8 @@
-# Kun 0.6 / RunDesk 0.28.0
+# Kun 0.7 / RunDesk 0.29.0
 
 在 0.2 的 MCP 基础上增加 K1 核心模块与执行约束。采用已确认的结构：**分进程、同仓库、选择性复制 PiG 源码并自主发展**。本版包含模型／工具循环、MCP 配置与审批、固定四模块、调用前参数校验、预算、运行记录、上下文检查和基础调试控制；不代表 KUN-DESIGN-v0.2 的所有阶段已经实现。
 
-固定模块与预算见 [K1 核心说明](KUN-K1-CORE.md)。安全续跑见 [检查点恢复](KUN-CHECKPOINTS.md)。调试控制见 [条件断点与 Console](KUN-DEBUG.md)。调用证据与快照差异见 [检查说明](KUN-INSPECT.md)，四面板见 [结构化检查](KUN-PANELS.md)。本版补齐 Codex/Kun 轮次、步骤、异常与统计的 [统一只读检查和 MCP](DEBUG-SERVICE.md)，并修复首次配置、嵌入脚本及审批刷新问题；阶段状态见 [开发进度](KUN-PROGRESS.md)，变更见 [0.28.0 发布记录](RELEASE-0.28.0.md)。
+固定模块与预算见 [K1 核心说明](KUN-K1-CORE.md)。安全续跑见 [检查点恢复](KUN-CHECKPOINTS.md)。调试控制见 [条件断点与 Console](KUN-DEBUG.md)。调用证据与快照差异见 [检查说明](KUN-INSPECT.md)，四面板见 [结构化检查](KUN-PANELS.md)。已有 Codex/Kun 轮次、步骤、异常与统计的 [统一只读检查和 MCP](DEBUG-SERVICE.md)，本版补 [独立诊断会话与建议](KUN-DIAGNOSIS.md)；阶段状态见 [开发进度](KUN-PROGRESS.md)，变更见 [0.29.0 发布记录](RELEASE-0.29.0.md)。
 
 ## 构建和启动
 

@@ -1,0 +1,14 @@
+{
+  "version": "0.29.0",
+  "passed": true,
+  "scope": "real Chromium + RunDesk + Kun worker + local model fixture; no real provider",
+  "modelCalls": 4,
+  "checks": [
+    "explicit creation starts a separate Kun diagnostic with fixed cursor and exclusive trace tools",
+    "source remains paused with identical revision and events; model usage belongs to diagnostic",
+    "suggestion citations open original evidence at the frozen source cursor",
+    "diagnostic source banner and reviewable suggestion survive reload",
+    "follow-up reuses the fixed source; 390px layout and literal text are safe"
+  ],
+  "pageErrors": []
+}

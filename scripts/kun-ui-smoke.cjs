@@ -6,7 +6,7 @@ const assert=require('assert');
 const path=require('node:path'),os=require('node:os');
 const root=path.resolve(__dirname,'..');
 const scratch=fs.mkdtempSync(path.join(os.tmpdir(),'rundesk-kun-ui-'));
-const pictures=path.join(root,'docs/screenshots/0.28.0');fs.mkdirSync(pictures,{recursive:true});
+const pictures=path.join(root,'docs/screenshots/0.29.0');fs.mkdirSync(pictures,{recursive:true});
 (async()=>{
  let calls=0,server,browser;const requests=[];const errors=[];
  const model=http.createServer(async(req,res)=>{
@@ -23,7 +23,7 @@ const pictures=path.join(root,'docs/screenshots/0.28.0');fs.mkdirSync(pictures,{
   await new Promise((res,rej)=>{server.stderr.once('data',res);server.once('error',rej)});
   browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH,headless:true,args:['--no-sandbox']});
   const page=await browser.newPage({viewport:{width:1440,height:1000}});
-  page.on('pageerror',e=>errors.push(e.message));
+  page.on('pageerror',e=>{errors.push(e.message);console.error('PAGE_ERROR',e.message)});page.on('response',r=>{if(r.status()>=400)console.error('HTTP_ERROR',r.status(),r.url())});
   await page.addInitScript(()=>{localStorage.setItem('rundesk-language','zh');sessionStorage.setItem('rundesk-setup-dismissed','1');});
   await page.goto('http://127.0.0.1:38730');
   await page.locator('#settings-button').click();

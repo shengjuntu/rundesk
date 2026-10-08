@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -12,6 +13,13 @@ func (s *Store) ExportTraceSnapshot(path, session string, through int64) error {
 		return nil
 	} else if !os.IsNotExist(e) {
 		return e
+	}
+	var count, total, largest int64
+	if err := s.db.QueryRow(`SELECT count(*),coalesce(sum(length(CAST(data AS BLOB))),0),coalesce(max(length(CAST(data AS BLOB))),0) FROM events WHERE session=? AND id<=?`, session, through).Scan(&count, &total, &largest); err != nil {
+		return err
+	}
+	if count > 100000 || total > 128<<20 || largest > 8<<20 {
+		return fmt.Errorf("trace snapshot exceeds 100000 events, 128 MiB total or 8 MiB per event")
 	}
 	if e := os.MkdirAll(filepath.Dir(path), 0700); e != nil {
 		return e

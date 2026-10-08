@@ -59,14 +59,15 @@ type Step struct {
 	ReportedDurationMS *int64         `json:"reportedDurationMs,omitempty"`
 }
 type Args struct {
-	RunID   string `json:"runId,omitempty"`
-	Query   string `json:"query,omitempty"`
-	Type    string `json:"type,omitempty"`
-	Status  string `json:"status,omitempty"`
-	Offset  int    `json:"offset,omitempty"`
-	Limit   int    `json:"limit,omitempty"`
-	StepID  string `json:"stepId,omitempty"`
-	EventID int64  `json:"eventId,omitempty"`
+	Proposal *ProposalInput `json:"proposal,omitempty"`
+	RunID    string         `json:"runId,omitempty"`
+	Query    string         `json:"query,omitempty"`
+	Type     string         `json:"type,omitempty"`
+	Status   string         `json:"status,omitempty"`
+	Offset   int            `json:"offset,omitempty"`
+	Limit    int            `json:"limit,omitempty"`
+	StepID   string         `json:"stepId,omitempty"`
+	EventID  int64          `json:"eventId,omitempty"`
 }
 
 func Open(path, session string, through int64) (*Reader, error) {
@@ -233,6 +234,9 @@ func (r *Reader) CallContext(ctx context.Context, name string, a Args) (any, err
 		if !exists {
 			return nil, errors.New("run is outside source snapshot")
 		}
+	}
+	if name == "trace_propose" {
+		return r.propose(ctx, a.RunID, a.Proposal)
 	}
 	if name == "trace_get_step" {
 		for _, s := range r.steps {

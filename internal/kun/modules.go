@@ -170,6 +170,12 @@ type toolResult struct {
 // This is the single side-effect gateway. Validation, approval, budget reservation,
 // and the durable dispatched record must precede it in Engine.
 func (e *Engine) executeAction(ctx context.Context, intent toolIntent, call p.ToolCall) (toolResult, error) {
+	if e.state.Diagnostic != nil {
+		if e.trace == nil {
+			return toolResult{}, fmt.Errorf("diagnostic source unavailable")
+		}
+		return e.executeDiagnostic(ctx, call)
+	}
 	if intent.MCP != nil {
 		out, raw, bad, err := e.callMCP(ctx, *intent.MCP, call)
 		return toolResult{out, raw, bad}, err

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.29.0
+
+- Kun 0.7.0 / worker protocol v7: separate diagnostic conversations on a fixed source snapshot, with an exclusive seven-tool trace/suggestion catalog. No inherited file tools, MCP servers, Skills, project notes or task-specific system prompt.
+- Shared `trace_propose` validates historical run/event references and returns a typed suggestion with no apply operation. Kun suggestions render as reviewable cards with fixed-cursor evidence links.
+- Trace-analysis creation accepts an explicit `through`; follow-up questions retain source scope and separate model usage. Sources remain untouched, including while paused. Diagnostic sessions use text inputs and follow-up questions instead of checkpoint resume.
+- Bound snapshot exports before reading payloads; strict per-tool argument checks shared by native trace MCP and Kun diagnostics.
+- Local Chromium diagnostic/source-isolation regression added; full Go, focused race, existing UI and Node checks retained. Real providers and Codex services remain unverified.
+- Upgrade both binaries together. Old engine checkpoints are readable as history but cannot resume under the new engine version.
+
 ## 0.28.0 — 跨后端步骤检查与浏览器修复
 
 - 统一 runs/steps/step/issues/statistics 查询与只读 MCP 工具，复用既有 tracequery；固定 through，支持筛选、分页和来源证据。

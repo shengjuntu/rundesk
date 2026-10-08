@@ -91,6 +91,9 @@ func (m *Manager) kunStartRequest(s Session, w Workspace, in Input) (p.Start, er
 			return p.Start{}, fmt.Errorf("Kun 凭证环境变量未设置：%s", cfg.APIKeyEnv)
 		}
 	}
+	if s.TraceOrigin != nil {
+		return m.kunDiagnosticRequest(s, w, in, cfg, key)
+	}
 	mcpServers, err := m.kunRuntimeMCP(i.ID)
 	if err != nil {
 		return p.Start{}, err

@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-const Version = 6
-const EngineVersion = "0.6.0"
+const Version = 7
+const EngineVersion = "0.7.0"
 const MaxMessage = 8 << 20
 
 type Envelope struct {
@@ -100,7 +100,20 @@ type Skill struct {
 	Content string `json:"content"`
 	Hash    string `json:"hash"`
 }
+
+// DiagnosticScope is immutable for the lifetime of a diagnostic session.
+type DiagnosticScope struct {
+	SessionID string `json:"sessionId"`
+	RunID     string `json:"runId"`
+	Through   int64  `json:"through"`
+}
+type DiagnosticSource struct {
+	DiagnosticScope
+	SnapshotPath string `json:"snapshotPath"`
+}
+
 type Start struct {
+	Diagnostic      *DiagnosticSource    `json:"diagnostic,omitempty"`
 	Resume          *CheckpointSelection `json:"resume,omitempty"`
 	ContextRevision string               `json:"contextRevision,omitempty"`
 	MCP             []MCPServer          `json:"mcp,omitempty"`
@@ -128,6 +141,7 @@ type Receipt struct {
 	Revision  int64  `json:"revision"`
 }
 type State struct {
+	Diagnostic      *DiagnosticScope       `json:"diagnostic,omitempty"`
 	Debug           DebugState             `json:"debug"`
 	Manifest        *RunManifest           `json:"manifest,omitempty"`
 	ResumedFrom     *CheckpointSelection   `json:"resumedFrom,omitempty"`

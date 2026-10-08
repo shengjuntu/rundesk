@@ -819,8 +819,11 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 			}
 		}
 	}
-	if s.RuntimeKind == "kun" && (recovery != nil || s.TraceOrigin != nil) {
+	if s.RuntimeKind == "kun" && recovery != nil {
 		return s, failure(400, "kun_recovery_unsupported", "首版 Kun 不支持原生 Codex 恢复或分析入口，请使用 Kun DevTools")
+	}
+	if s.RuntimeKind == "kun" && s.TraceOrigin != nil && (len(in.Files) > 0 || len(in.Skills) > 0 || in.KunResume != nil) {
+		return s, failure(400, "diagnostic_input_only", "诊断会话只接收问题文本；不接收文件、技能或恢复请求")
 	}
 	if in.KunResume != nil {
 		if s.RuntimeKind != "kun" {

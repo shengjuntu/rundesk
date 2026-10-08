@@ -10,9 +10,9 @@
 
 ![RunDesk 对话界面](docs/screenshots/0.16.0/chat-zh.png)
 
-## Kun 与 Codex 调试（0.28.0）
+## Kun 与 Codex 调试（0.29.0）
 
-RunDesk 0.28.0 新增跨后端只读“调试检查”：按轮次查看调用、异常、完整/缺失耗时及原始证据；统一 API 和 MCP 增加 runs/steps/step/issues/statistics。修复 Kun 调试脚本未嵌入、首次配置零值和审批刷新问题。Codex 内部单步、条件断点和完整上下文快照仍未提供。Kun 保持 0.6.0 / 协议 v6。见 [调试接入](docs/DEBUG-SERVICE.md)、[验证记录](docs/KUN-VALIDATION.md) 和 [完成度](docs/KUN-PROGRESS.md)。
+RunDesk 0.29.0 / Kun 0.7.0 增加独立诊断会话：在“调试检查”选择轮次并输入问题，由同后端模型分析固定历史；Kun 诊断仅提供 6 个轨迹查询和 1 个建议生成工具，不继承文件工具、业务 MCP、Skills 或项目提示。建议只记录、可跳转核对证据，不自动控制原任务。来源与诊断分别记录用量。worker 协议升级为 v7，两个命令须同时更新，旧引擎检查点不跨版本续跑。Codex 内部单步、条件断点和完整上下文快照仍未提供。见 [诊断说明](docs/KUN-DIAGNOSIS.md)、[验证记录](docs/KUN-VALIDATION.md) 和 [完成度](docs/KUN-PROGRESS.md)。
 
 
 Kun 与 RunDesk 同仓库、分进程运行。使用 Go 1.25.12+ 执行 `make build`，然后运行 `./bin/rundesk --data ./data`；在配置页的 **Agent 引擎** 中选择 Kun、设置模型服务并新建会话。Kun 不需要安装 Codex。

@@ -68,8 +68,8 @@ function kunConsole({sid,getCurrent,getSelected,refresh}){
  });
  operation.onchange=()=>{clear();text.disabled=operation.value!=="steer";};text.disabled=true;text.oninput=clear;
  const node=el("section",{class:"kun-console hidden"},el("h3",{},"Console"),target,
-  el("p",{class:"help"},"查询只读取当前状态或选定快照，不会向目标对话添加消息。这里不执行脚本，也没有自然语言诊断模型。"),
-  el("div",{class:"actions"},query,inspect),el("h4",{},"控制提案"),
+  el("p",{class:"help"},"查询只读取当前状态或选定快照，不会向目标对话添加消息。自然语言问题可另建独立诊断会话；会调用模型，用量单独记录。"),
+  el("div",{class:"actions"},query,inspect,button("独立诊断",async()=>{const source=await api("/sessions/"+encodeURIComponent(sid)),selected=getSelected();RunDeskDebug.open(source,{runId:selected?.data.runId||getCurrent()?.runId,...(selected?.id?{through:selected.id}:{})});})),el("h4",{},"控制提案"),
   el("p",{class:"help"},"控制始终针对当前运行。提案固定运行编号和状态版本；过期后重新预览。继续和单步不会代替 MCP 审批。"),
   operation,text,el("div",{class:"actions"},propose,apply),preview,feedback,
   el("div",{class:"actions"},button("清空本地显示",()=>history.replaceChildren())),history);

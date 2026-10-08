@@ -1,6 +1,6 @@
-# Kun 调试控制与 Console（0.6 更新）
+# Kun 调试控制与 Console（0.7 更新）
 
-RunDesk 0.26.0 继续推进 K2。本版检查视图与快照差异见 [KUN-INSPECT.md](KUN-INSPECT.md)。在既有单步、控制回执及检查点恢复上，增加四个安全边界的条件断点和无需模型的 Console。它没有 Go 源码行断点，也没有自然语言诊断 Agent。
+RunDesk 0.26.0 继续推进 K2。本版检查视图与快照差异见 [KUN-INSPECT.md](KUN-INSPECT.md)。在既有单步、控制回执及检查点恢复上，增加四个安全边界的条件断点和无需模型的 Console。它没有 Go 源码行断点。0.29.0 的 Console 新增“独立诊断”入口，转入固定宿主证据检查后另建模型诊断会话，见 [诊断说明](KUN-DIAGNOSIS.md)。
 
 ## 设置断点
 
@@ -43,7 +43,7 @@ Console 与其余面板共用“固定快照 / 跟随现场”的选择。查询
 
 控制区先展示结构化提案，再执行原 `/kun/control` 协议。提案固定当前 runId、revision 和 requestId。查看历史时，控制仍明确针对当前运行；版本过期后须重新预览，不会自动换目标。只有显式选择“补充指令”并执行，才会向当前运行追加文本。
 
-本地 Console 最多保留 20 条显示记录。清空显示不删除服务器事件。永久回执和命令仍在既有控制事件中。没有自然语言诊断、任意代码执行、任意数据库查询或自动工具重放。
+本地 Console 最多保留 20 条显示记录。清空显示不删除服务器事件。永久回执和命令仍在既有控制事件中。结构化查询不调用模型；自然语言问题通过新的独立诊断会话处理。没有任意代码执行、任意数据库查询或自动工具重放。
 
 ## API
 
@@ -71,10 +71,10 @@ Console 与其余面板共用“固定快照 / 跟随现场”的选择。查询
 }
 ```
 
-Worker 协议 v6 扩展 `query` 的 evidence/diff 与 fromSequence；保留 v5 的 set_breakpoints。hello 声明 conditionalBreakpoints/debugQueries/snapshotDiff/eventEvidence。RunDesk 和 Kun 必须同步升级。状态 schema 仍为 1，新增字段可选；旧快照可查，但旧引擎版本的检查点不跨版本恢复。
+Worker 协议 v6 曾扩展 `query` 的 evidence/diff 与 fromSequence；保留 v5 的 set_breakpoints。hello 声明 conditionalBreakpoints/debugQueries/snapshotDiff/eventEvidence。RunDesk 和 Kun 必须同步升级。状态 schema 仍为 1，新增字段可选；旧快照可查，但旧引擎版本的检查点不跨版本恢复。
 
 ## 仍待完成
 
-K2 具备基础条件断点、结构化 Console、单步/steer、控制幂等与安全检查点恢复，但不宣称完整 DevTools 验收。自然语言诊断、统一跨后端 DebugService/MCP 调试工具、同参数连续失败信号、上下文容量/费用/模块条件、高级上下文来源图和浏览器/生产服务验收尚未完成。K3 分叉与可配置模块组合、K4 轨迹编译仍未实现。
+K2 已有基础条件断点、结构化 Console、单步/steer、控制幂等、安全检查点恢复、统一只读 DebugService/MCP 和独立诊断；本地浏览器验证已完成。提案应用整合、同参数连续失败信号、上下文容量/费用/模块条件、高级上下文来源图和真实服务/生产验收尚未完成。0.29.0 使用 worker 协议 v7、Kun 0.7.0；旧引擎检查点不跨版本续跑。K3 分叉与可配置模块组合、K4 轨迹编译仍未实现。
 
 Sources 的结构化状态、按钮可用性和其余面板见 [KUN-PANELS.md](KUN-PANELS.md)。

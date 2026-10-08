@@ -417,6 +417,8 @@ function renderMessages() {
       });
     } else if (ev.method === "kun/model.completed" && ev.data.data?.message?.content) {
       items.push({_key:"kun:"+ev.id,type:"agentMessage",text:ev.data.data.message.content,_eventId:ev.id});
+    } else if (ev.method === "kun/tool.completed" && ev.data.data?.call?.function?.name === "trace_propose" && ev.data.data?.status === "succeeded" && !ev.data.data?.isError && RunDeskDebug.validSuggestion(ev.data.data?.result,state.session.traceOrigin)) {
+      items.push({_key:"diagnosis:"+ev.id,type:"diagnosticSuggestion",proposal:ev.data.data.result});
     } else if (ev.method === "kun/control.queued" && ev.data.data?.command?.operation === "steer") {
       items.push({_key:"kun-steer:"+ev.id,type:"user",text:ev.data.data.command.text,steering:true});
     } else if (ev.method === "run/steer") {
@@ -512,6 +514,7 @@ function renderMessages() {
     const signature = JSON.stringify([payload,state.deletedFilePaths||[]]);
     if (!node) {
       if (item.type === "user") node = el("div", { class: "message user" });
+      else if (item.type === "diagnosticSuggestion") node = el("article",{class:"message diagnostic-suggestion"});
       else if (item.type === "agentMessage")
         node = el("article", { class: "message assistant" });
       else if (item.type === "error")
@@ -539,6 +542,7 @@ function renderMessages() {
               ]
             : []),
         );
+      else if (item.type === "diagnosticSuggestion") RunDeskDebug.renderSuggestion(node,item.proposal,state.session.traceOrigin);
       else if (item.type === "agentMessage")
         renderAssistant(node, item);
       else if (item.type === "error") {
@@ -610,7 +614,9 @@ function renderMessages() {
     box.scrollTop = box.scrollHeight;
 }
 const LONG_TEXT_THRESHOLD = 8000;
+function diagnosticTextOnly(){return state.session?.runtimeKind==="kun"&&!!state.session.traceOrigin;}
 function stageLongText(text) {
+  if(diagnosticTextOnly())throw Error("诊断会话只接收问题文本，请直接输入或粘贴。");
   const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
   if (blob.size > 32 * 1024 * 1024)
     throw Error(rdText("长文本超过 32 MiB，请拆分后发送"));
@@ -626,7 +632,7 @@ function stageLongText(text) {
 }
 $("#prompt").addEventListener("paste", (event) => {
   const text = event.clipboardData?.getData("text/plain");
-  if (!text || [...text].length < LONG_TEXT_THRESHOLD) return;
+  if (diagnosticTextOnly() || !text || [...text].length < LONG_TEXT_THRESHOLD) return;
   event.preventDefault();
   if (state.sending) {
     toast(rdText("正在发送，请稍后粘贴长文本"));
@@ -643,7 +649,8 @@ $("#prompt").addEventListener("paste", (event) => {
 });
 async function sendMessage() {
   if (state.sending) return;
-  if ([...$("#prompt").value].length >= LONG_TEXT_THRESHOLD) {
+  if (diagnosticTextOnly() && (state.uploads.length || state.chosenSkills.length)) {toast("请移除附件和技能后发送诊断问题。");return;}
+  if (!diagnosticTextOnly() && [...$("#prompt").value].length >= LONG_TEXT_THRESHOLD) {
     stageLongText($("#prompt").value);
     $("#prompt").value = "";
   }
@@ -796,6 +803,7 @@ function renderAttachments() {
   );
 }
 async function uploadFiles(files) {
+  if(diagnosticTextOnly())throw Error("诊断会话不接收文件，请输入问题文本。");
   const wid = ws().id;
   for (const file of files) {
     const form = new FormData();
