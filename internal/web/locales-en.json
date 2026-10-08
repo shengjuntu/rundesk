@@ -1406,5 +1406,6 @@
   "启动时间：": "Started: ",
   "查看会话": "View conversation",
   "当前没有已登记的 App Server 连接。": "No registered App Server connections.",
-  "Linux / macOS 在关闭连接时清理其进程组。自行脱离进程组的后台服务不在此保证内；生产部署使用系统服务管理器。Windows 当前不保证子孙进程清理。": "Linux / macOS clean up the connection process group. Detached background services are outside this guarantee; use an OS service manager in production. Windows descendant cleanup is not guaranteed."
+  "Linux / macOS 在关闭连接时清理其进程组。自行脱离进程组的后台服务不在此保证内；生产部署使用系统服务管理器。Windows 当前不保证子孙进程清理。": "Linux / macOS clean up the connection process group. Detached background services are outside this guarantee; use an OS service manager in production. Windows descendant cleanup is not guaranteed.",
+  "撤销这个凭据？0.19.2 起绑定此凭据的排队任务将拒绝启动，定时规则到期时停用。已运行任务和无绑定记录的旧任务需单独停止。": "Revoke this credential? Queued tasks bound to it since 0.19.2 will not start; schedules will be disabled when due. Stop running tasks and unbound legacy tasks separately."
 }

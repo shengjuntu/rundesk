@@ -11,15 +11,17 @@ import (
 )
 
 type TaskSpec struct {
-	Title       string        `json:"title"`
-	WorkspaceID string        `json:"workspaceId"`
-	InstanceID  string        `json:"instanceId"`
-	Model       string        `json:"model"`
-	Source      SessionSource `json:"source"`
-	Input       Input         `json:"input"`
-	NotBefore   string        `json:"notBefore,omitempty"`
+	SubmittingKeyID string        `json:"-"`
+	Title           string        `json:"title"`
+	WorkspaceID     string        `json:"workspaceId"`
+	InstanceID      string        `json:"instanceId"`
+	Model           string        `json:"model"`
+	Source          SessionSource `json:"source"`
+	Input           Input         `json:"input"`
+	NotBefore       string        `json:"notBefore,omitempty"`
 }
 type Task struct {
+	SubmittingKeyID string   `json:"submittingKeyId,omitempty"`
 	FileOwner       string   `json:"fileOwner,omitempty"`
 	ID              string   `json:"id"`
 	SessionID       string   `json:"sessionId"`
@@ -98,7 +100,7 @@ func (m *Manager) prepareTask(spec TaskSpec, validate bool) (Task, Session, erro
 	spec.Model = s.Model
 	spec.Source = s.Source
 	spec.Title = s.Title
-	t := Task{FileOwner: spec.Input.LibraryOwner, ID: store.ID(), SessionID: s.ID, Spec: spec, Status: "queued", Created: store.Now(), Updated: store.Now()}
+	t := Task{SubmittingKeyID: spec.SubmittingKeyID, FileOwner: spec.Input.LibraryOwner, ID: store.ID(), SessionID: s.ID, Spec: spec, Status: "queued", Created: store.Now(), Updated: store.Now()}
 	s.TaskID = t.ID
 	return t, s, nil
 }
@@ -317,6 +319,18 @@ func (m *Manager) queueTick() {
 		}
 		if t.Status != "queued" {
 			m.queueMu.Unlock()
+			continue
+		}
+		if authErr := m.checkTaskAuthorization(t.SubmittingKeyID, t.Spec, t.ScheduleID != ""); authErr != nil {
+			t.Status = "failed"
+			t.Reason = authErr.Error()
+			t.FinishedAt = store.Now()
+			saveErr := m.saveTaskLocked(t)
+			m.queueMu.Unlock()
+			if saveErr != nil {
+				m.cancel()
+				return
+			}
 			continue
 		}
 		if !m.capacityLocked(t.Spec.InstanceID) {

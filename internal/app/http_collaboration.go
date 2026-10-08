@@ -319,7 +319,7 @@ func (s *Server) collaborationA2A(w http.ResponseWriter, r *http.Request) {
 				source = SessionSource{Kind: "application", AppID: k.AppID}
 			}
 			var session Session
-			task, session, e = m.prepareTask(TaskSpec{Title: "A2A · " + a.Name, WorkspaceID: a.WorkspaceID, InstanceID: a.InstanceID, Source: source, Input: Input{Text: input}}, true)
+			task, session, e = m.prepareTask(TaskSpec{SubmittingKeyID: submittingKey(r), Title: "A2A · " + a.Name, WorkspaceID: a.WorkspaceID, InstanceID: a.InstanceID, Source: source, Input: Input{Text: input}}, true)
 			if e == nil {
 				record = inboundA2A{Agent: a.ID, Scope: scope, Hash: fingerprint, TaskID: task.ID, ContextID: contextID}
 				m.queueMu.Lock()

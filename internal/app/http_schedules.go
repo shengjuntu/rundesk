@@ -21,6 +21,7 @@ func (s *Server) scheduleRoutes(mux *http.ServeMux) {
 		if !decode(w, r, &spec) {
 			return
 		}
+		spec.Task.SubmittingKeyID = submittingKey(r)
 		v, e := m.SaveSchedule("", spec, 0)
 		respond(w, v, e)
 	})
@@ -33,6 +34,7 @@ func (s *Server) scheduleRoutes(mux *http.ServeMux) {
 		if !decode(w, r, &v) {
 			return
 		}
+		v.Spec.Task.SubmittingKeyID = submittingKey(r)
 		result, e := m.SaveSchedule(r.PathValue("id"), v.Spec, v.Revision)
 		respond(w, result, e)
 	})

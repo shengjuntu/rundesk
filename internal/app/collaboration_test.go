@@ -85,7 +85,7 @@ func TestCollaborationA2AIdempotencyAndIsolation(t *testing.T) {
 	q.Paused = true
 	m.SaveQueue(q)
 	wid := m.Workspaces()[0].ID
-	a, _, key := setupKey(t, m, "a2a-test", wid, "read", "run")
+	a, credential, key := setupKey(t, m, "a2a-test", wid, "read", "run")
 	_, otherKey, e := m.CreateApplicationKey(a.AppID, KeyInput{Name: "other", WorkspaceIDs: []string{wid}, Scopes: []string{"read", "run"}})
 	if e != nil {
 		t.Fatal(e)
@@ -103,6 +103,9 @@ func TestCollaborationA2AIdempotencyAndIsolation(t *testing.T) {
 	first := call(data, key)
 	if first["error"] != nil {
 		t.Fatal(first)
+	}
+	if len(m.Tasks()) != 1 || m.Tasks()[0].SubmittingKeyID != credential.ID {
+		t.Fatal("A2A lost submitting credential")
 	}
 	second := call(data, key)
 	id := first["result"].(map[string]any)["id"].(string)

@@ -22,6 +22,7 @@ func (s *Server) queueRoutes(mux *http.ServeMux) {
 			return
 		}
 		spec.Input.LibraryOwner = personalOwner(r)
+		spec.SubmittingKeyID = submittingKey(r)
 		v, e := m.Enqueue(spec)
 		if e != nil {
 			writeErr(w, 400, e)

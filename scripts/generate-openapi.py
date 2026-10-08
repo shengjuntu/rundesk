@@ -46,13 +46,13 @@ schemas={
 }
 schemas.update({
  'TaskSpec':obj({'title':st(maxLength=120),'workspaceId':st(),'instanceId':st(),'model':st(),'source':ref('Source'),'input':ref('Input'),'notBefore':st(format='date-time')},['workspaceId','input']),
- 'Task':obj({k:st() for k in ['id','sessionId','runId','status','reason','created','updated','startedAt','finishedAt','scheduleId','scheduledFor','fileOwner']}|{'spec':ref('TaskSpec'),'cancelRequested':bool_},['id','sessionId','status','spec']),
+ 'Task':obj({k:st() for k in ['id','sessionId','runId','status','reason','created','updated','startedAt','finishedAt','scheduleId','scheduledFor','fileOwner','submittingKeyId']}|{'spec':ref('TaskSpec'),'cancelRequested':bool_},['id','sessionId','status','spec']),
  'QueueSettings':obj({'revision':integer,'paused':bool_,'maxConcurrent':{'type':'integer','minimum':1,'maximum':16},'perInstance':{'type':'object','additionalProperties':{'type':'integer','minimum':1,'maximum':16}}},['revision','paused','maxConcurrent','perInstance']),
  'TaskPage':obj({'items':arr(ref('Task')),'nextCursor':st()},['items','nextCursor'])
 })
 schemas.update({
  'ScheduleSpec':obj({'name':st(),'cron':st(description='五段：分 时 日 月 周'),'timezone':st(description='IANA 时区，禁止 Local'),'enabled':bool_,'misfire':st(enum=['skip','once']),'overlap':st(enum=['skip','queue']),'task':ref('TaskSpec')},['name','cron','timezone','enabled','task']),
- 'Schedule':obj({k:st() for k in ['id','created','updated','nextAt','lastAt','lastTaskId','lastReason']}|{'spec':ref('ScheduleSpec'),'revision':integer},['id','spec','revision']),
+ 'Schedule':obj({k:st() for k in ['id','created','updated','nextAt','lastAt','lastTaskId','lastReason','submittingKeyId']}|{'spec':ref('ScheduleSpec'),'revision':integer},['id','spec','revision']),
 })
 schemas.update({
  'ApplicationKey':obj({k:st() for k in ['id','appId','instanceId','name','created','expiresAt','revokedAt']}|{'workspaceIds':arr(st()),'scopes':arr(st(enum=['read','run','schedules','files','approvals']))},['id','appId','instanceId','name','created','workspaceIds','scopes']),

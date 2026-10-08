@@ -3,6 +3,7 @@ package app
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/robfig/cron/v3"
 	"github.com/shengjuntu/rundesk/internal/store"
@@ -21,15 +22,16 @@ type ScheduleSpec struct {
 	Task     TaskSpec `json:"task"`
 }
 type Schedule struct {
-	ID         string       `json:"id"`
-	Revision   int          `json:"revision"`
-	Spec       ScheduleSpec `json:"spec"`
-	Created    string       `json:"created"`
-	Updated    string       `json:"updated"`
-	NextAt     string       `json:"nextAt"`
-	LastAt     string       `json:"lastAt,omitempty"`
-	LastTaskID string       `json:"lastTaskId,omitempty"`
-	LastReason string       `json:"lastReason,omitempty"`
+	SubmittingKeyID string       `json:"submittingKeyId,omitempty"`
+	ID              string       `json:"id"`
+	Revision        int          `json:"revision"`
+	Spec            ScheduleSpec `json:"spec"`
+	Created         string       `json:"created"`
+	Updated         string       `json:"updated"`
+	NextAt          string       `json:"nextAt"`
+	LastAt          string       `json:"lastAt,omitempty"`
+	LastTaskID      string       `json:"lastTaskId,omitempty"`
+	LastReason      string       `json:"lastReason,omitempty"`
 }
 
 func parseSchedule(expr, zone string) (cron.Schedule, error) {
@@ -134,6 +136,11 @@ func (m *Manager) SaveSchedule(id string, spec ScheduleSpec, revision int) (Sche
 	} else {
 		s.NextAt = ""
 	}
+	// An administrator editing timing does not silently replace the owner.
+	// An application can re-authorize by saving with its new valid key.
+	if t.SubmittingKeyID != "" {
+		s.SubmittingKeyID = t.SubmittingKeyID
+	}
 	s.Spec = spec
 	s.Revision++
 	s.Updated = store.Now()
@@ -173,6 +180,24 @@ func (m *Manager) scheduleTick(now time.Time) {
 		if e != nil || due.After(now) {
 			continue
 		}
+		if authErr := m.checkTaskAuthorization(s.SubmittingKeyID, s.Spec.Task, true); authErr != nil {
+			// Storage failures are fail-closed but do not permanently disable a
+			// schedule. Retry the authorization check on a later tick.
+			var ae *apiError
+			if errors.As(authErr, &ae) && ae.Code == "task_authorization_revoked" {
+				s.Spec.Enabled = false
+				s.NextAt = ""
+				s.Revision++
+			}
+			s.LastReason = authErr.Error()
+			s.Updated = store.Now()
+			if e = m.Store.Put("schedule", s.ID, s); e != nil {
+				m.cancel()
+				return
+			}
+			m.schedules[s.ID] = s
+			continue
+		}
 		c, e := parseSchedule(s.Spec.Cron, s.Spec.Timezone)
 		if e != nil {
 			continue
@@ -199,7 +224,9 @@ func (m *Manager) scheduleTick(now time.Time) {
 			continue
 		}
 		// prepareSession may consult application configuration; never hold queueMu during validation RPC.
-		t, session, e := m.prepareTask(s.Spec.Task, false)
+		spec := s.Spec.Task
+		spec.SubmittingKeyID = s.SubmittingKeyID
+		t, session, e := m.prepareTask(spec, false)
 		if e != nil {
 			s.LastReason = e.Error()
 			if e = m.Store.Put("schedule", s.ID, s); e != nil {

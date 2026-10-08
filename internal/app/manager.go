@@ -856,6 +856,13 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 		if !ok || t.SessionID != id || t.Status != "dispatching" || t.CancelRequested {
 			return s, failure(409, "task_canceled", "任务已经取消")
 		}
+		// Serialize the final admission decision with credential revocation.
+		// Once accepted, stopping a running task remains an explicit action.
+		m.keyMu.Lock()
+		defer m.keyMu.Unlock()
+		if e = m.checkTaskAuthorization(t.SubmittingKeyID, t.Spec, t.ScheduleID != ""); e != nil {
+			return s, e
+		}
 		runID = t.RunID
 	}
 	if !m.capacityLocked(s.InstanceID) {
