@@ -94,6 +94,9 @@ func (m *Manager) kunStartRequest(s Session, w Workspace, in Input) (p.Start, er
 	if s.TraceOrigin != nil {
 		return m.kunDiagnosticRequest(s, w, in, cfg, key)
 	}
+	if s.KunFork != nil {
+		return m.kunForkStartRequest(s, w, in, cfg, key)
+	}
 	mcpServers, err := m.kunRuntimeMCP(i.ID)
 	if err != nil {
 		return p.Start{}, err

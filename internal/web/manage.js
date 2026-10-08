@@ -50,7 +50,8 @@ async function selectFirst() {
 function renderStatus() {
   renderCapabilityStrip();
   const s = state.session;
-  const diagnosticOnly=s?.runtimeKind==="kun"&&!!s.traceOrigin;
+  const diagnosticOnly=s?.runtimeKind==="kun"&&(!!s.traceOrigin||!!s.kunFork);
+  const forkFinished=!!s?.kunFork&&!active(s.status);
   $("#attach").disabled=diagnosticOnly;$("#skill-picker").disabled=diagnosticOnly;
   $("#session-title").textContent = s?.title || rdText("新对话");
   $("#run-status").textContent = s?.archived
@@ -60,14 +61,14 @@ function renderStatus() {
   const transitioning = ["starting", "stopping"].includes(s?.status);
   const steering = active(s?.status) && !transitioning;
   $("#send").disabled =
-    state.loadingSession || state.sending || transitioning || (steering && !s?.turnId) || !!s?.archived;
+    forkFinished || state.loadingSession || state.sending || transitioning || (steering && !s?.turnId) || !!s?.archived;
   $("#send").title = steering ? rdText("补充指令到当前任务") : rdText("发送");
   $("#send").setAttribute("aria-label", $("#send").title);
   $("#send").classList.toggle("steering", steering);
   $("#send").textContent = steering ? rdText("补充") : "↑";
   $("#stop").disabled = s?.status === "stopping";
-  $("#prompt").disabled = state.loadingSession || !!s?.archived;
-  $("#prompt").placeholder = s?.archived
+  $("#prompt").disabled = forkFinished || state.loadingSession || !!s?.archived;
+  $("#prompt").placeholder = forkFinished ? "Hybrid 已结束；请从来源创建新预览。" : s?.archived
     ? rdText("从会话菜单恢复后，可继续对话。")
     : steering
       ? rdText("补充要求或调整当前任务的方向…")
@@ -84,7 +85,10 @@ function renderStatus() {
  window.RunDeskTasks?.banner();
 }
 function renderAnalysisBanner() {
-  const host=$("#analysis-banner"),origin=state.session?.traceOrigin;
+  const host=$("#analysis-banner"),fork=state.session?.kunFork,origin=state.session?.traceOrigin;
+  if(fork){host.classList.remove("hidden");const signature=json(fork);if(host._signature===signature)return;host._signature=signature;
+   host.replaceChildren(el("strong",{},"Hybrid · 独立分支"),el("span",{},"模型重新调用；工具仅回放录制结果，未执行真实工具。来源边界 #"+fork.sequence),button("查看固定预览",()=>RunDeskKunForks.open({previewId:fork.previewId}),"quiet"));return;}
+
   host.classList.toggle("hidden",!origin);
   if(!origin){host.replaceChildren();host._signature="";return;}
   const signature=json(origin);if(host._signature===signature)return;host._signature=signature;

@@ -1,0 +1,33 @@
+{
+  "rundesk": "RunDesk 0.32.0",
+  "kun": "Kun 0.8.0",
+  "hello": {
+    "capabilities": {
+      "argumentValidation": true,
+      "budgets": true,
+      "conditionalBreakpoints": true,
+      "debugQueries": true,
+      "diagnosticSession": true,
+      "eventEvidence": true,
+      "fork": true,
+      "forkHybrid": true,
+      "forkLive": false,
+      "inspect": true,
+      "mcp": true,
+      "mcpApproval": true,
+      "modules": true,
+      "pause": true,
+      "replayEvents": true,
+      "resumeCheckpoint": true,
+      "snapshotDiff": true,
+      "steer": true,
+      "step": true
+    },
+    "engine": "kun",
+    "engineVersion": "0.8.0",
+    "protocolVersion": 8
+  },
+  "debugMCPTools": 19,
+  "debugMCPVersion": "0.32.0",
+  "passed": true
+}

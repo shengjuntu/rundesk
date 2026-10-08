@@ -96,10 +96,13 @@ func TestMalformedProtocolFailsPromptly(t *testing.T) {
 }
 
 func TestLongStderrDoesNotBlockReplies(t *testing.T) {
-	var truncated atomic.Bool
+	reported := make(chan struct{}, 1)
 	c := failureClient(t, "long-stderr", func(dir string, m Message) {
 		if dir == "stderr" && strings.Contains(string(m.Params), "truncated") {
-			truncated.Store(true)
+			select {
+			case reported <- struct{}{}:
+			default:
+			}
 		}
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -108,7 +111,11 @@ func TestLongStderrDoesNotBlockReplies(t *testing.T) {
 	if err != nil || string(result) != `{"ok":true}` {
 		t.Fatalf("stderr blocked response: %s %v", result, err)
 	}
-	if !truncated.Load() {
+	// stdout replies and stderr traces are drained by independent goroutines;
+	// the reply does not establish ordering with the final stderr callback.
+	select {
+	case <-reported:
+	case <-ctx.Done():
 		t.Fatal("long stderr must be bounded and explicitly marked")
 	}
 }

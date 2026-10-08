@@ -123,6 +123,14 @@ func TestProjectionKunScopesEvidenceAndApproval(t *testing.T) {
 	}
 }
 
+func TestProjectionHybridReplayIsAnObservation(t *testing.T) {
+	p := project(t, input("branch"), worker("tool.completed", "branch", 3, map[string]any{"step": 2, "call": map[string]any{"id": "replay", "function": map[string]string{"name": "write_file"}}, "status": "replayed", "replay": map[string]any{"mode": "recorded", "executed": false, "sourceSequence": 20}, "isError": true}))
+	steps := stepsOf(p, "toolReplay")
+	if len(steps) != 1 || !steps[0].Point || steps[0].Status != "replayed" || len(steps[0].Missing) != 0 || steps[0].ReportedDurationMS != nil {
+		t.Fatal(steps)
+	}
+}
+
 func TestProjectionRedactionPrecisionPreviewAndClock(t *testing.T) {
 	start := item("started", "t", "a", map[string]any{"authorization": "secret-header", "arguments": map[string]any{"count": json.Number("9007199254740993"), "password": "secret-password", "long": strings.Repeat("字", 9000)}})
 	end := item("completed", "t", "a", map[string]any{"exitCode": 0})

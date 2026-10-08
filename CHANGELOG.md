@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.32.0
+
+- First K3-B safe runtime forks: immutable previews from a stopped Kun run's safe boundary, independent execution state, inherited budgets, optional deferred instruction and explicit Hybrid launch.
+- Recompute subsequent model calls; strictly replay tool recordings by identity, schema, environment, normalized arguments and tape order. Replay misses stop; no live file/MCP dispatch or external rollback.
+- One preview owns one single-run session across retries/restarts. Deleted targets stay deleted. Ordinary follow-up/resume and nested forks are blocked.
+- Administrator API/UI, replay evidence, inherited/new usage, public metadata/private bundle separation. Kun 0.8.0 / protocol v8; old 0.7 checkpoints remain inspectable but cannot resume/fork across versions.
+- Core, real worker/HTTP fixture, Node dialog and focused race checks. Chromium blocked by local socket restrictions; no 0.32 visual/mobile acceptance claim. Live, module composition and K4 remain pending.
+- Stabilize an existing concurrent stderr test and remove duplicate task-list OpenAPI parameters. Runtime dependencies unchanged.
+
 ## 0.31.0
 
 - K3-A offline experiments: freeze explicitly identified Kun run records, preserve redacted baselines, and create immutable child branches with hypothetical tool-output replacements.

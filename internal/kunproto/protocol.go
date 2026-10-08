@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-const Version = 7
-const EngineVersion = "0.7.0"
+const Version = 8
+const EngineVersion = "0.8.0"
 const MaxMessage = 8 << 20
 
 type Envelope struct {
@@ -113,6 +113,7 @@ type DiagnosticSource struct {
 }
 
 type Start struct {
+	Fork            *ForkStart           `json:"fork,omitempty"`
 	Diagnostic      *DiagnosticSource    `json:"diagnostic,omitempty"`
 	Resume          *CheckpointSelection `json:"resume,omitempty"`
 	ContextRevision string               `json:"contextRevision,omitempty"`
@@ -141,6 +142,7 @@ type Receipt struct {
 	Revision  int64  `json:"revision"`
 }
 type State struct {
+	Fork            *ForkState             `json:"fork,omitempty"`
 	Diagnostic      *DiagnosticScope       `json:"diagnostic,omitempty"`
 	Debug           DebugState             `json:"debug"`
 	Manifest        *RunManifest           `json:"manifest,omitempty"`

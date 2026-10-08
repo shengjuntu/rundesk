@@ -112,7 +112,11 @@ func (e *Engine) finishTool(call p.ToolCall, intent toolIntent, result toolResul
 		metadata = map[string]string{"server": intent.MCP.Server, "tool": intent.MCP.Name}
 	}
 	e.moduleState("action", "after_tool", map[string]any{"callId": call.ID, "tool": call.Function.Name, "status": status, "schemaHash": intent.SchemaHash})
-	err := e.record("kun/tool.completed", map[string]any{"call": call, "output": result.Output, "isError": result.IsError, "status": status, "durationMs": elapsed.Milliseconds(), "step": e.state.Step, "mcp": metadata, "result": result.Raw})
+	data := map[string]any{"call": call, "output": result.Output, "isError": result.IsError, "status": status, "durationMs": elapsed.Milliseconds(), "step": e.state.Step, "mcp": metadata, "result": result.Raw}
+	if result.Replay != nil {
+		data["replay"] = result.Replay
+	}
+	err := e.record("kun/tool.completed", data)
 	if e.single {
 		e.pause = true
 	}

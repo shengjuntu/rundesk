@@ -3,7 +3,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
 const {spawn}=require('node:child_process'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 (async()=>{
  const root=path.resolve(__dirname,'..'),temp=fs.mkdtempSync(path.join(os.tmpdir(),'rd-debug-ui-')),base='http://127.0.0.1:38732';
- const pictures=path.join(root,'docs/screenshots/0.31.0');fs.mkdirSync(pictures,{recursive:true});
+ const pictures=path.join(root,'docs/screenshots/0.32.0');fs.mkdirSync(pictures,{recursive:true});
  let server,browser;const errors=[],requests=[],checks=[];
  const pause=ms=>new Promise(r=>setTimeout(r,ms));
  const api=async(p,body)=>{const r=await fetch(base+'/api/v1'+p,{method:body?'POST':'GET',headers:{'Content-Type':'application/json','Idempotency-Key':crypto.randomUUID()},body:body?JSON.stringify(body):undefined});assert(r.ok,await r.clone().text());return r.json()};
@@ -39,6 +39,6 @@ const {spawn}=require('node:child_process'),fs=require('node:fs'),os=require('no
   await page.screenshot({path:path.join(pictures,'codex-debug-steps.png')});
   await page.setViewportSize({width:390,height:844});assert(await d.evaluate(n=>n.scrollWidth<=n.clientWidth+1),'dialog overflow');assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'page overflow');await page.screenshot({path:path.join(pictures,'codex-debug-mobile.png')});
   assert(requests.every(r=>r.method==='GET'));assert.deepEqual(errors,[]);checks.push('desktop/mobile layout, GET-only inspection and zero browser exceptions');
-  const report={version:'0.31.0',passed:true,scope:'real Chromium + RunDesk host + explicit Codex protocol fixture; no real Codex/model calls',checks,pageErrors:errors};fs.writeFileSync(path.join(root,'docs/debug-ui-validation.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
+  const report={version:'0.32.0',passed:true,scope:'real Chromium + RunDesk host + explicit Codex protocol fixture; no real Codex/model calls',checks,pageErrors:errors};fs.writeFileSync(path.join(root,'docs/debug-ui-validation.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
  }finally{await browser?.close();if(server&&server.exitCode===null){const exited=new Promise(r=>server.once('exit',r));server.kill();await Promise.race([exited,pause(5000)]);if(server.exitCode===null)server.kill('SIGKILL')}fs.rmSync(temp,{recursive:true,force:true})}
 })().catch(e=>{console.error(e);process.exitCode=1});

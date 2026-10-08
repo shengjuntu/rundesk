@@ -1,0 +1,89 @@
+package kunproto
+
+import (
+	"crypto/sha256"
+	"fmt"
+)
+
+const ForkSchema = 1
+const MaxForkBytes = 4 << 20
+const MaxReplayRecords = 128
+
+// A runtime fork uses a private, unredacted worker recording. It must never be
+// reconstructed from the host's redacted debug events or K3-A text overlays.
+type ForkSelection struct {
+	SourceRunID      string `json:"sourceRunId"`
+	Sequence         int64  `json:"sequence"`
+	Through          int64  `json:"through"`
+	ExpectedRevision int64  `json:"expectedStateRevision"`
+	WorkerEpoch      string `json:"workerEpoch"`
+}
+type ForkPoint struct {
+	Sequence int64  `json:"sequence"`
+	Phase    string `json:"phase"`
+	Step     int    `json:"step"`
+	Pending  int    `json:"pending"`
+}
+type ForkPoints struct {
+	Selection  ForkSelection `json:"selection"`
+	Items      []ForkPoint   `json:"items"`
+	NextOffset int           `json:"nextOffset"`
+	HasMore    bool          `json:"hasMore"`
+}
+type ForkExport struct {
+	Selection ForkSelection `json:"selection"`
+}
+type ReplayRecord struct {
+	Sequence      int64  `json:"sequence"`
+	Tool          string `json:"tool"`
+	SchemaHash    string `json:"schemaHash"`
+	ArgumentsHash string `json:"argumentsHash"`
+	IdentityHash  string `json:"identityHash"`
+	Output        string `json:"output"`
+	IsError       bool   `json:"isError"`
+	Status        string `json:"status"`
+}
+type ForkBundle struct {
+	Schema          int            `json:"schema"`
+	Selection       ForkSelection  `json:"selection"`
+	State           State          `json:"state"`
+	CatalogHash     string         `json:"catalogHash"`
+	EnvironmentHash string         `json:"environmentHash"`
+	Records         []ReplayRecord `json:"records"`
+	ContentHash     string         `json:"contentHash"`
+}
+
+func ForkHash(b ForkBundle) string {
+	b.ContentHash = ""
+	return fmt.Sprintf("%x", sha256.Sum256(JSON(b)))
+}
+
+type ForkOrigin struct {
+	PreviewID  string `json:"previewId"`
+	SessionID  string `json:"sessionId"`
+	RunID      string `json:"runId"`
+	Sequence   int64  `json:"sequence"`
+	Through    int64  `json:"through"`
+	BundleHash string `json:"bundleHash"`
+	Mode       string `json:"mode"`
+}
+type ForkState struct {
+	Origin          ForkOrigin  `json:"origin"`
+	InheritedStep   int         `json:"inheritedStep"`
+	InheritedBudget BudgetUsage `json:"inheritedBudget"`
+	ReplayCursor    int         `json:"replayCursor"`
+	ReplayTotal     int         `json:"replayTotal"`
+}
+type ForkStart struct {
+	Origin      ForkOrigin `json:"origin"`
+	Bundle      ForkBundle `json:"bundle"`
+	Instruction string     `json:"instruction"`
+}
+type ReplayEvidence struct {
+	Mode           string `json:"mode"`
+	SourceSequence int64  `json:"sourceSequence"`
+	Position       int    `json:"position"`
+	BundleHash     string `json:"bundleHash"`
+	RecordedStatus string `json:"recordedStatus"`
+	Executed       bool   `json:"executed"`
+}

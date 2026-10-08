@@ -366,6 +366,9 @@ func (p *projection) ingest(id int64, at, method string, d map[string]any) {
 			if data["isError"] == true || hasError(data["error"]) {
 				status = "failed"
 			}
+			if replay := obj(data["replay"]); replay["mode"] == "recorded" && replay["executed"] == false {
+				phase, status, kind, title = "point", "replayed", "toolReplay", "Recorded tool result: "+title
+			}
 		}
 	case "kun/mcp.request", "kun/mcp.response":
 		kind = "mcpExchange"

@@ -235,3 +235,10 @@ notices 按 source+message 合并次数，每个连接最多保留 32 条、单�
 仅接受 running / waiting 状态；starting / stopping、无活动 turn、目标 turn 不匹配时返回 409。服务器不会回退为 turn/start。文件及 Skills 复用既有输入校验。客户端在同一提交重试时必须保留 requestId 和完整请求；不同消息必须使用不同 ID。已接收的重复请求返回原回执，不再次注入。结果不明确的请求不会重新发送，需要查看对话/事件记录。服务重启后也保留去重记录，删除会话时清理。
 
 WebUI 的补充按钮发送到当前轮次，停止按钮调用原有 stop 接口。此版未加入下一轮消息队列。
+
+
+## Hybrid 安全分叉（0.32.0）
+
+管理员可使用 `/kun-forks/sources/{sid}` 读取最近已停止普通 Kun 轮次的安全边界，`POST /kun-forks` 生成固定预览，`POST /kun-forks/{fid}/start` 携带 `expectedHash` 显式启动独立 Hybrid 会话。两个 POST 都要求 `Idempotency-Key`。`GET /kun-forks` 和 `GET /kun-forks/{fid}` 读取公开预览；私有执行包不经 HTTP 返回。
+
+Hybrid 后续模型重新调用，工具严格录制回放，未命中停止；不执行真实工具。每份预览只运行一次，重复启动返回相同目标，删除目标后不能重新创建。普通新轮次和恢复拒绝。应用/成员凭据无权调用这些入口。完整字段、限额与版本约束见 [KUN-FORKS.md](KUN-FORKS.md) 及 OpenAPI。

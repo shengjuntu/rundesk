@@ -1,5 +1,5 @@
 // Structured projections of recorded state. No network or control side effects.
-const kunStateLabels={running:"运行中",paused:"已暂停",pausing:"等待暂停",completing:"正在结束",completed:"已完成",failed:"失败",interrupted:"已中断",idle:"空闲",prepared:"待派发",dispatched:"已派发",succeeded:"成功",rejected:"参数拒绝",declined:"审批拒绝",cancelled:"已取消",outcome_unknown:"结果未知",pending:"待初始化",ready:"就绪",connecting:"连接中",closed:"已关闭"};
+const kunStateLabels={replayed:"录制回放（未执行）",recorded:"固定录制",running:"运行中",paused:"已暂停",pausing:"等待暂停",completing:"正在结束",completed:"已完成",failed:"失败",interrupted:"已中断",idle:"空闲",prepared:"待派发",dispatched:"已派发",succeeded:"成功",rejected:"参数拒绝",declined:"审批拒绝",cancelled:"已取消",outcome_unknown:"结果未知",pending:"待初始化",ready:"就绪",connecting:"连接中",closed:"已关闭"};
 function kunStateLabel(value){return kunStateLabels[value]||value||"未记录";}
 function kunNumber(value){return typeof value==="number"&&Number.isFinite(value)&&value>=0?value:null;}
 function kunMillis(value){return kunNumber(value)===null?"未记录":(value/1000).toFixed(3)+" s";}
@@ -47,6 +47,7 @@ function kunRenderSources(s,selected,events,navigate){
  const node=kunPanel("当前运行控制状态","sources-state",s,null);
  node.append(el("p",{class:"help"},"控制目标始终是当前运行。"+(selected?"历史选择仍固定在 #"+selected.data.sequence+"，不会成为控制目标。":"")));
  if(!s){node.append(el("p",{},"当前状态不可用，可检查恢复条件或查看保留事件。"));return node;}
+ if(s.fork)node.append(el("p",{class:"experiment-mode"},"Hybrid · 工具仅录制回放 · 未命中停止"),kunFacts([["来源边界",s.fork.origin.sequence],["录制进度",s.fork.replayCursor+" / "+s.fork.replayTotal],["新增模型调用",s.step-s.fork.inheritedStep]]));
  const scoped=kunScopedEvents(events,s,null),pause=s.debug?.pause;
  node.append(kunFacts([["状态",kunStateLabel(s.status)],["阶段",s.phase],["模型步骤",s.step],["待派发工具",s.pending?.length??0],["断点规则版本",s.debug?.revision],["预算停止原因",s.budget?.stopReason||"无已记录原因"]]));
  if(s.error)node.append(el("p",{class:"kun-signal"},"运行错误："+s.error));
@@ -83,11 +84,12 @@ function kunRenderPerformance(s,selected,events,navigate){
  const node=kunPanel("运行用量与耗时","performance",s,selected),hasBudget=!!s?.harness?.id&&!!s?.budget,budget=hasBudget?s.budget:{},limits=hasBudget?s.config?.budget||{}:{};
  if(s&&!hasBudget)node.append(el("p",{class:"help"},"此记录缺少预算模块标识，累计预算按未知显示，兼容旧快照。"));
  if(!s)node.append(el("p",{class:"help"},"此时点的状态不可用；下面仅展示已加载事件，无法给出累计预算。"));
- node.append(el("div",{class:"kun-metrics"},kunMetric("已发起模型调用",s?.step,s?.config?.maxSteps),kunMetric("已派发工具",budget.toolCalls,limits.maxToolCalls),
+ node.append(el("div",{class:"kun-metrics"},kunMetric("已发起模型调用",s?.step,s?.config?.maxSteps),kunMetric(s?.fork?"工具预算（继承 + 回放）":"已派发工具",budget.toolCalls,limits.maxToolCalls),
   kunMetric("已报告 token",budget.reportedTokens,limits.maxTotalTokens,String,true),kunMetric("活动时间",budget.activeMillis,kunNumber(limits.maxActiveSeconds)===null?null:limits.maxActiveSeconds*1000,kunMillis),
   kunMetric("连续工具失败",budget.consecutiveFailures,limits.maxConsecutiveFailures)),
   kunFacts([["人工等待时间",kunMillis(budget.waitMillis)],["未报告有效用量的已完成模型调用",budget.unreportedModelCalls],["预算停止原因",budget.stopReason||"无已记录原因"],["费用", "未估算"]]),
   el("p",{class:"help"},"累计值来自上述状态版本；当前状态中的活动/等待计时不保证实时刷新。token 仅包含有效报告，缺失部分未知；阈值不保证当前请求不超额。调用耗时彼此可能嵌套，不能相加当作总运行时间。"));
+ if(s?.fork)node.append(el("h4",{},"分支新增用量"),kunFacts([["继承模型调用",s.fork.inheritedStep],["新增模型调用",s.step-s.fork.inheritedStep],["继承已报告 token",s.fork.inheritedBudget.reportedTokens],["新增已报告 token",budget.reportedTokens-s.fork.inheritedBudget.reportedTokens],["回放工具结果",s.fork.replayCursor],["本分支真实工具调用",0]]),el("p",{class:"help"},"上述预算总量包含来源检查点的用量；回放消耗工具预算，但没有外部工具调用。"));
  const scoped=kunScopedEvents(events,s,selected);
  for(const [kind,label,method]of [["model","模型","kun/model.completed"],["tool","工具","kun/tool.completed"],["mcp","MCP 交换（可能嵌套于工具调用）","kun/mcp.response"]]){
   const all=scoped.filter(e=>e.method===method),rows=all.slice(-200).reverse();
@@ -100,6 +102,7 @@ function kunRenderApplication(s,selected,events,navigate,showSources){
  const node=kunPanel("MCP 服务与审批","application",s,selected);
  if(!s){node.append(el("p",{},"此时点的状态不可用；可在 Network 查看保留事件。"));return node;}
  const scoped=kunScopedEvents(events,s,selected);
+ if(s.fork)node.append(el("p",{class:"experiment-mode"},"Hybrid 固定目录 · 没有连接真实 MCP；下列审批配置仅为来源记录，回放不会请求或复用真实执行审批。"));
  node.append(kunFacts([["本轮交互策略",s.approvalPolicy==="never"?"禁止询问：需要逐次审批的调用将拒绝":s.approvalPolicy||"允许逐次询问"]]),
   el("p",{class:"help"},"这是所选运行已捕获的目录。修改配置后下一轮才生效。内置文件写权限与 MCP 权限独立；此处只显示本轮目录工具，未列出的工具不等于已允许。"));
  const servers=s.mcp||[];

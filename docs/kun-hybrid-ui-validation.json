@@ -1,0 +1,15 @@
+{
+  "version": "0.32.0",
+  "passed": true,
+  "scope": "Node DOM stub + shipped view code; browser layout not tested",
+  "checks": [
+    "preview does not start models",
+    "fixed source selection and expected hash",
+    "edits invalidate preview",
+    "duplicate start click guarded",
+    "literal text rendering",
+    "stale preview response ignored",
+    "closing dialog suppresses late navigation",
+    "no source control routes"
+  ]
+}

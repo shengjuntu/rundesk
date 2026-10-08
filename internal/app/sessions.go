@@ -57,6 +57,8 @@ func (m *Manager) PatchSession(id string, p SessionPatch) (Session, error) {
 // Delete only RunDesk's metadata/journal. Original files and native Codex
 // history intentionally remain available to the operator.
 func (m *Manager) DeleteSession(id string) error {
+	m.kunForkMu.Lock()
+	defer m.kunForkMu.Unlock()
 	if _, e := m.Session(id); e != nil {
 		return e
 	}

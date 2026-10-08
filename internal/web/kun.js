@@ -27,7 +27,7 @@ async function renderKunSettings(target){
  el("label",{},"运行后端",kind),endpoint.node,model.node,key.node,steps.node,timeout.node,toolBudget.node,tokenBudget.node,activeBudget.node,failureBudget.node,el("p",{class:"help"},"token 阈值按服务报告的用量，在下一动作前检查；不能保证当前请求不超额。启用后如服务未报告用量，将停止后续执行。费用暂不估算。"),el("label",{},"系统提示词",system),
  el("label",{class:"kun-check"},write,"允许 Kun 写入项目内文件（仅限制内置文件工具）"),
  el("label",{class:"kun-check"},pause,"每次模型请求前暂停，供调试检查"),
- el("p",{class:"help"},"MCP 在工具 MCP 页面配置；其权限独立于内置文件工具。当前不支持 Shell、图像模型、历史回滚、分叉或轨迹编译。"),
+ el("p",{class:"help"},"MCP 在工具 MCP 页面配置；其权限独立于内置文件工具。支持安全边界 Hybrid 分叉；工具仅录制回放。当前不支持 Shell、图像模型、文件回滚、Live 分叉或轨迹编译。"),
  debuggerConfig.node,el("button",{type:"submit",class:"primary"},"保存引擎配置"),status);
  form.onsubmit=async event=>{
   event.preventDefault();status.textContent="保存中…";
@@ -73,6 +73,7 @@ window.RunDeskKun={
    list.replaceChildren();detail.replaceChildren();diffView.update();updateControlButtons();
    dialog.dataset.panel=panel;list.classList.toggle("hidden",!["network","elements"].includes(panel));
    summary.textContent=current?"状态："+current.status+" · "+current.phase+" · 版本 "+current.revision+" · 模型步骤 "+current.step:"历史记录";
+   if(current?.fork)summary.textContent+=" · Hybrid · 工具仅回放";
    if(historyLimited)summary.textContent+=" · 缓存已截断，部分事件可能缺失";
    if(historyPending)summary.textContent+=" · 正在补取历史事件";
    summary.textContent+=(selected?" · 固定快照 #"+selected.data.sequence:" · 跟随现场");
@@ -192,6 +193,7 @@ window.RunDeskKun={
     recoveryStatus.textContent=recoveryCheck.eligible?"可提交恢复：检查点 #"+recoveryCheck.selection.sequence+" · 待执行工具 "+recoveryCheck.pending+" · 已用工具调用 "+recoveryCheck.budget.toolCalls+"。保留既有工具结果，旧的一次性审批不复用。":"不能恢复："+(recoveryReasons[recoveryCheck.reason]||(recoveryCheck.reason.startsWith("budget_")?"执行预算已用尽："+recoveryCheck.reason.slice(7):recoveryCheck.reason));
    }catch(e){recoveryStatus.textContent=e.message;}
   }),recoverButton,recoveryStatus));
+  controls.append(button("预览 Hybrid 分叉",()=>window.RunDeskKunForks.open({sessionId:sid})));
   const steerButton=button("提交补充指令",()=>{if(!steer.value.trim()){feedback.textContent="请输入补充指令。";return;}return sendControl("steer",steer.value);});
   controlButtons.set("steer",steerButton);controls.append(steer,steerButton);
   dialog.append(el("div",{class:"dialog-head"},title,close),summary,tabs,button("刷新记录",refresh),button("跟随现场",()=>{selected=null;redraw();}),controls,consoleView.node,feedback,diffView.node,el("div",{class:"kun-inspector"},list,detail));

@@ -37,13 +37,13 @@ SQLite 在一次事务内写入状态、事件和最新安全检查点；在 `mo
 - `POST /api/v1/sessions/{sid}/kun/resume`：要求会话 run 权限及 `Idempotency-Key`，请求体为上述 `selection`。仍通过既有队列预留、并发和进程容量检查；接收前复核提交凭据。
 - `selection` 含 `sourceRunId`、`sequence`、`expectedStateRevision`、`workerEpoch`。它仅定位服务端保存的内容，不接受编辑消息、替换结果或注入配置。
 - 恢复中新发生的 MCP 逐次审批仍要求 approvals scope。应用不能检查或恢复其他应用会话。
-- Worker JSONL 当前协议 v6 保留 `checkpoint`（v4 引入）；恢复通过 `start.resume` 提交。内核目录锁保证同一执行目录只运行一个受管 worker，epoch 防止重启后复用旧恢复选择；尚无分布式租约/daemon。
+- Worker JSONL 当前协议 v8 保留 `checkpoint`（v4 引入）；恢复通过 `start.resume` 提交。内核目录锁保证同一执行目录只运行一个受管 worker，epoch 防止重启后复用旧恢复选择；尚无分布式租约/daemon。
 - 来源在 `kun/run.started.data.resumedFrom`、状态 `resumedFrom` 及宿主 `run/input.kunResume` 中可查。正常事件游标继续递增，历史记录不覆盖。
 
 ## 未覆盖
 
 不保存或恢复项目文件快照、远端状态、MCP 进程内存、工具程序二进制或宿主环境的完整副本；工作区路径/配置一致不代表外部世界未变。已记录的工具结果继续使用，后续读取使用当前文件和服务。没有外部副作用恰好一次保证；未知结果采取阻止恢复策略。
 
-没有后台自动续跑、任意历史选择、分叉、工具结果替换或 JIT。0.5 已新增结构化 Console 和限定条件断点，见 [调试说明](KUN-DEBUG.md)。MCP 重连校验失败时来源已被消费，当前实现不提供重新尝试该来源的入口。运行中权限即时撤销、完整跨后端 AgentRuntime 抽取和生产服务验收仍待完成。
+此续跑入口没有后台自动恢复、任意历史选择、工具结果替换或 JIT。0.32 新增独立的 [Hybrid 分叉入口](KUN-FORKS.md)，不消费来源续跑检查点；Hybrid 本身不能通过普通恢复入口续跑。0.5 已新增结构化 Console 和限定条件断点，见 [调试说明](KUN-DEBUG.md)。MCP 重连校验失败时来源已被消费，当前实现不提供重新尝试该来源的入口。运行中权限即时撤销、完整跨后端 AgentRuntime 抽取和生产服务验收仍待完成。
 
 升级需同时更新 RunDesk 与 Kun。先结束旧 worker；旧记录的快照可继续查看，但不会凭空获得恢复资格。备份仍使用既有数据目录流程。

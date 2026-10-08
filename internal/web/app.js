@@ -96,7 +96,7 @@ async function hasPendingSubmission(path,body) {return pendingAPI.has(await subm
 async function api(path, options = {}) {
   const headers = { ...options.headers };
   const method=options.method||"GET", body=options.body;
-  const deduplicate=method==="POST" && (/^\/experiments(?:\/[^/]+\/branches)?$/.test(path)||/^\/sessions\/[^/]+\/kun\/resume$/.test(path)||/^\/workspaces\/[^/]+\/mcp-tests(?:\?|$)/.test(path)||/^\/(instances|workspaces|sessions|tasks|schedules)$/.test(path)||/^\/sessions\/[^/]+\/(turns|recover)$/.test(path));
+  const deduplicate=method==="POST" && (/^\/kun-forks(?:\/[^/]+\/start)?$/.test(path)||/^\/experiments(?:\/[^/]+\/branches)?$/.test(path)||/^\/sessions\/[^/]+\/kun\/resume$/.test(path)||/^\/workspaces\/[^/]+\/mcp-tests(?:\?|$)/.test(path)||/^\/(instances|workspaces|sessions|tasks|schedules)$/.test(path)||/^\/sessions\/[^/]+\/(turns|recover)$/.test(path));
   let signature;
   if(deduplicate) {
     signature=await submissionSignature(path,body);
@@ -614,7 +614,7 @@ function renderMessages() {
     box.scrollTop = box.scrollHeight;
 }
 const LONG_TEXT_THRESHOLD = 8000;
-function diagnosticTextOnly(){return state.session?.runtimeKind==="kun"&&!!state.session.traceOrigin;}
+function diagnosticTextOnly(){return state.session?.runtimeKind==="kun"&&(!!state.session.traceOrigin||!!state.session.kunFork);}
 function stageLongText(text) {
   if(diagnosticTextOnly())throw Error("诊断会话只接收问题文本，请直接输入或粘贴。");
   const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
@@ -649,7 +649,8 @@ $("#prompt").addEventListener("paste", (event) => {
 });
 async function sendMessage() {
   if (state.sending) return;
-  if (diagnosticTextOnly() && (state.uploads.length || state.chosenSkills.length)) {toast("请移除附件和技能后发送诊断问题。");return;}
+  if(state.session?.kunFork&&!active(state.session.status)){toast("Hybrid 已结束；请从来源创建新预览。");return;}
+  if (diagnosticTextOnly() && (state.uploads.length || state.chosenSkills.length)) {toast("此会话只接收文本，请移除附件和技能。");return;}
   if (!diagnosticTextOnly() && [...$("#prompt").value].length >= LONG_TEXT_THRESHOLD) {
     stageLongText($("#prompt").value);
     $("#prompt").value = "";

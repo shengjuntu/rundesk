@@ -100,7 +100,7 @@ requests={
  ('PUT','/workspaces/{wid}/mcp/{name}'):obj({'version':st(),'config':obj(extra=True),'remove':bool_},['version']),
  ('POST','/workspaces/{wid}/mcp/import'):obj({'version':st(),'bundle':obj(extra=True),'overwrite':bool_},['version','bundle']),
 }
-idempotent={('POST',p) for p in ['/experiments','/experiments/{eid}/branches','/instances','/workspaces','/sessions','/sessions/{sid}/turns','/sessions/{sid}/recover','/sessions/{sid}/kun/resume','/tasks','/schedules','/workspaces/{wid}/mcp-tests']}
+idempotent={('POST',p) for p in ['/kun-forks','/kun-forks/{fid}/start','/experiments','/experiments/{eid}/branches','/instances','/workspaces','/sessions','/sessions/{sid}/turns','/sessions/{sid}/recover','/sessions/{sid}/kun/resume','/tasks','/schedules','/workspaces/{wid}/mcp-tests']}
 summaries={
  '/instances/{iid}/images':'管理员：GET 读取持久化镜像目录及环境差异；POST 检查并登记本机镜像，不构建、不拉取、不启动容器',
  '/instances/{iid}/images/{vid}/check':'管理员：按固定 Image ID 核对可用性；失败仍返回记录，检查 availability 和 error',
@@ -146,9 +146,6 @@ for file in sorted((root/'internal/app').glob('*.go')):
   params.append({'name':'X-Request-ID','in':'header','schema':st(),'description':'可选关联编号；响应回传有效编号，否则由服务器生成。'})
   if (method,path) in idempotent:params.append({'name':'Idempotency-Key','in':'header','required':True,'schema':st(pattern='^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$'),'description':'每个逻辑操作唯一。相同请求重试必须复用，不能将 Key 用于不同请求。'})
   response=ref('NativeObject'); status='202' if path.endswith(('/turns','/recover')) else '200'
-  if path=='/tasks' and method=='GET':
-   for n in ['status','appId','instanceId','cursor']:query(n)
-   query('limit',integer)
   if path=='/sessions':response=arr(ref('Session')) if method=='GET' else ref('Session')
   if path=='/sessions/{sid}' and method!='DELETE' or path.endswith(('/turns','/recover')):response=ref('Session')
   if path.endswith('/recovery/check'):response=ref('RecoveryPlan')
@@ -349,6 +346,33 @@ for path,method,response,body in [
  # This path lists record metadata, never the session event SSE API.
  if path.endswith('/events'):op['responses']['200']['content'].pop('text/event-stream',None)
 
+# K3-B safe, single-run Hybrid forks. Executable bundles never cross HTTP.
+schemas['KunForkSelection']=obj({'sourceRunId':st(),'sequence':{'type':'integer','minimum':1},'through':{'type':'integer','minimum':1},'expectedStateRevision':integer,'workerEpoch':st()},['sourceRunId','sequence','through','expectedStateRevision','workerEpoch'])
+schemas['KunForkCursor']=copy.deepcopy(schemas['KunForkSelection'])
+schemas['KunForkCursor']['properties']['sequence']={'type':'integer','const':0,'description':'列表游标尚未选择边界，创建预览时使用 items 中的正序号。'}
+schemas['KunForkOrigin']=obj({'previewId':st(),'sessionId':st(),'runId':st(),'sequence':integer,'through':integer,'bundleHash':st(),'mode':st(enum=['hybrid'])},['previewId','sessionId','runId','sequence','through','bundleHash','mode'])
+schemas['KunForkPreview']=obj({'id':st(),'title':st(),'createdAt':st(),'hash':st(),'origin':ref('KunForkOrigin'),'targetSessionId':st(),'instruction':st(maxLength=16000),'phase':st(),'step':integer,'pending':integer,'budget':ref('KunBudgetUsage'),'limits':ref('KunBudgetLimits'),'maxSteps':integer,'recordCount':integer},['id','title','createdAt','hash','origin','targetSessionId','instruction','phase','step','pending','budget','limits','maxSteps','recordCount'])
+schemas['KunForkSummary']=obj({k:v for k,v in schemas['KunForkPreview']['properties'].items() if k!='instruction'},[k for k in schemas['KunForkPreview']['required'] if k!='instruction'])
+schemas['KunForkState']=obj({'origin':ref('KunForkOrigin'),'inheritedStep':integer,'inheritedBudget':ref('KunBudgetUsage'),'replayCursor':integer,'replayTotal':integer},['origin','inheritedStep','inheritedBudget','replayCursor','replayTotal'])
+schemas['KunState']['properties']['fork']=ref('KunForkState')
+schemas['Session']['properties']['kunFork']=ref('KunForkOrigin')
+for path,method,response,body in [
+ ('/kun-forks/sources/{sid}','get',obj({'selection':ref('KunForkCursor'),'items':arr(obj({'sequence':integer,'phase':st(),'step':integer,'pending':integer},['sequence','phase','step','pending'])),'nextOffset':integer,'hasMore':bool_},['selection','items','nextOffset','hasMore']),None),
+ ('/kun-forks','get',obj({'items':arr(ref('KunForkSummary')),'nextOffset':integer,'hasMore':bool_},['items','nextOffset','hasMore']),None),
+ ('/kun-forks','post',ref('KunForkPreview'),obj({'sessionId':st(),'selection':ref('KunForkSelection'),'title':st(minLength=1,maxLength=120),'instruction':st(maxLength=16000)},['sessionId','selection','title'])),
+ ('/kun-forks/{fid}','get',ref('KunForkPreview'),None),
+ ('/kun-forks/{fid}/start','post',ref('Session'),obj({'expectedHash':st(minLength=1)},['expectedHash'])),
+]:
+ op=paths[path][method];op['x-administrator-only']=True
+ op['summary']='Hybrid fork: '+path.rsplit('/',1)[-1]
+ op['description']='K3-B 首批，仅管理员。来源为普通 Kun 最近已停止轮次的兼容安全边界；不支持 Codex、诊断或 Hybrid 嵌套分叉。预览校验 epoch/revision/through 与配置指纹，保存固定私有执行包，不调用模型或 MCP。start 显式调用模型；工具仅按名称/Schema/环境/目录/参数/顺序匹配录制，未命中 replay_miss 停止，没有真实工具回退。继承所选时点预算和上下文，不复制/回滚项目文件。每份预览绑定一个独立会话和一次运行；重复启动返回同一会话，删除后拒绝重新创建；普通新轮次与恢复均拒绝。预览可在来源删除和宿主重启后启动，配置漂移拒绝。HTTP 不接收或返回私有可执行 bundle，不导入 K3-A 假设。'
+ op['parameters']=[v for v in op['parameters'] if v['in']!='query']
+ op['responses']['200']['content']['application/json']['schema']=response
+ for code,desc in [('400','未知/重复参数、分页/标题/指令无效、缺少指纹或幂等 Key。'),('404','来源或预览不存在。'),('409','来源未停止、边界/版本/录制不兼容、指纹或配置改变、目标已删除、运行/进程容量限制。')]:op['responses'][code]={'description':desc}
+ if body is not None:op['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
+ if method=='get' and path!='/kun-forks/{fid}':
+  op['parameters'] += [{'name':'offset','in':'query','schema':{'type':'integer','minimum':0,'maximum':1000000 if 'sources' in path else 20971520}},{'name':'limit','in':'query','schema':{'type':'integer','minimum':1,'maximum':50,'default':50 if 'sources' in path else 20}}]
+
 # Unified read-only debug facade. Existing Kun aliases retain their response shape.
 debug_kinds=['overview','run','events','event','context','tools','budget','modules','breakpoints','actions','snapshot','evidence','diff','runs','steps','step','issues','statistics']
 schemas['DebugCapability']=obj({'supported':bool_,'available':bool_,'reason':st()},['supported','available'])
@@ -454,6 +478,6 @@ if '/usage' in paths:
 if '/setup/docker-template' in paths:
  paths['/setup/docker-template']['get']['parameters']=[{'name':'version','in':'query','required':True,'schema':st(),'description':'Exact Codex release'}]
  paths['/setup/docker-template']['get']['responses']['200']={'description':'Pinned base image build context','content':{'application/zip':{'schema':st(format='binary')}}}
-spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk 0.31.0：K3-A 离线记录基线、不可变实验分支、保守失效与谱系差异；建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
+spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk 0.32.0：Kun 0.8 / 协议 v8 安全检查点独立 Hybrid 分支，模型重算、工具严格录制回放、未命中停止；K3-A 离线记录基线、不可变实验分支、保守失效与谱系差异；建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

@@ -1,71 +1,64 @@
-# RunDesk 0.31.0 / Kun 0.7.0 验证记录
+# RunDesk 0.32.0 / Kun 0.8.0 验证记录
 
-日期：2026-10-06。Linux amd64，Go 1.25.12，Chromium Headless Shell 138.0.7204.92。本版实现宿主侧 K3-A 离线记录实验；Kun 引擎保持 0.7.0，worker 协议保持 v7。
+日期：2026-10-08。Linux amd64，Go 1.25.12，worker 协议 v8。**核心与本地协议验证通过；真实浏览器和真实远程服务验收未完成。**
 
 | 检查 | 本次结果 |
 | --- | --- |
-| `go test ./... -count=1 -timeout=180s` | 全量通过；含真实 Kun 子进程和本地模型/MCP fixture |
+| `go test ./... -count=1 -timeout=180s` | 全量通过；含真实 Kun 子进程与本地模型/MCP fixture；最后的 MCP 回放状态显示调整又验证了 Kun/CLI/投影/web 包 |
 | `go vet ./...` | 通过 |
-| 专项 `go test -race` | experiment、store、app 的 Recording / Experiment 用例通过；未运行全项目 race |
-| JavaScript/CJS `node --check` | 60 个文件通过 |
-| `kun-inspect-test.cjs` / `kun-panels-test.cjs` | 两组 Node 回归通过 |
-| Linux amd64 `make build` | RunDesk 与 Kun 构建成功 |
-| Windows amd64 交叉构建 | 两个 PE32+ x86-64 命令构建成功；未在 Windows 实机运行 |
-| 已构建 CLI | RunDesk 0.31.0、Kun 0.7.0；Kun hello 为 v7、fork=false；debug-mcp initialize/initialized/tools-list/ping/EOF 正常，19 个工具，stdout 仅 JSON 协议 |
-| OpenAPI | 146 个路径、175 个操作；7 个实验操作仅管理员，未投影到成员 API；分页参数无重复 |
-| 离线实验 Chromium | 通过；来源初始 3 次模型调用，显式新来源轮次另 1 次；实验操作 0 次模型调用，零页面异常 |
-| 诊断建议审核 Chromium 回归 | 通过；4 次诊断模型请求、单独继续来源后的 1 次业务模型请求，零页面异常 |
-| Codex 检查 Chromium 回归 | 通过；明确的 Codex 协议 DEMO，零真实 Codex/模型调用 |
-| Kun 常规调试 Chromium 回归 | 通过；本地模型 3 次请求，零页面异常 |
-| Kun MCP 审批 Chromium 回归 | 通过；本地模型 4 次请求、2 次工具调用、3 次工具发现，零页面异常 |
-| 依赖 | `go.mod` / `go.sum` 与 0.30.0 一致 |
-| 真实 Codex、远程模型/MCP、news2douyin、生产压力 | 未运行；不声明真实服务或生产环境验收 |
+| 专项 `go test -race` | kun、app、tracequery 的 Hybrid / ProjectionHybrid 用例通过；未运行全项目 race |
+| JavaScript/CJS `node --check` | 63 个文件通过 |
+| Node 检查器、面板、Hybrid 对话框 | 三组通过；DOM stub 验证交互和数据语义，不代表浏览器布局 |
+| Linux amd64 构建 | RunDesk、Kun 成功 |
+| Windows amd64 交叉构建 | 两个 PE32+ x86-64 命令成功；未在 Windows 实机运行 |
+| CLI | RunDesk 0.32.0、Kun 0.8.0；hello v8，fork/forkHybrid=true、forkLive=false；debug-mcp 握手/初始化/工具列表/ping/EOF 正常，共 19 个工具 |
+| OpenAPI | 150 个路径、180 个操作；5 个 Hybrid 操作仅管理员，不投影到成员 API；参数唯一性通过；修正原任务列表重复查询参数 |
+| 真实 HTTP 冒烟 | 构建后的 RunDesk/Kun + 本地模型：来源 2 次调用，Hybrid 新增 2 次；2 个工具回放，来源文件/revision 不变，重复启动不增加模型调用 |
+| Hybrid Chromium | 启动时环境拒绝本地套接字，报 Operation not permitted。未执行页面、视觉及 390px 布局验收，无本版成功截图 |
+| 既有 5 组 Chromium 回归 | 本次没有重跑成功；保留 0.31 的历史报告，不视为 0.32 验收 |
+| 依赖 | go.mod、go.sum 与 0.31.0 一致 |
+| 真实 Codex、远程模型/MCP、业务系统、生产压力 | 未运行；不声明真实服务或生产验收 |
 
-## 核心与存储
+## 核心分叉
 
-- 固定会话、明确轮次和 through 捕获，排除未来记录、其他轮次和其他会话；缺失或不一致的 worker 标识拒绝。保存前结构化脱敏，JSON 大整数保持精度，来源显示标题有界。
-- 原始基线与父节点保持不变；多处替代按最早点传播保守失效。后续编辑同时携带上游未验证标志；逐个恢复重算剩余失效范围，全部恢复与根视图差异为零。
-- 拒绝其他根比较、非工具事件、固定范围外事件、无变化提交、错误父指纹、无替代值的恢复、超限文本、空理由、过深分支和不支持的操作。
-- 单事件超过 4 MiB、总量超过 16 MiB、超过 2,000 条事件均先检查后拒绝。较早合法 through 仍可捕获；恰好 2,000 条可以读取。
-- 最大 32 个替代值、两侧均为最大长度且需要 JSON 转义的文本时，差异按 16 条分页，单页仍在 4 MiB 响应上限内；分页可读完整 32 条，未截断替代值。
+- 本地模型创建读取/写入录制。捕获后修改原文件，再分叉：模型使用旧录制内容，来源证明文件未再次覆盖，私有工作区未生成文件。
+- 参数变化、调用顺序变化、录制耗尽均以 replay_miss 失败。回放完成事件带 executed=false，分支没有真实 tool.started 或 MCP 连接事件。
+- 拒绝 epoch/revision/through/run 不一致的选择，拒绝内容篡改、目录/环境/schema 不匹配、真实 MCP 配置注入与模型配置变更。
+- 参数对象键序/空白规范化，大整数不丢精度；重复键、非对象、尾随输入与非法数字拒绝。
+- 从待处理工具快照分叉，保留模型步骤与报告用量，仅新增后续模型请求；补充指令位于回放工具消息之后。
+- 来源完成后关闭 MCP fixture，分支仍能回放完成；来源工具仅调用一次，分支不连接、不审批、不派发。
+- 继承已达到的 token 阈值时不发新模型请求；持久化并重开分支执行库后仍禁止普通新轮次。相同 start 请求不重复执行，检查点恢复入口明确拒绝 Hybrid。
+- 统一投影把回放展示为 toolReplay 点事件，不伪造真实工具开始/耗时，也不误报缺失开始记录。
 
-## HTTP、权限与持久化
+## 宿主与界面
 
-- 创建根与子分支复用 HTTP 幂等回执，重试不生成重复分支。严格拒绝未知/重复参数、错误页界限、无效上界及客户端附加 live 等字段；没有实验 execute 路由。
-- 所有 7 个实验入口拒绝应用 read/run/approvals key、成员 viewer/runner 和成员代理凭据。
-- 创建、编辑、读取和恢复不修改来源 session、事件或 worker 状态，不启动 worker。原文按 Unicode 字符分块。
-- 删除来源并重开宿主数据库后，基线、分支、谱系仍可读取，也能继续创建恢复分支；没有从来源重新提取记录。
+实际 worker + HTTP 测试覆盖读取边界、创建/查询预览、指纹核验、启动和幂等；列表/详情不暴露私有上下文或工具正文。同预览改用新 HTTP Key 仍返回原会话/run。普通新轮次拒绝，来源游标/revision 不变。删除目标与删除标记同事务，删除后及宿主重启后均不能重新创建；未启动预览在来源删除、宿主重启后仍可启动。实例配置变化拒绝旧预览且不新增模型调用。
 
-## 浏览器
+5 个新入口均拒绝应用 read/run/approvals key、成员 runner/viewer 及成员代理入口。重复/未知分页参数与非法页界限拒绝。
 
-- 从 Kun 调试检查器选择明确轮次后创建基线，固定检查器的 through；未选轮次时创建按钮禁用。
-- 真实 Kun worker 在本地模型 fixture 驱动下读取长中文文本并写一次证明文件。编辑假设后，来源 revision、宿主事件上界、证明文件及模型调用数保持不变。
-- 覆盖替代结果、后续失效、原始 JSON 分块、逐条前后移动、恢复为孙分支、相对父节点差异和三代谱系。
-- 延迟基线请求不会覆盖后来选择的子分支；延迟逐条导航请求不会覆盖后来选择的事件。
-- 来源显式进入新轮次后，原实验 bundleHash 和 through 保持不变；页面刷新、宿主重启、删除来源后仍能从全局入口查看实验。
-- 工具结果和假设文本中的 HTML 按文本显示，零页面异常；390px 布局无横向溢出，桌面与移动截图已检查。
+kun-hybrid-ui-test.cjs 执行真实前端代码，以可控 HTTP 和 DOM stub 验证：预览不启动运行、固定选择与 expectedHash、编辑使预览失效、重复点击保护、文字不被当作 HTML、迟到响应不覆盖新选择、关闭后迟到启动响应不导航、没有来源控制请求。
 
-开发过程中修正了 SQLite TEXT 载荷的读取类型、浏览器夹具在 about:blank 访问 localStorage 的问题，以及迟到导航响应和大文本差异页上限。最终流程通过。
+kun-hybrid-ui-smoke.cjs 已完成真实 HTTP 前置流程，随后因本地套接字权限无法启动 Chromium。脚本保留完整浏览器场景供兼容环境复跑；报告明确为 passed=false、browserStatus=blocked。Node 测试不能替代视觉、焦点、键盘、移动端和真实浏览器异步行为验收。
 
-机器结果见 `kun-experiment-ui-validation.json`、`kun-diagnostic-ui-validation.json`、`debug-ui-validation.json`、`kun-ui-validation.json`、`kun-mcp-ui-validation.json`；本次截图在 `screenshots/0.31.0/`。浏览器的 4 个来源模型请求不计入实验请求：3 个用于准备原始轨迹，1 个用于验证之后的新轮次不会改变固定实验。
+开发中修正了空动作账本恢复、空 Skills/MCP 列表经过 JSON 协议后的指纹差异、已删除目标重新创建的边界。全量回归还暴露原有 stderr 测试的竞争：stdout 响应与 stderr 回调不保证顺序；测试现在有界等待实际回调，RPC 生产逻辑不变。最终相关检查通过。
+
+机器记录：kun-build-validation.json、kun-contract-validation.json、kun-cli-validation.json、kun-hybrid-ui-validation.json、kun-hybrid-browser-validation.json。0.31 的历史记录见 [KUN-VALIDATION-0.31.0.md](KUN-VALIDATION-0.31.0.md)，其截图仍在 screenshots/0.31.0/。
 
 ## 复现
 
 ```bash
 go test ./... -count=1 -timeout=180s
 go vet ./...
-go test -race ./internal/app ./internal/experiment ./internal/store -run 'Test(Recording|Experiment)' -count=1 -timeout=100s
+go test -race ./internal/kun ./internal/app ./internal/tracequery -run 'TestHybrid|TestProjectionHybrid' -count=1 -timeout=120s
 node scripts/kun-inspect-test.cjs
 node scripts/kun-panels-test.cjs
+node scripts/kun-hybrid-ui-test.cjs
+python3 scripts/generate-openapi.py
 make build
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -buildvcs=false -trimpath -o /tmp/rundesk.exe ./cmd/rundesk
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -buildvcs=false -trimpath -o /tmp/kun.exe ./cmd/kun
-# Node 能解析 playwright；CHROMIUM_PATH 指向可执行的 Chromium。
-CHROMIUM_PATH=/absolute/path/to/chromium node scripts/kun-experiment-ui-smoke.cjs
-CHROMIUM_PATH=/absolute/path/to/chromium node scripts/kun-diagnostic-ui-smoke.cjs
-CHROMIUM_PATH=/absolute/path/to/chromium node scripts/debug-trace-ui-smoke.cjs
-CHROMIUM_PATH=/absolute/path/to/chromium node scripts/kun-ui-smoke.cjs
-CHROMIUM_PATH=/absolute/path/to/chromium node scripts/kun-mcp-ui-smoke.cjs
+# 需要可启动 Chromium 的环境，Node 可解析 playwright。
+CHROMIUM_PATH=/absolute/path/to/chromium node scripts/kun-hybrid-ui-smoke.cjs
 ```
 
-上一版见 [KUN-VALIDATION-0.30.0.md](KUN-VALIDATION-0.30.0.md)。实现范围见 [KUN-EXPERIMENTS.md](KUN-EXPERIMENTS.md)，阶段状态见 [KUN-PROGRESS.md](KUN-PROGRESS.md)。本版不包含完整依赖图、执行结果重算、检查点运行时分叉、Hybrid/Live、实验删除或 K4 优化。
+K3-C / Live / 第二种 LoopPolicy / Harness 对比和 K4 尚未实现。没有以录制差异宣称优化收益。

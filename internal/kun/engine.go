@@ -17,6 +17,7 @@ import (
 )
 
 type Engine struct {
+	forkTape        *p.ForkBundle
 	trace           *tracequery.Reader
 	epoch           string
 	expectedCatalog string
@@ -72,7 +73,7 @@ func Open(path string) (*Engine, error) {
 		v.state.Approval = nil
 		v.state.Debug.Pause = nil
 		for n := range v.state.MCP {
-			if v.state.MCP[n].Status != "failed" {
+			if v.state.MCP[n].Status != "failed" && v.state.MCP[n].Status != "recorded" {
 				v.state.MCP[n].Status = "closed"
 			}
 		}
@@ -179,6 +180,9 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 	if err != sql.ErrNoRows {
 		return p.State{}, err
 	}
+	if e.state.Fork != nil {
+		return p.State{}, fmt.Errorf("Hybrid sessions are single-run; create a new fork to retry")
+	}
 	if p.Active(e.state.Status) || e.state.Status == "completing" {
 		return p.State{}, fmt.Errorf("session already running")
 	}
@@ -193,7 +197,13 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 		}
 	}
 	if in.Resume != nil {
+		if in.Fork != nil {
+			return p.State{}, fmt.Errorf("fork and resume are mutually exclusive")
+		}
 		return e.resumeLocked(in, hash)
+	}
+	if in.Fork != nil {
+		return e.forkLocked(in, hash)
 	}
 	var reader *tracequery.Reader
 	if in.Diagnostic != nil {
@@ -440,7 +450,7 @@ func (e *Engine) loop(ctx context.Context) {
 		e.state.Approval = nil
 		e.state.Debug.Pause = nil
 		for n := range e.state.MCP {
-			if e.state.MCP[n].Status != "failed" {
+			if e.state.MCP[n].Status != "failed" && e.state.MCP[n].Status != "recorded" {
 				e.state.MCP[n].Status = "closed"
 			}
 		}
@@ -574,6 +584,11 @@ func (e *Engine) loop(ctx context.Context) {
 			}
 			intent, validationErr := e.modules.action.Validate(call, e.catalog)
 			if validationErr != nil {
+				if e.state.Fork != nil {
+					failure = e.replayTool(call, toolIntent{})
+					e.mu.Unlock()
+					return
+				}
 				failure = e.finishTool(call, intent, toolResult{Output: validationErr.Error(), IsError: true}, "rejected", 0)
 				e.mu.Unlock()
 				if failure != nil {
@@ -586,9 +601,25 @@ func (e *Engine) loop(ctx context.Context) {
 			}
 			e.moduleState("action", "validated", map[string]any{"callId": call.ID, "tool": intent.Name, "schemaHash": intent.SchemaHash, "argumentsHash": fingerprint(call.Function.Arguments)})
 			failure = e.record("kun/tool.validated", e.state.Modules["action"])
+			hybrid := e.state.Fork != nil
 			e.mu.Unlock()
 			if failure != nil {
 				return
+			}
+			if hybrid {
+				e.mu.Lock()
+				failure = ctx.Err()
+				if failure == nil {
+					failure = e.replayTool(call, intent)
+				}
+				e.mu.Unlock()
+				if failure != nil {
+					return
+				}
+				if failure = e.boundary(ctx, "after_tool", call); failure != nil {
+					return
+				}
+				continue
 			}
 			if intent.MCP != nil {
 				var allowed bool

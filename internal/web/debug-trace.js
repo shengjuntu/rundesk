@@ -15,7 +15,7 @@ window.RunDeskDebug=(()=>{
   function syncDiagnosis(){diagnosisStart.disabled=creating||through===null||!selectedRun||!diagnosisQuestion.value.trim();experimentStart.disabled=capturing||through===null||!selectedRun;}
   diagnosisQuestion.oninput=syncDiagnosis;
   const d=el('dialog',{class:'debug-inspector',id:'debug-inspector'}),info=el('p',{class:'help',role:'status'}),error=el('p',{class:'error',role:'alert'}),stats=el('p',{class:'debug-summary'}),list=el('div',{class:'debug-step-list'}),detail=el('section',{class:'debug-step-detail'});
-  const runs=el('select',{'aria-label':'调试轮次'}),types=el('select',{'aria-label':'步骤类型'},...['','commandExecution','mcpToolCall','dynamicToolCall','webSearch','fileChange','agentMessage','reasoning','approval','modelCall','toolCall','mcpExchange'].map(v=>el('option',{value:v},v||'所有类型')));
+  const runs=el('select',{'aria-label':'调试轮次'}),types=el('select',{'aria-label':'步骤类型'},...['','commandExecution','mcpToolCall','dynamicToolCall','webSearch','fileChange','agentMessage','reasoning','approval','modelCall','toolCall','toolReplay','mcpExchange'].map(v=>el('option',{value:v},v||'所有类型')));
   const search=el('input',{type:'search',maxLength:1000,placeholder:'搜索已脱敏预览','aria-label':'搜索已脱敏预览'}),issues=el('input',{type:'checkbox'}),capabilities=el('details',{},el('summary',{},'后端能力与来源'));
   const pageLabel=el('span',{}),runPage=el('span',{});
   const read=(q)=>api(base+'query?'+new URLSearchParams(q));

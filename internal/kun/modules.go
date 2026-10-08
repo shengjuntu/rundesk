@@ -162,6 +162,7 @@ func (e *Engine) moduleState(name, phase string, data any) {
 }
 
 type toolResult struct {
+	Replay  *p.ReplayEvidence
 	Output  string
 	Raw     json.RawMessage
 	IsError bool
@@ -170,6 +171,9 @@ type toolResult struct {
 // This is the single side-effect gateway. Validation, approval, budget reservation,
 // and the durable dispatched record must precede it in Engine.
 func (e *Engine) executeAction(ctx context.Context, intent toolIntent, call p.ToolCall) (toolResult, error) {
+	if e.state.Fork != nil {
+		return toolResult{}, fmt.Errorf("Hybrid prohibits live tool execution")
+	}
 	if e.state.Diagnostic != nil {
 		if e.trace == nil {
 			return toolResult{}, fmt.Errorf("diagnostic source unavailable")
@@ -178,7 +182,7 @@ func (e *Engine) executeAction(ctx context.Context, intent toolIntent, call p.To
 	}
 	if intent.MCP != nil {
 		out, raw, bad, err := e.callMCP(ctx, *intent.MCP, call)
-		return toolResult{out, raw, bad}, err
+		return toolResult{Output: out, Raw: raw, IsError: bad}, err
 	}
 	out, err := executeTool(e.workspace, e.state.Config.AllowWrite, call)
 	if err != nil {

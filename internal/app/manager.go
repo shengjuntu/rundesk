@@ -15,6 +15,7 @@ import (
 	"time"
 
 	kc "github.com/shengjuntu/rundesk/internal/adapters/kun"
+	p "github.com/shengjuntu/rundesk/internal/kunproto"
 	"github.com/shengjuntu/rundesk/internal/redaction"
 	"github.com/shengjuntu/rundesk/internal/rpc"
 	"github.com/shengjuntu/rundesk/internal/store"
@@ -28,6 +29,7 @@ type Workspace struct {
 	Revision int    `json:"revision"`
 }
 type Session struct {
+	KunFork       *p.ForkOrigin   `json:"kunFork,omitempty"`
 	RuntimeKind   string          `json:"runtimeKind,omitempty"`
 	ExecutionMode string          `json:"executionMode,omitempty"`
 	EnvironmentID string          `json:"environmentId,omitempty"`
@@ -63,6 +65,7 @@ type Approval struct {
 	ResolvedAt string      `json:"resolvedAt,omitempty"`
 }
 type Input struct {
+	KunFork      *kunForkInput   `json:"-"`
 	KunResume    *kunResumeInput `json:"-"`
 	LibraryOwner string          `json:"-"`
 	Text         string          `json:"text"`
@@ -88,6 +91,7 @@ type handle struct {
 	requests       map[string]Approval
 }
 type Manager struct {
+	kunForkMu           sync.Mutex
 	Kun                 string
 	diagnosticReviewMu  sync.Mutex
 	collabMu            sync.Mutex
@@ -826,6 +830,11 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 	if s.RuntimeKind == "kun" && s.TraceOrigin != nil && (len(in.Files) > 0 || len(in.Skills) > 0 || in.KunResume != nil) {
 		return s, failure(400, "diagnostic_input_only", "诊断会话只接收问题文本；不接收文件、技能或恢复请求")
 	}
+	if s.KunFork != nil || in.KunFork != nil {
+		if s.KunFork == nil || in.KunFork == nil || in.KunFork.PreviewID != s.KunFork.PreviewID || s.RunID != "" || len(in.Files) > 0 || len(in.Skills) > 0 || in.KunResume != nil || recovery != nil {
+			return s, failure(409, "hybrid_single_run", "Hybrid 会话只允许固定预览的首次启动；重试实验请创建新分叉")
+		}
+	}
 	if in.KunResume != nil {
 		if s.RuntimeKind != "kun" {
 			return s, failure(400, "not_kun", "该会话不使用 Kun")
@@ -891,7 +900,10 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 	if in.LibraryOwner == "" && s.Source.Kind != "application" {
 		in.LibraryOwner = "administrator"
 	}
-	if e = m.preparePersonalRun(s, runID, in.LibraryOwner); e != nil {
+	if s.KunFork == nil {
+		e = m.preparePersonalRun(s, runID, in.LibraryOwner)
+	}
+	if e != nil {
 		m.unreserveProcess(id)
 		return s, e
 	}
@@ -935,6 +947,11 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 	}
 	if in.KunResume != nil {
 		record["kunResume"] = in.KunResume.Selection
+	}
+	if s.KunFork != nil {
+		record["kunFork"] = s.KunFork
+		delete(record, "cwd")
+		delete(record, "notes")
 	}
 	if e = m.event(id, "internal", "run/input", record); e != nil {
 		_ = m.update(id, func(v *Session) {

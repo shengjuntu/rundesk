@@ -17,7 +17,7 @@ import (
 	"github.com/shengjuntu/rundesk/internal/store"
 )
 
-const Version = "0.31.0"
+const Version = "0.32.0"
 
 type apiError struct {
 	Status        int
@@ -144,7 +144,7 @@ func supportsIdempotency(r *http.Request) bool {
 		return false
 	}
 	p := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	return len(p) == 2 && p[1] == "experiments" || len(p) == 4 && p[1] == "experiments" && p[3] == "branches" || len(p) == 5 && p[1] == "sessions" && p[3] == "kun" && p[4] == "resume" || len(p) == 4 && p[1] == "workspaces" && p[3] == "mcp-tests" || len(p) == 2 && (p[1] == "instances" || p[1] == "workspaces" || p[1] == "sessions" || p[1] == "tasks" || p[1] == "schedules" || p[1] == "collaborations") || len(p) == 4 && p[1] == "sessions" && (p[3] == "turns" || p[3] == "recover")
+	return len(p) == 2 && p[1] == "kun-forks" || len(p) == 4 && p[1] == "kun-forks" && p[3] == "start" || len(p) == 2 && p[1] == "experiments" || len(p) == 4 && p[1] == "experiments" && p[3] == "branches" || len(p) == 5 && p[1] == "sessions" && p[3] == "kun" && p[4] == "resume" || len(p) == 4 && p[1] == "workspaces" && p[3] == "mcp-tests" || len(p) == 2 && (p[1] == "instances" || p[1] == "workspaces" || p[1] == "sessions" || p[1] == "tasks" || p[1] == "schedules" || p[1] == "collaborations") || len(p) == 4 && p[1] == "sessions" && (p[3] == "turns" || p[3] == "recover")
 }
 
 type recordedResponse struct {
