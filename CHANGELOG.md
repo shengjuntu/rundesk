@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.33.0
+
+- K3-C initial slice: Plan-Act makes one explicit, tool-disabled planning call before the existing action loop, using shared budgets and debugger boundaries.
+- Two validated built-in module compositions; serialized plan and module schema/version checks on recovery and Hybrid; per-session Harness revision changes on new ordinary runs.
+- Settings, recorded plan evidence and fixed-snapshot Harness comparison; no planning output presented as a final reply; no optimization claims from unequal runs.
+- Kun 0.9.0 / protocol v9. Upgrade both binaries; old execution records remain readable, but checkpoints/forks do not execute across versions. No new runtime dependencies or API paths.
+- Go, real worker/HTTP, focused race, Node interaction and build checks recorded in KUN-VALIDATION.md. Real browser and real remote-service acceptance remain outstanding. Live, in-run module replacement and K4 are not implemented.
+
 ## 0.32.0
 
 - First K3-B safe runtime forks: immutable previews from a stopped Kun run's safe boundary, independent execution state, inherited budgets, optional deferred instruction and explicit Hybrid launch.

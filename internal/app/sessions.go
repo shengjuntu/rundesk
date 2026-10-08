@@ -142,12 +142,13 @@ func (m *Manager) Markdown(id string) (string, error) {
 			if ev.Method == "kun/model.completed" {
 				var v struct {
 					Data struct {
+						Purpose string `json:"purpose"`
 						Message struct {
 							Content string `json:"content"`
 						} `json:"message"`
 					} `json:"data"`
 				}
-				if json.Unmarshal(ev.Data, &v) == nil && v.Data.Message.Content != "" {
+				if json.Unmarshal(ev.Data, &v) == nil && v.Data.Purpose != "plan" && v.Data.Message.Content != "" {
 					ordered = append(ordered, &message{"Kun", v.Data.Message.Content})
 				}
 				continue

@@ -1,4 +1,4 @@
-> 实现进度：RunDesk 0.32.0 / Kun 0.8 在 K0–K2 本地核心与 K3-A 离线记录实验上，新增 K3-B 首批安全运行时分叉：固定预览、独立 Hybrid、模型重算、严格工具录制回放和未命中停止。K3-C / Live / 第二种 LoopPolicy / 模块组合及 K4 尚未实现；真实服务与本版真实浏览器验收未完成。逐阶段证据见 [KUN-PROGRESS.md](KUN-PROGRESS.md)，范围见 [KUN-FORKS.md](KUN-FORKS.md)。
+> 实现进度：RunDesk 0.33.0 / Kun 0.9 在 K3-A 离线记录实验、K3-B 安全 Hybrid 基础上，增加 K3-C 首批 Plan-Act、两套内置组合及 Harness 固定快照对照。Live、运行中换模块及 K4 尚未实现；真实服务和本版真实浏览器验收未完成。逐阶段证据见 [KUN-PROGRESS.md](KUN-PROGRESS.md)，范围见 [KUN-HARNESS.md](KUN-HARNESS.md)。
 
 # Kun + Agent DevTools：RunDesk 内置 Agent Loop 与调试器设计
 

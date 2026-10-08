@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-const Version = 8
-const EngineVersion = "0.8.0"
+const Version = 9
+const EngineVersion = "0.9.0"
 const MaxMessage = 8 << 20
 
 type Envelope struct {
@@ -23,20 +23,22 @@ type Envelope struct {
 	Event   *Event          `json:"event,omitempty"`
 }
 type Config struct {
-	Debug            DebugPolicy  `json:"debug"`
-	Budget           BudgetLimits `json:"budget"`
-	Kind             string       `json:"kind"`
-	Endpoint         string       `json:"endpoint"`
-	Model            string       `json:"model"`
-	APIKeyEnv        string       `json:"apiKeyEnv,omitempty"`
-	SystemPrompt     string       `json:"systemPrompt,omitempty"`
-	MaxSteps         int          `json:"maxSteps"`
-	TimeoutSeconds   int          `json:"timeoutSeconds"`
-	AllowWrite       bool         `json:"allowWrite"`
-	PauseBeforeModel bool         `json:"pauseBeforeModel"`
+	Harness          HarnessConfig `json:"harness"`
+	Debug            DebugPolicy   `json:"debug"`
+	Budget           BudgetLimits  `json:"budget"`
+	Kind             string        `json:"kind"`
+	Endpoint         string        `json:"endpoint"`
+	Model            string        `json:"model"`
+	APIKeyEnv        string        `json:"apiKeyEnv,omitempty"`
+	SystemPrompt     string        `json:"systemPrompt,omitempty"`
+	MaxSteps         int           `json:"maxSteps"`
+	TimeoutSeconds   int           `json:"timeoutSeconds"`
+	AllowWrite       bool          `json:"allowWrite"`
+	PauseBeforeModel bool          `json:"pauseBeforeModel"`
 }
 
 func (c Config) Normalized() Config {
+	c.Harness = c.Harness.Normalized()
 	c.Budget = c.Budget.Normalized()
 	if c.Kind == "" {
 		c.Kind = "codex"
@@ -56,6 +58,9 @@ func (c Config) Validate() error {
 	}
 	if c.Kind == "codex" {
 		return nil
+	}
+	if err := c.Harness.Validate(); err != nil {
+		return err
 	}
 	if err := c.Debug.Validate(); err != nil {
 		return err

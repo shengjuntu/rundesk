@@ -1,0 +1,12 @@
+{
+  "version": "0.32.0",
+  "scope": "real host and worker, local model fixture; browser separately reported",
+  "modelCalls": 4,
+  "checks": [
+    "real HTTP preview/start/retry; 2 replayed tools, source file/revision unchanged, 2 new model calls"
+  ],
+  "pageErrors": [],
+  "passed": false,
+  "browserStatus": "blocked",
+  "reason": "Chromium local socket denied by execution environment"
+}

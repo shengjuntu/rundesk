@@ -81,7 +81,7 @@ func serve(e *k.Engine, input io.Reader, output io.Writer) error {
 					value, err = e.ExportFork(v)
 				}
 			case "hello":
-				value = map[string]any{"engine": "kun", "engineVersion": p.EngineVersion, "protocolVersion": p.Version, "pid": os.Getpid(), "capabilities": map[string]bool{"inspect": true, "pause": true, "step": true, "steer": true, "replayEvents": true, "resumeCheckpoint": true, "fork": true, "forkHybrid": true, "forkLive": false, "mcp": true, "mcpApproval": true, "modules": true, "budgets": true, "argumentValidation": true, "conditionalBreakpoints": true, "debugQueries": true, "snapshotDiff": true, "eventEvidence": true, "diagnosticSession": true}}
+				value = map[string]any{"engine": "kun", "engineVersion": p.EngineVersion, "protocolVersion": p.Version, "pid": os.Getpid(), "capabilities": map[string]bool{"inspect": true, "pause": true, "step": true, "steer": true, "replayEvents": true, "resumeCheckpoint": true, "fork": true, "forkHybrid": true, "forkLive": false, "mcp": true, "mcpApproval": true, "modules": true, "harnessComposition": true, "planAct": true, "budgets": true, "argumentValidation": true, "conditionalBreakpoints": true, "debugQueries": true, "snapshotDiff": true, "eventEvidence": true, "diagnosticSession": true}}
 			case "start":
 				var v p.Start
 				err = json.Unmarshal(in.Params, &v)

@@ -242,3 +242,10 @@ WebUI 的补充按钮发送到当前轮次，停止按钮调用原有 stop 接�
 管理员可使用 `/kun-forks/sources/{sid}` 读取最近已停止普通 Kun 轮次的安全边界，`POST /kun-forks` 生成固定预览，`POST /kun-forks/{fid}/start` 携带 `expectedHash` 显式启动独立 Hybrid 会话。两个 POST 都要求 `Idempotency-Key`。`GET /kun-forks` 和 `GET /kun-forks/{fid}` 读取公开预览；私有执行包不经 HTTP 返回。
 
 Hybrid 后续模型重新调用，工具严格录制回放，未命中停止；不执行真实工具。每份预览只运行一次，重复启动返回相同目标，删除目标后不能重新创建。普通新轮次和恢复拒绝。应用/成员凭据无权调用这些入口。完整字段、限额与版本约束见 [KUN-FORKS.md](KUN-FORKS.md) 及 OpenAPI。
+
+
+## Kun 内置组合（0.33.0）
+
+原 `PUT /instances/{iid}/agent-runtime` 的 `config.harness` 新增可选字段 `loopPolicy`、`memory`、`planning`、`action`、`capability`。省略选默认 Tool Loop；`{"loopPolicy":"plan-act-v1"}` 选择 Plan-Act 并补齐 explicit-plan-v1。仅接受已注册的两套组合，不兼容/未知 ID 拒绝。新普通轮次才读取新组合，恢复/Hybrid 不换配置。详细约束见 [KUN-HARNESS.md](KUN-HARNESS.md)。
+
+`kun/model.started` 和 `kun/model.completed` 增加 `data.purpose=plan|act`，旧事件没有此字段时仍按原回复处理。规划结果保存在模块快照，不能作为完成回复执行反馈操作。Harness 对比使用两次既有只读 `GET /sessions/{sid}/kun/snapshots/{sequence}`，不新增路由；版本升级为 worker v9 / Kun 0.9.0。

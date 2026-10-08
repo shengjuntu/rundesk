@@ -94,7 +94,7 @@ function kunRenderPerformance(s,selected,events,navigate){
  for(const [kind,label,method]of [["model","模型","kun/model.completed"],["tool","工具","kun/tool.completed"],["mcp","MCP 交换（可能嵌套于工具调用）","kun/mcp.response"]]){
   const all=scoped.filter(e=>e.method===method),rows=all.slice(-200).reverse();
   node.append(el("h4",{},label),el("p",{class:"help"},"已加载 "+all.length+" 条完成记录，展示最近 "+rows.length+" 条；不代表服务端完整历史。"),
-   kunTable(["步骤 / 调用","结果","耗时","已报告 token","证据"],rows.map(e=>{const d=e.data.data||{};return [kind==="model"?"模型 "+d.step:kind==="tool"?d.call?.function?.name:d.server+" / "+d.method,d.status?kunStateLabel(d.status):d.error||d.isError?"失败":"已返回",kunMillis(d.durationMs),kind==="model"?kunReportedUsage(d.usage):"—",kunEvidenceLink(e,navigate)];})));
+   kunTable(["步骤 / 调用","结果","耗时","已报告 token","证据"],rows.map(e=>{const d=e.data.data||{};return [kind==="model"?(d.purpose==="plan"?"规划模型 ":"执行模型 ")+d.step:kind==="tool"?d.call?.function?.name:d.server+" / "+d.method,d.status?kunStateLabel(d.status):d.error||d.isError?"失败":"已返回",kunMillis(d.durationMs),kind==="model"?kunReportedUsage(d.usage):"—",kunEvidenceLink(e,navigate)];})));
  }
  node.append(kunRaw("用量与限制原始 JSON",{budget:s?.budget,limits:s?.config?.budget,modelCalls:s?.step,maxModelCalls:s?.config?.maxSteps}));return node;
 }
@@ -123,6 +123,7 @@ function kunRenderApplication(s,selected,events,navigate,showSources){
 function kunModuleEvidence(name,module,events){
  if(!module||module.phase==="pending")return null;
  return events.findLast(e=>{
+  if(name==="planning"&&module.implementation?.id==="explicit-plan-v1"&&["ready","rejected"].includes(module.phase))return e.method==="kun/model.completed"&&e.data.data?.purpose==="plan"&&(!module.data?.step||e.data.data.step===module.data.step);
   if(name==="memory"||name==="planning")return e.method==="kun/context.built";
   if(name==="capability")return e.method==="kun/capability.ready";
   if(name==="action")return e.method===(module.phase==="validated"?"kun/tool.validated":"kun/tool.completed")&&e.data.data?.call?.id===module.data?.callId;
@@ -133,17 +134,60 @@ function kunRenderLayers(s,selected,events,navigate){
  const node=kunPanel("四模块记录","layers",s,selected);
  if(!s){node.append(el("p",{},"此时点的模块状态不可用。"));return node;}
  const h=s.harness||{},scoped=kunScopedEvents(events,s,selected);
- node.append(kunFacts([["LoopPolicy",h.id],["版本",h.version],["Harness 版本",h.revision]]),el("p",{class:"help"},"下列是模块最后记录的状态，不是实时健康评分。当前实现固定，无法在运行中替换；Planning 没有单独的规划模型调用。"));
+ node.append(kunFacts([["LoopPolicy",h.id],["版本",h.version],["Harness 版本",h.revision]]),el("p",{class:"help"},"下列是模块最后记录的状态，不是实时健康评分。支持 Tool Loop / Plan-Act 两套内置组合；新轮次可更换，运行中不可替换。Plan-Act 的计划仅是建议，后续指令和工具结果优先；本版不自动重规划。"));
  const cards=el("div",{class:"kun-module-grid"});
  for(const [name,title]of [["memory","Memory · 上下文"],["planning","Planning · 规划"],["action","Action · 动作"],["capability","Capability · 工具目录"]]){
   const m=s.modules?.[name],v=m?.implementation||h.modules?.[name]||{},d=m?.data||{};
   const card=el("section",{class:"kun-module-card",'data-module':name},el("h4",{},title),kunFacts([["实现",v.id],["版本 / 状态结构",(v.version||"未记录")+" / "+(v.stateSchemaVersion??"未记录")],["记录阶段",m?.phase||"未记录"]]));
   let facts=[];
   if(name==="memory")facts=[["消息数",d.messageCount],["请求 JSON 字节数",d.requestBytes],["压缩",d.compression],["截断",d.truncated==null?"未记录":d.truncated?"是":"否"]];
-  if(name==="planning")facts=[["规划状态",d.status==="not_requested"?"未请求独立规划":d.status],["说明",d.reason]];
+  if(name==="planning"){facts=[["规划状态",d.status==="not_requested"?"未请求独立规划":kunStateLabel(d.status)],["规划模型步骤",d.step],["说明",d.reason]];if(d.plan)card.append(kunRaw("显式计划（未执行证明）",d.plan));}
   if(name==="action")facts=[["调用 ID",d.callId],["工具",d.tool],["结果",kunStateLabel(d.status)],["参数 Schema 哈希",d.schemaHash]];
   if(name==="capability")facts=[["工具数",d.toolCount],["Schema 方言",d.schemaDialect],["format 语义",d.format]];
   card.append(kunFacts(facts),kunEvidenceLink(kunModuleEvidence(name,m,scoped),navigate),kunRaw("模块原始状态",m||null));cards.append(card);
  }
  node.append(cards,kunRaw("Harness 原始定义",h));return node;
+}
+
+function kunRenderHarnessComparison(from,to){
+ const a=from.state,b=to.state;
+ const mode=s=>s.fork?"Hybrid · 工具仅录制回放":s.resumedFrom?"检查点续跑（累计预算）":"普通轮次";
+ const version=v=>v?`${v.id} / ${v.version} / schema ${v.stateSchemaVersion}`:"未记录";
+ const rows=[
+  ["固定快照",from.sequence,to.sequence],["运行",a.runId,b.runId],["状态 / 阶段",a.status+" / "+a.phase,b.status+" / "+b.phase],
+  ["执行模式",mode(a),mode(b)],["LoopPolicy",a.harness?.id,b.harness?.id],["策略版本",a.harness?.version,b.harness?.version],["Harness revision",a.harness?.revision,b.harness?.revision],
+  ...["memory","planning","action","capability"].map(k=>[k,version(a.harness?.modules?.[k]),version(b.harness?.modules?.[k])]),
+  ["规划状态",a.modules?.planning?.data?.status,b.modules?.planning?.data?.status],
+  ["模型",a.config?.model,b.config?.model],["配置指纹",a.manifest?.configHash,b.manifest?.configHash],["工具目录来源指纹",a.manifest?.mcpHash,b.manifest?.mcpHash],
+  ["已发起模型调用",a.step,b.step],["工具预算累计",a.harness?.id?a.budget?.toolCalls:null,b.harness?.id?b.budget?.toolCalls:null],
+  ["已报告 token",a.harness?.id?a.budget?.reportedTokens:null,b.harness?.id?b.budget?.reportedTokens:null],
+  ["未报告用量的模型调用",a.harness?.id?a.budget?.unreportedModelCalls:null,b.harness?.id?b.budget?.unreportedModelCalls:null],
+  ["活动时间",kunMillis(a.harness?.id?a.budget?.activeMillis:null),kunMillis(b.harness?.id?b.budget?.activeMillis:null)],
+  ["人工等待",kunMillis(a.harness?.id?a.budget?.waitMillis:null),kunMillis(b.harness?.id?b.budget?.waitMillis:null)],
+  ["预算停止原因",a.budget?.stopReason||"无已记录原因",b.budget?.stopReason||"无已记录原因"]
+ ];
+ return el("section",{class:"kun-harness-comparison"},el("h4",{},"Harness 对照 · #"+from.sequence+" → #"+to.sequence),
+  el("p",{class:"help"},"描述性对照：两份快照可能来自不同输入、阶段、环境或继承预算，不能据此判定优化收益。模型用量缺失时不可视为零；没有质量评分或费用估算。工具目录来源指纹只涵盖配置，不证明外部服务未变化。"),
+  kunTable(["项目","起点","终点"],rows));
+}
+
+function kunHarnessCompare({sid,getSelected}){
+ let baseline=null,generation=0,busy=false;
+ const target=el("p",{class:"help"}),status=el("p",{role:"status"}),result=el("div",{});
+ const set=button("设为 Harness 对照起点",()=>{baseline=getSelected()?.data?.sequence||null;generation++;busy=false;result.replaceChildren();status.textContent="";update();});
+ const compare=button("对照所选 Harness 快照",async()=>{
+  const sequence=getSelected()?.data?.sequence,from=baseline;if(!from||!sequence||busy)return;
+  const ticket=++generation;busy=true;update();result.replaceChildren();status.textContent="读取两份固定快照…";
+  try{
+   const values=await Promise.all([from,sequence].map(n=>api("/sessions/"+sid+"/kun/snapshots/"+n)));
+   if(ticket!==generation)return;
+   if(values.some((s,n)=>!s.state||s.sequence!==[from,sequence][n]||s.state.sessionId!==sid))throw Error("快照身份不匹配，请重新选择。");
+   result.replaceChildren(kunRenderHarnessComparison(...values));status.textContent="已固定对照结果；选择其他事件不会改变已展示的两份快照。";
+  }catch(e){if(ticket===generation)status.textContent=e.message;}
+  finally{if(ticket===generation){busy=false;update();}}
+ });
+ const node=el("section",{class:"kun-harness-compare"},el("h3",{},"Harness 快照对比（只读）"),
+  el("p",{class:"help"},"在 Network 或 Elements 选择固定快照，切换到 Layers 设为起点，再选择另一快照对照。可比较同一会话不同轮次的组合，不会执行模型或工具。"),el("div",{class:"actions"},set,compare),target,status,result);
+ function update(){const sequence=getSelected()?.data?.sequence;set.disabled=!sequence;compare.disabled=busy||!baseline||!sequence;target.textContent="起点："+(baseline?"#"+baseline:"未选择")+"；待对照："+(sequence?"#"+sequence:"请先选择固定快照");}
+ return {node,update};
 }

@@ -236,9 +236,9 @@ const rdFormat=globalThis.rdFormat||((key,...values)=>key.replace(/\$\{(\d+)\}/g
             const model=e.method.includes("/model."),done=e.method.endsWith(".completed");
             const key="kun-"+r.id+"-"+(model?"model-"+data.step:"tool-"+data.call?.id);
             let row=this.rows.get(key);
-            if(!row)row=this.add(e,r,{id:key,track:model?"model":"tools",title:model?"Kun 模型调用":data.call?.function?.name||"Kun 工具",start:done?null:t,end:null,point:false,status:"running"});
+            if(!row)row=this.add(e,r,{id:key,track:model?"model":"tools",title:model?(data.purpose==="plan"?"Kun 显式规划":"Kun 模型调用"):data.call?.function?.name||"Kun 工具",start:done?null:t,end:null,point:false,status:"running"});
             this.ref(row,e);row.detail={...row.detail,...data,kunSequence:d.sequence};row.body=model?(data.message?.content||plain(data.request||{})):(data.output||data.call?.function?.arguments||"");
-            if(done){row.end=t;row.status=data.status||(data.isError?"failed":"completed");if(model&&data.message?.content){this.add(e,r,{id:key+"-reply",track:"input",type:"agentMessage",title:"Kun 回复",body:data.message.content,detail:data.message});}}
+            if(done){row.end=t;row.status=data.status||(data.isError?"failed":"completed");if(model&&data.purpose!=="plan"&&data.message?.content){this.add(e,r,{id:key+"-reply",track:"input",type:"agentMessage",title:"Kun 回复",body:data.message.content,detail:data.message});}}
           }
           continue;
         }

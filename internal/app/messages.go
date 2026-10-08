@@ -48,6 +48,7 @@ func (m *Manager) Reply(sid string, eid int64) (Reply, error) {
 			RunID    string `json:"runId"`
 			Sequence int64  `json:"sequence"`
 			Data     struct {
+				Purpose string `json:"purpose"`
 				Message struct {
 					Content string `json:"content"`
 				} `json:"message"`
@@ -56,7 +57,7 @@ func (m *Manager) Reply(sid string, eid int64) (Reply, error) {
 		if e := json.Unmarshal(event.Data, &v); e != nil {
 			return Reply{}, e
 		}
-		if v.Data.Message.Content != "" {
+		if v.Data.Purpose != "plan" && v.Data.Message.Content != "" {
 			return Reply{SessionID: sid, EventID: eid, ItemID: fmt.Sprint(v.Sequence), TurnID: v.RunID, Text: v.Data.Message.Content, Time: event.Time}, nil
 		}
 	}

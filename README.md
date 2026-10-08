@@ -10,17 +10,11 @@ Built with Go and plain HTML/JavaScript. Node.js is not required to run RunDesk 
 
 ![RunDesk conversation workspace](docs/screenshots/0.16.0/chat-en.png)
 
-## Kun Hybrid forks and debugging (0.32.0)
+## Kun Plan-Act and Harness comparison (0.33.0)
 
-RunDesk 0.32.0 adds the first K3-B runtime forks: choose a safe boundary in the latest stopped ordinary Kun run, review an immutable preview, then explicitly launch an independent Hybrid session. Subsequent model calls are recomputed; tools use strictly matched recorded results. A replay miss stops the branch. No real file tools or MCP connections run in Hybrid. The branch inherits the selected checkpoint's budget, and each preview owns one single-run session. See [Hybrid forks](docs/KUN-FORKS.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md).
+RunDesk 0.33.0 adds the first K3-C slice: two validated built-in compositions, a real Plan-Act policy with one explicit planning call before acting, and read-only Harness comparison between fixed snapshots in one session. Planning cannot dispatch tools and uses the same model/time/token budgets. Completed plans and exact module versions survive checkpoint recovery and Hybrid forks. See [Harness compositions](docs/KUN-HARNESS.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md).
 
-K3-A [offline recording experiments](docs/KUN-EXPERIMENTS.md) remain available. Their hypothetical outputs do not become executable fork inputs. Live forks, configurable module composition, a second LoopPolicy and K4 optimization remain unimplemented. Kun is now **0.8.0 / worker protocol v8**: upgrade both binaries together. Old 0.7 execution records remain inspectable, but cannot be resumed or forked across the version boundary; first create a new ordinary run with 0.8. Codex retains host-side read-only inspection and native analysis; internal stepping, conditional breakpoints and full context snapshots remain unavailable.
-
-Kun shares this repository with RunDesk and runs in a separate worker process. Build with Go 1.25.12+ using `make build`, then launch `./bin/rundesk --data ./data`. Open **Agent engine** in configuration, select Kun, configure an OpenAI-compatible endpoint/model, and create a new session. Codex is not required for Kun.
-
-Kun 0.8 supports text model calls, workspace file tools, explicit Skills, and MCP over stdio or finite Streamable HTTP. Configure MCP in the existing tools page: rules default to per-call approval; an explicit always-allow rule applies to the next run. DevTools shows Network, Elements, Sources, Performance, Console, Layers and MCP state in Application. Pause, step, supplemental instructions and cancellation are available. Plugins, file rollback, Live forks and trajectory compilation remain unimplemented; offline record branches and safe Hybrid forks are available.
-
-See [Kun implementation and limits](docs/KUN.md). Thanks to PiG and Pi contributors: selected source files, pinned revision, adaptations and preserved MIT licenses are recorded in [UPSTREAM.md](docs/UPSTREAM.md).
+[K3-B Hybrid forks](docs/KUN-FORKS.md) and [K3-A offline recording experiments](docs/KUN-EXPERIMENTS.md) remain available. Live forks, in-run module changes, arbitrary plugins, cross-session benchmarks and K4 optimization remain unimplemented. Snapshot comparisons are descriptive, not evidence of optimization gains. Kun is now **0.9.0 / worker protocol v9**: upgrade both binaries together. Old 0.8 records remain inspectable, but checkpoints and forks cannot execute across the version boundary. Codex retains host-side read-only inspection and native analysis; internal stepping, conditional breakpoints and full context snapshots remain unavailable.
 
 ## Codex quick start
 

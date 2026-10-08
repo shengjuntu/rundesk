@@ -27,7 +27,7 @@ RunDesk 0.23.0 引入，0.26.0 保留 K2 中的“最近安全检查点显式继
 
 SQLite 在一次事务内写入状态、事件和最新安全检查点；在 `model.started` / `tool.started` 前使当前可恢复检查点失效。MCP 重连阶段同样不可恢复。恢复还保留断点规则版本与命中计数；旧暂停期限清除，新发生的暂停重新计时。恢复的 `run.started`、新 run 登记和来源检查点消费在一次事务中提交。
 
-恢复清单包括引擎版本、固定 Harness/模块版本、规范工作区路径、有效配置摘要、显式技能摘要、MCP 配置摘要及宿主 instance/workspace 版本。MCP 环境/认证头仅参与摘要，不将解析出的凭据另存入清单；改变 MCP 凭据也会阻止本次恢复。模型 API key 在启动时重新读取，其环境变量名称属于配置；key 值不持久化。
+恢复清单包括引擎版本、所选 Harness/四模块实现和状态结构版本、规范工作区路径、有效配置摘要、显式技能摘要、MCP 配置摘要及宿主 instance/workspace 版本。MCP 环境/认证头仅参与摘要，不将解析出的凭据另存入清单；改变 MCP 凭据也会阻止本次恢复。模型 API key 在启动时重新读取，其环境变量名称属于配置；key 值不持久化。
 
 工具目录比较包括名称、别名、说明、schema、annotations 和审批模式；JSON 对象键次序及列表顺序不作为目录变化。该比较在重连之后完成，因此预检查通过不能保证远端目录匹配。
 
@@ -37,7 +37,7 @@ SQLite 在一次事务内写入状态、事件和最新安全检查点；在 `mo
 - `POST /api/v1/sessions/{sid}/kun/resume`：要求会话 run 权限及 `Idempotency-Key`，请求体为上述 `selection`。仍通过既有队列预留、并发和进程容量检查；接收前复核提交凭据。
 - `selection` 含 `sourceRunId`、`sequence`、`expectedStateRevision`、`workerEpoch`。它仅定位服务端保存的内容，不接受编辑消息、替换结果或注入配置。
 - 恢复中新发生的 MCP 逐次审批仍要求 approvals scope。应用不能检查或恢复其他应用会话。
-- Worker JSONL 当前协议 v8 保留 `checkpoint`（v4 引入）；恢复通过 `start.resume` 提交。内核目录锁保证同一执行目录只运行一个受管 worker，epoch 防止重启后复用旧恢复选择；尚无分布式租约/daemon。
+- Worker JSONL 当前协议 v9 保留 `checkpoint`（v4 引入）；恢复通过 `start.resume` 提交。内核目录锁保证同一执行目录只运行一个受管 worker，epoch 防止重启后复用旧恢复选择；尚无分布式租约/daemon。
 - 来源在 `kun/run.started.data.resumedFrom`、状态 `resumedFrom` 及宿主 `run/input.kunResume` 中可查。正常事件游标继续递增，历史记录不覆盖。
 
 ## 未覆盖
@@ -47,3 +47,5 @@ SQLite 在一次事务内写入状态、事件和最新安全检查点；在 `mo
 此续跑入口没有后台自动恢复、任意历史选择、工具结果替换或 JIT。0.32 新增独立的 [Hybrid 分叉入口](KUN-FORKS.md)，不消费来源续跑检查点；Hybrid 本身不能通过普通恢复入口续跑。0.5 已新增结构化 Console 和限定条件断点，见 [调试说明](KUN-DEBUG.md)。MCP 重连校验失败时来源已被消费，当前实现不提供重新尝试该来源的入口。运行中权限即时撤销、完整跨后端 AgentRuntime 抽取和生产服务验收仍待完成。
 
 升级需同时更新 RunDesk 与 Kun。先结束旧 worker；旧记录的快照可继续查看，但不会凭空获得恢复资格。备份仍使用既有数据目录流程。
+
+0.33 的 Plan-Act 检查点保留显式计划。恢复已完成计划后从执行阶段继续，预算不退还；更换组合只能开始普通新轮次，不能借续跑修改 Harness。见 [KUN-HARNESS.md](KUN-HARNESS.md)。

@@ -3,7 +3,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
 const {spawn}=require('node:child_process'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 (async()=>{
  const root=path.resolve(__dirname,'..'),temp=fs.mkdtempSync(path.join(os.tmpdir(),'kun-mcp-ui-'));
- const pictures=path.join(root,'docs/screenshots/0.32.0');fs.mkdirSync(pictures,{recursive:true});
+ const pictures=path.join(root,'docs/screenshots/0.33.0');fs.mkdirSync(pictures,{recursive:true});
  let server,browser,toolCalls=0,modelCalls=0,listCalls=0;const errors=[];
  const fixture=http.createServer(async(req,res)=>{
   if(req.method==='DELETE'){res.writeHead(204).end();return}

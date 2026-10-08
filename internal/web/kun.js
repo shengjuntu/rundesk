@@ -8,6 +8,7 @@ async function renderKunSettings(target){
  for(const [field,fallback]of [["maxToolCalls",64],["maxActiveSeconds",900],["maxConsecutiveFailures",3]])if(cfg.budget[field]===0)cfg.budget[field]=fallback;
  const field=(label,value,type="text")=>{const input=el("input",{type,value:value??""});return {input,node:el("label",{},label,input)}};
  const kind=el("select",{},el("option",{value:"codex"},"Codex"),el("option",{value:"kun"},"Kun · 独立进程"));kind.value=cfg.kind;
+ const harness=el("select",{'aria-label':"Kun 模块组合"},el("option",{value:"tool-loop-v1"},"Tool Loop · 按需调用工具"),el("option",{value:"plan-act-v1"},"Plan-Act · 先规划，再执行"));harness.value=cfg.harness?.loopPolicy||"tool-loop-v1";
  const endpoint=field("OpenAI 兼容 API 基础地址（包含 /v1）",cfg.endpoint);
  const model=field("模型名称",cfg.model);
  const key=field("API Key 环境变量名（留空用于无需认证的本地模型）",cfg.apiKeyEnv);
@@ -24,14 +25,14 @@ async function renderKunSettings(target){
  const debuggerConfig=kunPolicyEditor(cfg.debug);
  const status=el("p",{role:"status",class:"help"});
  const form=el("form",{class:"kun-config"},el("h3",{},"Agent 引擎"),el("p",{class:"help"},"选择后端后，新会话使用新引擎。已有会话保留后端归属。Kun 提供文本模型、项目文件工具、显式 Skills、MCP 和调试控制。"),
- el("label",{},"运行后端",kind),endpoint.node,model.node,key.node,steps.node,timeout.node,toolBudget.node,tokenBudget.node,activeBudget.node,failureBudget.node,el("p",{class:"help"},"token 阈值按服务报告的用量，在下一动作前检查；不能保证当前请求不超额。启用后如服务未报告用量，将停止后续执行。费用暂不估算。"),el("label",{},"系统提示词",system),
+ el("label",{},"运行后端",kind),el("label",{},"Kun 模块组合",harness),el("p",{class:"help"},"Plan-Act 每个新轮次先生成一份显式计划，规划禁用工具，额外调用计入模型次数、token 和活动时间预算。保存后下一次新轮次生效；当前运行和检查点续跑保留原组合。其余三个模块使用完整历史、参数校验和固定目录。"),endpoint.node,model.node,key.node,steps.node,timeout.node,toolBudget.node,tokenBudget.node,activeBudget.node,failureBudget.node,el("p",{class:"help"},"token 阈值按服务报告的用量，在下一动作前检查；不能保证当前请求不超额。启用后如服务未报告用量，将停止后续执行。费用暂不估算。"),el("label",{},"系统提示词",system),
  el("label",{class:"kun-check"},write,"允许 Kun 写入项目内文件（仅限制内置文件工具）"),
  el("label",{class:"kun-check"},pause,"每次模型请求前暂停，供调试检查"),
  el("p",{class:"help"},"MCP 在工具 MCP 页面配置；其权限独立于内置文件工具。支持安全边界 Hybrid 分叉；工具仅录制回放。当前不支持 Shell、图像模型、文件回滚、Live 分叉或轨迹编译。"),
  debuggerConfig.node,el("button",{type:"submit",class:"primary"},"保存引擎配置"),status);
  form.onsubmit=async event=>{
   event.preventDefault();status.textContent="保存中…";
-  try{const updated=await api("/instances/"+i.id+"/agent-runtime",{method:"PUT",body:{revision:i.revision,config:{kind:kind.value,endpoint:endpoint.input.value.trim(),model:model.input.value.trim(),apiKeyEnv:key.input.value.trim(),systemPrompt:system.value,maxSteps:Number(steps.input.value),timeoutSeconds:Number(timeout.input.value),allowWrite:write.checked,pauseBeforeModel:pause.checked,debug:debuggerConfig.get(),budget:{maxToolCalls:Number(toolBudget.input.value),maxTotalTokens:Number(tokenBudget.input.value),maxActiveSeconds:Number(activeBudget.input.value),maxConsecutiveFailures:Number(failureBudget.input.value)}}}});
+  try{const updated=await api("/instances/"+i.id+"/agent-runtime",{method:"PUT",body:{revision:i.revision,config:{harness:{loopPolicy:harness.value},kind:kind.value,endpoint:endpoint.input.value.trim(),model:model.input.value.trim(),apiKeyEnv:key.input.value.trim(),systemPrompt:system.value,maxSteps:Number(steps.input.value),timeoutSeconds:Number(timeout.input.value),allowWrite:write.checked,pauseBeforeModel:pause.checked,debug:debuggerConfig.get(),budget:{maxToolCalls:Number(toolBudget.input.value),maxTotalTokens:Number(tokenBudget.input.value),maxActiveSeconds:Number(activeBudget.input.value),maxConsecutiveFailures:Number(failureBudget.input.value)}}}});
    state.instances=state.instances.map(v=>v.id===updated.id?updated:v);if(!state.session&&kind.value==="kun")$("#model").value=updated.agentRuntime.model;status.textContent="已保存，请新建会话使用。";i.revision=updated.revision;
   }catch(e){status.textContent=e.message;}
  };
@@ -85,11 +86,11 @@ window.RunDeskKun={
    if(panel==="console")return;
    if(panel==="sources"){detail.append(kunRenderSources(current,selected,events,openEvidence));return;}
    if(panel==="application"){detail.append(kunRenderApplication(inspected,selected,events,openEvidence,()=>{panel="sources";redraw();}));return;}
-   if(panel==="layers"){detail.append(kunRenderLayers(inspected,selected,events,openEvidence));return;}
+   if(panel==="layers"){harnessView.update();detail.append(kunRenderLayers(inspected,selected,events,openEvidence),harnessView.node);return;}
    if(panel==="performance"){detail.append(kunRenderPerformance(inspected,selected,events,openEvidence));return;}
    if(panel==="elements"){
     for(const event of events.filter(e=>e.method==="kun/model.started")){
-     const b=button("#"+event.data.sequence+" · 模型 "+event.data.data.step+" · "+event.data.runId,()=>selectEvent(event));
+     const b=button("#"+event.data.sequence+" · "+(event.data.data.purpose==="plan"?"规划模型 ":"执行模型 ")+event.data.data.step+" · "+event.data.runId,()=>selectEvent(event));
      b.classList.toggle("selected",selected?.data.sequence===event.data.sequence);list.append(b);
     }
     detail.append(kunRenderContext(selected,selected?snapshots.get(selected.data.sequence):null,current));return;
@@ -173,6 +174,7 @@ window.RunDeskKun={
   controls.append(el("details",{class:"kun-control-section"},el("summary",{},"编辑当前断点"),runtimePolicy.node,
    el("p",{class:"help"},"先读取当前规则再编辑。清空规则不会解除已有暂停，也不改变模型前固定暂停。重新读取会替换当前草稿。"),policyLoad,policyApply,policyHint,policyStatus));
   const diffView=kunDiffView({sid,getSelected:()=>selected});
+  const harnessView=kunHarnessCompare({sid,getSelected:()=>selected});
   const consoleView=kunConsole({sid,getCurrent:()=>current,getSelected:()=>selected,refresh});
   const steer=el("textarea",{rows:"2",placeholder:"给当前运行补充文本指令"});
   const recoveryStatus=el("p",{role:"status",class:"help"});

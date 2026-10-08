@@ -57,6 +57,9 @@ func Open(path string) (*Engine, error) {
 		return nil, e
 	}
 	v := &Engine{epoch: fmt.Sprintf("%x", epoch), modules: defaultModules(), j: j, state: s, wake: make(chan struct{}, 1), fatal: make(chan error, 1)}
+	if selected, err := configuredModules(s.Config); err == nil {
+		v.modules = selected
+	}
 	if p.Active(s.Status) {
 		// Opening only reconciles records. Explicit recovery requires a safe checkpoint.
 		for id, status := range v.state.Actions {
@@ -118,7 +121,7 @@ func (e *Engine) record(kind string, data any) error {
 	return err
 }
 func fingerprint(v any) string { return fmt.Sprintf("%x", sha256.Sum256(p.JSON(v))) }
-func (e *Engine) Start(in p.Start) (p.State, error) {
+func (e *Engine) Start(in p.Start) (out p.State, startErr error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if e.closed {
@@ -196,6 +199,18 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 			return p.State{}, fmt.Errorf("previous run is still closing")
 		}
 	}
+	selectedModules, err := configuredModules(in.Config)
+	if err != nil {
+		return p.State{}, err
+	}
+	previousModules := e.modules
+	selectedModules.provider = previousModules.provider
+	e.modules = selectedModules
+	defer func() {
+		if startErr != nil {
+			e.modules = previousModules
+		}
+	}()
 	if in.Resume != nil {
 		if in.Fork != nil {
 			return p.State{}, fmt.Errorf("fork and resume are mutually exclusive")
@@ -239,6 +254,7 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 	for _, sk := range in.Skills {
 		prompt += "\n<skill name=" + sk.Name + " hash=" + sk.Hash + ">\n" + sk.Content + "\n</skill>"
 	}
+	harness := e.nextHarness(in.Config)
 	previousState := clone(e.state)
 	e.state = p.State{Schema: 1, SessionID: in.SessionID, RunID: in.RunID, Revision: e.state.Revision + 1, Status: "running", Phase: "before_model", Config: in.Config, Skills: in.Skills, Actions: map[string]string{}, Messages: append([]p.Message{{Role: "system", Content: prompt}}, kept...)}
 	if in.Diagnostic != nil {
@@ -247,7 +263,7 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 	}
 	e.state.Messages = append(e.state.Messages, p.Message{Role: "user", Content: in.Input})
 	e.state.Debug = p.DebugState{Revision: 1, Policy: in.Config.Debug, Hits: map[string]int{}}
-	e.state.Harness = e.modules.harness()
+	e.state.Harness = harness
 	e.state.Manifest = e.manifest(in)
 	e.state.Modules = map[string]p.ModuleState{}
 	for name, version := range e.state.Harness.Modules {
@@ -272,7 +288,7 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 		e.state = previousState
 		return p.State{}, fmt.Errorf("context exceeds 2 MiB; start a new session")
 	}
-	if _, err = e.j.commit(e.state, "kun/run.started", map[string]any{"config": in.Config, "skills": in.Skills, "mcp": e.state.MCP, "approvalPolicy": in.ApprovalPolicy}, ""+in.RunID, hash, nil); err != nil {
+	if _, err = e.j.commit(e.state, "kun/run.started", map[string]any{"harness": e.state.Harness, "previousHarness": previousState.Harness, "config": in.Config, "skills": in.Skills, "mcp": e.state.MCP, "approvalPolicy": in.ApprovalPolicy}, ""+in.RunID, hash, nil); err != nil {
 		e.state.Status = "failed"
 		return p.State{}, err
 	}
@@ -509,9 +525,10 @@ func (e *Engine) loop(ctx context.Context) {
 				e.mu.Unlock()
 				return
 			}
+			purpose := modelPurpose(e.state)
 			e.state.Step++
 			e.state.Phase = "model"
-			if failure = e.record("kun/model.started", map[string]any{"step": e.state.Step, "request": requestBody(e.state)}); failure != nil {
+			if failure = e.record("kun/model.started", map[string]any{"step": e.state.Step, "purpose": purpose, "request": requestBody(e.state)}); failure != nil {
 				e.mu.Unlock()
 				return
 			}
@@ -529,6 +546,9 @@ func (e *Engine) loop(ctx context.Context) {
 			}
 			e.mu.Lock()
 			for _, call := range result.Message.ToolCalls {
+				if purpose == "plan" {
+					break
+				}
 				if _, exists := e.state.Actions[call.ID]; exists {
 					e.mu.Unlock()
 					failure = fmt.Errorf("model reused a tool call ID")
@@ -536,13 +556,26 @@ func (e *Engine) loop(ctx context.Context) {
 				}
 			}
 			absorbUsage(&e.state.Budget, result.Usage)
-			e.state.Messages = append(e.state.Messages, result.Message)
-			e.state.Pending = result.Message.ToolCalls
-			e.state.Phase = "after_model"
-			for _, call := range e.state.Pending {
-				e.state.Actions[call.ID] = "prepared"
+			var planErr error
+			if purpose == "plan" {
+				planErr = e.acceptPlan(result)
+			} else {
+				e.state.Messages = append(e.state.Messages, result.Message)
+				e.state.Pending = result.Message.ToolCalls
+				for _, call := range e.state.Pending {
+					e.state.Actions[call.ID] = "prepared"
+				}
 			}
-			failure = e.record("kun/model.completed", map[string]any{"step": s.Step, "message": result.Message, "usage": result.Usage, "durationMs": time.Since(started).Milliseconds()})
+			e.state.Phase = "after_model"
+			data := map[string]any{"step": s.Step, "purpose": purpose, "message": result.Message, "usage": result.Usage, "durationMs": time.Since(started).Milliseconds()}
+			if planErr != nil {
+				data["error"] = planErr.Error()
+				data["status"] = "rejected"
+			}
+			failure = e.record("kun/model.completed", data)
+			if failure == nil {
+				failure = planErr
+			}
 			if e.single {
 				e.pause = true
 			}

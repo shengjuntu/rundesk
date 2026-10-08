@@ -336,6 +336,9 @@ func (p *projection) ingest(id int64, at, method string, d map[string]any) {
 	case "kun/model.started", "kun/model.completed":
 		kind = "modelCall"
 		title = "Kun model"
+		if str(data["purpose"]) == "plan" {
+			title = "Kun explicit plan"
+		}
 		if step := numberKey(data["step"]); step != "" {
 			base = key(rid, "model", step)
 		}

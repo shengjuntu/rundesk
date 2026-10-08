@@ -26,6 +26,25 @@ func requestBody(s p.State) map[string]any {
 		definitions = toolDefinitions(s.Config.AllowWrite)
 	}
 	body := map[string]any{"model": s.Config.Model, "messages": s.Messages, "tools": definitions, "stream": true}
+	if s.Harness.ID == "plan-act-v1" {
+		messages := append([]p.Message(nil), s.Messages...)
+		if modelPurpose(s) == "plan" {
+			messages = append(messages, p.Message{Role: "system", Content: "Produce a concise explicit execution plan for the current user goal (at most 32768 UTF-8 bytes). List proposed actions and checks, not private reasoning or a final answer. Do not call tools or claim actions have run. The next stage will execute the task."})
+			delete(body, "tools")
+			body["tool_choice"] = "none"
+		} else {
+			var plan planData
+			_ = json.Unmarshal(s.Modules["planning"].Data, &plan)
+			at := plan.MessageCount
+			if at < 0 || at > len(messages) {
+				at = len(messages)
+			}
+			tail := append([]p.Message(nil), messages[at:]...)
+			messages = append(messages[:at], p.Message{Role: "assistant", Content: "Advisory execution plan (not proof of completed work; later instructions and observed tool results take precedence):\n" + plan.Plan})
+			messages = append(messages, tail...)
+		}
+		body["messages"] = messages
+	}
 	if s.Config.Budget.MaxTotalTokens > 0 {
 		body["stream_options"] = map[string]bool{"include_usage": true}
 	}

@@ -75,6 +75,6 @@ Worker 协议 v6 曾扩展 `query` 的 evidence/diff 与 fromSequence；保留 v
 
 ## 仍待完成
 
-K2 已有基础条件断点、结构化 Console、单步/steer、控制幂等、安全检查点恢复、统一只读 DebugService/MCP 和独立诊断；本地浏览器验证已完成。提案应用整合、同参数连续失败信号、上下文容量/费用/模块条件、高级上下文来源图和真实服务/生产验收尚未完成。0.32.0 使用 worker 协议 v8、Kun 0.8.0；旧引擎检查点不跨版本续跑。K3-B 首批安全 Hybrid 分叉见 [KUN-FORKS.md](KUN-FORKS.md)；Live、可配置模块组合和 K4 仍未实现。
+K2 已有基础条件断点、结构化 Console、单步/steer、控制幂等、安全检查点恢复、统一只读 DebugService/MCP 和独立诊断；历史版本已有本地浏览器验证；0.33 未完成真实浏览器验收。提案应用整合、同参数连续失败信号、上下文容量/费用/模块条件、高级上下文来源图和真实服务/生产验收尚未完成。0.33.0 使用 worker 协议 v9、Kun 0.9.0；旧引擎检查点不跨版本续跑。K3-B 首批安全 Hybrid 分叉见 [KUN-FORKS.md](KUN-FORKS.md)；Plan-Act 与两套内置组合见 [KUN-HARNESS.md](KUN-HARNESS.md)；Live、运行中更换模块和 K4 仍未实现。
 
 Sources 的结构化状态、按钮可用性和其余面板见 [KUN-PANELS.md](KUN-PANELS.md)。

@@ -18,7 +18,7 @@ function kunCallRows(events){
 function kunPretty(value){return typeof value==="string"?value:JSON.stringify(value,null,2)??"未记录";}
 function kunRaw(label,value){return el("details",{class:"kun-raw"},el("summary",{},label),el("pre",{},kunPretty(value)));}
 function kunFacts(pairs){return el("dl",{class:"kun-facts"},...pairs.flatMap(([k,v])=>[el("dt",{},k),el("dd",{},String(v??"未记录"))]));}
-function kunCallName(row){const d=(row.start||row.end)?.data.data||{};return row.kind==="model"?"模型 · 步骤 "+d.step:row.kind==="tool"?"工具 · "+d.call?.function?.name:"MCP · "+d.server+" / "+d.method;}
+function kunCallName(row){const d=(row.start||row.end)?.data.data||{};return row.kind==="model"?(d.purpose==="plan"?"规划模型":"执行模型")+" · 步骤 "+d.step:row.kind==="tool"?"工具 · "+d.call?.function?.name:"MCP · "+d.server+" / "+d.method;}
 function kunCallStatus(row){const d=row.end?.data.data;return d?.replay?.mode==="recorded"?"录制回放（未执行）":!d?"结果未记录":d.error||d.isError?"失败":d.status||"已返回";}
 function kunRenderCall(row,sequence){
  const visible=kunCallRows(row.events.filter(e=>e.data.sequence<=sequence))[0];
@@ -28,7 +28,7 @@ function kunRenderCall(row,sequence){
   kunFacts([["运行",row.runId],["结果",kunCallStatus(visible)],["请求事件",a?"#"+a.sequence:"未保留 / 未派发"],["结果事件",b?"#"+b.sequence:"此快照尚未记录"],["耗时",r.durationMs==null?"未知":r.durationMs+" ms"]]));
  if(row.kind==="model"){
   node.append(kunFacts([["模型",d.request?.model],["输入消息",d.request?.messages?.length],["工具定义",d.request?.tools?.length],["服务报告用量",r.usage==null?"未知":kunPretty(r.usage)]]));
-  if(b)node.append(el("h4",{},"模型回答"),el("pre",{},r.message?.content||"（无文本回答）"),kunRaw("模型工具调用",r.message?.tool_calls||[]));
+  if(b)node.append(el("h4",{},r.purpose==="plan"?"显式计划（未执行）":"模型回答"),el("pre",{},r.message?.content||"（无文本回答）"),kunRaw("模型工具调用",r.message?.tool_calls||[]));
  }else if(row.kind==="tool"){
   node.append(kunFacts([["调用 ID",(d.call||r.call)?.id],["状态",r.status||"结果未记录"]]),kunRaw("工具参数",(d.call||r.call)?.function?.arguments));
   if(r.replay)node.append(el("p",{class:"experiment-mode"},"录制回放 · 未执行真实工具"),kunFacts([["来源序号",r.replay.sourceSequence],["录制位置",r.replay.position+1],["原始结果",r.replay.recordedStatus]]));

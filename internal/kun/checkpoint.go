@@ -42,7 +42,7 @@ func (e *Engine) manifest(in p.Start) *p.RunManifest {
 		workspace = real
 	}
 	// Persist digests only, never the resolved MCP environment/headers or API key.
-	return &p.RunManifest{EngineVersion: p.EngineVersion, Workspace: workspace, ConfigHash: fingerprint(in.Config.Normalized()), MCPHash: fingerprint(in.MCP), SkillsHash: fingerprint(in.Skills), HarnessHash: fingerprint(e.modules.harness()), ContextRevision: in.ContextRevision}
+	return &p.RunManifest{EngineVersion: p.EngineVersion, Workspace: workspace, ConfigHash: fingerprint(in.Config.Normalized()), MCPHash: fingerprint(in.MCP), SkillsHash: fingerprint(in.Skills), HarnessHash: fingerprint(e.nextHarness(in.Config)), ContextRevision: in.ContextRevision}
 }
 func catalogFingerprint(s p.State) string {
 	// JSON object key order and server tool listing order are not semantic changes.
@@ -106,7 +106,7 @@ func (e *Engine) checkpointLocked() (p.CheckpointCheck, p.State, error) {
 	if err = json.Unmarshal(raw, &saved); err != nil {
 		return check, saved, err
 	}
-	if !checkpointSafe(saved) || saved.Manifest.EngineVersion != p.EngineVersion || saved.Manifest.HarnessHash != fingerprint(e.modules.harness()) {
+	if !checkpointSafe(saved) || saved.Manifest.EngineVersion != p.EngineVersion || !compatibleHarness(saved) {
 		return block("checkpoint_incompatible")
 	}
 	// The terminal record retains consumed budgets; pausing/restarting never refunds them.

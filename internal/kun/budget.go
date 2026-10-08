@@ -146,6 +146,7 @@ func (e *Engine) prepareCatalog() error {
 	return e.record("kun/capability.ready", e.state.Modules["capability"])
 }
 func (e *Engine) prepareContext() error {
+	e.state.Modules["planning"] = e.modules.planning.Plan(clone(e.state))
 	copy := clone(e.state)
 	ctx, err := e.modules.memory.Build(copy)
 	if err != nil {
@@ -158,7 +159,6 @@ func (e *Engine) prepareContext() error {
 		skills = append(skills, sk.Hash)
 	}
 	e.moduleState("memory", "before_model", map[string]any{"messageCount": len(ctx.Messages), "requestBytes": ctx.Bytes, "skillHashes": skills, "compression": "none", "truncated": false})
-	e.state.Modules["planning"] = e.modules.planning.Plan(clone(e.state))
 	return e.record("kun/context.built", map[string]any{"memory": e.state.Modules["memory"], "planning": e.state.Modules["planning"]})
 }
 func (e *Engine) activeFailure(err error) error {

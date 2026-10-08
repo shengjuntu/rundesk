@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Application API",
-    "version": "0.32.0",
-    "description": "RunDesk 0.32.0：Kun 0.8 / 协议 v8 安全检查点独立 Hybrid 分支，模型重算、工具严格录制回放、未命中停止；K3-A 离线记录基线、不可变实验分支、保守失效与谱系差异；建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。"
+    "version": "0.33.0",
+    "description": "RunDesk 0.33.0：Kun 0.9 / 协议 v9；Plan-Act 显式规划、两套内置模块组合与 Harness 固定快照对照； 安全检查点独立 Hybrid 分支，模型重算、工具严格录制回放、未命中停止；K3-A 离线记录基线、不可变实验分支、保守失效与谱系差异；建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。"
   },
   "servers": [
     {
@@ -9105,7 +9105,7 @@
           }
         },
         "x-administrator-only": true,
-        "description": "Kun 0.7：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
+        "description": "Kun 0.9：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚；Hybrid 使用独立 fork API。Plan-Act 规划与执行请求共用模型预算和四边界；purpose=plan 的结果不是最终回复。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
         "requestBody": {
           "required": true,
           "content": {
@@ -9204,7 +9204,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.7：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
+        "description": "Kun 0.9：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚；Hybrid 使用独立 fork API。Plan-Act 规划与执行请求共用模型预算和四边界；purpose=plan 的结果不是最终回复。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
         "x-application-scopes": [
           "read"
         ]
@@ -9283,7 +9283,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.7：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。 set_breakpoints 必须带 debug，替换本 run 的规则并重置命中计数；不解除已有暂停，默认配置不变。未知条件字段被拒绝。",
+        "description": "Kun 0.9：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚；Hybrid 使用独立 fork API。Plan-Act 规划与执行请求共用模型预算和四边界；purpose=plan 的结果不是最终回复。control 需当前 runId/revision；approve/reject 另需 approvals scope。 set_breakpoints 必须带 debug，替换本 run 的规则并重置命中计数；不解除已有暂停，默认配置不变。未知条件字段被拒绝。",
         "requestBody": {
           "required": true,
           "content": {
@@ -9401,7 +9401,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.7：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
+        "description": "Kun 0.9：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚；Hybrid 使用独立 fork API。Plan-Act 规划与执行请求共用模型预算和四边界；purpose=plan 的结果不是最终回复。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
         "x-application-scopes": [
           "read"
         ]
@@ -9480,7 +9480,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.7：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
+        "description": "Kun 0.9：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚；Hybrid 使用独立 fork API。Plan-Act 规划与执行请求共用模型预算和四边界；purpose=plan 的结果不是最终回复。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
         "x-application-scopes": [
           "read"
         ]
@@ -9569,7 +9569,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.7：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
+        "description": "Kun 0.9：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚；Hybrid 使用独立 fork API。Plan-Act 规划与执行请求共用模型预算和四边界；purpose=plan 的结果不是最终回复。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
         "requestBody": {
           "required": true,
           "content": {
@@ -9697,7 +9697,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.7：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。 context 在 model.started 快照返回实际 model_request，其余为 state_context；evidence 返回精确事件；diff 返回 KunSnapshotDiff，先脱敏再比较，有界预览，不执行回滚。需要在线 worker。",
+        "description": "Kun 0.9：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚；Hybrid 使用独立 fork API。Plan-Act 规划与执行请求共用模型预算和四边界；purpose=plan 的结果不是最终回复。control 需当前 runId/revision；approve/reject 另需 approvals scope。 context 在 model.started 快照返回实际 model_request，其余为 state_context；evidence 返回精确事件；diff 返回 KunSnapshotDiff，先脱敏再比较，有界预览，不执行回滚。需要在线 worker。",
         "x-application-scopes": [
           "read"
         ]
@@ -18850,9 +18850,52 @@
         ],
         "additionalProperties": false
       },
+      "KunHarnessConfig": {
+        "type": "object",
+        "properties": {
+          "loopPolicy": {
+            "type": "string",
+            "enum": [
+              "tool-loop-v1",
+              "plan-act-v1"
+            ]
+          },
+          "memory": {
+            "type": "string",
+            "enum": [
+              "full-history-v1"
+            ]
+          },
+          "planning": {
+            "type": "string",
+            "enum": [
+              "no-explicit-plan-v1",
+              "explicit-plan-v1"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "schema-action-v1"
+            ]
+          },
+          "capability": {
+            "type": "string",
+            "enum": [
+              "fixed-catalog-v1"
+            ]
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "description": "Two installed compositions only: tool-loop-v1 pairs with no-explicit-plan-v1; plan-act-v1 pairs with explicit-plan-v1. Missing fields use the selected preset defaults. Unknown IDs and incompatible pairs are rejected. New ordinary runs may select a new composition; active runs, resume and Hybrid retain their recorded version."
+      },
       "KunConfig": {
         "type": "object",
         "properties": {
+          "harness": {
+            "$ref": "#/components/schemas/KunHarnessConfig"
+          },
           "kind": {
             "type": "string",
             "enum": [

@@ -1,5 +1,7 @@
 # RunDesk 0.26.0：Kun 结构化检查面板
 
+> 本文保留首批版本说明。0.33 新增 Plan-Act、内置组合与 Layers 对照，当前行为见 [KUN-HARNESS.md](KUN-HARNESS.md)。
+
 本版在既有 Network、Elements、Console 和快照差异上补 Sources、Performance、Application、Layers。Kun 执行引擎仍为 0.6.0，worker 协议仍为 v6；没有新执行动作，也没有变更状态格式或恢复校验。
 
 ## Sources：当前运行控制

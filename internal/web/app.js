@@ -415,7 +415,7 @@ function renderMessages() {
         text: ev.data.input.text,
         files: ev.data.input.files,
       });
-    } else if (ev.method === "kun/model.completed" && ev.data.data?.message?.content) {
+    } else if (ev.method === "kun/model.completed" && ev.data.data?.purpose !== "plan" && ev.data.data?.message?.content) {
       items.push({_key:"kun:"+ev.id,type:"agentMessage",text:ev.data.data.message.content,_eventId:ev.id});
     } else if (ev.method === "kun/tool.completed" && ev.data.data?.call?.function?.name === "trace_propose" && ev.data.data?.status === "succeeded" && !ev.data.data?.isError && RunDeskDebug.validSuggestion(ev.data.data?.result,state.session.traceOrigin)) {
       items.push({_key:"diagnosis:"+ev.id,type:"diagnosticSuggestion",proposal:ev.data.data.result,eventId:ev.id,diagnosticSessionId:state.session.id});

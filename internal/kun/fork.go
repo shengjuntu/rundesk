@@ -178,7 +178,7 @@ func (e *Engine) ExportFork(in p.ForkExport) (p.ForkBundle, error) {
 		return out, err
 	}
 	s := snap.State
-	if s.SessionID != e.state.SessionID || s.RunID != q.SourceRunID || !checkpointSafe(s) || s.Manifest.EngineVersion != p.EngineVersion || s.Manifest.HarnessHash != fingerprint(e.modules.harness()) {
+	if s.SessionID != e.state.SessionID || s.RunID != q.SourceRunID || !checkpointSafe(s) || s.Manifest.EngineVersion != p.EngineVersion || !compatibleHarness(s) {
 		return out, fmt.Errorf("not a compatible safe fork boundary")
 	}
 	catalog, err := e.modules.capability.Build(s)
@@ -248,7 +248,7 @@ func (e *Engine) forkLocked(in p.Start, hash string) (p.State, error) {
 	if e.state.SessionID != "" || in.Resume != nil || in.Diagnostic != nil || len(in.MCP) > 0 || len(in.Skills) > 0 {
 		return p.State{}, fmt.Errorf("Hybrid requires an empty session and no live tool configuration")
 	}
-	if b.Schema != p.ForkSchema || b.ContentHash != p.ForkHash(b) || len(p.JSON(b)) > p.MaxForkBytes || len(b.Records) > p.MaxReplayRecords || !checkpointSafe(s) || s.Manifest.EngineVersion != p.EngineVersion || s.Manifest.HarnessHash != fingerprint(e.modules.harness()) || s.Manifest.ConfigHash != fingerprint(s.Config) || b.CatalogHash != catalogFingerprint(s) || b.EnvironmentHash != fingerprint(s.Manifest) {
+	if b.Schema != p.ForkSchema || b.ContentHash != p.ForkHash(b) || len(p.JSON(b)) > p.MaxForkBytes || len(b.Records) > p.MaxReplayRecords || !checkpointSafe(s) || s.Manifest.EngineVersion != p.EngineVersion || !compatibleHarness(s) || s.Manifest.ConfigHash != fingerprint(s.Config) || b.CatalogHash != catalogFingerprint(s) || b.EnvironmentHash != fingerprint(s.Manifest) {
 		return p.State{}, fmt.Errorf("invalid or incompatible Hybrid recording")
 	}
 	if o.Mode != "hybrid" || o.PreviewID == "" || o.SessionID != s.SessionID || o.SessionID == in.SessionID || o.RunID != s.RunID || o.BundleHash != b.ContentHash || o.Sequence != b.Selection.Sequence || o.Through != b.Selection.Through || o.RunID != b.Selection.SourceRunID || fingerprint(in.Config) != fingerprint(s.Config) || in.ApprovalPolicy != s.ApprovalPolicy || utf8.RuneCountInString(f.Instruction) > 16000 {
@@ -279,6 +279,14 @@ func (e *Engine) forkLocked(in p.Start, hash string) (p.State, error) {
 	for n := range s.MCP {
 		s.MCP[n].Status = "recorded"
 		s.MCP[n].Error = ""
+	}
+	if s.Harness.ID == "plan-act-v1" && s.Modules["planning"].Phase == "ready" {
+		var plan planData
+		_ = json.Unmarshal(s.Modules["planning"].Data, &plan)
+		plan.MessageCount++
+		module := s.Modules["planning"]
+		module.Data = p.JSON(plan)
+		s.Modules["planning"] = module
 	}
 	s.Messages = append([]p.Message{{Role: "system", Content: "This is a RunDesk Hybrid experiment. Tool results are recorded simulations, not current observations or executed actions. Report that distinction. A replay miss stops the run; never claim a simulated write happened."}}, s.Messages...)
 	if strings.TrimSpace(f.Instruction) != "" {
