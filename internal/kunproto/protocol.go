@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-const Version = 3
-const EngineVersion = "0.3.0"
+const Version = 4
+const EngineVersion = "0.4.0"
 const MaxMessage = 8 << 20
 
 type Envelope struct {
@@ -97,15 +97,17 @@ type Skill struct {
 	Hash    string `json:"hash"`
 }
 type Start struct {
-	MCP            []MCPServer `json:"mcp,omitempty"`
-	ApprovalPolicy string      `json:"approvalPolicy,omitempty"`
-	SessionID      string      `json:"sessionId"`
-	RunID          string      `json:"runId"`
-	Input          string      `json:"input"`
-	Workspace      string      `json:"workspace"`
-	Config         Config      `json:"config"`
-	APIKey         string      `json:"apiKey,omitempty"`
-	Skills         []Skill     `json:"skills,omitempty"`
+	Resume          *CheckpointSelection `json:"resume,omitempty"`
+	ContextRevision string               `json:"contextRevision,omitempty"`
+	MCP             []MCPServer          `json:"mcp,omitempty"`
+	ApprovalPolicy  string               `json:"approvalPolicy,omitempty"`
+	SessionID       string               `json:"sessionId"`
+	RunID           string               `json:"runId"`
+	Input           string               `json:"input"`
+	Workspace       string               `json:"workspace"`
+	Config          Config               `json:"config"`
+	APIKey          string               `json:"apiKey,omitempty"`
+	Skills          []Skill              `json:"skills,omitempty"`
 }
 type Control struct {
 	CallID           string `json:"callId,omitempty"`
@@ -121,6 +123,8 @@ type Receipt struct {
 	Revision  int64  `json:"revision"`
 }
 type State struct {
+	Manifest        *RunManifest           `json:"manifest,omitempty"`
+	ResumedFrom     *CheckpointSelection   `json:"resumedFrom,omitempty"`
 	Harness         Harness                `json:"harness"`
 	Modules         map[string]ModuleState `json:"modules,omitempty"`
 	Budget          BudgetUsage            `json:"budget"`

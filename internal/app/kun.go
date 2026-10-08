@@ -72,11 +72,10 @@ func (m *Manager) SetAgentRuntime(id string, revision int, config p.Config) (Ins
 	*v = next
 	return next, nil
 }
-func (m *Manager) runKun(s Session, w Workspace, h *handle, in Input) {
+func (m *Manager) kunStartRequest(s Session, w Workspace, in Input) (p.Start, error) {
 	i, err := m.Instance(s.InstanceID)
 	if err != nil {
-		m.finish(s.ID, "failed", err.Error())
-		return
+		return p.Start{}, err
 	}
 	cfg := i.AgentRuntime.Normalized()
 	if s.Model != "" {
@@ -89,20 +88,36 @@ func (m *Manager) runKun(s Session, w Workspace, h *handle, in Input) {
 	if cfg.APIKeyEnv != "" {
 		key = os.Getenv(cfg.APIKeyEnv)
 		if key == "" {
-			m.finish(s.ID, "failed", "Kun 凭证环境变量未设置："+cfg.APIKeyEnv)
-			return
+			return p.Start{}, fmt.Errorf("Kun 凭证环境变量未设置：%s", cfg.APIKeyEnv)
 		}
 	}
 	mcpServers, err := m.kunRuntimeMCP(i.ID)
 	if err != nil {
-		m.finish(s.ID, "failed", err.Error())
-		return
+		return p.Start{}, err
 	}
 	skills, err := m.kunInputSkills(w, i, in.Skills)
 	if err != nil {
-		m.finish(s.ID, "failed", err.Error())
-		return
+		return p.Start{}, err
 	}
+	input := in.Text
+	if w.Notes != "" {
+		input += "\n<project-notes>\n" + w.Notes + "\n</project-notes>"
+	}
+	input += "\nSave deliverables under outputs/" + s.ID + "/."
+	for _, f := range in.Files {
+		input += "\nUploaded file (use read_file): " + f
+	}
+	request := p.Start{SessionID: s.ID, RunID: s.RunID, Input: input, Workspace: w.Path, Config: cfg, APIKey: key, Skills: skills, MCP: mcpServers, ApprovalPolicy: i.Permissions.normalized().ApprovalPolicy}
+	request.ContextRevision = fmt.Sprintf("%s:%d/%s:%d", i.ID, i.Revision, w.ID, w.Revision)
+	if in.KunResume != nil {
+		request.Resume = &in.KunResume.Selection
+	}
+	return request, nil
+}
+
+// Caller holds handle.op and owns a process reservation when launching.
+func (m *Manager) ensureKunWorker(s Session, h *handle) (*kc.Client, error) {
+	var err error
 	h.mu.Lock()
 	client := h.kun
 	h.mu.Unlock()
@@ -116,8 +131,7 @@ func (m *Manager) runKun(s Session, w Workspace, h *handle, in Input) {
 	if client == nil {
 		client, err = kc.Launch(m.ctx, m.kunExecutable(), filepath.Join(m.Data, "kun", "sessions", s.ID))
 		if err != nil {
-			m.finish(s.ID, "failed", "启动 Kun："+err.Error())
-			return
+			return nil, err
 		}
 		m.loaded.Add(1)
 		go func(c *kc.Client) { <-c.Done(); m.loaded.Add(-1) }(client)
@@ -125,6 +139,23 @@ func (m *Manager) runKun(s Session, w Workspace, h *handle, in Input) {
 		h.kun = client
 		h.instanceID = s.InstanceID
 		h.mu.Unlock()
+	}
+	h.mu.Lock()
+	h.last = time.Now()
+	h.mu.Unlock()
+	return client, nil
+}
+func (m *Manager) runKun(s Session, w Workspace, h *handle, in Input) {
+	start, err := m.kunStartRequest(s, w, in)
+	if err != nil {
+		m.finish(s.ID, "failed", err.Error())
+		return
+	}
+	cfg := start.Config
+	client, err := m.ensureKunWorker(s, h)
+	if err != nil {
+		m.finish(s.ID, "failed", "启动 Kun："+err.Error())
+		return
 	}
 	_ = m.Store.Put("runtime", s.ID, RuntimeStatus{ID: s.ID, InstanceID: s.InstanceID, WorkspaceID: s.WorkspaceID, ConnectionID: fmt.Sprint(client.PID()), ExecutionMode: "local", Live: true, ConnectedAt: store.Now(), Notices: []RuntimeNotice{}, UserAgent: "Kun/" + p.EngineVersion, Effective: map[string]any{"runtimeKind": "kun", "model": cfg.Model, "endpoint": cfg.Endpoint, "allowWrite": cfg.AllowWrite}})
 	h.mu.Lock()
@@ -135,17 +166,9 @@ func (m *Manager) runKun(s Session, w Workspace, h *handle, in Input) {
 		m.finish(s.ID, "interrupted", "")
 		return
 	}
-	input := in.Text
-	if w.Notes != "" {
-		input += "\n<project-notes>\n" + w.Notes + "\n</project-notes>"
-	}
-	input += "\nSave deliverables under outputs/" + s.ID + "/."
-	for _, f := range in.Files {
-		input += "\nUploaded file (use read_file): " + f
-	}
 	var result p.State
 	ctx, cancel := context.WithTimeout(m.ctx, 15*time.Second)
-	err = client.Call(ctx, "start", p.Start{SessionID: s.ID, RunID: s.RunID, Input: input, Workspace: w.Path, Config: cfg, APIKey: key, Skills: skills, MCP: mcpServers, ApprovalPolicy: i.Permissions.normalized().ApprovalPolicy}, &result)
+	err = client.Call(ctx, "start", start, &result)
 	cancel()
 	if err != nil {
 		client.Close()
@@ -317,6 +340,7 @@ func (m *Manager) steerKun(s Session, in SteerInput) (SteerReceipt, error) {
 	return receipt, e
 }
 func (s *Server) kunRoutes(mux *http.ServeMux) {
+	s.kunCheckpointRoutes(mux)
 	mux.HandleFunc("PUT /api/instances/{iid}/agent-runtime", func(w http.ResponseWriter, r *http.Request) {
 		var in struct {
 			Revision int      `json:"revision"`

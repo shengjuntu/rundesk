@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// These are inspectable contracts, not a promise of checkpoint restoration.
+// Module versions are persisted and checked during checkpoint restoration.
 type ModuleVersion struct {
 	ID                 string `json:"id"`
 	Version            string `json:"version"`

@@ -100,7 +100,7 @@ requests={
  ('PUT','/workspaces/{wid}/mcp/{name}'):obj({'version':st(),'config':obj(extra=True),'remove':bool_},['version']),
  ('POST','/workspaces/{wid}/mcp/import'):obj({'version':st(),'bundle':obj(extra=True),'overwrite':bool_},['version','bundle']),
 }
-idempotent={('POST',p) for p in ['/instances','/workspaces','/sessions','/sessions/{sid}/turns','/sessions/{sid}/recover','/tasks','/schedules','/workspaces/{wid}/mcp-tests']}
+idempotent={('POST',p) for p in ['/instances','/workspaces','/sessions','/sessions/{sid}/turns','/sessions/{sid}/recover','/sessions/{sid}/kun/resume','/tasks','/schedules','/workspaces/{wid}/mcp-tests']}
 summaries={
  '/instances/{iid}/images':'管理员：GET 读取持久化镜像目录及环境差异；POST 检查并登记本机镜像，不构建、不拉取、不启动容器',
  '/instances/{iid}/images/{vid}/check':'管理员：按固定 Image ID 核对可用性；失败仍返回记录，检查 availability 和 error',
@@ -247,6 +247,10 @@ schemas['KunMCPStatus']=obj({'name':st(),'configRevision':st(),'transport':st(),
 schemas['KunMCPTool']=obj({'alias':st(),'server':st(),'name':st(),'description':st(),'inputSchema':obj(extra=True),'annotations':obj(extra=True),'approvalMode':st(enum=['approve','prompt'])},['alias','server','name','inputSchema','approvalMode'])
 schemas['KunToolApproval']=obj({'callId':st(),'server':st(),'tool':st(),'arguments':st(),'decision':st(enum=['approve','reject'])},['callId','server','tool','arguments'])
 schemas['KunState']['properties'].update({'harness':ref('KunHarness'),'modules':{'type':'object','additionalProperties':ref('KunModuleState')},'budget':ref('KunBudgetUsage'),'toolDefinitions':arr(obj(extra=True)),'mcp':arr(ref('KunMCPStatus')),'mcpTools':arr(ref('KunMCPTool')),'approval':ref('KunToolApproval'),'approvalPolicy':st(enum=['on-request','never'])})
+schemas['KunCheckpointSelection']=obj({'sourceRunId':st(),'sequence':{'type':'integer','minimum':1},'expectedStateRevision':{'type':'integer','minimum':1},'workerEpoch':st()},['sourceRunId','sequence','expectedStateRevision','workerEpoch'])
+schemas['KunRunManifest']=obj({k:st() for k in ['engineVersion','workspace','configHash','mcpHash','skillsHash','harnessHash','contextRevision']},['engineVersion','workspace','configHash','mcpHash','skillsHash','harnessHash','contextRevision'])
+schemas['KunCheckpointCheck']=obj({'eligible':bool_,'reason':st(),'selection':ref('KunCheckpointSelection'),'phase':st(),'step':integer,'pending':integer,'budget':ref('KunBudgetUsage')},['eligible','reason','selection','step','pending','budget'])
+schemas['KunState']['properties'].update({'manifest':ref('KunRunManifest'),'resumedFrom':ref('KunCheckpointSelection')})
 schemas['KunQueuedControl']=copy.deepcopy(schemas['KunControl'])
 schemas['KunQueuedControl']['properties']['expectedStateRevision']['minimum']=-1
 schemas['KunState']['properties']['queuedControls']=arr(ref('KunQueuedControl'))
@@ -255,12 +259,14 @@ schemas['Instance']['properties']['agentRuntime']=ref('KunConfig')
 for path,method,response,body in [
  ('/instances/{iid}/agent-runtime','put',ref('Instance'),obj({'revision':integer,'config':ref('KunConfig')},['revision','config'])),
  ('/sessions/{sid}/kun/state','get',ref('KunState'),None),
+ ('/sessions/{sid}/kun/checkpoint','get',ref('KunCheckpointCheck'),None),
+ ('/sessions/{sid}/kun/resume','post',ref('Session'),ref('KunCheckpointSelection')),
  ('/sessions/{sid}/kun/snapshots/{sequence}','get',obj({'sequence':integer,'state':ref('KunState')},['sequence','state']),None),
  ('/sessions/{sid}/kun/control','post',ref('KunReceipt'),ref('KunControl')),
 ]:
  op=paths[path][method]
  op['summary']='Kun independent worker: '+path.rsplit('/',1)[-1]
- op['description']='Kun 0.2：本机独立 worker；上下文检查、边界暂停、单步及 MCP。状态/快照要求在线 worker；控制需当前 runId 与 revision；approve/reject 另需匹配 callId 与 approvals scope。无检查点继续执行或分叉。'
+ op['description']='Kun 0.4：本机独立 worker。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。'
  op['responses']['200']['content']['application/json']['schema']=response
  op['responses']['409']={'description':'Worker 离线、状态版本变化、ID 冲突或控制操作不适用；刷新状态后处理。'}
  if body:op['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
@@ -343,6 +349,6 @@ if '/usage' in paths:
 if '/setup/docker-template' in paths:
  paths['/setup/docker-template']['get']['parameters']=[{'name':'version','in':'query','required':True,'schema':st(),'description':'Exact Codex release'}]
  paths['/setup/docker-template']['get']['responses']['200']={'description':'Pinned base image build context','content':{'application/zip':{'schema':st(format='binary')}}}
-spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk 0.22.0：Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
+spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk 0.23.0：Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

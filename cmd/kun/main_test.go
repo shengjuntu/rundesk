@@ -25,7 +25,7 @@ func TestProtocolHandshakeAndVersionRejection(t *testing.T) {
 	var first, second p.Envelope
 	_ = decoder.Decode(&first)
 	_ = decoder.Decode(&second)
-	if first.Error == "" || second.Error != "" || !bytes.Contains(second.Result, []byte(`"resumeCheckpoint":false`)) {
+	if first.Error == "" || second.Error != "" || !bytes.Contains(second.Result, []byte(`"resumeCheckpoint":true`)) {
 		t.Fatal(out.String(), first, second)
 	}
 }

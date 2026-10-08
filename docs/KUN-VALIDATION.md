@@ -1,53 +1,51 @@
-# Kun 0.3 / RunDesk 0.22.0 验证记录
+# Kun 0.4 / RunDesk 0.23.0 验证记录
 
-日期：2026-10-05。环境：Linux amd64，Go 1.25.12。所有模型和 MCP 调用使用本地测试桩；RunDesk 集成测试构建并启动真实 Kun 子进程。未调用生产服务或付费模型。
+日期：2026-10-05。环境：Linux amd64、Go 1.25.12。模型和 MCP 使用本地 fixture；宿主测试构建并启动真实 Kun 子进程，没有调用生产模型或付费服务。
 
 | 检查 | 本次结果 |
 | --- | --- |
-| `go test ./... -count=1 -timeout=180s` | 全部通过；包含原有 RunDesk 测试、新增 Kun 契约与真实 worker 集成测试 |
+| `go test ./... -count=1 -timeout=180s` | 全部通过，app 包约 65 秒 |
 | `go test -race ./internal/kun ./internal/mcp ./cmd/kun -count=1 -timeout=90s` | 通过 |
+| `go test -race ./internal/app -run '^TestKunCheckpoint' -count=1 -timeout=90s` | 通过，覆盖本次宿主恢复路径；不表示完整 app 包竞态验收 |
 | `go vet ./...` | 通过 |
-| 浏览器 JS 和测试脚本 `node --check` | 49 个文件通过 |
-| Linux amd64 `make build` | RunDesk、Kun 均构建成功 |
-| Windows amd64 交叉构建 | 两个命令均通过；未在 Windows 实机运行 |
-| 浏览器交互与视觉验收 | **本次未运行**：环境未安装 Chromium。已更新脚本，包括预算配置、四模块状态、跨面板固定选择与刷新 |
-| 真实模型/MCP、news2douyin 业务流程 | **未运行**，需部署侧实际服务 |
+| JavaScript / CJS `node --check` | 49 个文件通过；更新恢复场景后再次检查对应脚本通过 |
+| Linux amd64 `make build` | RunDesk、Kun 均成功 |
+| Windows amd64 交叉构建 | 两个命令均成功，未在 Windows 实机运行 |
+| OpenAPI 生成 | 132 个路径、159 个操作；包含恢复请求、返回结构、权限及幂等 Header |
+| 浏览器交互与视觉验收 | **未运行**，当前环境没有 Chromium；恢复场景已补入 Playwright 脚本 |
+| 真实模型/MCP、news2douyin 业务流程 | **未运行**，需要部署侧实际服务 |
 
-## 新增验证
+## 新增恢复验证
 
-- schema：对象必填/类型/额外字段、字符串长度/正则、精确数值和 multipleOf、数组去重、local ref、组合/条件/依赖、tuple/contains；重复键、不支持关键字/远程引用、极端指数与递归求值限额拒绝。
-- 工具预算：一个模型返回多个工具意图时，达到派发数上限后第二个工具未执行，挂起的调用得到取消结果。
-- token：实际报告超过阈值或服务未报告用量时，阻止后续工具派发；不把未知用量当零。
-- 连续失败与模型调用上限：准确停止，无效参数不增加实际工具调用数。
-- 活动时间：取消超时模型请求；调试等待独立累计，不消耗活动时间额度。
-- MCP 无效参数：在默认逐次审批策略下，既没有审批事件，也没有 tools/call，模型收到明确 rejected 结果后可结束。
-- 模块状态：四模块版本及状态存在于实际模型请求的持久化快照中。
-- 保留既有 stdio/HTTP、审批、去重、step/steer、只读/路径边界、未知结果及进程集成测试。
-
-测试中曾发现发现阶段使用短期 context 会过早终止 stdio 进程，已分离“本轮进程生命周期”与“初始化请求期限”，通过现有 stdio 测试及竞态回归。schema 递归求值限额为不可被组合关键字吞掉的拒绝条件。
+- 一个模型返回两个写文件调用，在第一个完成后停机；重开引擎并恢复，只执行第二个。人为修改的第一个文件保留，不被重放覆盖。
+- 恢复保留模型调用次数、已报告 token、工具调用数及来源；重复 start 不执行第二次，来源检查点已消费。
+- 过期 epoch、配置预算变化、工作区变化拒绝；预算耗尽、模型在途、未知工具结果、未应用 steer、旧记录缺少恢复清单时不提供恢复。
+- MCP 重连之后仍停在审批；模拟批准已经落盘但尚未派发就崩溃的窗口，旧一次性批准不会复用。
+- 工具目录与已保存目录不同，在任何新模型/工具调用前失败。
+- 强制终止真实 Kun 子进程，再关闭并重新创建 RunDesk Manager；检查重开 worker 不调用模型，恢复创建新 run，显式继续后模型只调用一次。
+- HTTP 拒绝缺失幂等 Key、过期检查点、容量不足及重复消费；相同 Key 返回原始接收回执。
+- 应用 read scope 可检查自身会话，但不能恢复；跨应用检查/恢复均拒绝。
+- 原有 K1 参数校验、预算、step/steer、MCP、路径权限、会话和任务测试继续通过。
 
 ## 复现
 
 ```bash
 go test ./... -count=1 -timeout=180s
 go test -race ./internal/kun ./internal/mcp ./cmd/kun -count=1 -timeout=90s
+go test -race ./internal/app -run '^TestKunCheckpoint' -count=1 -timeout=90s
 go vet ./...
 make build
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -buildvcs=false -o /tmp/rundesk.exe ./cmd/rundesk
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -buildvcs=false -o /tmp/kun.exe ./cmd/kun
 ```
 
-浏览器脚本需要测试环境额外安装 Playwright 和 Chromium：
+浏览器脚本需 Playwright 和 Chromium：
 
 ```bash
 PLAYWRIGHT_PATH=/absolute/node_modules/playwright CHROMIUM_PATH=/absolute/chromium node scripts/kun-ui-smoke.cjs
 PLAYWRIGHT_PATH=/absolute/node_modules/playwright CHROMIUM_PATH=/absolute/chromium node scripts/kun-mcp-ui-smoke.cjs
 ```
 
-本版 `kun-ui-validation.json` 和 `kun-mcp-ui-validation.json` 明确为 not_run。上一版记录另存为 `*-0.21.0.json`，旧说明在 `KUN-VALIDATION-0.2.md`，旧截图保留对应版本目录；它们不能作为 0.22.0 的浏览器通过证据。
+本版两个 UI 验证 JSON 明确为 not_run。旧记录 `KUN-VALIDATION-0.3.md`、`KUN-VALIDATION-0.2.md` 及 0.21.0 截图/JSON 仅说明对应旧版，不作为本版浏览器证据。
 
-## 限制
-
-- 自建 schema 校验器支持范围见 `KUN-K1-CORE.md`，不宣称完整 JSON Schema 一致性认证。
-- 尚未做大规模/长期运行、完整集成路径竞态或 Windows 实机测试。
-- 暂无检查点恢复、记忆摘要、费用预算和运行中权限撤销；测试通过不等于 K1/K2 全量验收完成。
+测试没有覆盖分布式租约、故障磁盘、远端副作用恰好一次、全部崩溃指令窗口、大规模长时间运行或生产集成。恢复覆盖和限制以 [KUN-CHECKPOINTS.md](KUN-CHECKPOINTS.md) 为准；K1/K2 尚未整体验收完成。

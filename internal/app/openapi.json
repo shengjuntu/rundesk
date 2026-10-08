@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Application API",
-    "version": "0.22.0",
-    "description": "RunDesk 0.22.0：Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。"
+    "version": "0.23.0",
+    "description": "RunDesk 0.23.0：Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。"
   },
   "servers": [
     {
@@ -7702,7 +7702,7 @@
           }
         },
         "x-administrator-only": true,
-        "description": "Kun 0.2：本机独立 worker；上下文检查、边界暂停、单步及 MCP。状态/快照要求在线 worker；控制需当前 runId 与 revision；approve/reject 另需匹配 callId 与 approvals scope。无检查点继续执行或分叉。",
+        "description": "Kun 0.4：本机独立 worker。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
         "requestBody": {
           "required": true,
           "content": {
@@ -7801,7 +7801,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.2：本机独立 worker；上下文检查、边界暂停、单步及 MCP。状态/快照要求在线 worker；控制需当前 runId 与 revision；approve/reject 另需匹配 callId 与 approvals scope。无检查点继续执行或分叉。",
+        "description": "Kun 0.4：本机独立 worker。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
         "x-application-scopes": [
           "read"
         ]
@@ -7880,7 +7880,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.2：本机独立 worker；上下文检查、边界暂停、单步及 MCP。状态/快照要求在线 worker；控制需当前 runId 与 revision；approve/reject 另需匹配 callId 与 approvals scope。无检查点继续执行或分叉。",
+        "description": "Kun 0.4：本机独立 worker。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
         "requestBody": {
           "required": true,
           "content": {
@@ -7998,9 +7998,187 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.2：本机独立 worker；上下文检查、边界暂停、单步及 MCP。状态/快照要求在线 worker；控制需当前 runId 与 revision；approve/reject 另需匹配 callId 与 approvals scope。无检查点继续执行或分叉。",
+        "description": "Kun 0.4：本机独立 worker。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
         "x-application-scopes": [
           "read"
+        ]
+      }
+    },
+    "/sessions/{sid}/kun/checkpoint": {
+      "get": {
+        "operationId": "get_sessions_sid_kun_checkpoint",
+        "summary": "Kun independent worker: checkpoint",
+        "parameters": [
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KunCheckpointCheck"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Worker 离线、状态版本变化、ID 冲突或控制操作不适用；刷新状态后处理。"
+          }
+        },
+        "x-administrator-only": false,
+        "description": "Kun 0.4：本机独立 worker。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
+        "x-application-scopes": [
+          "read"
+        ]
+      }
+    },
+    "/sessions/{sid}/kun/resume": {
+      "post": {
+        "operationId": "post_sessions_sid_kun_resume",
+        "summary": "Kun independent worker: resume",
+        "parameters": [
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            },
+            "description": "每个逻辑操作唯一。相同请求重试必须复用，不能将 Key 用于不同请求。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Worker 离线、状态版本变化、ID 冲突或控制操作不适用；刷新状态后处理。"
+          }
+        },
+        "x-administrator-only": false,
+        "description": "Kun 0.4：本机独立 worker。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KunCheckpointSelection"
+              }
+            }
+          }
+        },
+        "x-application-scopes": [
+          "run"
         ]
       }
     },
@@ -13078,6 +13256,196 @@
         "x-personal-user-only": true
       }
     },
+    "/member/{grantId}/sessions/{sid}/kun/checkpoint": {
+      "get": {
+        "operationId": "member_get_sessions_sid_kun_checkpoint",
+        "summary": "Kun independent worker: checkpoint",
+        "parameters": [
+          {
+            "name": "grantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KunCheckpointCheck"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Worker 离线、状态版本变化、ID 冲突或控制操作不适用；刷新状态后处理。"
+          }
+        },
+        "x-administrator-only": false,
+        "description": "个人访问码或成员 Cookie。grantId 必须属于当前用户；仅允许授权应用项目。viewer 仅 GET；runner 可提交、上传、审批。任务和文件在同项目共享。变更为本机执行后禁止成员写入。",
+        "x-personal-user-only": true
+      }
+    },
+    "/member/{grantId}/sessions/{sid}/kun/resume": {
+      "post": {
+        "operationId": "member_post_sessions_sid_kun_resume",
+        "summary": "Kun independent worker: resume",
+        "parameters": [
+          {
+            "name": "grantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            },
+            "description": "每个逻辑操作唯一。相同请求重试必须复用，不能将 Key 用于不同请求。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Worker 离线、状态版本变化、ID 冲突或控制操作不适用；刷新状态后处理。"
+          }
+        },
+        "x-administrator-only": false,
+        "description": "个人访问码或成员 Cookie。grantId 必须属于当前用户；仅允许授权应用项目。viewer 仅 GET；runner 可提交、上传、审批。任务和文件在同项目共享。变更为本机执行后禁止成员写入。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KunCheckpointSelection"
+              }
+            }
+          }
+        },
+        "x-personal-user-only": true
+      }
+    },
     "/member/{grantId}/sessions/{sid}/messages/{eid}": {
       "get": {
         "operationId": "member_get_sessions_sid_messages_eid",
@@ -15917,6 +16285,12 @@
               "on-request",
               "never"
             ]
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/KunRunManifest"
+          },
+          "resumedFrom": {
+            "$ref": "#/components/schemas/KunCheckpointSelection"
           }
         },
         "required": [
@@ -16037,6 +16411,103 @@
           "server",
           "tool",
           "arguments"
+        ],
+        "additionalProperties": false
+      },
+      "KunCheckpointSelection": {
+        "type": "object",
+        "properties": {
+          "sourceRunId": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "expectedStateRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "workerEpoch": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sourceRunId",
+          "sequence",
+          "expectedStateRevision",
+          "workerEpoch"
+        ],
+        "additionalProperties": false
+      },
+      "KunRunManifest": {
+        "type": "object",
+        "properties": {
+          "engineVersion": {
+            "type": "string"
+          },
+          "workspace": {
+            "type": "string"
+          },
+          "configHash": {
+            "type": "string"
+          },
+          "mcpHash": {
+            "type": "string"
+          },
+          "skillsHash": {
+            "type": "string"
+          },
+          "harnessHash": {
+            "type": "string"
+          },
+          "contextRevision": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "engineVersion",
+          "workspace",
+          "configHash",
+          "mcpHash",
+          "skillsHash",
+          "harnessHash",
+          "contextRevision"
+        ],
+        "additionalProperties": false
+      },
+      "KunCheckpointCheck": {
+        "type": "object",
+        "properties": {
+          "eligible": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "selection": {
+            "$ref": "#/components/schemas/KunCheckpointSelection"
+          },
+          "phase": {
+            "type": "string"
+          },
+          "step": {
+            "type": "integer"
+          },
+          "pending": {
+            "type": "integer"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/KunBudgetUsage"
+          }
+        },
+        "required": [
+          "eligible",
+          "reason",
+          "selection",
+          "step",
+          "pending",
+          "budget"
         ],
         "additionalProperties": false
       },

@@ -62,10 +62,11 @@ type Approval struct {
 	ResolvedAt string      `json:"resolvedAt,omitempty"`
 }
 type Input struct {
-	LibraryOwner string   `json:"-"`
-	Text         string   `json:"text"`
-	Files        []string `json:"files"`
-	Skills       []Skill  `json:"skills"`
+	KunResume    *kunResumeInput `json:"-"`
+	LibraryOwner string          `json:"-"`
+	Text         string          `json:"text"`
+	Files        []string        `json:"files"`
+	Skills       []Skill         `json:"skills"`
 }
 type Skill struct {
 	Name string `json:"name"`
@@ -845,6 +846,16 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 	if s.RuntimeKind == "kun" && (recovery != nil || s.TraceOrigin != nil) {
 		return s, failure(400, "kun_recovery_unsupported", "首版 Kun 不支持原生 Codex 恢复或分析入口，请使用 Kun DevTools")
 	}
+	if in.KunResume != nil {
+		if s.RuntimeKind != "kun" {
+			return s, failure(400, "not_kun", "该会话不使用 Kun")
+		}
+		skills, err := m.validateKunResume(s, w, h, in)
+		if err != nil {
+			return s, err
+		}
+		in.Skills = skills
+	}
 	if recovery != nil {
 		if e = m.validateRecovery(s, h, recovery); e != nil {
 			return s, e
@@ -883,6 +894,13 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 			return s, e
 		}
 		runID = t.RunID
+	}
+	if in.KunResume != nil {
+		m.keyMu.Lock()
+		defer m.keyMu.Unlock()
+		if e = m.checkTaskAuthorization(in.KunResume.SubmittingKeyID, TaskSpec{InstanceID: s.InstanceID, WorkspaceID: s.WorkspaceID, Source: s.Source}, false); e != nil {
+			return s, e
+		}
 	}
 	if !m.capacityLocked(s.InstanceID) {
 		return s, failure(429, "run_capacity", "并发已满，请稍后提交或加入任务队列")
@@ -934,6 +952,9 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 	if recovery != nil {
 		record["recovery"] = s.Recovery
 		record["recoveryInput"] = recovery.TaskInput
+	}
+	if in.KunResume != nil {
+		record["kunResume"] = in.KunResume.Selection
 	}
 	if e = m.event(id, "internal", "run/input", record); e != nil {
 		_ = m.update(id, func(v *Session) {

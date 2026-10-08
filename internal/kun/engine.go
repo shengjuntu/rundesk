@@ -2,6 +2,7 @@ package kun
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
@@ -15,24 +16,26 @@ import (
 )
 
 type Engine struct {
-	modules        modules
-	catalog        *toolCatalog
-	clock          time.Time
-	waiting        bool
-	mcpSpecs       []p.MCPServer
-	connections    map[string]*mcpConnection
-	secrets        []string
-	exchange       int64
-	mu             sync.Mutex
-	j              *journal
-	state          p.State
-	workspace, key string
-	cancel         context.CancelFunc
-	done           chan struct{}
-	wake           chan struct{}
-	pause, single  bool
-	fatal          chan error
-	closed         bool
+	epoch           string
+	expectedCatalog string
+	modules         modules
+	catalog         *toolCatalog
+	clock           time.Time
+	waiting         bool
+	mcpSpecs        []p.MCPServer
+	connections     map[string]*mcpConnection
+	secrets         []string
+	exchange        int64
+	mu              sync.Mutex
+	j               *journal
+	state           p.State
+	workspace, key  string
+	cancel          context.CancelFunc
+	done            chan struct{}
+	wake            chan struct{}
+	pause, single   bool
+	fatal           chan error
+	closed          bool
 }
 
 func Open(path string) (*Engine, error) {
@@ -45,9 +48,14 @@ func Open(path string) (*Engine, error) {
 		j.db.Close()
 		return nil, e
 	}
-	v := &Engine{modules: defaultModules(), j: j, state: s, wake: make(chan struct{}, 1), fatal: make(chan error, 1)}
+	epoch := make([]byte, 16)
+	if _, e = rand.Read(epoch); e != nil {
+		j.db.Close()
+		return nil, e
+	}
+	v := &Engine{epoch: fmt.Sprintf("%x", epoch), modules: defaultModules(), j: j, state: s, wake: make(chan struct{}, 1), fatal: make(chan error, 1)}
 	if p.Active(s.Status) {
-		// Recovery is inspection-only. An unfinished external action is never retried.
+		// Opening only reconciles records. Explicit recovery requires a safe checkpoint.
 		for id, status := range v.state.Actions {
 			if status == "dispatched" {
 				v.state.Actions[id] = "outcome_unknown"
@@ -160,12 +168,23 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 	if err != sql.ErrNoRows {
 		return p.State{}, err
 	}
-	if p.Active(e.state.Status) {
+	if p.Active(e.state.Status) || e.state.Status == "completing" {
 		return p.State{}, fmt.Errorf("session already running")
 	}
 	if e.state.SessionID != "" && e.state.SessionID != in.SessionID {
 		return p.State{}, fmt.Errorf("session database belongs to another session")
 	}
+	if e.done != nil {
+		select {
+		case <-e.done:
+		default:
+			return p.State{}, fmt.Errorf("previous run is still closing")
+		}
+	}
+	if in.Resume != nil {
+		return e.resumeLocked(in, hash)
+	}
+	e.expectedCatalog = ""
 	history := e.state.Messages
 	// Rebuild system context from the effective config; preserve completed conversation messages.
 	kept := []p.Message{}
@@ -182,6 +201,7 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 	e.state = p.State{Schema: 1, SessionID: in.SessionID, RunID: in.RunID, Revision: e.state.Revision + 1, Status: "running", Phase: "before_model", Config: in.Config, Skills: in.Skills, Actions: map[string]string{}, Messages: append([]p.Message{{Role: "system", Content: prompt}}, kept...)}
 	e.state.Messages = append(e.state.Messages, p.Message{Role: "user", Content: in.Input})
 	e.state.Harness = e.modules.harness()
+	e.state.Manifest = e.manifest(in)
 	e.state.Modules = map[string]p.ModuleState{}
 	for name, version := range e.state.Harness.Modules {
 		e.state.Modules[name] = p.ModuleState{Implementation: version, Phase: "pending", Data: p.JSON(map[string]any{})}
@@ -205,6 +225,10 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 		e.state.Status = "failed"
 		return p.State{}, err
 	}
+	e.launchLocked(in)
+	return clone(e.state), nil
+}
+func (e *Engine) launchLocked(in p.Start) {
 	e.workspace, e.key = in.Workspace, in.APIKey
 	_ = json.Unmarshal(p.JSON(in.MCP), &e.mcpSpecs)
 	e.connections = map[string]*mcpConnection{}
@@ -231,7 +255,6 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 	e.cancel = cancel
 	e.done = make(chan struct{})
 	go e.loop(ctx)
-	return clone(e.state), nil
 }
 func (e *Engine) Control(c p.Control) (p.Receipt, error) {
 	e.mu.Lock()
@@ -426,65 +449,76 @@ func (e *Engine) loop(ctx context.Context) {
 		return
 	}
 	for {
-		if failure = e.boundary(ctx, "before_model"); failure != nil {
-			return
-		}
 		e.mu.Lock()
-		if failure = e.checkBudget("model"); failure != nil {
-			e.mu.Unlock()
-			return
+		next := e.modules.policy.Next(clone(e.state))
+		if next == "complete" {
+			e.state.Status = "completing"
 		}
-		if failure = e.prepareContext(); failure != nil {
-			e.mu.Unlock()
-			return
-		}
-		e.state.Step++
-		e.state.Phase = "model"
-		if failure = e.record("kun/model.started", map[string]any{"step": e.state.Step, "request": requestBody(e.state)}); failure != nil {
-			e.mu.Unlock()
-			return
-		}
-		s := clone(e.state)
-		key := e.key
 		e.mu.Unlock()
-		started := time.Now()
-		callCtx, callCancel := e.activeContext(ctx)
-		result, err := e.modules.provider.Complete(callCtx, s, key)
-		callCancel()
-		err = e.activeFailure(err)
-		if err != nil {
-			failure = err
+		if next == "complete" {
 			return
 		}
-		e.mu.Lock()
-		for _, call := range result.Message.ToolCalls {
-			if _, exists := e.state.Actions[call.ID]; exists {
-				e.mu.Unlock()
-				failure = fmt.Errorf("model reused a tool call ID")
+		if next != "before_tool" {
+			if failure = e.boundary(ctx, "before_model"); failure != nil {
 				return
 			}
-		}
-		absorbUsage(&e.state.Budget, result.Usage)
-		e.state.Messages = append(e.state.Messages, result.Message)
-		e.state.Pending = result.Message.ToolCalls
-		e.state.Phase = "after_model"
-		for _, call := range e.state.Pending {
-			e.state.Actions[call.ID] = "prepared"
-		}
-		failure = e.record("kun/model.completed", map[string]any{"step": s.Step, "message": result.Message, "usage": result.Usage, "durationMs": time.Since(started).Milliseconds()})
-		if e.single {
-			e.pause = true
-		}
-		nextPhase := e.modules.policy.Next(clone(e.state))
-		if nextPhase == "complete" {
-			e.state.Status = "completing"
-		} // Close admission before deciding to finish.
-		e.mu.Unlock()
-		if failure != nil {
-			return
-		}
-		if nextPhase == "complete" {
-			return
+			e.mu.Lock()
+			if failure = e.checkBudget("model"); failure != nil {
+				e.mu.Unlock()
+				return
+			}
+			if failure = e.prepareContext(); failure != nil {
+				e.mu.Unlock()
+				return
+			}
+			e.state.Step++
+			e.state.Phase = "model"
+			if failure = e.record("kun/model.started", map[string]any{"step": e.state.Step, "request": requestBody(e.state)}); failure != nil {
+				e.mu.Unlock()
+				return
+			}
+			s := clone(e.state)
+			key := e.key
+			e.mu.Unlock()
+			started := time.Now()
+			callCtx, callCancel := e.activeContext(ctx)
+			result, err := e.modules.provider.Complete(callCtx, s, key)
+			callCancel()
+			err = e.activeFailure(err)
+			if err != nil {
+				failure = err
+				return
+			}
+			e.mu.Lock()
+			for _, call := range result.Message.ToolCalls {
+				if _, exists := e.state.Actions[call.ID]; exists {
+					e.mu.Unlock()
+					failure = fmt.Errorf("model reused a tool call ID")
+					return
+				}
+			}
+			absorbUsage(&e.state.Budget, result.Usage)
+			e.state.Messages = append(e.state.Messages, result.Message)
+			e.state.Pending = result.Message.ToolCalls
+			e.state.Phase = "after_model"
+			for _, call := range e.state.Pending {
+				e.state.Actions[call.ID] = "prepared"
+			}
+			failure = e.record("kun/model.completed", map[string]any{"step": s.Step, "message": result.Message, "usage": result.Usage, "durationMs": time.Since(started).Milliseconds()})
+			if e.single {
+				e.pause = true
+			}
+			nextPhase := e.modules.policy.Next(clone(e.state))
+			if nextPhase == "complete" {
+				e.state.Status = "completing"
+			} // Close admission before deciding to finish.
+			e.mu.Unlock()
+			if failure != nil {
+				return
+			}
+			if nextPhase == "complete" {
+				return
+			}
 		}
 		for {
 			e.mu.Lock()

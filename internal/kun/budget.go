@@ -37,7 +37,15 @@ func (e *Engine) setWaiting(wait bool) {
 }
 func (e *Engine) checkBudget(next string) error {
 	e.tick(time.Now())
-	b, c := e.state.Budget, e.state.Config.Budget
+	reason := budgetReason(e.state, next)
+	if reason != "" {
+		e.state.Budget.StopReason = reason
+		return budgetError(reason)
+	}
+	return nil
+}
+func budgetReason(s p.State, next string) string {
+	b, c := s.Budget, s.Config.Budget
 	var reason string
 	switch {
 	case b.ActiveMillis >= int64(c.MaxActiveSeconds)*1000:
@@ -48,16 +56,12 @@ func (e *Engine) checkBudget(next string) error {
 		reason = "token_usage_unknown"
 	case c.MaxTotalTokens > 0 && b.ReportedTokens >= c.MaxTotalTokens:
 		reason = "reported_token_threshold"
-	case next == "model" && e.state.Step >= e.state.Config.MaxSteps:
+	case next == "model" && s.Step >= s.Config.MaxSteps:
 		reason = "model_calls"
 	case next == "tool" && b.ToolCalls >= c.MaxToolCalls:
 		reason = "tool_calls"
 	}
-	if reason != "" {
-		e.state.Budget.StopReason = reason
-		return budgetError(reason)
-	}
-	return nil
+	return reason
 }
 
 // Child deadline cancels active network work, but not human approval/debug wait.
@@ -120,6 +124,14 @@ func (e *Engine) prepareCatalog() error {
 	catalog, err := e.modules.capability.Build(clone(e.state))
 	if err != nil {
 		return err
+	}
+	if e.expectedCatalog != "" && e.expectedCatalog != catalogFingerprint(e.state) {
+		return fmt.Errorf("checkpoint tool catalog changed; resume blocked before execution")
+	}
+	e.expectedCatalog = ""
+	e.state.Phase = e.modules.policy.Next(clone(e.state))
+	if e.state.Phase == "complete" {
+		e.state.Phase = "after_model"
 	}
 	e.catalog = catalog
 	hashes := map[string]string{}

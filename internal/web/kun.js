@@ -23,7 +23,7 @@ async function renderKunSettings(target){
  el("label",{},"运行后端",kind),endpoint.node,model.node,key.node,steps.node,timeout.node,toolBudget.node,tokenBudget.node,activeBudget.node,failureBudget.node,el("p",{class:"help"},"token 阈值按服务报告的用量，在下一动作前检查；不能保证当前请求不超额。启用后如服务未报告用量，将停止后续执行。费用暂不估算。"),el("label",{},"系统提示词",system),
  el("label",{class:"kun-check"},write,"允许 Kun 写入项目内文件（仅限制内置文件工具）"),
  el("label",{class:"kun-check"},pause,"每次模型请求前暂停，供调试检查"),
- el("p",{class:"help"},"MCP 在工具 MCP 页面配置；其权限独立于内置文件工具。当前不支持 Shell、图像模型、检查点重执行、分叉或轨迹编译。"),
+ el("p",{class:"help"},"MCP 在工具 MCP 页面配置；其权限独立于内置文件工具。当前不支持 Shell、图像模型、历史回滚、分叉或轨迹编译。"),
  el("button",{type:"submit",class:"primary"},"保存引擎配置"),status);
  form.onsubmit=async event=>{
   event.preventDefault();status.textContent="保存中…";
@@ -44,7 +44,7 @@ window.RunDeskKun={
   const close=button("关闭",()=>{dialog.close();dialog.remove();});
   const summary=el("p",{class:"help"}),feedback=el("p",{role:"status"}),list=el("div",{class:"kun-call-list"}),detail=el("pre",{class:"kun-detail"});
   const tabs=el("div",{class:"tabs"}),controls=el("div",{class:"kun-controls"});
-  let panel="network",current=null,selected=null,events=[];const snapshots=new Map();
+  let panel="network",current=null,selected=null,events=[],recoveryCheck=null;const snapshots=new Map();
   const inspectState=()=>selected?snapshots.get(selected.data.sequence)?.state:null;
   const loadSelected=async()=>{if(selected&&!snapshots.has(selected.data.sequence)){try{snapshots.set(selected.data.sequence,await api("/sessions/"+sid+"/kun/snapshots/"+selected.data.sequence));}catch(e){feedback.textContent=e.message;}}};
   const selectedDetail=event=>panel==="elements"?{runId:event.data.runId,sequence:event.data.sequence,request:event.data.data.request,snapshot:snapshots.get(event.data.sequence)??"点击步骤以读取持久化快照"}:event.data;
@@ -95,6 +95,24 @@ window.RunDeskKun={
    }));
   }
   const steer=el("textarea",{rows:"2",placeholder:"给当前运行补充文本指令"});
+  const recoveryStatus=el("p",{role:"status",class:"help"});
+  const recoveryReasons={run_not_stopped:"当前运行尚未结束",run_still_closing:"运行正在关闭，请稍后重试",inflight_action_or_unapplied_control:"模型/工具结果未知，或有未应用指令",no_safe_checkpoint:"没有可用安全检查点（旧版本记录不能恢复）",runtime_manifest_changed:"配置、项目版本、凭据或技能已变化",checkpoint_incompatible:"引擎或模块版本不兼容",checkpoint_consumed:"检查点已使用",no_run:"会话没有运行记录"};
+  const recoverButton=button("从检查点继续",async()=>{
+   if(!recoveryCheck?.eligible)return;recoverButton.disabled=true;
+   try{const session=await api("/sessions/"+sid+"/kun/resume",{method:"POST",body:recoveryCheck.selection});
+    if(state.session?.id===sid)state.session=session;
+    state.sessions=state.sessions.map(s=>s.id===sid?session:s);
+    recoveryStatus.textContent="恢复已提交：新运行 "+session.runId+"。MCP 将重连并核对工具定义，需要审批的调用会重新询问。";
+    recoveryCheck=null;await refresh();
+   }catch(e){recoveryStatus.textContent=e.message;recoverButton.disabled=false;}
+  });recoverButton.disabled=true;
+  controls.append(el("p",{class:"help"},"中断恢复沿用最近安全检查点和剩余预算，不回滚项目文件。检查只读取状态；恢复提交后才会重连 MCP 并验证工具定义。"),button("检查恢复条件",async()=>{
+   recoveryCheck=null;recoverButton.disabled=true;
+   try{recoveryCheck=await api("/sessions/"+sid+"/kun/checkpoint");
+    recoverButton.disabled=!recoveryCheck.eligible;
+    recoveryStatus.textContent=recoveryCheck.eligible?"可提交恢复：检查点 #"+recoveryCheck.selection.sequence+" · 待执行工具 "+recoveryCheck.pending+" · 已用工具调用 "+recoveryCheck.budget.toolCalls+"。保留既有工具结果，旧的一次性审批不复用。":"不能恢复："+(recoveryReasons[recoveryCheck.reason]||(recoveryCheck.reason.startsWith("budget_")?"执行预算已用尽："+recoveryCheck.reason.slice(7):recoveryCheck.reason));
+   }catch(e){recoveryStatus.textContent=e.message;}
+  }),recoverButton,recoveryStatus);
   controls.append(steer,button("提交补充指令",async()=>{
    if(!current)return;try{const v=await api("/sessions/"+sid+"/kun/control",{method:"POST",body:{requestId:crypto.randomUUID(),runId:current.runId,expectedStateRevision:current.revision,operation:"steer",text:steer.value}});feedback.textContent="补充指令："+v.status;steer.value="";}catch(e){feedback.textContent=e.message;}
   }));

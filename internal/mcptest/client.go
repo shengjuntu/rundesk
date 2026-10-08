@@ -24,7 +24,7 @@ func (c *Client) Call(method string, params any) (json.RawMessage, error) {
 	return c.client.Call(c.ctx, method, params)
 }
 func (c *Client) Initialize() error {
-	_, err := c.client.Initialize(c.ctx, "rundesk-mcp-test", "0.22.0")
+	_, err := c.client.Initialize(c.ctx, "rundesk-mcp-test", "0.23.0")
 	return err
 }
 func Stdio(ctx context.Context, cmd *exec.Cmd) (*Client, error) {

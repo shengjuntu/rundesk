@@ -17,7 +17,7 @@ func openJournal(path string) (*journal, error) {
 		return nil, e
 	}
 	db.SetMaxOpenConns(1)
-	_, e = db.Exec("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; CREATE TABLE IF NOT EXISTS state(id INTEGER PRIMARY KEY CHECK(id=1), data BLOB NOT NULL); CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT,data BLOB NOT NULL,snapshot BLOB NOT NULL); CREATE TABLE IF NOT EXISTS commands(id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL,receipt BLOB NOT NULL); CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY,fingerprint TEXT NOT NULL);")
+	_, e = db.Exec("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; CREATE TABLE IF NOT EXISTS state(id INTEGER PRIMARY KEY CHECK(id=1), data BLOB NOT NULL); CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT,data BLOB NOT NULL,snapshot BLOB NOT NULL); CREATE TABLE IF NOT EXISTS commands(id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL,receipt BLOB NOT NULL); CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY,fingerprint TEXT NOT NULL); CREATE TABLE IF NOT EXISTS checkpoints(run_id TEXT PRIMARY KEY, seq INTEGER NOT NULL, snapshot BLOB NOT NULL, consumed_by TEXT NOT NULL DEFAULT '');")
 	if e != nil {
 		db.Close()
 		return nil, e
@@ -65,6 +65,30 @@ func (j *journal) commit(s p.State, kind string, data any, commandID, fingerprin
 		}
 		if e != nil {
 			return ev, e
+		}
+	}
+	if kind == "kun/run.started" && s.ResumedFrom != nil {
+		r, err := tx.Exec("UPDATE checkpoints SET consumed_by=? WHERE run_id=? AND seq=? AND consumed_by=''", s.RunID, s.ResumedFrom.SourceRunID, s.ResumedFrom.Sequence)
+		if err != nil {
+			return ev, err
+		}
+		n, err := r.RowsAffected()
+		if err != nil {
+			return ev, err
+		}
+		if n != 1 {
+			return ev, fmt.Errorf("checkpoint already consumed or changed")
+		}
+	}
+	if p.Active(s.Status) {
+		if checkpointUnsafe(s) {
+			if _, e = tx.Exec("DELETE FROM checkpoints WHERE run_id=? AND consumed_by=''", s.RunID); e != nil {
+				return ev, e
+			}
+		} else if checkpointSafe(s) {
+			if _, e = tx.Exec("INSERT INTO checkpoints(run_id,seq,snapshot) VALUES(?,?,?) ON CONFLICT(run_id) DO UPDATE SET seq=excluded.seq,snapshot=excluded.snapshot WHERE consumed_by=''", s.RunID, ev.Sequence, []byte(p.JSON(s))); e != nil {
+				return ev, e
+			}
 		}
 	}
 	return ev, tx.Commit()
