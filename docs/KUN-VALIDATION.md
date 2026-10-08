@@ -1,54 +1,54 @@
-# Kun 0.6 / RunDesk 0.25.0 验证记录
+# RunDesk 0.26.0 / Kun 0.6 验证记录
 
-日期：2026-10-05。Linux amd64，Go 1.25.12。模型/MCP 均为本地 fixture；宿主集成测试构建并运行真实 Kun 子进程。没有连接生产服务。
+日期：2026-10-05。Linux amd64，Go 1.25.12。Kun 执行引擎及协议代码与 0.25.0 相同，本轮主要变更前端检查界面与产品版本元数据。
 
-| 检查 | 结果 |
+| 检查 | 本次结果 |
 | --- | --- |
-| `go test ./... -count=1 -timeout=180s` | 全部通过，app 包约 67 秒 |
-| `go test -race ./internal/kun ./internal/mcp ./cmd/kun -count=1 -timeout=90s` | 通过 |
-| `go test -race ./internal/app -run '^TestKun(Debug\|Checkpoint)' -count=1 -timeout=90s` | 通过，仅代表所选宿主调试/恢复用例 |
-| 元数据更新后 API/OpenAPI/Version 相关回归 | 通过 |
-| 最终差异遍历上限专项（`TestInspect`，race） | 通过 |
+| `go test ./... -count=1 -timeout=180s` | 全部通过，app 包约 68 秒；包含真实 Kun 子进程的宿主集成测试 |
 | `go vet ./...` | 通过 |
-| JavaScript/CJS `node --check` | 52 个文件通过 |
-| `node scripts/kun-inspect-test.cjs` | 通过；不等同于浏览器验收 |
-| Linux amd64 `make build` | RunDesk、Kun 均成功 |
-| Windows amd64 交叉构建 | 两个命令成功，未在 Windows 实机运行 |
-| OpenAPI 生成 | 134 个路径、161 个操作，含 evidence/diff、fromSequence 和差异结构 |
-| Playwright / 浏览器交互与布局 | 未运行；没有 Chromium，可复现脚本已更新 |
-| 真实模型、MCP、news2douyin 业务 | 未运行 |
+| JavaScript/CJS `node --check` | 54 个文件通过 |
+| `node scripts/kun-inspect-test.cjs` | 通过，保留上一版调用关联/实际输入/差异交互回归 |
+| `node scripts/kun-panels-test.cjs` | 通过，数据视图和真实 DevTools 入口在模拟 DOM/API 中执行 |
+| Linux amd64 `make build` | RunDesk、Kun 构建成功 |
+| Windows amd64 交叉构建 | 两个命令成功；未在 Windows 实机运行 |
+| OpenAPI 生成 | 134 个路径、161 个操作；本版无新增 API 路由 |
+| Playwright 浏览器/布局验收 | 未运行，环境中无 Chromium；两份脚本已更新 |
+| 真实模型、MCP、news2douyin 业务 | 未运行，Go 回归使用本地 fixture |
 
-## 本轮专项证据
+本轮没有重新执行竞态测试；执行引擎、协议与并发后端没有变化。上一版竞态结果可见 KUN-VALIDATION-0.25.0.md，不将它计作本轮测试。
 
-- worker 关闭再打开，读取 model.started 的 context/evidence，与 fixture 实际收到的 HTTP 请求 body 一致；模型最终回答不会混入原始输入。
-- 精确事件与快照身份可追溯；其他时点明确返回 state_context。
-- context/evidence/diff 不改变状态、revision 或事件，不增加模型调用，不重新执行工具。
-- 差异覆盖同一快照、反向/跨 run 可用语义；跨 session 核心比较拒绝；读取权限允许本人会话，跨应用 403。
-- 大整数精度、缺失与 null、数组位置、JSON Pointer 转义、敏感嵌套字段先脱敏、Unicode 预览、路径长度、256 变化及 20,000 节点上限。
-- 非法/重复序号、缺少固定端点、未知类型与不存在的序号拒绝；已有控制幂等/过期 revision 行为保留。
-- Node 前端逻辑测试：同名调用跨运行/步骤/服务器不串联、所选时点不泄漏未来响应、消息作为字面文本、实际输入优先于状态消息、比较忙碌状态和过期响应。
-- 之前的条件断点、MCP 审批独立、预算、检查点失效/恢复、真实 worker 终止及宿主重启用例继续通过。
+## 前端专项覆盖
 
-## 复现命令
+- 运行与快照截止过滤，不将其他运行或未来完成记录放入选定时点；离线且没有固定快照时不随意汇总历史运行。
+- 有效零用量、缺失/非法用量、输入+输出已报告合计分别处理；旧快照缺少预算模块标识时不把解码默认零当测量值。
+- 预算上限、关闭 token 阈值、超额进度条、活动/等待分列；费用未知，嵌套时长没有合计。
+- MCP 逐次询问与 never 策略组合明确显示拒绝；工具描述作为文本，不生成 HTML 元素。
+- 四模块卡片的证据定位与身份稳定；继承状态没有本 run 证据时不串到另一运行。
+- 实际 RunDeskKun.open 初始化、Network/Elements/Layers/Application/Performance/Sources 切换、通用事件跳转和共享固定快照。
+- 自动刷新保留模块展开；相同原始状态标题在不同模块中不会碰撞。
+- 历史快照固定时 Sources 仍绑定当前 run/revision；纯检查不发送 POST。
+- 控制忙碌时重复点击不发送第二次请求；终态/无审批禁用对应按钮；较旧状态响应不能回退当前控制目标。
+- 审批时继续禁用，明确允许绑定当前 callId；规则读取后状态变化时禁用旧草稿提交。
+
+模拟 DOM 不验证真实 CSS 布局、可访问性或浏览器事件差异，仍需浏览器验收。Playwright 已更新结构化面板断言、折叠控制区和可用性检查，但 UI JSON 保持 not_run。
+
+## 复现
 
 ```bash
 go test ./... -count=1 -timeout=180s
-go test -race ./internal/kun ./internal/mcp ./cmd/kun -count=1 -timeout=90s
-go test -race ./internal/app -run '^TestKun(Debug|Checkpoint)' -count=1 -timeout=90s
-go test ./internal/app -run 'Test.*(OpenAPI|Version|API)' -count=1 -timeout=90s
-go test -race ./internal/kun -run TestInspect -count=1 -timeout=60s
 go vet ./...
 node scripts/kun-inspect-test.cjs
+node scripts/kun-panels-test.cjs
 make build
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -buildvcs=false -o /tmp/rundesk.exe ./cmd/rundesk
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -buildvcs=false -o /tmp/kun.exe ./cmd/kun
 ```
 
-具备 Chromium 时再执行以下浏览器场景。本轮两个 UI JSON 均标记 not_run；新增的 Elements 展开保留、快照差异和关联 MCP 场景尚未通过浏览器实测。
+浏览器环境准备好后另行执行：
 
 ```bash
 PLAYWRIGHT_PATH=/absolute/node_modules/playwright CHROMIUM_PATH=/absolute/chromium node scripts/kun-ui-smoke.cjs
 PLAYWRIGHT_PATH=/absolute/node_modules/playwright CHROMIUM_PATH=/absolute/chromium node scripts/kun-mcp-ui-smoke.cjs
 ```
 
-未覆盖完整浏览器交互、长时间/大规模负载、故障磁盘、分布式租约、远端副作用恰好一次与生产服务行为。旧验证记录归档 KUN-VALIDATION-0.5.md / -0.4.md / -0.3.md / -0.2.md。不将旧截图或本地 fixture 结果标作本版生产验收；阶段状态见 KUN-PROGRESS.md。
+本轮不声明 K2 全部完成。统一调试服务接入、更多信号、自然语言诊断、生产环境验收和 K3/K4 范围见 KUN-PROGRESS.md。没有新增运行时依赖。

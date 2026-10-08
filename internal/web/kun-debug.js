@@ -60,7 +60,7 @@ function kunConsole({sid,getCurrent,getSelected,refresh}){
   catch(e){feedback.textContent=e.message;apply.disabled=false;}
  });apply.disabled=true;
  const propose=button("预览控制提案",()=>{
-  const current=getCurrent();if(!current||!["running","paused","pausing"].includes(current.status))throw Error("当前没有可控制的运行");
+  const current=getCurrent();const reason=kunControlReason(current,operation.value);if(reason)throw Error(reason);
   if(operation.value==="steer"&&!text.value.trim())throw Error("请输入补充指令");
   proposal={requestId:crypto.randomUUID(),runId:current.runId,expectedStateRevision:current.revision,operation:operation.value};
   if(operation.value==="steer")proposal.text=text.value;

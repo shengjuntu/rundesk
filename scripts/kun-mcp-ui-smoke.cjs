@@ -3,7 +3,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
 const {spawn}=require('node:child_process'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 (async()=>{
  const root=path.resolve(__dirname,'..'),temp=fs.mkdtempSync(path.join(os.tmpdir(),'kun-mcp-ui-'));
- const pictures=path.join(root,'docs/screenshots/0.25.0');fs.mkdirSync(pictures,{recursive:true});
+ const pictures=path.join(root,'docs/screenshots/0.26.0');fs.mkdirSync(pictures,{recursive:true});
  let server,browser,toolCalls=0,modelCalls=0,listCalls=0;const errors=[];
  const fixture=http.createServer(async(req,res)=>{
   if(req.method==='DELETE'){res.writeHead(204).end();return}
@@ -50,8 +50,8 @@ const {spawn}=require('node:child_process'),fs=require('node:fs'),os=require('no
   await page.waitForFunction(()=>document.querySelector('#messages')?.textContent.includes('MCP 调用完成'));assert.equal(toolCalls,1);
   await page.locator('#kun-debug-open').click();const dialog=page.locator('#kun-devtools');
   await dialog.getByRole('button',{name:'Application · MCP',exact:true}).click();
-  await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-detail')?.textContent.includes('"lookup"'));
-  assert((await dialog.locator('.kun-detail').innerText()).includes('"prompt"'));await page.screenshot({path:pictures+'/kun-mcp-application.png'});
+  await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-application')?.textContent.includes('lookup'));
+  assert((await dialog.locator('.kun-application').innerText()).includes('每次调用前询问'));await page.screenshot({path:pictures+'/kun-mcp-application.png'});
   await dialog.getByRole('button',{name:'Network · 调用',exact:true}).click();await dialog.locator('.kun-call-list button').filter({hasText:'tools/call · 已返回'}).click();
   assert((await dialog.locator('.kun-detail').innerText()).includes('Shanghai 24°C'));await page.screenshot({path:pictures+'/kun-mcp-network.png'});
   await dialog.getByRole('button',{name:'Elements · 上下文',exact:true}).click();await dialog.locator('.kun-call-list button').first().click();

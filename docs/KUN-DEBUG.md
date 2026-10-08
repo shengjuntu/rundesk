@@ -1,6 +1,6 @@
 # Kun 调试控制与 Console（0.6 更新）
 
-RunDesk 0.25.0 继续推进 K2。本版检查视图与快照差异见 [KUN-INSPECT.md](KUN-INSPECT.md)。在既有单步、控制回执及检查点恢复上，增加四个安全边界的条件断点和无需模型的 Console。它没有 Go 源码行断点，也没有自然语言诊断 Agent。
+RunDesk 0.26.0 继续推进 K2。本版检查视图与快照差异见 [KUN-INSPECT.md](KUN-INSPECT.md)。在既有单步、控制回执及检查点恢复上，增加四个安全边界的条件断点和无需模型的 Console。它没有 Go 源码行断点，也没有自然语言诊断 Agent。
 
 ## 设置断点
 
@@ -75,4 +75,6 @@ Worker 协议 v6 扩展 `query` 的 evidence/diff 与 fromSequence；保留 v5 �
 
 ## 仍待完成
 
-K2 具备基础条件断点、结构化 Console、单步/steer、控制幂等与安全检查点恢复，但不宣称完整 DevTools 验收。自然语言诊断、统一跨后端 DebugService/MCP 调试工具、同参数连续失败信号、上下文容量/费用/模块条件、高级上下文来源图、其余面板结构化和浏览器/生产服务验收尚未完成。K3 分叉与可配置模块组合、K4 轨迹编译仍未实现。
+K2 具备基础条件断点、结构化 Console、单步/steer、控制幂等与安全检查点恢复，但不宣称完整 DevTools 验收。自然语言诊断、统一跨后端 DebugService/MCP 调试工具、同参数连续失败信号、上下文容量/费用/模块条件、高级上下文来源图和浏览器/生产服务验收尚未完成。K3 分叉与可配置模块组合、K4 轨迹编译仍未实现。
+
+Sources 的结构化状态、按钮可用性和其余面板见 [KUN-PANELS.md](KUN-PANELS.md)。

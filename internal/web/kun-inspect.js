@@ -90,3 +90,9 @@ function kunDiffView({sid,getSelected}){
  function update(){const selected=getSelected()?.data;set.disabled=!selected;compare.disabled=busy||!baseline||!selected;target.textContent="起点："+(baseline?"#"+baseline.sequence+" · "+baseline.runId:"未选择")+"；终点："+(selected?"#"+selected.sequence+" · "+selected.runId:"未选择固定快照");}
  return {node,update};
 }
+
+// Stable semantic keys preserve expansion when newer cards/rows are inserted.
+function kunDetailKey(node){
+ const parts=[];for(let current=node;current;current=current.parentElement){if(current.dataset?.module)parts.unshift("module:"+current.dataset.module);if(current.tagName==="DETAILS")parts.unshift(current.dataset.kunKey||current.querySelector(":scope > summary")?.textContent||"");}
+ return JSON.stringify(parts);
+}

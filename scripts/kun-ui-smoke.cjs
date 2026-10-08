@@ -6,7 +6,7 @@ const assert=require('assert');
 const path=require('node:path'),os=require('node:os');
 const root=path.resolve(__dirname,'..');
 const scratch=fs.mkdtempSync(path.join(os.tmpdir(),'rundesk-kun-ui-'));
-const pictures=path.join(root,'docs/screenshots/0.25.0');fs.mkdirSync(pictures,{recursive:true});
+const pictures=path.join(root,'docs/screenshots/0.26.0');fs.mkdirSync(pictures,{recursive:true});
 (async()=>{
  let calls=0,server,browser;const requests=[];const errors=[];
  const model=http.createServer(async(req,res)=>{
@@ -45,6 +45,8 @@ const pictures=path.join(root,'docs/screenshots/0.25.0');fs.mkdirSync(pictures,{
   await dialog.getByRole('button',{name:'Sources · 控制',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-detail')?.textContent.includes('"status": "paused"'));
   assert.equal(calls,0,'breakpoint allowed model call');
+  assert(await dialog.getByRole('button',{name:'允许本次工具调用',exact:true}).isDisabled());
+  assert(await dialog.getByRole('button',{name:'暂停',exact:true}).isDisabled());
   await dialog.getByRole('button',{name:'单步',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-detail')?.textContent.includes('before_tool'));
   assert.equal(calls,1);
@@ -75,13 +77,12 @@ const pictures=path.join(root,'docs/screenshots/0.25.0');fs.mkdirSync(pictures,{
   await page.screenshot({path:pictures+'/kun-diff.png'});
   await dialog.locator('.kun-call-list button').last().click();
   await dialog.getByRole('button',{name:'Layers · 模块',exact:true}).click();
-  const layers=JSON.parse(await dialog.locator('.kun-detail').innerText());
-  assert.equal(layers.sequence,selectedSnapshot);assert.equal(Object.keys(layers.modules).length,4);assert.equal(layers.harness.id,'tool-loop-v1');
-  await dialog.getByRole('button',{name:'刷新记录',exact:true}).click();assert.equal(JSON.parse(await dialog.locator('.kun-detail').innerText()).sequence,selectedSnapshot);
+  assert.equal(Number(await dialog.locator('.kun-layers').getAttribute('data-sequence')),selectedSnapshot);assert.equal(await dialog.locator('.kun-module-card').count(),4);assert((await dialog.locator('.kun-layers').innerText()).includes('tool-loop-v1'));
+  await dialog.getByRole('button',{name:'刷新记录',exact:true}).click();assert.equal(Number(await dialog.locator('.kun-panel').getAttribute('data-sequence')),selectedSnapshot);
   await page.screenshot({path:pictures+'/kun-layers.png'});
-  await dialog.getByRole('button',{name:'Application · MCP',exact:true}).click();assert.equal(JSON.parse(await dialog.locator('.kun-detail').innerText()).sequence,selectedSnapshot);
+  await dialog.getByRole('button',{name:'Application · MCP',exact:true}).click();assert.equal(Number(await dialog.locator('.kun-panel').getAttribute('data-sequence')),selectedSnapshot);
   await dialog.getByRole('button',{name:'跟随现场',exact:true}).click();
-  await dialog.getByRole('button',{name:'Layers · 模块',exact:true}).click();assert.equal(JSON.parse(await dialog.locator('.kun-detail').innerText()).budget.toolCalls,1);
+  await dialog.getByRole('button',{name:'Layers · 模块',exact:true}).click();assert.equal(Number(await dialog.locator('.kun-layers').getAttribute('data-sequence')),0);
   await dialog.getByRole('button',{name:'Performance · 用量',exact:true}).click();assert((await dialog.locator('.kun-detail').innerText()).includes('110'));
   await dialog.getByRole('button',{name:'关闭',exact:true}).click();
   assert((await page.locator('#messages').innerText()).includes('Kun 独立进程验证成功'));
@@ -92,11 +93,13 @@ const pictures=path.join(root,'docs/screenshots/0.25.0');fs.mkdirSync(pictures,{
   await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-detail')?.textContent.includes('"status": "paused"'));
   await dialog.getByRole('button',{name:'停止',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-detail')?.textContent.includes('"status": "interrupted"'));
+  await dialog.locator('.kun-control-section > summary').filter({hasText:'检查点恢复'}).click();
   await dialog.getByRole('button',{name:'检查恢复条件',exact:true}).click();
   await page.waitForFunction(()=>[...document.querySelectorAll('#kun-devtools button')].some(b=>b.textContent==='从检查点继续'&&!b.disabled));
   await dialog.getByRole('button',{name:'从检查点继续',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-detail')?.textContent.includes('"status": "paused"'));
   assert.equal(calls,2,'recovery inspection or breakpoint issued a model call');
+  await dialog.locator('.kun-control-section > summary').filter({hasText:'编辑当前断点'}).click();
   await dialog.getByRole('button',{name:'读取当前断点',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-controls')?.textContent.includes('已读取规则版本'));
   const policy=dialog.locator('.kun-controls .kun-policy-editor');
@@ -125,6 +128,6 @@ const pictures=path.join(root,'docs/screenshots/0.25.0');fs.mkdirSync(pictures,{
   await page.screenshot({path:pictures+'/kun-mobile.png'});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false,'mobile overflow');
   assert.deepEqual(errors,[],'browser errors');
-  const report={passed:true,modelCalls:calls,checks:['UI config','model/tool step boundaries','steer before next request','actual request context tree','snapshot diff','expanded details survive refresh','snapshot inspection','reported usage','budget settings','four module states','fixed snapshot across panels and refresh','live inspection','conditional after-model breakpoint','Console read-only query and control proposal','explicit checkpoint recovery','reload persistence','mobile viewport'],pageErrors:errors};fs.writeFileSync(path.join(root,'docs/kun-ui-validation.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
+  const report={passed:true,modelCalls:calls,checks:['UI config','model/tool step boundaries','steer before next request','actual request context tree','snapshot diff','expanded details survive refresh','snapshot inspection','reported usage','budget settings','four structured module cards','current Sources control gating','MCP state and performance tables','fixed snapshot across panels and refresh','live inspection','conditional after-model breakpoint','Console read-only query and control proposal','explicit checkpoint recovery','reload persistence','mobile viewport'],pageErrors:errors};fs.writeFileSync(path.join(root,'docs/kun-ui-validation.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
  }finally{if(browser)await browser.close();if(server&&server.exitCode===null&&server.signalCode===null){server.kill('SIGTERM');await new Promise(resolve=>server.once('exit',resolve));}model.closeAllConnections();model.close();fs.rmSync(scratch,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1});

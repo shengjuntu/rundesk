@@ -10,9 +10,9 @@
 
 ![RunDesk 对话界面](docs/screenshots/0.16.0/chat-zh.png)
 
-## Kun 内置引擎（0.25.0）
+## Kun 内置引擎（0.26.0）
 
-Kun 0.6 新增请求/结果关联的调用视图、有序实际输入检查，以及先脱敏、带截断标记的只读快照差异。保留条件断点、Console 控制与安全检查点恢复。协议 v6，须同步更新两个可执行文件。使用方式见 [检查与差异](docs/KUN-INSPECT.md)、[调试说明](docs/KUN-DEBUG.md)；阶段状态见 [计划完成度](docs/KUN-PROGRESS.md)。
+RunDesk 0.26.0 新增 Sources、Performance、Application、Layers 结构化视图及统一事件证据跳转，控制按钮按当前状态提示可用性。用量缺失按未知显示，模型/工具/MCP 耗时分开展示。Kun 保持 0.6.0 / 协议 v6。使用方式见 [面板说明](docs/KUN-PANELS.md)、[检查与差异](docs/KUN-INSPECT.md)，阶段状态见 [计划完成度](docs/KUN-PROGRESS.md)。
 
 
 Kun 与 RunDesk 同仓库、分进程运行。使用 Go 1.25.12+ 执行 `make build`，然后运行 `./bin/rundesk --data ./data`；在配置页的 **Agent 引擎** 中选择 Kun、设置模型服务并新建会话。Kun 不需要安装 Codex。

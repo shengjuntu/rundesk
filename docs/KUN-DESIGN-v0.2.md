@@ -1,4 +1,4 @@
-> 实现进度：RunDesk 0.25.0 / Kun 0.6 在固定模块、预算、MCP、安全恢复、条件断点和 Console 基础上，增加调用证据关联、有序实际输入检查及只读快照差异。K2 仍待浏览器/生产验收与完整调试整合；K3 仅有固定模块前置设施，分叉与可配置组合未实现；K4 未实现。逐阶段证据见 [KUN-PROGRESS.md](KUN-PROGRESS.md)，当前范围以 [KUN.md](KUN.md) 为准。
+> 实现进度：RunDesk 0.26.0 / Kun 0.6 在固定模块、预算、MCP、安全恢复、条件断点和 Console 基础上，已增加调用证据关联、有序实际输入检查、只读快照差异，以及 Sources/Performance/Application/Layers 结构化视图与事件跳转。K2 仍待浏览器/生产验收与完整调试整合；K3 仅有固定模块前置设施，分叉与可配置组合未实现；K4 未实现。逐阶段证据见 [KUN-PROGRESS.md](KUN-PROGRESS.md)，当前范围以 [KUN.md](KUN.md) 为准。
 
 # Kun + Agent DevTools：RunDesk 内置 Agent Loop 与调试器设计
 
