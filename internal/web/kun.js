@@ -3,6 +3,9 @@ async function renderKunSettings(target){
  const cfg={kind:"codex",endpoint:"http://127.0.0.1:8000/v1",model:"",apiKeyEnv:"",systemPrompt:"",maxSteps:20,timeoutSeconds:120,allowWrite:false,pauseBeforeModel:false,...i.agentRuntime};
  if(!cfg.kind)cfg.kind="codex";
  cfg.budget={maxToolCalls:64,maxTotalTokens:0,maxActiveSeconds:900,maxConsecutiveFailures:3,...cfg.budget};
+ // Persisted Codex/legacy configs can contain numeric zero defaults. Match Config.Normalized.
+ for(const [field,fallback]of [["maxSteps",20],["timeoutSeconds",120]])if(cfg[field]===0)cfg[field]=fallback;
+ for(const [field,fallback]of [["maxToolCalls",64],["maxActiveSeconds",900],["maxConsecutiveFailures",3]])if(cfg.budget[field]===0)cfg.budget[field]=fallback;
  const field=(label,value,type="text")=>{const input=el("input",{type,value:value??""});return {input,node:el("label",{},label,input)}};
  const kind=el("select",{},el("option",{value:"codex"},"Codex"),el("option",{value:"kun"},"Kun · 独立进程"));kind.value=cfg.kind;
  const endpoint=field("OpenAI 兼容 API 基础地址（包含 /v1）",cfg.endpoint);
@@ -209,7 +212,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 // Kun approvals belong to its persisted loop state, not to Codex server requests.
 async function refreshKunApproval(sid){
  let current;
- try{acceptCurrent(await api("/sessions/"+sid+"/kun/state"));}catch(e){if(e.code!=="kun_offline")throw e;}
+ try{current=await api("/sessions/"+sid+"/kun/state");}catch(e){if(e.code!=="kun_offline")throw e;}
  if(state.session?.id!==sid)return;
  const target=$("#approvals"),approval=current?.approval;
  if(!approval||approval.decision){target.replaceChildren();state.approvalSignature=null;return;}

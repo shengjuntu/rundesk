@@ -1,4 +1,4 @@
-> 实现进度：RunDesk 0.26.0 / Kun 0.6 在固定模块、预算、MCP、安全恢复、条件断点和 Console 基础上，已增加调用证据关联、有序实际输入检查、只读快照差异，以及 Sources/Performance/Application/Layers 结构化视图与事件跳转。K2 仍待浏览器/生产验收与完整调试整合；K3 仅有固定模块前置设施，分叉与可配置组合未实现；K4 未实现。逐阶段证据见 [KUN-PROGRESS.md](KUN-PROGRESS.md)，当前范围以 [KUN.md](KUN.md) 为准。
+> 实现进度：RunDesk 0.28.0 / Kun 0.6 已有固定模块、预算、安全恢复、条件断点、快照差异和结构化 DevTools；现已接入统一只读 DebugService/MCP，并增加 Codex/Kun 宿主轮次/步骤/异常/统计重建及只读检查界面。K2 仍待真实服务验收与完整诊断整合，K3/K4 尚未完成。逐阶段证据见 [KUN-PROGRESS.md](KUN-PROGRESS.md)，验证结果见 [KUN-VALIDATION.md](KUN-VALIDATION.md)。
 
 # Kun + Agent DevTools：RunDesk 内置 Agent Loop 与调试器设计
 
@@ -34,7 +34,7 @@ Agent DevTools 是建立在统一调试协议上的交互工作台：Network、E
 
 ## 2. v0.19.4 实际已有的基础
 
-以下来自本次源码静态检查；没有执行完整测试，也没有连接真实 Codex、模型或 MCP 服务。
+以下为方案形成时的源码静态核对记录；当前版本的测试与验收状态以 KUN-VALIDATION.md 为准。
 
 | 源码位置 | 现有实现 | Kun 接入方式 |
 | --- | --- | --- |

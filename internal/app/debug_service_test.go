@@ -157,7 +157,7 @@ func TestDebugMemberBoundaryAndKunOffline(t *testing.T) {
 	m, _, _, viewer, code, shared, private := userFixture(t)
 	h := NewHandler(m, userTestAdmin, true)
 	root := "/api/v1/member/" + viewer.Grants[0].ID + "/sessions/"
-	for _, suffix := range []string{"/debug/capabilities", "/debug/query?kind=events", "/debug/query?kind=run"} {
+	for _, suffix := range []string{"/debug/capabilities", "/debug/query?kind=events", "/debug/query?kind=run", "/debug/query?kind=runs", "/debug/query?kind=steps", "/debug/query?kind=issues", "/debug/query?kind=statistics"} {
 		for _, test := range []struct {
 			sid    string
 			status int
@@ -191,6 +191,12 @@ func TestDebugMemberBoundaryAndKunOffline(t *testing.T) {
 	for _, q := range []d.Query{{Kind: "run"}, {Kind: "snapshot", Sequence: 1}, {Kind: "diff", Sequence: 1, FromSequence: 1}} {
 		if _, e = service.Query(context.Background(), ks.ID, q); e == nil {
 			t.Fatal("offline query succeeded")
+		}
+	}
+	for _, kind := range []string{"runs", "steps", "issues", "statistics"} {
+		result, e := service.Query(context.Background(), ks.ID, d.Query{Kind: kind})
+		if e != nil || result.Source != "host_projection" {
+			t.Fatal(kind, result, e)
 		}
 	}
 	if len(km.handles) != 0 {

@@ -3,7 +3,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
 const {spawn}=require('node:child_process'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 (async()=>{
  const root=path.resolve(__dirname,'..'),temp=fs.mkdtempSync(path.join(os.tmpdir(),'kun-mcp-ui-'));
- const pictures=path.join(root,'docs/screenshots/0.27.0');fs.mkdirSync(pictures,{recursive:true});
+ const pictures=path.join(root,'docs/screenshots/0.28.0');fs.mkdirSync(pictures,{recursive:true});
  let server,browser,toolCalls=0,modelCalls=0,listCalls=0;const errors=[];
  const fixture=http.createServer(async(req,res)=>{
   if(req.method==='DELETE'){res.writeHead(204).end();return}
@@ -32,7 +32,7 @@ const {spawn}=require('node:child_process'),fs=require('node:fs'),os=require('no
   await page.locator('#settings-button').click();await page.locator('[data-settings-tab=kun]').click();
   const form=page.locator('.kun-config');await form.locator('select').selectOption('kun');
   await form.locator('label').filter({hasText:'基础地址'}).locator('input').fill(`http://127.0.0.1:${model.address().port}/v1`);
-  await form.locator('label').filter({hasText:'模型名称'}).locator('input').fill('kun-mcp-fixture');await form.locator('button[type=submit]').click();
+  await form.locator('label').filter({hasText:'模型名称'}).locator('input').fill('kun-mcp-fixture');assert.equal(await form.locator(':invalid').count(),0,'initial engine defaults are invalid');await form.locator('button[type=submit]').click();
   await page.waitForFunction(()=>document.querySelector('.kun-config [role=status]')?.textContent.includes('已保存'));
   await page.locator('[data-settings-tab=mcp]').click();
   const editor=page.locator('details.configuration-editor');if(await editor.count())await editor.locator('summary').click();

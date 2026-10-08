@@ -2,17 +2,18 @@
 package tracequery
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"github.com/shengjuntu/rundesk/internal/redaction"
 	_ "modernc.org/sqlite"
 	"net/url"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 type Reader struct {
@@ -24,27 +25,38 @@ type Reader struct {
 	loaded    bool
 }
 type Run struct {
-	ID           string `json:"id"`
-	Question     string `json:"question"`
-	Status       string `json:"status"`
-	Start        string `json:"start"`
-	End          string `json:"end,omitempty"`
-	InputEventID int64  `json:"inputEventId"`
+	ID           string  `json:"id"`
+	Question     string  `json:"question"`
+	Status       string  `json:"status"`
+	Start        string  `json:"start"`
+	End          string  `json:"end,omitempty"`
+	InputEventID int64   `json:"inputEventId"`
+	Association  string  `json:"association"`
+	EventIDs     []int64 `json:"eventIds"`
 }
 type Step struct {
-	ID          string         `json:"id"`
-	RunID       string         `json:"runId"`
-	Type        string         `json:"type"`
-	Title       string         `json:"title"`
-	Status      string         `json:"status"`
-	Start       string         `json:"start,omitempty"`
-	End         string         `json:"end,omitempty"`
-	DurationMS  *int64         `json:"durationMs,omitempty"`
-	Point       bool           `json:"point"`
-	EventIDs    []int64        `json:"eventIds"`
-	Payload     map[string]any `json:"preview"`
-	PreviewOnly bool           `json:"previewOnly"`
-	Clock       string         `json:"clock"`
+	ID                 string         `json:"id"`
+	RunID              string         `json:"runId"`
+	Type               string         `json:"type"`
+	Title              string         `json:"title"`
+	Status             string         `json:"status"`
+	Start              string         `json:"start,omitempty"`
+	End                string         `json:"end,omitempty"`
+	DurationMS         *int64         `json:"durationMs,omitempty"`
+	Point              bool           `json:"point"`
+	EventIDs           []int64        `json:"eventIds"`
+	Payload            map[string]any `json:"preview"`
+	PreviewOnly        bool           `json:"previewOnly"`
+	Clock              string         `json:"clock"`
+	Association        string         `json:"association"`
+	StartObserved      bool           `json:"startObserved"`
+	EndObserved        bool           `json:"endObserved"`
+	Missing            []string       `json:"missing"`
+	Issues             []string       `json:"issues"`
+	PreviewTruncated   bool           `json:"previewTruncated"`
+	EvidenceTruncated  bool           `json:"evidenceTruncated"`
+	WorkerSequences    []int64        `json:"workerSequences,omitempty"`
+	ReportedDurationMS *int64         `json:"reportedDurationMs,omitempty"`
 }
 type Args struct {
 	RunID   string `json:"runId,omitempty"`
@@ -58,8 +70,11 @@ type Args struct {
 }
 
 func Open(path, session string, through int64) (*Reader, error) {
-	if session == "" || through <= 0 {
-		return nil, errors.New("source session and positive snapshot cursor required")
+	return OpenContext(context.Background(), path, session, through)
+}
+func OpenContext(ctx context.Context, path, session string, through int64) (*Reader, error) {
+	if session == "" || through < 0 {
+		return nil, errors.New("source session and nonnegative fixed snapshot cursor required")
 	}
 	absolute, e := filepath.Abs(path)
 	if e != nil {
@@ -81,7 +96,7 @@ func Open(path, session string, through int64) (*Reader, error) {
 	}
 	db.SetMaxOpenConns(1)
 	var exists int
-	e = db.QueryRow("SELECT count(*) FROM objects WHERE kind='session' AND id=?", session).Scan(&exists)
+	e = db.QueryRowContext(ctx, "SELECT count(*) FROM objects WHERE kind='session' AND id=?", session).Scan(&exists)
 	if e != nil || exists != 1 {
 		db.Close()
 		return nil, errors.New("source session is unavailable")
@@ -102,265 +117,94 @@ func obj(v any) map[string]any {
 	}
 	return m
 }
-func clipped(v any, budget *int, depth int) any {
-	if depth > 10 || *budget <= 0 {
-		return "[preview truncated]"
-	}
-	switch x := v.(type) {
-	case string:
-		chars := []rune(x)
-		n := len(chars)
-		if n > 4096 {
-			n = 4096
-		}
-		if n > *budget {
-			n = *budget
-		}
-		*budget -= n
-		if n < len(chars) {
-			return string(chars[:n]) + " [preview truncated]"
-		}
-		return x
-	case []any:
-		out := []any{}
-		for i, v := range x {
-			if i >= 64 || *budget <= 0 {
-				out = append(out, "[preview truncated]")
-				break
-			}
-			out = append(out, clipped(v, budget, depth+1))
-		}
-		return out
-	case map[string]any:
-		out := map[string]any{}
-		keys := []string{}
-		for k := range x {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			out[k] = clipped(x[k], budget, depth+1)
-		}
-		return out
-	default:
-		return v
-	}
-}
 func isFailure(s string) bool {
 	return s == "failed" || s == "error" || s == "declined" || s == "interrupted" || s == "expired" || s == "cancelled" || s == "canceled"
 }
-func (r *Reader) load() error {
+
+// The same fixed-snapshot projector serves legacy trace tools and DebugService.
+func (r *Reader) load(ctx context.Context) error {
 	if r.loaded {
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 8*time.Second)
 	defer cancel()
-	rows, e := r.db.QueryContext(ctx, `SELECT id,time,method,data FROM events WHERE session=? AND id<=? AND method IN ('run/input','run/steer','turn/started','turn/completed','run/state','item/started','item/completed','approval/pending','approval/resolved','approval/expired','error','warning','configWarning','thread/compacted') ORDER BY id`, r.SessionID, r.Through)
-	if e != nil {
-		return e
+	var count, total, largest int64
+	where := ` FROM events WHERE session=? AND id<=? AND (` + lifecycleSQL + `)`
+	if err := r.db.QueryRowContext(ctx, `SELECT count(*),coalesce(sum(length(CAST(data AS BLOB))),0),coalesce(max(length(CAST(data AS BLOB))),0)`+where, r.SessionID, r.Through).Scan(&count, &total, &largest); err != nil {
+		return err
+	}
+	if count > 20000 || total > 64<<20 || largest > 8<<20 {
+		return ErrProjectionLimit
+	}
+	rows, err := r.db.QueryContext(ctx, `SELECT id,time,method,data`+where+` ORDER BY id`, r.SessionID, r.Through)
+	if err != nil {
+		return err
 	}
 	defer rows.Close()
-	runs := []Run{}
-	steps := []Step{}
-	runIndex := map[string]int{}
-	turns := map[string]string{}
-	indices := map[string]int{}
-	current := ""
-	count := 0
+	index := newProjection()
 	for rows.Next() {
-		count++
-		if count > 100000 {
-			return errors.New("snapshot exceeds 100,000 lifecycle records; narrow the source session")
+		if err = ctx.Err(); err != nil {
+			return err
 		}
 		var id int64
 		var at, method string
 		var raw []byte
-		if e = rows.Scan(&id, &at, &method, &raw); e != nil {
-			return e
+		if err = rows.Scan(&id, &at, &method, &raw); err != nil {
+			return err
 		}
-		var d map[string]any
-		if e = json.Unmarshal(raw, &d); e != nil {
-			return e
+		var value any
+		decoder := json.NewDecoder(bytes.NewReader(raw))
+		decoder.UseNumber()
+		if err = decoder.Decode(&value); err != nil {
+			return errors.New("invalid retained lifecycle JSON")
 		}
-		p := obj(d["params"])
-		if method == "run/input" {
-			current = str(d["runId"])
-			if current == "" {
-				current = fmt.Sprint("observed-", id)
-			}
-			question := []rune(str(obj(d["input"])["text"]))
-			if len(question) > 2000 {
-				question = append(question[:2000], []rune(" [preview truncated]")...)
-			}
-			runs = append(runs, Run{ID: current, Question: string(question), Status: "running", Start: at, InputEventID: id})
-			runIndex[current] = len(runs) - 1
-		}
-		tid := str(p["turnId"])
-		if tid == "" {
-			tid = str(obj(p["turn"])["id"])
-		}
-		rid := str(d["runId"])
-		if rid == "" {
-			rid = turns[tid]
-		}
-		if rid == "" {
-			rid = current
-		}
-		if rid == "" {
-			rid = "observed"
-			runs = append(runs, Run{ID: rid, Question: "已有原生事件", Status: "unknown", Start: at})
-			runIndex[rid] = len(runs) - 1
-			current = rid
-		}
-		if tid != "" {
-			turns[tid] = rid
-		}
-		ri, known := runIndex[rid]
-		if !known {
-			return errors.New("journal run references are incomplete")
-		}
-		if method == "turn/completed" || method == "run/state" {
-			status := str(obj(p["turn"])["status"])
-			if method == "run/state" {
-				status = str(d["status"])
-			}
-			if status == "" {
-				status = "unknown"
-			}
-			runs[ri].Status = status
-			runs[ri].End = at
-			if d["error"] == nil && obj(p["turn"])["error"] == nil {
-				continue
-			}
-		}
-		if method == "turn/started" {
-			continue
-		}
-		item := obj(p["item"])
-		kind := str(item["type"])
-		title := kind
-		key := ""
-		status := "completed"
-		start, end := at, at
-		payload := d
-		switch method {
-		case "item/started", "item/completed":
-			key = rid + ":" + tid + ":" + str(item["id"])
-			payload = item
-			switch kind {
-			case "commandExecution":
-				title = str(item["command"])
-			case "mcpToolCall":
-				title = str(item["server"]) + " / " + str(item["tool"])
-			case "webSearch":
-				title = "Web search"
-			case "agentMessage":
-				title = "Assistant reply"
-			case "reasoning":
-				title = "Public reasoning summary"
-			}
-			if method == "item/started" {
-				status = "running"
-				end = ""
-			} else {
-				start = ""
-				if v := str(item["status"]); v != "" {
-					status = v
-				}
-				code, hasCode := item["exitCode"].(float64)
-				if hasCode && code != 0 || item["success"] == false || item["error"] != nil || obj(item["result"])["isError"] == true {
-					status = "failed"
-				}
-			}
-		case "approval/pending":
-			key = "approval:" + str(d["id"])
-			kind = "approval"
-			title = "Approval"
-			status = "pending"
-			end = ""
-		case "approval/resolved":
-			key = "approval:" + str(d["id"])
-			kind = "approval"
-			title = "Approval"
-			status = "accepted"
-			start = ""
-			if d["decision"] == "decline" || d["decision"] == "cancel" {
-				status = "declined"
-			}
-		default:
-			kind = method
-			title = method
-			if method == "error" {
-				status = "failed"
-			}
-			if method == "warning" || method == "configWarning" {
-				status = "warning"
-			}
-		}
-		if key == "" {
-			key = fmt.Sprint("event:", id)
-		}
-		index, exists := indices[key]
-		if !exists {
-			index = len(steps)
-			indices[key] = index
-			point := method != "item/started" && method != "item/completed" && kind != "approval"
-			steps = append(steps, Step{ID: fmt.Sprint("step-", id), RunID: rid, Type: kind, Title: title, Start: start, Point: point, PreviewOnly: true, Clock: "journal receive time; durations require both lifecycle boundaries", Payload: map[string]any{}})
-		}
-		s := &steps[index]
-		if title != "" && title != " / " {
-			s.Title = title
-		}
-		s.Status = status
-		s.End = end
-		s.EventIDs = append(s.EventIDs, id)
-		if len(s.EventIDs) > 16 {
-			s.EventIDs = append(s.EventIDs[:1], s.EventIDs[len(s.EventIDs)-15:]...)
-		}
-		budget := 8192
-		preview := obj(clipped(payload, &budget, 0))
-		for k, v := range preview {
-			s.Payload[k] = v
-		}
-		if s.Start != "" && s.End != "" && !s.Point {
-			a, x := time.Parse(time.RFC3339Nano, s.Start)
-			b, y := time.Parse(time.RFC3339Nano, s.End)
-			if x == nil && y == nil && !b.Before(a) {
-				n := b.Sub(a).Milliseconds()
-				s.DurationMS = &n
-			}
-		}
+		index.ingest(id, at, method, obj(redaction.Fields(value)))
 	}
-	if e = rows.Err(); e != nil {
-		return e
+	if err = rows.Err(); err != nil {
+		return err
 	}
-	for i := range steps {
-		s := &steps[i]
-		if (s.Status == "running" || s.Status == "pending") && runs[runIndex[s.RunID]].Status != "running" {
-			s.Status = "unknown"
-		}
-	}
-	r.runs = runs
-	r.steps = steps
+	index.finish()
+	r.runs = index.runs
+	r.steps = index.steps
 	r.loaded = true
 	return nil
 }
 func (r *Reader) Runs() ([]Run, error) {
-	if e := r.load(); e != nil {
+	if e := r.load(context.Background()); e != nil {
 		return nil, e
 	}
 	return r.runs, nil
 }
 func (r *Reader) Call(name string, a Args) (any, error) {
-	if a.Offset < 0 || a.Limit < 0 || a.Limit > 20000 || len(a.Query) > 1000 {
+	return r.CallContext(context.Background(), name, a)
+}
+func (r *Reader) CallContext(ctx context.Context, name string, a Args) (any, error) {
+	if a.Offset < 0 || a.Limit < 0 || a.Limit > 20000 || utf8.RuneCountInString(a.Query) > 1000 {
 		return nil, errors.New("invalid query limits")
 	}
 	if name == "trace_read_event" {
 		var raw []byte
 		var method, at string
-		e := r.db.QueryRow("SELECT data,method,time FROM events WHERE session=? AND id=? AND id<=?", r.SessionID, a.EventID, r.Through).Scan(&raw, &method, &at)
+		var size int64
+		if e := r.db.QueryRowContext(ctx, "SELECT length(CAST(data AS BLOB)) FROM events WHERE session=? AND id=? AND id<=?", r.SessionID, a.EventID, r.Through).Scan(&size); e != nil {
+			return nil, errors.New("event is outside the source snapshot or unavailable")
+		}
+		if size > 8<<20 {
+			return nil, ErrProjectionLimit
+		}
+		e := r.db.QueryRowContext(ctx, "SELECT data,method,time FROM events WHERE session=? AND id=? AND id<=?", r.SessionID, a.EventID, r.Through).Scan(&raw, &method, &at)
 		if e != nil {
 			return nil, errors.New("event is outside the source snapshot or unavailable")
+		}
+		var value any
+		decoder := json.NewDecoder(bytes.NewReader(raw))
+		decoder.UseNumber()
+		if e = decoder.Decode(&value); e != nil {
+			return nil, e
+		}
+		raw, e = json.Marshal(redaction.Fields(value))
+		if e != nil {
+			return nil, e
 		}
 		chars := []rune(string(raw))
 		if a.Offset > len(chars) {
@@ -376,7 +220,7 @@ func (r *Reader) Call(name string, a Args) (any, error) {
 		}
 		return map[string]any{"eventId": a.EventID, "method": method, "time": at, "jsonChunk": string(chars[a.Offset:end]), "offset": a.Offset, "nextOffset": end, "totalCharacters": len(chars), "hasMore": end < len(chars), "sessionId": r.SessionID, "snapshotThrough": r.Through}, nil
 	}
-	if e := r.load(); e != nil {
+	if e := r.load(ctx); e != nil {
 		return nil, e
 	}
 	if a.RunID != "" {
@@ -392,7 +236,7 @@ func (r *Reader) Call(name string, a Args) (any, error) {
 	}
 	if name == "trace_get_step" {
 		for _, s := range r.steps {
-			if s.ID == a.StepID {
+			if s.ID == a.StepID && (a.RunID == "" || a.RunID == s.RunID) {
 				return s, nil
 			}
 		}
@@ -403,17 +247,24 @@ func (r *Reader) Call(name string, a Args) (any, error) {
 		if offset > len(r.runs) {
 			offset = len(r.runs)
 		}
-		end := offset + 50
+		limit := a.Limit
+		if limit == 0 || limit > 50 {
+			limit = 50
+		}
+		end := offset + limit
 		if end > len(r.runs) {
 			end = len(r.runs)
 		}
-		return map[string]any{"sessionId": r.SessionID, "snapshotThrough": r.Through, "runs": r.runs[offset:end], "total": len(r.runs), "nextOffset": end, "hasMore": end < len(r.runs)}, nil
+		return map[string]any{"sessionId": r.SessionID, "snapshotThrough": r.Through, "projectionVersion": 2, "runs": r.runs[offset:end], "total": len(r.runs), "nextOffset": end, "hasMore": end < len(r.runs)}, nil
 	}
-	if name != "trace_find_steps" && name != "trace_statistics" {
+	if name != "trace_find_steps" && name != "trace_statistics" && name != "trace_find_issues" {
 		return nil, errors.New("unknown read-only tool")
 	}
 	found := []Step{}
 	for _, s := range r.steps {
+		if name == "trace_find_issues" && len(s.Issues) == 0 {
+			continue
+		}
 		if a.RunID != "" && s.RunID != a.RunID || a.Type != "" && s.Type != a.Type || a.Status != "" && s.Status != a.Status {
 			continue
 		}
@@ -430,7 +281,7 @@ func (r *Reader) Call(name string, a Args) (any, error) {
 		for _, s := range found {
 			statuses[s.Status]++
 			types[s.Type]++
-			if isFailure(s.Status) || s.Status == "warning" || s.Status == "pending" {
+			if len(s.Issues) > 0 {
 				issues++
 			}
 			if s.DurationMS != nil {
@@ -440,7 +291,7 @@ func (r *Reader) Call(name string, a Args) (any, error) {
 				unknown++
 			}
 		}
-		return map[string]any{"steps": len(found), "byStatus": statuses, "byType": types, "attentionSteps": issues, "completeDurationSteps": complete, "withoutCompleteDuration": unknown, "sumRecordedDurationsMs": sum, "durationNote": "Journal receive times. Sum of step durations is not wall-clock runtime; parallel steps may overlap. Missing boundaries are not zero-duration steps.", "outcomeNote": "Tool completion is not proof that the user's goal was achieved."}, nil
+		return map[string]any{"steps": len(found), "byStatus": statuses, "byType": types, "attentionSteps": issues, "completeDurationSteps": complete, "withoutCompleteDuration": unknown, "sumRecordedDurationsMs": sum, "sessionId": r.SessionID, "snapshotThrough": r.Through, "projectionVersion": 2, "durationNote": "Host receive or Kun worker event times, as labeled on each step. Sum of step durations is not wall-clock runtime; parallel steps may overlap. Missing boundaries are not zero-duration steps.", "outcomeNote": "Tool completion is not proof that the user's goal was achieved."}, nil
 	}
 	offset := a.Offset
 	if offset > len(found) {
@@ -454,5 +305,5 @@ func (r *Reader) Call(name string, a Args) (any, error) {
 	if end > len(found) {
 		end = len(found)
 	}
-	return map[string]any{"steps": found[offset:end], "total": len(found), "nextOffset": end, "hasMore": end < len(found), "previewOnly": true, "note": "Search matches recorded previews. Use trace_read_event for full output; not finding text in previews does not prove absence."}, nil
+	return map[string]any{"steps": found[offset:end], "total": len(found), "nextOffset": end, "hasMore": end < len(found), "previewOnly": true, "sessionId": r.SessionID, "snapshotThrough": r.Through, "projectionVersion": 2, "note": "Search matches recorded previews. Use trace_read_event for full output; not finding text in previews does not prove absence."}, nil
 }

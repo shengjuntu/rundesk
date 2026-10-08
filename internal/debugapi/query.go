@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"unicode/utf8"
 
 	p "github.com/shengjuntu/rundesk/internal/kunproto"
 )
 
 const MaxResponseBytes = 4 << 20
 
-var Kinds = []string{"overview", "run", "events", "event", "context", "tools", "budget", "modules", "breakpoints", "actions", "snapshot", "evidence", "diff"}
+var Kinds = []string{"overview", "run", "events", "event", "context", "tools", "budget", "modules", "breakpoints", "actions", "snapshot", "evidence", "diff", "runs", "steps", "step", "issues", "statistics"}
 
 type Query struct {
 	Kind         string `json:"kind"`
@@ -23,6 +24,11 @@ type Query struct {
 	EventID      int64  `json:"eventId,omitempty"`
 	Offset       int    `json:"offset,omitempty"`
 	Limit        int    `json:"limit,omitempty"`
+	RunID        string `json:"runId,omitempty"`
+	Type         string `json:"type,omitempty"`
+	Status       string `json:"status,omitempty"`
+	Search       string `json:"query,omitempty"`
+	StepID       string `json:"stepId,omitempty"`
 }
 
 // Fields lists the only accepted fields per query, including explicitly zero
@@ -34,7 +40,15 @@ func Fields(kind string) []string {
 	case "events":
 		return []string{"after", "through", "limit"}
 	case "event":
-		return []string{"eventId", "offset", "limit"}
+		return []string{"eventId", "through", "offset", "limit"}
+	case "runs":
+		return []string{"through", "offset", "limit"}
+	case "steps", "issues":
+		return []string{"through", "runId", "type", "status", "query", "offset", "limit"}
+	case "step":
+		return []string{"through", "runId", "stepId"}
+	case "statistics":
+		return []string{"through", "runId", "type", "status", "query"}
 	case "diff":
 		return []string{"sequence", "fromSequence"}
 	case "run", "context", "tools", "budget", "modules", "breakpoints", "actions", "snapshot", "evidence":
@@ -50,10 +64,34 @@ func (q Query) Validate() error {
 	if q.Sequence < 0 || q.FromSequence < 0 || q.After < 0 || q.EventID < 0 || q.Offset < 0 || q.Limit < 0 || q.Through != nil && *q.Through < 0 {
 		return fmt.Errorf("negative debug selector")
 	}
-	if q.Kind != "events" && (q.After != 0 || q.Through != nil) || q.Kind != "event" && (q.EventID != 0 || q.Offset != 0) || q.Kind != "events" && q.Kind != "event" && q.Limit != 0 {
-		return fmt.Errorf("inapplicable debug selector")
+	allowed := map[string]bool{}
+	for _, field := range Fields(q.Kind) {
+		allowed[field] = true
+	}
+	present := map[string]bool{"sequence": q.Sequence != 0, "fromSequence": q.FromSequence != 0, "after": q.After != 0, "through": q.Through != nil, "eventId": q.EventID != 0, "offset": q.Offset != 0, "limit": q.Limit != 0, "runId": q.RunID != "", "type": q.Type != "", "status": q.Status != "", "query": q.Search != "", "stepId": q.StepID != ""}
+	for field, yes := range present {
+		if yes && !allowed[field] {
+			return fmt.Errorf("inapplicable debug selector")
+		}
+	}
+	for field, value := range map[string]string{"runId": q.RunID, "type": q.Type, "status": q.Status, "query": q.Search, "stepId": q.StepID} {
+		limit := 256
+		if field == "query" {
+			limit = 1000
+		}
+		if utf8.RuneCountInString(value) > limit {
+			return fmt.Errorf("debug text selector too long")
+		}
 	}
 	switch q.Kind {
+	case "runs", "steps", "step", "issues", "statistics":
+		if q.Limit > 50 {
+			return fmt.Errorf("at most 50 projected records per page")
+		}
+		if q.Kind == "step" && q.StepID == "" {
+			return fmt.Errorf("stepId required")
+		}
+		return nil
 	case "overview", "events", "event":
 		if q.Sequence != 0 || q.FromSequence != 0 {
 			return fmt.Errorf("host queries do not accept Kun sequences")
@@ -86,6 +124,23 @@ func Parse(values url.Values) (Query, error) {
 			return q, fmt.Errorf("unknown, repeated or inapplicable debug parameter")
 		}
 		if name == "kind" {
+			continue
+		}
+		switch name {
+		case "runId":
+			q.RunID = items[0]
+			continue
+		case "type":
+			q.Type = items[0]
+			continue
+		case "status":
+			q.Status = items[0]
+			continue
+		case "query":
+			q.Search = items[0]
+			continue
+		case "stepId":
+			q.StepID = items[0]
 			continue
 		}
 		n, err := strconv.ParseInt(items[0], 10, 64)
@@ -134,9 +189,14 @@ type Result struct {
 	SessionID string `json:"sessionId"`
 	Backend   string `json:"backend"`
 	Source    string `json:"source"`
+	Through   *int64 `json:"through,omitempty"`
 	Kind      string `json:"kind"`
 	RunID     string `json:"runId,omitempty"`
 	Revision  *int64 `json:"revision,omitempty"`
 	Sequence  *int64 `json:"sequence,omitempty"`
 	Data      any    `json:"data"`
+}
+
+func Projection(kind string) bool {
+	return kind == "runs" || kind == "steps" || kind == "step" || kind == "issues" || kind == "statistics"
 }

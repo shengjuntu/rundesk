@@ -1,50 +1,52 @@
-# RunDesk 0.27.0 / Kun 0.6 验证记录
+# RunDesk 0.28.0 / Kun 0.6 验证记录
 
-日期：2026-10-05。Linux amd64，Go 1.25.12。Kun 引擎与 worker 协议源文件经逐文件比对与 0.26.0 相同；本次新增宿主只读调试服务、MCP 代理及相关查询复用。
+日期：2026-10-06。Linux amd64，Go 1.25.12，Chromium Headless Shell 138.0.7204.92。Kun 引擎及 worker 协议维持 0.6.0 / v6；本次新增宿主轨迹重建和只读检查页面，修复既有 Kun 页面问题。
 
 | 检查 | 本次结果 |
 | --- | --- |
-| `go test ./... -count=1 -timeout=180s` | 全部通过，app 包 66.569 秒；包含真实 Kun worker 子进程与本地模型/MCP fixture |
+| `go test ./... -count=1 -timeout=180s` | 全部通过，app 包 64.812 秒；包含真实 Kun worker 子进程与本地模型/MCP fixture |
 | `go vet ./...` | 通过 |
-| 本次改动范围 `go test -race` | debugapi、debugmcp、app 调试集成与 CLI 专项全部通过；没有重跑全项目 race |
-| JavaScript/CJS `node --check` | 54 个文件通过 |
-| `node scripts/kun-inspect-test.cjs` | 通过，包括统一查询 URL、固定差异与过期响应保护 |
-| `node scripts/kun-panels-test.cjs` | 通过，保留实际 DevTools 入口的模拟 DOM/API 回归 |
+| 本次改动范围 `go test -race` | tracequery、debugapi、debugmcp、app 调试/分析集成、web 嵌入资源专项通过；没有重跑全项目 race |
+| 最后一次 trace MCP 目录调整后的针对性回归 | tracequery 与 app 的 Projection / ReadOnlyScope / TraceAnalysis 测试通过 |
+| JavaScript/CJS `node --check` | 56 个文件通过 |
+| `node scripts/kun-inspect-test.cjs` | 通过，覆盖关联、固定快照、文本安全、上下文、差异与过期响应 |
+| `node scripts/kun-panels-test.cjs` | 通过，覆盖面板、实际 DevTools 初始化、控制目标、忙碌保护与过期状态 |
 | Linux amd64 `make build` | RunDesk、Kun 构建成功 |
-| Windows amd64 交叉构建 | 两个命令成功，PE 文件存在；未在 Windows 实机运行 |
-| 已构建 RunDesk CLI 冒烟 | `--version` 为 0.27.0；真实 debug-mcp 进程 initialize/initialized/tools-list/EOF 正常，14 个工具，stdout 仅协议 JSON |
-| OpenAPI | 138 个路径、165 个操作；新增普通与 member 调试路由的授权标识检查通过 |
-| 浏览器/真实布局 | 未运行，环境无 Chromium；Node 模拟 DOM 不能替代浏览器验收 |
-| 真实 Codex、模型、MCP、news2douyin 业务 | 未运行；Codex 新查询使用宿主事件 fixture，未声明原生服务验收 |
+| Windows amd64 交叉构建 | RunDesk、Kun 构建成功；未在 Windows 实机运行 |
+| 已构建 RunDesk CLI 冒烟 | `--version` 为 0.28.0；真实 debug-mcp 进程 initialize/initialized/tools-list/ping/EOF 正常，19 个工具，stdout 仅协议 JSON |
+| OpenAPI | 138 个路径、165 个操作；新查询、来源、through、筛选参数和重建类型已生成，路由授权测试通过 |
+| Codex 检查页真实浏览器 | 通过；真实宿主 + 明确的 Codex 协议 DEMO，零真实 Codex/模型调用 |
+| Kun 调试真实浏览器 | 通过；真实 worker + 本地模型 fixture，3 次模型请求，零页面异常 |
+| Kun MCP 审批真实浏览器 | 通过；真实 worker + 本地模型/MCP fixture，4 次模型请求、2 次工具调用、3 次工具发现，零页面异常 |
+| 真实 Codex、远程模型/MCP、news2douyin 业务、生产压力 | 未运行；不声明真实服务及生产环境验收 |
 
 ## 本次专项覆盖
 
-- Codex capability 明确只支持宿主概况和保留事件；内部上下文、快照、差异等查询返回 unsupported；宿主运行概况不虚构 worker revision/sequence。
-- 应用自身 read key 可以查询，另一应用不能读取；成员 viewer 只能读授权项目，不能读同应用其他项目或通过新接口写入。
-- 宿主事件逐 ID 分页：固定 through 后排除新事件，包含 delta，空历史 through=0 保持固定；不同会话的 eventId 不可读取。
-- 事件按 Unicode 字符分块，完整 JSON 脱敏先于切块；拼接后保留中文、emoji 和 9007199254740993 大整数，结构化密钥不会跨块泄漏。
-- 事件列表只加载元数据；原始事件超 8 MiB 在解析前拒绝。HTTP 客户端拒绝超 4 MiB 响应、无效 JSON 和重定向，不泄露错误正文中的凭据。
-- Kun 新旧查询入口的 data/revision/sequence 一致，覆盖状态、上下文、工具、预算、模块、断点、账本、证据和差异；固定快照可读，跨应用拒绝。
-- 暂停中的纯查询不调用模型、不改变状态 revision；离线 Kun capability/query 不创建运行 handle 或启动 worker。
-- MCP 初始化与 initialized 通知、协议协商、ping、工具目录、错误层次；非法 JSON/ID、缺字段、未知工具、错误参数、输入上限均覆盖。
-- MCP → HTTP → application gate → DebugService 的串行集成覆盖 Codex 运行、能力不支持和空历史读取；只有固定会话的 GET，无控制/任意 URL/会话切换字段。
-- CLI 凭据必须由显式环境变量提供，不继承管理员 RUNDESK_TOKEN，不接受 token 命令行参数；MCP 文本查询不会写入目标对话。
+- 原生记录按 run/turn/type/item 关联，晚到的已知 turn 回到原轮次；未知 turn、缺少 item ID 与重复开始保留独立或有歧义的证据。Kun 模型、工具、MCP 和审批采用各自标识，宿主 ID 与 worker sequence 不混用。
+- 开始/结束缺失、逆序时钟、未知状态和真实零耗时分别表示；等待中的活动步骤不直接判成失败，终态遗留开始标为未知。步骤时长合计不冒充墙钟时间。
+- 固定 through 的多页查询排除后来记录，空历史 through=0 仍固定；step 的可选 runId 必须匹配，证据不能越过 through。离线 Kun 查询保留的宿主轨迹不启动 worker。
+- 脱敏先于预览、搜索和分块，UseNumber 保留大整数，数字组成的对象同样受预算限制；字面搜索包含 SQL 样文本不会转为 SQL。单条大载荷在解析前拒绝，取消请求可中止重建。
+- 应用 read key 与会话归属、成员 viewer 项目授权继续生效；其他应用/项目、越界事件与 POST 被拒绝。MCP → HTTP → 授权 → 重建的集成没有创建 handle 或改变运行状态。
+- 新浏览器检查页验证分页、长中文原始事件分块、HTML 样文本、固定历史、显式刷新、异步筛选过期响应、390px 窄屏及 GET-only 请求；桌面和移动截图已人工检查。
+- Kun 浏览器验证单步、补充指令、实际请求上下文、固定快照与差异、四模块、条件断点、Console 提案、检查点恢复、重载持久化及 MCP 审批策略。验证中发现并修复三份未嵌入脚本、首次配置默认值、审批刷新作用域问题。
 
-这些检查验证本地实现与边界，不证明远程 Codex 内部提供了相应信息，也不证明外部 MCP 客户端、真实服务或生产压力环境已验收。没有新增运行时依赖。
+机器结果见 `debug-ui-validation.json`、`kun-ui-validation.json`、`kun-mcp-ui-validation.json`；截图见 `screenshots/0.28.0/`。浏览器使用 Chromium 与真实 RunDesk/worker，但上游请求由本地服务夹具响应。结构化 Console 已有；跨后端自然语言自动诊断、Codex 内部执行控制仍未实现。
 
 ## 复现
 
 ```bash
 go test ./... -count=1 -timeout=180s
 go vet ./...
-go test -race ./internal/debugapi ./internal/debugmcp ./internal/app ./cmd/rundesk \
-  -run 'Test(CodexDebug|DebugMember|KunDebug|LifecycleValidation|ProtocolNegotiation|ClientOrigin|StrictSelectors|DebugMCPCLI)' \
-  -count=1 -timeout=120s
+go test -race ./internal/tracequery ./internal/debugapi ./internal/debugmcp ./internal/app ./internal/web -run 'Test(Projection|ReadOnlyScope|Debug|CodexDebug|KunDebug|TraceAnalysis|StrictSelectors|LifecycleValidation|ProtocolNegotiation|ClientOrigin|HTMLScript)' -count=1 -timeout=180s
 node scripts/kun-inspect-test.cjs
 node scripts/kun-panels-test.cjs
 make build
-GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -buildvcs=false -o /tmp/rundesk.exe ./cmd/rundesk
-GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -buildvcs=false -o /tmp/kun.exe ./cmd/kun
+GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -buildvcs=false -trimpath -o /tmp/rundesk.exe ./cmd/rundesk
+GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -buildvcs=false -trimpath -o /tmp/kun.exe ./cmd/kun
+# Node 能解析 playwright；CHROMIUM_PATH 指向可执行的 Chromium。
+CHROMIUM_PATH=/absolute/path/to/chromium node scripts/debug-trace-ui-smoke.cjs
+CHROMIUM_PATH=/absolute/path/to/chromium node scripts/kun-ui-smoke.cjs
+CHROMIUM_PATH=/absolute/path/to/chromium node scripts/kun-mcp-ui-smoke.cjs
 ```
 
-真实浏览器准备好后执行已有 Playwright 脚本，再做真实服务验收；当前 UI JSON 保持 not_run。上一版记录归档为 KUN-VALIDATION-0.26.0.md；阶段边界见 KUN-PROGRESS.md。
+上一版记录保留为 [KUN-VALIDATION-0.27.0.md](KUN-VALIDATION-0.27.0.md)；本版阶段边界见 [KUN-PROGRESS.md](KUN-PROGRESS.md)。源码包不含构建产物。

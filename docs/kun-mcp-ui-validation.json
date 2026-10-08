@@ -1,7 +1,18 @@
 {
-  "version": "0.27.0",
-  "status": "not_run",
-  "passed": null,
-  "reason": "No Chromium executable; no browser or real-service acceptance. Node regressions cover the shared debug query URL.",
-  "previousVersionEvidence": "kun-mcp-ui-validation-0.21.0.json"
+  "passed": true,
+  "modelCalls": 4,
+  "toolCalls": 2,
+  "listCalls": 3,
+  "pageErrors": [],
+  "checks": [
+    "Kun config UI",
+    "MCP discovery without tool execution",
+    "prompt holds execution",
+    "approve once",
+    "request/result inspection",
+    "tool definitions snapshot",
+    "always-allow next turn without approval",
+    "reload",
+    "390px viewport"
+  ]
 }

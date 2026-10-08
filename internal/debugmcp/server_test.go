@@ -87,7 +87,7 @@ func TestLifecycleValidationAndNoControlForwarding(t *testing.T) {
 			Annotations map[string]bool `json:"annotations"`
 		} `json:"tools"`
 	}
-	if json.Unmarshal(rows[10]["result"], &catalog) != nil || len(catalog.Tools) != 14 {
+	if json.Unmarshal(rows[10]["result"], &catalog) != nil || len(catalog.Tools) != 19 {
 		t.Fatal("missing tools", string(rows[10]["result"]))
 	}
 	for _, tool := range catalog.Tools {
@@ -176,5 +176,18 @@ func TestClientOriginCredentialAndResponseBoundaries(t *testing.T) {
 	}
 	if leaked.Load() != 0 {
 		t.Fatal("redirect forwarded credentials")
+	}
+}
+
+func TestProjectionArgumentsAreTypedAndScoped(t *testing.T) {
+	for _, test := range []struct{ kind, args string }{{"steps", `{"runId":"r","query":"literal' OR 1=1 --","through":0,"limit":50}`}, {"step", `{"stepId":"step-1","runId":"r"}`}, {"statistics", `{"type":"mcpToolCall","status":"failed"}`}} {
+		if _, e := arguments(test.kind, json.RawMessage(test.args)); e != nil {
+			t.Fatal(test, e)
+		}
+	}
+	for _, test := range []struct{ kind, args string }{{"steps", `{"runId":null}`}, {"steps", `{"query":1}`}, {"steps", `{"limit":51}`}, {"steps", `{"sessionId":"other"}`}, {"step", `{}`}, {"statistics", `{"offset":0}`}} {
+		if _, e := arguments(test.kind, json.RawMessage(test.args)); e == nil {
+			t.Fatal("invalid projection args", test)
+		}
 	}
 }

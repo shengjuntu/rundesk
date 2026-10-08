@@ -1,0 +1,14 @@
+{
+  "version": "0.28.0",
+  "passed": true,
+  "scope": "real Chromium + RunDesk host + explicit Codex protocol fixture; no real Codex/model calls",
+  "checks": [
+    "real host projection pagination",
+    "bounded Unicode event chunks and literal untrusted content",
+    "new source run excluded from fixed history",
+    "stale asynchronous filter response ignored",
+    "explicit refresh advances the host cursor",
+    "desktop/mobile layout, GET-only inspection and zero browser exceptions"
+  ],
+  "pageErrors": []
+}

@@ -1,7 +1,26 @@
 {
-  "version": "0.27.0",
-  "status": "not_run",
-  "passed": null,
-  "reason": "No Chromium executable; no browser or real-service acceptance. Node regressions cover the shared debug query URL.",
-  "previousVersionEvidence": "kun-ui-validation-0.21.0.json"
+  "passed": true,
+  "modelCalls": 3,
+  "checks": [
+    "UI config",
+    "model/tool step boundaries",
+    "steer before next request",
+    "actual request context tree",
+    "snapshot diff",
+    "expanded details survive refresh",
+    "snapshot inspection",
+    "reported usage",
+    "budget settings",
+    "four structured module cards",
+    "current Sources control gating",
+    "MCP state and performance tables",
+    "fixed snapshot across panels and refresh",
+    "live inspection",
+    "conditional after-model breakpoint",
+    "Console read-only query and control proposal",
+    "explicit checkpoint recovery",
+    "reload persistence",
+    "mobile viewport"
+  ],
+  "pageErrors": []
 }

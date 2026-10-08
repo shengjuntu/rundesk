@@ -6,8 +6,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/shengjuntu/rundesk/internal/tracequery"
 	"net/http"
 	"net/url"
+	"path/filepath"
 
 	kc "github.com/shengjuntu/rundesk/internal/adapters/kun"
 	d "github.com/shengjuntu/rundesk/internal/debugapi"
@@ -39,7 +41,7 @@ func (s DebugService) Capabilities(sid string) (d.Capabilities, error) {
 	for _, kind := range d.Kinds {
 		v := d.Capability{Supported: true, Available: true}
 		switch kind {
-		case "overview", "events", "event":
+		case "overview", "events", "event", "runs", "steps", "step", "issues", "statistics":
 		case "run":
 			if backend != "kun" {
 				v.Reason = "host session overview only; no internal Codex state revision or snapshot"
@@ -69,6 +71,31 @@ func (s DebugService) Query(ctx context.Context, sid string, q d.Query) (d.Resul
 		return out, err
 	}
 	out.Backend = runtimeKind(session.RuntimeKind)
+	if d.Projection(q.Kind) {
+		page, e := s.manager.Store.DebugEvents(sid, 0, q.Through, 1)
+		if e != nil {
+			return out, failure(400, "invalid_debug_cursor", e.Error())
+		}
+		reader, e := tracequery.OpenContext(ctx, filepath.Join(s.manager.Data, "state.db"), sid, page.Through)
+		if e != nil {
+			return out, e
+		}
+		defer reader.Close()
+		methods := map[string]string{"runs": "trace_list_runs", "steps": "trace_find_steps", "step": "trace_get_step", "issues": "trace_find_issues", "statistics": "trace_statistics"}
+		value, e := reader.CallContext(ctx, methods[q.Kind], tracequery.Args{RunID: q.RunID, Type: q.Type, Status: q.Status, Query: q.Search, StepID: q.StepID, Offset: q.Offset, Limit: q.Limit})
+		if e != nil {
+			if errors.Is(e, tracequery.ErrProjectionLimit) {
+				return out, failure(413, "debug_projection_too_large", e.Error())
+			}
+			return out, failure(409, "debug_projection_rejected", e.Error())
+		}
+		out.Source = "host_projection"
+		out.Through = &page.Through
+		out.RunID = q.RunID
+		out.Data = value
+		return out, nil
+	}
+
 	if q.Kind == "overview" || q.Kind == "run" && out.Backend != "kun" {
 		if q.Sequence != 0 {
 			return out, failure(409, "debug_unsupported", "Codex 没有内部状态快照；sequence 不适用于宿主运行概况")
@@ -92,6 +119,15 @@ func (s DebugService) Query(ctx context.Context, sid string, q d.Query) (d.Resul
 		out.Data = page
 		return out, nil
 	case "event":
+		if q.Through != nil {
+			if _, e := s.manager.Store.DebugEvents(sid, 0, q.Through, 1); e != nil {
+				return out, failure(400, "invalid_debug_cursor", e.Error())
+			}
+			if q.EventID > *q.Through {
+				return out, failure(404, "debug_event_not_found", "事件不在选定宿主历史范围内")
+			}
+			out.Through = q.Through
+		}
 		n, e := s.manager.Store.DebugEventSize(sid, q.EventID)
 		if errors.Is(e, sql.ErrNoRows) {
 			return out, failure(404, "debug_event_not_found", "此会话没有该宿主事件")

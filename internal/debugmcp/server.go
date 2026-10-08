@@ -15,7 +15,12 @@ import (
 )
 
 var descriptions = map[string]string{
-	"capabilities": "Check supported and currently available queries for the fixed session. Codex has host overview/events only; Kun internals require an online worker.",
+	"runs":         "List recorded runs for either backend at a fixed host through cursor. Max 50 per page; keep returned through including zero for later queries. Synthetic IDs indicate missing run identity.",
+	"steps":        "List reconstructed lifecycle steps, including calls, approvals and warnings. Filter by runId/type/status or literal query over redacted previews. Max 50; retain through and follow nextOffset. Missing text in previews is not proof of absence.",
+	"step":         "Read one projected step by stepId, with source host event IDs, pairing evidence, missing boundaries and preview truncation. Optional runId must match. Read full evidence with debug_event and the same through cursor.",
+	"issues":       "List recorded failures, pending approvals and incomplete/ambiguous lifecycle evidence. These are deterministic signals, not inferred root causes or proof of goal failure. Same filters and paging as steps.",
+	"statistics":   "Count filtered reconstructed steps, types, statuses and attention signals in a fixed host snapshot. Recorded durations may overlap and use different clocks; their sum is not runtime or billing. Missing boundaries are not zero durations.",
+	"capabilities": "Check supported and currently available queries for the fixed session. Codex has host overview/events and reconstructed lifecycle queries; Kun internals require an online worker.",
 	"overview":     "Read the current host session overview. No internal state revision or worker snapshot is implied.",
 	"run":          "Read Kun runtime state, or Codex host session overview only. A Kun sequence selects a fixed snapshot.",
 	"events":       "List retained host event metadata in ID order, at most 200. Keep through from the first page (including zero) on subsequent pages; nextCursor advances after. Covers all recorded methods, not just tool calls. No full payloads.",
@@ -39,6 +44,15 @@ func Tools() []any {
 		for _, field := range d.Fields(kind) {
 			schema := map[string]any{"type": "integer", "minimum": 0}
 			switch field {
+			case "runId", "type", "status", "query", "stepId":
+				schema = map[string]any{"type": "string", "maxLength": 256}
+				if field == "query" {
+					schema["maxLength"] = 1000
+				}
+				if field == "stepId" {
+					schema["minLength"] = 1
+					required = append(required, field)
+				}
 			case "sequence":
 				schema["description"] = "Kun worker sequence; zero/current only for supported non-fixed queries"
 				if kind == "snapshot" || kind == "evidence" || kind == "diff" {
@@ -50,7 +64,9 @@ func Tools() []any {
 				required = append(required, field)
 			case "limit":
 				schema["minimum"] = 1
-				if kind == "events" {
+				if d.Projection(kind) {
+					schema["maximum"] = 50
+				} else if kind == "events" {
 					schema["maximum"] = 200
 				} else {
 					schema["maximum"] = 16000
@@ -81,6 +97,14 @@ func arguments(kind string, raw json.RawMessage) (url.Values, error) {
 	for name, value := range args {
 		if !allowed[name] {
 			return nil, fmt.Errorf("unknown or inapplicable tool argument")
+		}
+		if name == "runId" || name == "type" || name == "status" || name == "query" || name == "stepId" {
+			var text string
+			if len(value) == 0 || value[0] != '"' || json.Unmarshal(value, &text) != nil {
+				return nil, fmt.Errorf("invalid text argument")
+			}
+			values.Set(name, text)
+			continue
 		}
 		n, err := strconv.ParseInt(string(value), 10, 64)
 		if err != nil || n < 0 || name == "limit" && n == 0 {

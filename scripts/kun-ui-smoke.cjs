@@ -6,7 +6,7 @@ const assert=require('assert');
 const path=require('node:path'),os=require('node:os');
 const root=path.resolve(__dirname,'..');
 const scratch=fs.mkdtempSync(path.join(os.tmpdir(),'rundesk-kun-ui-'));
-const pictures=path.join(root,'docs/screenshots/0.27.0');fs.mkdirSync(pictures,{recursive:true});
+const pictures=path.join(root,'docs/screenshots/0.28.0');fs.mkdirSync(pictures,{recursive:true});
 (async()=>{
  let calls=0,server,browser;const requests=[];const errors=[];
  const model=http.createServer(async(req,res)=>{
@@ -34,6 +34,7 @@ const pictures=path.join(root,'docs/screenshots/0.27.0');fs.mkdirSync(pictures,{
   await form.locator('label').filter({hasText:'允许 Kun 写入'}).locator('input').check();
   await form.locator('label').filter({hasText:'每次模型请求前'}).locator('input').check();
   await form.locator('label').filter({hasText:'每轮最多工具调用次数'}).locator('input').fill('7');
+  assert.equal(await form.locator(':invalid').count(),0,'initial engine defaults are invalid');
   await form.locator('button[type="submit"]').click();
   await page.waitForFunction(()=>document.querySelector('.kun-config [role=status]')?.textContent.includes('已保存'));
   await page.screenshot({path:pictures+'/kun-settings.png'});
