@@ -112,9 +112,9 @@ Frontend assets and the Docker template are embedded in the executable. Rebuild 
 
 Stop the service and back up the existing data directory and Codex configuration before replacing binaries. Keep the same `--data` location. Existing applications and conversations are preserved.
 
-Version **0.19.2** adds credential re-checks before queued application tasks start and before scheduled occurrences are created. It retains application/project ownership checks for files from 0.19.1. Uploads without recorded ownership must be uploaded again through the application/member endpoint; administrators retain access. It includes the native process cleanup, kernel-backed data locks, runtime-process view and systemd example from 0.19.0. It retains the bilingual interface and environment setup introduced in 0.16. Technical logs and user/model content remain in their original language. Some legacy detailed diagnostic messages retain their original wording.
+Version **0.19.4** adds a discovered MCP tool list with per-tool default, allow, prompt and disable choices. It retains queued-task credential re-checks from 0.19.2. It retains application/project ownership checks for files from 0.19.1. Uploads without recorded ownership must be uploaded again through the application/member endpoint; administrators retain access. It includes the native process cleanup, kernel-backed data locks, runtime-process view and systemd example from 0.19.0. It retains the bilingual interface and environment setup introduced in 0.16. Technical logs and user/model content remain in their original language. Some legacy detailed diagnostic messages retain their original wording.
 
-This patch is checked with automated Go tests, focused race tests and a credential-dialog browser scenario. The packaged Docker template has not been built against a real Docker engine in the development environment; real model/provider and container deployments require local verification. See [release notes](docs/RELEASE-0.19.2.md).
+This patch is checked with automated Go tests, focused race tests and MCP approval-editor browser scenarios. The packaged Docker template has not been built against a real Docker engine in the development environment; real model/provider and container deployments require local verification. See [release notes](docs/RELEASE-0.19.4.md).
 
 [License](LICENSE)
 

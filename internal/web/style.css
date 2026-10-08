@@ -1466,3 +1466,7 @@ main > header .breadcrumb {
 #settings-context {margin:8px 0 0;overflow-wrap:anywhere}
 .integration-links {margin-top:18px}
 @media(max-width:640px){.configuration-grid{grid-template-columns:1fr}.capability-strip{padding:0 16px 10px;gap:7px}.capability-model{max-width:160px}#capabilities-content{padding:8px 12px 12px}}
+
+.mcp-policy-editor {margin:1rem 0}.mcp-policy-row {display:grid;grid-template-columns:minmax(0,1fr) minmax(140px,190px);gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}.mcp-policy-row strong,.mcp-policy-row p {overflow-wrap:anywhere}.mcp-policy-row p {margin:4px 0}.mcp-policy-row select {align-self:start}@media(max-width:600px){.mcp-policy-row{grid-template-columns:1fr}}
+
+.mcp-policy-row small {display:block;margin-top:4px}

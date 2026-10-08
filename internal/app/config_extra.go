@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"os/exec"
@@ -26,10 +27,41 @@ func prepareMCP(value, old map[string]any) (map[string]any, error) {
 		return nil, e
 	}
 	value = copy
-	allowed := map[string]bool{"command": true, "args": true, "env": true, "env_vars": true, "url": true, "bearer_token_env_var": true, "http_headers": true, "env_http_headers": true, "enabled": true, "startup_timeout_sec": true, "tool_timeout_sec": true, "enabled_tools": true, "disabled_tools": true}
+	allowed := map[string]bool{"command": true, "args": true, "env": true, "env_vars": true, "url": true, "bearer_token_env_var": true, "http_headers": true, "env_http_headers": true, "enabled": true, "startup_timeout_sec": true, "tool_timeout_sec": true, "enabled_tools": true, "disabled_tools": true, "tools": true}
 	for key := range value {
 		if !allowed[key] {
 			return nil, fmt.Errorf("暂不支持 MCP 字段: %s", key)
+		}
+	}
+	if rawTools, exists := value["tools"]; exists {
+		tools, ok := rawTools.(map[string]any)
+		if !ok {
+			return nil, errors.New("tools 必须为工具配置对象")
+		}
+		for name, rawTool := range tools {
+			if strings.TrimSpace(name) == "" || strings.ContainsAny(name, "\r\n\x00") {
+				return nil, errors.New("工具名称不能为空或包含控制字符")
+			}
+			tool, ok := rawTool.(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("tools.%s 必须为对象", name)
+			}
+			for field, raw := range tool {
+				switch field {
+				case "approval_mode":
+					mode, ok := raw.(string)
+					if !ok || (mode != "auto" && mode != "prompt" && mode != "writes" && mode != "approve") {
+						return nil, fmt.Errorf("tools.%s.approval_mode 必须为 auto/prompt/writes/approve", name)
+					}
+				case "output_token_limit":
+					n, ok := raw.(float64)
+					if !ok || n <= 0 || n != math.Trunc(n) {
+						return nil, fmt.Errorf("tools.%s.output_token_limit 必须为正整数", name)
+					}
+				default:
+					return nil, fmt.Errorf("暂不支持 MCP 工具字段: %s", field)
+				}
+			}
 		}
 	}
 	command, _ := value["command"].(string)

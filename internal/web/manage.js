@@ -562,6 +562,7 @@ async function renderMCP(target) {
     checked: true,
     id: "mcp-enabled",
   });
+  const policies = mcpPolicyEditor(info, cp, () => name.value.trim());
   const advanced = el("input", { type: "checkbox", id: "mcp-advanced" });
   const config = el(
     "textarea",
@@ -594,6 +595,7 @@ async function renderMCP(target) {
     local,
     remote,
     el("label", {}, enabled, rdText(" 启用服务")),
+    policies.node,
   );
   const jsonPanel = el(
     "div",
@@ -611,6 +613,7 @@ async function renderMCP(target) {
     url.value = value.url || "";
     tokenEnv.value = value.bearer_token_env_var || "";
     enabled.checked = value.enabled !== false;
+    policies.fill(value);
     config.value = json(value);
     switchType();
   }
@@ -619,7 +622,7 @@ async function renderMCP(target) {
     remote.classList.toggle("hidden", type.value !== "http");
   }
   function formValue() {
-    const v = { ...original, enabled: enabled.checked };
+    const v = policies.apply({ ...original, enabled: enabled.checked });
     if (type.value === "stdio") {
       delete v.url;
       delete v.bearer_token_env_var;
