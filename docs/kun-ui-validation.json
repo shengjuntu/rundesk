@@ -1,7 +1,7 @@
 {
-  "version": "0.26.0",
+  "version": "0.27.0",
   "status": "not_run",
   "passed": null,
-  "reason": "No Chromium executable. Updated Playwright scenarios not run. Node view/DevTools-entry regressions and syntax checks passed; no browser layout acceptance.",
+  "reason": "No Chromium executable; no browser or real-service acceptance. Node regressions cover the shared debug query URL.",
   "previousVersionEvidence": "kun-ui-validation-0.21.0.json"
 }

@@ -65,6 +65,38 @@ func TestKunDebugReadScopesAndControlProjection(t *testing.T) {
 			t.Fatal("query changed run", result)
 		}
 	}
+
+	// Both HTTP facades return the same worker projection; the unified path
+	// also exposes fixed snapshots and capability availability.
+	common := "/api/v1/sessions/" + session.ID + "/debug/"
+	response = appRequest(handler, "GET", common+"capabilities", "", reader, "")
+	if response.Code != 200 || !strings.Contains(response.Body.String(), `"backend":"kun"`) {
+		t.Fatal(response.Code, response.Body.String())
+	}
+	for _, query := range []string{"kind=run", "kind=context", "kind=tools", "kind=budget", "kind=modules", "kind=breakpoints", "kind=actions", "kind=evidence&sequence=1", "kind=diff&sequence=1&fromSequence=1", "kind=snapshot&sequence=1"} {
+		response = appRequest(handler, "GET", common+"query?"+query, "", reader, "")
+		if response.Code != 200 {
+			t.Fatal(query, response.Code, response.Body.String())
+		}
+		var shared struct {
+			Data     json.RawMessage `json:"data"`
+			Revision int64           `json:"revision"`
+			Sequence int64           `json:"sequence"`
+		}
+		json.Unmarshal(response.Body.Bytes(), &shared)
+		if !strings.Contains(query, "snapshot") {
+			legacy := appRequest(handler, "GET", path+"query?"+query, "", reader, "")
+			var old p.DebugResult
+			json.Unmarshal(legacy.Body.Bytes(), &old)
+			if legacy.Code != 200 || shared.Revision != old.Revision || shared.Sequence != old.Sequence || string(shared.Data) != string(old.Data) {
+				t.Fatal("facades disagree", query, response.Body.String(), legacy.Body.String())
+			}
+		}
+		response = appRequest(handler, "GET", common+"query?"+query, "", foreign, "")
+		if response.Code != 403 {
+			t.Fatal("foreign common query", response.Code)
+		}
+	}
 	if calls.Load() != 0 {
 		t.Fatal("queries called provider")
 	}

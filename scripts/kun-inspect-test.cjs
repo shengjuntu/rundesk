@@ -46,7 +46,7 @@ assert(context.kunRenderContext(records[2],snapshot,null).textContent.includes('
  const set=treeWalk(view.node,n=>n.tag==='button'&&n.textContent==='设为比较起点');
  const compare=treeWalk(view.node,n=>n.tag==='button'&&n.textContent==='比较到所选快照');
  set.click();selected=records[2];view.update();const first=compare.click();
- assert.equal(pending[0].url,'/sessions/session/kun/query?kind=diff&fromSequence=1&sequence=3');
+ assert.equal(pending[0].url,'/sessions/session/debug/query?kind=diff&fromSequence=1&sequence=3');
  view.update();assert(compare.disabled,'refresh enabled a duplicate comparison while busy');
  // A delayed comparison must not overwrite a newly selected baseline.
  selected=records[3];set.click();pending[0].resolve({data:{from:{sequence:1},to:{sequence:3},changes:[]}});await first;

@@ -43,6 +43,7 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 	s.processRoutes(mux)
 	s.instanceRoutes(mux)
 	s.kunRoutes(mux)
+	s.debugRoutes(mux)
 	s.applicationRoutes(mux)
 	s.skillBundleRoutes(mux)
 	s.runtimeRoutes(mux)
@@ -71,7 +72,7 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 		writeJSON(w, 200, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("GET /api/meta", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, map[string]any{"name": "RunDesk", "version": Version, "apiVersions": []string{"v1"}, "demo": m.Demo, "protocol": "Codex App Server / Kun JSONL", "capabilities": []string{"kun", "kun-devtools", "instances", "sessions", "trace", "events", "approvals", "skills", "mcp", "notes", "files", "api-v1", "idempotency", "configuration-summary", "application-metadata", "application-connect", "reply-feedback", "applications", "skill-bundles", "task-recovery", "native-retry-status", "task-queue", "schedules", "application-credentials", "docker-environments", "image-catalog", "member-project-access", "personal-file-library", "collaboration", "a2a-0.3-jsonrpc", "gitea-blackboard"}})
+		writeJSON(w, 200, map[string]any{"name": "RunDesk", "version": Version, "apiVersions": []string{"v1"}, "demo": m.Demo, "protocol": "Codex App Server / Kun JSONL", "capabilities": []string{"kun", "kun-devtools", "debug-service", "debug-mcp-readonly", "instances", "sessions", "trace", "events", "approvals", "skills", "mcp", "notes", "files", "api-v1", "idempotency", "configuration-summary", "application-metadata", "application-connect", "reply-feedback", "applications", "skill-bundles", "task-recovery", "native-retry-status", "task-queue", "schedules", "application-credentials", "docker-environments", "image-catalog", "member-project-access", "personal-file-library", "collaboration", "a2a-0.3-jsonrpc", "gitea-blackboard"}})
 	})
 	mux.HandleFunc("GET /api/workspaces", func(w http.ResponseWriter, r *http.Request) {
 		if k := principal(r); k != nil {

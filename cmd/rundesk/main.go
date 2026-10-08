@@ -22,6 +22,12 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "debug-mcp" {
+		if e := runDebugMCP(os.Args[2:], os.Stdin, os.Stdout, os.Stderr); e != nil {
+			log.Fatal(e)
+		}
+		return
+	}
 	if handled, e := containerruntime.Dispatch(os.Args[1:]); handled {
 		if e != nil {
 			log.Fatal(e)

@@ -293,7 +293,12 @@ func (m *Manager) kunClient(sid string) (*kc.Client, error) {
 	if s.RuntimeKind != "kun" {
 		return nil, failure(400, "not_kun", "该会话不使用 Kun")
 	}
-	h, _ := m.getHandle(sid)
+	m.mu.Lock()
+	h := m.handles[sid]
+	m.mu.Unlock()
+	if h == nil {
+		return nil, failure(409, "kun_offline", "Kun worker 尚未启动或已回收；历史记录仍可在轨迹中查看")
+	}
 	h.mu.Lock()
 	c := h.kun
 	h.mu.Unlock()

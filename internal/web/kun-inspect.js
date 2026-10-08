@@ -72,7 +72,7 @@ function kunDiffView({sid,getSelected}){
   const to=getSelected()?.data,from=baseline;if(!to||!from)return;
   const ticket=++generation;busy=true;compare.disabled=true;status.textContent="正在读取两份固定快照…";
   try{
-   const value=await api("/sessions/"+sid+"/kun/query?kind=diff&fromSequence="+from.sequence+"&sequence="+to.sequence);
+   const value=await api("/sessions/"+sid+"/debug/query?kind=diff&fromSequence="+from.sequence+"&sequence="+to.sequence);
    if(ticket!==generation)return;
    const diff=value.data;
    result.replaceChildren(el("h4",{},"#"+diff.from.sequence+" → #"+diff.to.sequence),

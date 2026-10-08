@@ -45,7 +45,7 @@ function kunConsole({sid,getCurrent,getSelected,refresh}){
  const append=(title,data)=>{history.prepend(el("details",{open:true},el("summary",{},title),el("pre",{},JSON.stringify(data,null,2))));while(history.children.length>20)history.lastElementChild.remove();};
  const inspect=button("执行只读查询",async()=>{
   const sequence=getSelected()?.data.sequence||0;
-  try{const result=await api("/sessions/"+sid+"/kun/query?kind="+query.value+"&sequence="+sequence);
+  try{const result=await api("/sessions/"+sid+"/debug/query?kind="+query.value+"&sequence="+sequence);
    append("查询 · "+query.selectedOptions[0].textContent+" · "+result.runId+" · 版本 "+result.revision+(sequence?" · 快照 #"+sequence:""),result);feedback.textContent="查询完成，没有调用模型或工具。";
   }catch(e){feedback.textContent=e.message;}
  });

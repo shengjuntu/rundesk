@@ -10,9 +10,9 @@ Built with Go and plain HTML/JavaScript. Node.js is not required to run RunDesk 
 
 ![RunDesk conversation workspace](docs/screenshots/0.16.0/chat-en.png)
 
-## Kun engine (0.26.0)
+## Kun and Codex debugging (0.27.0)
 
-RunDesk 0.26.0 adds structured Sources, Performance, Application and Layers views, shared links to event evidence, and state-aware control buttons. Missing usage remains unknown; model, tool and MCP durations are shown separately. The Kun engine stays at 0.6.0 / protocol v6. See [panel semantics](docs/KUN-PANELS.md), [inspection and diff](docs/KUN-INSPECT.md), and [plan progress](docs/KUN-PROGRESS.md).
+RunDesk 0.27.0 adds a shared read-only DebugService and a fixed-session stdio MCP proxy. Codex exposes host session overview and retained event inspection; Kun exposes context, evidence, budget, modules, breakpoints, action ledger, snapshots and diffs. Codex internal stepping, conditional breakpoints and full context snapshots are not available. Kun stays at 0.6.0 / protocol v6. See the [capability matrix and setup](docs/DEBUG-SERVICE.md) and [plan progress](docs/KUN-PROGRESS.md).
 
 
 Kun shares this repository with RunDesk and runs in a separate worker process. Build with Go 1.25.12+ using `make build`, then launch `./bin/rundesk --data ./data`. Open **Agent engine** in configuration, select Kun, configure an OpenAI-compatible endpoint/model, and create a new session. Codex is not required for Kun.
