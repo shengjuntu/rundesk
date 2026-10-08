@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.31.0
+
+- K3-A offline experiments: freeze explicitly identified Kun run records, preserve redacted baselines, and create immutable child branches with hypothetical tool-output replacements.
+- Conservative downstream invalidation, restore-as-child, lineage fingerprints, bounded record navigation/chunks and same-root differences; no model/tool invocation or source mutation.
+- Recordings survive host restart and source deletion. Administrator-only API/UI, idempotent creation, strict input/page bounds and stale-response guards. No experiment deletion/expiry in this initial increment.
+- Add core/store/HTTP/authorization and real-browser fixture regressions. Runtime forks, Hybrid/Live execution, configurable modules and K4 remain future work.
+- Kun remains 0.7.0 / worker protocol v7; no new third-party runtime dependencies.
+
 ## 0.30.0
 
 - Administrator review for Kun steering suggestions: resolve the retained proposal event, edit text, preview the current run/revision, and explicitly dispatch the immutable command.

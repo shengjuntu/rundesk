@@ -1,8 +1,8 @@
-# Kun 0.7 / RunDesk 0.30.0
+# Kun 0.7 / RunDesk 0.31.0
 
 在 0.2 的 MCP 基础上增加 K1 核心模块与执行约束。采用已确认的结构：**分进程、同仓库、选择性复制 PiG 源码并自主发展**。本版包含模型／工具循环、MCP 配置与审批、固定四模块、调用前参数校验、预算、运行记录、上下文检查和基础调试控制；不代表 KUN-DESIGN-v0.2 的所有阶段已经实现。
 
-固定模块与预算见 [K1 核心说明](KUN-K1-CORE.md)。安全续跑见 [检查点恢复](KUN-CHECKPOINTS.md)。调试控制见 [条件断点与 Console](KUN-DEBUG.md)。调用证据与快照差异见 [检查说明](KUN-INSPECT.md)，四面板见 [结构化检查](KUN-PANELS.md)。已有 Codex/Kun 轮次、步骤、异常与统计的 [统一只读检查和 MCP](DEBUG-SERVICE.md)，已有 [独立诊断会话与建议审核](KUN-DIAGNOSIS.md)；阶段状态见 [开发进度](KUN-PROGRESS.md)，变更见 [0.30.0 发布记录](RELEASE-0.30.0.md)。
+固定模块与预算见 [K1 核心说明](KUN-K1-CORE.md)。安全续跑见 [检查点恢复](KUN-CHECKPOINTS.md)。调试控制见 [条件断点与 Console](KUN-DEBUG.md)。调用证据与快照差异见 [检查说明](KUN-INSPECT.md)，四面板见 [结构化检查](KUN-PANELS.md)。已有 Codex/Kun 轮次、步骤、异常与统计的 [统一只读检查和 MCP](DEBUG-SERVICE.md)，已有 [独立诊断会话与建议审核](KUN-DIAGNOSIS.md)，以及 [K3-A 离线记录实验](KUN-EXPERIMENTS.md)；阶段状态见 [开发进度](KUN-PROGRESS.md)，变更见 [0.31.0 发布记录](RELEASE-0.31.0.md)。
 
 ## 构建和启动
 
@@ -70,7 +70,7 @@ Kun 独占 `<data>/kun/sessions/<sessionId>/state.db`，RunDesk 的业务数据�
 | 预算 | 模型/工具调用次数、活动时间、连续工具失败、可选已报告 token 阈值；等待时间单独统计 |
 | 记录 | 状态、事件、快照、命令回执、工具执行台账；API Key 字段不进入记录 |
 
-不支持：Shell、PiG 插件/Node 扩展、图像输入、自动 Skills 激活、压缩/记忆管理、高级模块/费用断点、替换工具结果、任意历史回滚、分叉、确定性代码生成、JEV/JIT、Docker worker。四模块健康度、自然语言诊断、模块替换与第二种 LoopPolicy 尚未实现；Layers 提供固定模块的结构化状态，Application 目前仅覆盖 MCP。Codex 仍沿用现有后端，Kun 控制接口不会控制 Codex 的循环。
+不支持：Shell、PiG 插件/Node 扩展、图像输入、自动 Skills 激活、压缩/记忆管理、高级模块/费用断点、运行时替换工具结果、任意历史回滚、运行时分叉、确定性代码生成、JEV/JIT、Docker worker。已有 Kun 独立自然语言诊断和宿主离线记录分支；四模块健康度、模块替换与第二种 LoopPolicy 尚未实现；Layers 提供固定模块的结构化状态，Application 目前仅覆盖 MCP。Codex 仍沿用现有后端，Kun 控制接口不会控制 Codex 的循环。
 
 模型文本在请求结束后显示，目前没有逐 token UI。模型服务调用仍会发送任务上下文到配置的服务地址；“本地记录”不代表模型离线运行。
 
@@ -166,7 +166,7 @@ Network 记录 initialize、tools/list、tools/call 的业务请求/响应和耗
 
 ## 协议与 API
 
-worker 协议版本 6，每行一个 JSON 对象；stdout 仅输出协议，stderr 输出诊断。方法包括 `hello`、`start`、`state`、`events`、`snapshot`、`control`、`checkpoint`、`query`；`start.resume` 用于显式恢复。`hello` 宣告 `snapshotDiff=true`、`eventEvidence=true`、`resumeCheckpoint=true`、`fork=false`、`mcp=true`、`mcpApproval=true`。最大消息为 8 MiB。升级时同时更新 RunDesk 与 Kun；旧版 worker 的握手会被拒绝。状态记录 schema 保持 1，新增字段为可选，旧记录可读取，但不匹配当前引擎版本或缺少恢复清单的记录不允许恢复。
+worker 协议版本 7，每行一个 JSON 对象；stdout 仅输出协议，stderr 输出诊断。方法包括 `hello`、`start`、`state`、`events`、`snapshot`、`control`、`checkpoint`、`query`；`start.resume` 用于显式恢复。`hello` 宣告 `snapshotDiff=true`、`eventEvidence=true`、`resumeCheckpoint=true`、`fork=false`、`mcp=true`、`mcpApproval=true`、`diagnosticSession=true`。宿主离线记录分支不使用 worker fork，不改变该能力标志。最大消息为 8 MiB。升级时同时更新 RunDesk 与 Kun；旧版 worker 的握手会被拒绝。状态记录 schema 保持 1，新增字段为可选，旧记录可读取，但不匹配当前引擎版本或缺少恢复清单的记录不允许恢复。
 
 HTTP 同时支持 `/api` 和 `/api/v1`：
 - `PUT /instances/{iid}/agent-runtime`：管理员提交 `{revision, config}`。
@@ -195,6 +195,6 @@ HTTP 同时支持 `/api` 和 `/api/v1`：
 
 本版实际复制范围是 PiG 模型 SSE、MCP SSE 解码实现和一项模型协议回归测试；Loop、持久化、RunDesk 适配与调试控制由 Kun 自行实现。来源、固定版本、许可证与改动见 [UPSTREAM.md](UPSTREAM.md)。
 
-本版已增加 Kun 内部 Provider/模块接口与统一工具派发入口；跨后端 AgentRuntime 抽取仍未完成。后续先验收实际模型/MCP、补记忆管理与剩余预算要求，再扩展恢复覆盖、可配置模块和分叉，最后考虑轨迹归纳代码与去优化守卫。AgentJIT 仅为前期提供资料中的研究参考，本版没有实现或验证其效果。
+本版已增加 Kun 内部 Provider/模块接口与统一工具派发入口；跨后端 AgentRuntime 抽取仍未完成。后续先验收实际模型/MCP、补记忆管理与剩余预算要求，K3-A 先交付离线记录分支，再扩展 K3-B 安全检查点运行时分叉/Hybrid、K3-C 可配置模块与第二种 LoopPolicy，最后进入 K4 轨迹归纳代码与去优化守卫。AgentJIT 仅为前期提供资料中的研究参考，本版没有实现或验证其效果。
 
 验证范围、复现命令及已知测试时序问题见 [KUN-VALIDATION.md](KUN-VALIDATION.md)。

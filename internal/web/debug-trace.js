@@ -8,10 +8,11 @@ window.RunDeskDebug=(()=>{
   if(!session?.id){toast('请先选择会话');return;}
   const sid=session.id,base='/sessions/'+encodeURIComponent(sid)+'/debug/';
   let through=null,epoch=0,listTicket=0,detailTicket=0,eventTicket=0,offset=0,next=0,hasMore=false,runOffset=0,runNext=0,runMore=false,closed=false;
-  let selectedRun=selection.runId||'',query='',kind='steps',type='',creating=false;
+  let selectedRun=selection.runId||'',query='',kind='steps',type='',creating=false,capturing=false;
   const diagnosisQuestion=el('textarea',{rows:3,maxLength:4000,'aria-label':'诊断问题',placeholder:'例如：这次调用为何失败？请引用事件并给出待审核建议。'}),diagnosisFeedback=el('p',{role:'status'});
   const diagnosisStart=button('创建诊断并发送问题',startDiagnosis);
-  function syncDiagnosis(){diagnosisStart.disabled=creating||through===null||!selectedRun||!diagnosisQuestion.value.trim();}
+  const experimentStart=button('创建离线实验基线',async()=>{if(capturing||through===null||!selectedRun)return;const e=epoch;capturing=true;syncDiagnosis();try{const branch=await api('/experiments',{method:'POST',body:{sessionId:sid,runId:selectedRun,through,title:[...(session.title||'Kun')+' · 离线基线'].slice(0,120).join('')}});if(alive(e))RunDeskExperiments.open({sessionId:sid,branchId:branch.id});else toast('离线基线已保存。');}finally{capturing=false;if(!closed)syncDiagnosis();}});
+  function syncDiagnosis(){diagnosisStart.disabled=creating||through===null||!selectedRun||!diagnosisQuestion.value.trim();experimentStart.disabled=capturing||through===null||!selectedRun;}
   diagnosisQuestion.oninput=syncDiagnosis;
   const d=el('dialog',{class:'debug-inspector',id:'debug-inspector'}),info=el('p',{class:'help',role:'status'}),error=el('p',{class:'error',role:'alert'}),stats=el('p',{class:'debug-summary'}),list=el('div',{class:'debug-step-list'}),detail=el('section',{class:'debug-step-detail'});
   const runs=el('select',{'aria-label':'调试轮次'}),types=el('select',{'aria-label':'步骤类型'},...['','commandExecution','mcpToolCall','dynamicToolCall','webSearch','fileChange','agentMessage','reasoning','approval','modelCall','toolCall','mcpExchange'].map(v=>el('option',{value:v},v||'所有类型')));
@@ -109,6 +110,7 @@ window.RunDeskDebug=(()=>{
   d.append(el('div',{class:'dialog-head'},el('h2',{},'只读调试'),button('关闭',()=>d.close(),'quiet')),info,error,capabilities,
    el('div',{class:'debug-filters'},el('label',{},'轮次',runs),el('label',{},'类型',types),el('label',{},'预览搜索',search),el('label',{class:'debug-check'},issues,'仅需关注'),filter,latest),
    el('div',{class:'debug-pages'},runsPrev,runPage,runsNext),el('details',{class:'debug-diagnosis'},el('summary',{},'用独立会话诊断'),el('p',{class:'help'},'请先选择一个轮次。会调用该会话配置的模型，发送固定范围内的证据，用量记在新的诊断会话。结论和建议需审核。'),diagnosisQuestion,diagnosisStart,diagnosisFeedback),stats,el('div',{class:'debug-columns'},el('section',{},list,el('div',{class:'debug-pages'},prev,pageLabel,more)),detail));
+  if(session.runtimeKind==='kun')d.append(el('section',{class:'debug-diagnosis'},el('h3',{},'离线记录实验'),el('p',{class:'help'},'先选择轮次。复制固定范围的已脱敏 Kun 记录，不调用模型或工具；每次编辑生成子分支，后续结果标为未验证。'),experimentStart,button('查看已有离线分支',()=>RunDeskExperiments.open({sessionId:sid}))));
   d.onclose=()=>{closed=true;epoch++;d.remove();};document.body.append(d);d.showModal();syncDiagnosis();refresh(true);return d;
  }
  function validSuggestion(p,origin){return !!origin&&p?.status==='suggestion_only'&&p.sessionId===origin.sessionId&&p.runId===origin.runId&&p.through===origin.through&&['inspect','steer','configuration'].includes(p.kind)&&typeof p.text==='string'&&typeof p.reason==='string'&&Array.isArray(p.evidenceIds)&&p.evidenceIds.length>0&&p.evidenceIds.length<=16&&p.evidenceIds.every(id=>Number.isSafeInteger(id)&&id>0&&id<=origin.through);}

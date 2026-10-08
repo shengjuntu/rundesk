@@ -96,7 +96,7 @@ async function hasPendingSubmission(path,body) {return pendingAPI.has(await subm
 async function api(path, options = {}) {
   const headers = { ...options.headers };
   const method=options.method||"GET", body=options.body;
-  const deduplicate=method==="POST" && (/^\/sessions\/[^/]+\/kun\/resume$/.test(path)||/^\/workspaces\/[^/]+\/mcp-tests(?:\?|$)/.test(path)||/^\/(instances|workspaces|sessions|tasks|schedules)$/.test(path)||/^\/sessions\/[^/]+\/(turns|recover)$/.test(path));
+  const deduplicate=method==="POST" && (/^\/experiments(?:\/[^/]+\/branches)?$/.test(path)||/^\/sessions\/[^/]+\/kun\/resume$/.test(path)||/^\/workspaces\/[^/]+\/mcp-tests(?:\?|$)/.test(path)||/^\/(instances|workspaces|sessions|tasks|schedules)$/.test(path)||/^\/sessions\/[^/]+\/(turns|recover)$/.test(path));
   let signature;
   if(deduplicate) {
     signature=await submissionSignature(path,body);

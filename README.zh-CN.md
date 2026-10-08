@@ -10,14 +10,15 @@
 
 ![RunDesk 对话界面](docs/screenshots/0.16.0/chat-zh.png)
 
-## Kun 与 Codex 调试（0.30.0）
+## Kun 离线实验与调试（0.31.0）
 
-RunDesk 0.30.0 接通 Kun“补充指令”建议的审核流程：编辑文本、预览当前运行和状态版本、明确发送，再查看排队/生效/拒绝回执。过期预览拒绝，同一预览重试复用控制请求编号。检查与配置建议仍需人工处理。诊断模型保持 6 个只读查询和 1 个建议工具，没有执行控制工具。Kun 维持 0.7.0 / 协议 v7，相比 0.29.0 没有引擎版本变化。Codex 内部单步、条件断点和完整上下文快照仍未提供。见 [诊断说明](docs/KUN-DIAGNOSIS.md)、[验证记录](docs/KUN-VALIDATION.md) 和 [完成度](docs/KUN-PROGRESS.md)。
+RunDesk 0.31.0 开始 K3-A：冻结 Kun 单个轮次的记录，建立不可变实验分支，查看来源谱系和记录差异。管理员可假设工具返回另一段文本；后续记录保守标为未验证。这些操作不调用模型或工具、不重新生成答案，也不改变来源会话。实验能在宿主重启和来源删除后继续查看；当前尚无实验删除或过期接口。见 [离线实验说明](docs/KUN-EXPERIMENTS.md)、[验证记录](docs/KUN-VALIDATION.md) 和 [完成度](docs/KUN-PROGRESS.md)。
 
+Kun 维持 0.7.0 / 协议 v7，保留既有诊断建议审核。检查点运行时分叉、Hybrid/Live 和 K4 优化尚未实现。Codex 保留只读检查与原生分析路径，内部单步、条件断点和完整上下文快照仍未提供。
 
 Kun 与 RunDesk 同仓库、分进程运行。使用 Go 1.25.12+ 执行 `make build`，然后运行 `./bin/rundesk --data ./data`；在配置页的 **Agent 引擎** 中选择 Kun、设置模型服务并新建会话。Kun 不需要安装 Codex。
 
-Kun 0.7 提供 OpenAI 兼容文本模型、项目文件工具、显式 Skills，以及 stdio / Streamable HTTP MCP。复用工具 MCP 配置页：默认逐次询问，设为“始终允许”后下一轮直接执行。DevTools 包括 Network、Elements、Sources、Performance、Console、Layers 和 MCP 状态 Application 视图。支持暂停、单步、文本补充和停止。插件、任意历史回滚、分叉和轨迹编译尚未实现。
+Kun 0.7 提供 OpenAI 兼容文本模型、项目文件工具、显式 Skills，以及 stdio / Streamable HTTP MCP。复用工具 MCP 配置页：默认逐次询问，设为“始终允许”后下一轮直接执行。DevTools 包括 Network、Elements、Sources、Performance、Console、Layers 和 MCP 状态 Application 视图。支持暂停、单步、文本补充和停止。插件、任意历史回滚、运行时分叉和轨迹编译尚未实现；宿主已提供离线记录分支。
 
 详见 [Kun 使用与实现边界](docs/KUN.md)。选择性复制的 PiG 源码、固定版本及感谢声明见 [来源记录](docs/UPSTREAM.md)；MIT 许可与版权声明随源码保留。
 

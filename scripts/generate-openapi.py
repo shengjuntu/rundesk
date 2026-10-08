@@ -100,7 +100,7 @@ requests={
  ('PUT','/workspaces/{wid}/mcp/{name}'):obj({'version':st(),'config':obj(extra=True),'remove':bool_},['version']),
  ('POST','/workspaces/{wid}/mcp/import'):obj({'version':st(),'bundle':obj(extra=True),'overwrite':bool_},['version','bundle']),
 }
-idempotent={('POST',p) for p in ['/instances','/workspaces','/sessions','/sessions/{sid}/turns','/sessions/{sid}/recover','/sessions/{sid}/kun/resume','/tasks','/schedules','/workspaces/{wid}/mcp-tests']}
+idempotent={('POST',p) for p in ['/experiments','/experiments/{eid}/branches','/instances','/workspaces','/sessions','/sessions/{sid}/turns','/sessions/{sid}/recover','/sessions/{sid}/kun/resume','/tasks','/schedules','/workspaces/{wid}/mcp-tests']}
 summaries={
  '/instances/{iid}/images':'管理员：GET 读取持久化镜像目录及环境差异；POST 检查并登记本机镜像，不构建、不拉取、不启动容器',
  '/instances/{iid}/images/{vid}/check':'管理员：按固定 Image ID 核对可用性；失败仍返回记录，检查 availability 和 error',
@@ -313,6 +313,42 @@ for path,method,response,body in [
  if body is not None:op['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
  if method=='get':op['parameters'].append({'name':'proposalEventId','in':'query','required':True,'schema':{'type':'integer','minimum':1}})
 
+# K3-A offline recordings. These resources are not sessions or resumable workers.
+schemas['ExperimentSource']=obj({'sessionId':st(),'runId':st(),'through':integer,'workspaceId':st(),'instanceId':st(),'title':st(),'backend':st(enum=['kun'])},['sessionId','runId','through','workspaceId','instanceId','title','backend'])
+schemas['ExperimentPatch']=obj({'eventId':integer,'text':st(maxLength=16000),'reason':st(maxLength=2000),'branchId':st()},['eventId','text','reason','branchId'])
+schemas['ExperimentChange']=obj({'eventId':{'type':'integer','minimum':1},'operation':st(enum=['replace','restore']),'text':st(maxLength=16000),'reason':st(minLength=1,maxLength=2000)},['eventId','operation','reason'])
+schemas['ExperimentBranch']=obj({'schema':{'const':1},'id':st(),'rootId':st(),'parentId':st(),'parentHash':st(),'bundleHash':st(),'contentHash':st(),'source':ref('ExperimentSource'),'title':st(),'createdAt':st(),'mode':st(enum=['record_edit']),'depth':integer,'eventCount':integer,'patches':arr(ref('ExperimentPatch')),'change':ref('ExperimentChange')},['schema','id','rootId','bundleHash','contentHash','source','title','createdAt','mode','depth','eventCount','patches'])
+schemas['ExperimentSummary']=obj({k:v for k,v in schemas['ExperimentBranch']['properties'].items() if k not in ['schema','parentHash','bundleHash','patches','change']}|{'patchCount':integer},['id','rootId','contentHash','source','title','createdAt','mode','depth','eventCount','patchCount'])
+schemas['ExperimentCounts']=obj({'recorded':integer,'edited':integer,'stale':integer},['recorded','edited','stale'])
+schemas['ExperimentEvent']=obj({'id':integer,'index':integer,'time':st(),'method':st(),'classification':st(enum=['recorded','edited','stale']),'downstreamUnverified':bool_,'editable':bool_,'toolName':st(),'patch':ref('ExperimentPatch')},['id','index','time','method','classification','downstreamUnverified','editable'])
+schemas['ExperimentDifference']=obj({'eventId':integer,'method':st(),'before':ref('ExperimentEvent'),'after':ref('ExperimentEvent')},['eventId','method','before','after'])
+schemas['ExperimentCreate']=obj({'sessionId':st(),'runId':st(),'through':{'type':'integer','minimum':1},'title':st(minLength=1,maxLength=120)},['sessionId','runId','title'])
+schemas['ExperimentFork']=obj({'title':st(minLength=1,maxLength=120),'expectedParentHash':st(),'change':ref('ExperimentChange')},['title','expectedParentHash','change'])
+for path,method,response,body in [
+ ('/experiments','post',ref('ExperimentBranch'),ref('ExperimentCreate')),
+ ('/experiments','get',obj({'items':arr(ref('ExperimentSummary')),'nextOffset':integer,'hasMore':bool_},['items','nextOffset','hasMore']),None),
+ ('/experiments/{eid}','get',obj({'branch':ref('ExperimentBranch'),'counts':ref('ExperimentCounts'),'lineage':arr(ref('ExperimentSummary')),'invalidation':st()},['branch','counts','lineage','invalidation']),None),
+ ('/experiments/{eid}/branches','post',ref('ExperimentBranch'),ref('ExperimentFork')),
+ ('/experiments/{eid}/events','get',obj({'items':arr(ref('ExperimentEvent')),'total':integer,'nextOffset':integer,'hasMore':bool_,'counts':ref('ExperimentCounts')},['items','total','nextOffset','hasMore','counts']),None),
+ ('/experiments/{eid}/events/{eventId}','get',obj({'event':ref('ExperimentEvent'),'originalChunk':st(),'offset':integer,'nextOffset':integer,'totalCharacters':integer,'hasMore':bool_,'note':st()},['event','originalChunk','offset','nextOffset','totalCharacters','hasMore','note']),None),
+ ('/experiments/{eid}/diff','get',obj({'before':ref('ExperimentSummary'),'after':ref('ExperimentSummary'),'items':arr(ref('ExperimentDifference')),'total':integer,'nextOffset':integer,'hasMore':bool_},['before','after','items','total','nextOffset','hasMore']),None),
+]:
+ op=paths[path][method];op['x-administrator-only']=True
+ op['parameters']=[v for v in op['parameters'] if v['in']!='query']
+ op['summary']='Offline record experiment: '+path.rsplit('/',1)[-1]
+ op['description']='K3-A 仅管理员：Kun 固定单轮次已脱敏记录，非执行会话或 checkpoint。只捕获有明确 runId 的宿主记录，最多 2000 条、原始 16 MiB、单条 4 MiB，脱敏包最多 20 MiB。基线及子分支不可变；替代成功/失败工具返回文本会保守地将之后所有记录标为 stale，不自动重算依赖。每次 replace/restore 新建子分支，最多 32 层及 32 个替代值。读取、逐条查看、差异和分叉不启动 worker/模型/工具，不回滚文件或外部系统。源会话删除后记录仍保留，不提供实验删除/导入/执行接口。'
+ op['responses']['200']['content']['application/json']['schema']=response
+ op['responses']['400']={'description':'未知/重复参数、无效分页、标题、固定上界或缺少幂等 Key。'}
+ op['responses']['404']={'description':'分支或固定记录不存在。'}
+ op['responses']['409']={'description':'记录上限、后端不支持、不可编辑事件、父指纹/内容校验失败、跨基线比较或分支深度超限。'}
+ if body is not None:op['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
+ if method=='get' and path!='/experiments/{eid}':
+  op['parameters'] += [{'name':'offset','in':'query','schema':{'type':'integer','minimum':0,'maximum':20971520}},{'name':'limit','in':'query','schema':{'type':'integer','minimum':1,'maximum':16000 if path.endswith('/{eventId}') else 16 if path.endswith('/diff') else 50,'default':4000 if path.endswith('/{eventId}') else 16 if path.endswith('/diff') else 20}}]
+ if path=='/experiments' and method=='get':op['parameters'].append({'name':'sessionId','in':'query','schema':st()})
+ if path.endswith('/diff'):op['parameters'].append({'name':'against','in':'query','schema':st(),'description':'同一 rootId 的分支；省略对比父分支或自身基线。'})
+ # This path lists record metadata, never the session event SSE API.
+ if path.endswith('/events'):op['responses']['200']['content'].pop('text/event-stream',None)
+
 # Unified read-only debug facade. Existing Kun aliases retain their response shape.
 debug_kinds=['overview','run','events','event','context','tools','budget','modules','breakpoints','actions','snapshot','evidence','diff','runs','steps','step','issues','statistics']
 schemas['DebugCapability']=obj({'supported':bool_,'available':bool_,'reason':st()},['supported','available'])
@@ -418,6 +454,6 @@ if '/usage' in paths:
 if '/setup/docker-template' in paths:
  paths['/setup/docker-template']['get']['parameters']=[{'name':'version','in':'query','required':True,'schema':st(),'description':'Exact Codex release'}]
  paths['/setup/docker-template']['get']['responses']['200']={'description':'Pinned base image build context','content':{'application/zip':{'schema':st(format='binary')}}}
-spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk 0.30.0：建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
+spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk 0.31.0：K3-A 离线记录基线、不可变实验分支、保守失效与谱系差异；建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

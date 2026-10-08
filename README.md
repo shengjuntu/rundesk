@@ -10,14 +10,15 @@ Built with Go and plain HTML/JavaScript. Node.js is not required to run RunDesk 
 
 ![RunDesk conversation workspace](docs/screenshots/0.16.0/chat-en.png)
 
-## Kun and Codex debugging (0.30.0)
+## Kun offline experiments and debugging (0.31.0)
 
-RunDesk 0.30.0 connects Kun diagnostic steering suggestions to administrator review: edit the text, preview the current run and revision, explicitly send it, and inspect queued/applied/rejected receipts. Stale previews are rejected; retries of the same preview reuse the worker command ID. Diagnostic models still expose only six trace queries and one suggestion formatter, without control tools. Kun stays at 0.7.0 / worker protocol v7; there is no engine-version change from 0.29.0. Codex keeps its native analysis path; internal stepping, conditional breakpoints and full context snapshots remain unavailable. See [diagnostic setup](docs/KUN-DIAGNOSIS.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md).
+RunDesk 0.31.0 starts K3-A with frozen Kun recordings, immutable branches, lineage and record differences. Administrators can hypothesize a different tool output and inspect conservatively invalidated downstream records. These actions do not invoke models or tools, regenerate answers, or change the source session. Captured recordings survive host restart and source deletion; experiment deletion/expiry is not yet available. See [offline experiments](docs/KUN-EXPERIMENTS.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md).
 
+Kun remains 0.7.0 / worker protocol v7. Existing diagnostic steering review is retained. Runtime checkpoint forks, Hybrid/Live execution and K4 optimization remain unimplemented. Codex keeps its read-only inspector and native analysis path; internal stepping, conditional breakpoints and full context snapshots remain unavailable.
 
 Kun shares this repository with RunDesk and runs in a separate worker process. Build with Go 1.25.12+ using `make build`, then launch `./bin/rundesk --data ./data`. Open **Agent engine** in configuration, select Kun, configure an OpenAI-compatible endpoint/model, and create a new session. Codex is not required for Kun.
 
-Kun 0.6 supports text model calls, workspace file tools, explicit Skills, and MCP over stdio or finite Streamable HTTP. Configure MCP in the existing tools page: rules default to per-call approval; an explicit always-allow rule applies to the next run. DevTools shows Network, Elements, Sources, Performance, Console, Layers and MCP state in Application. Pause, step, supplemental instructions and cancellation are available. Plugins, historical rollback, forks and trajectory compilation remain unimplemented.
+Kun 0.7 supports text model calls, workspace file tools, explicit Skills, and MCP over stdio or finite Streamable HTTP. Configure MCP in the existing tools page: rules default to per-call approval; an explicit always-allow rule applies to the next run. DevTools shows Network, Elements, Sources, Performance, Console, Layers and MCP state in Application. Pause, step, supplemental instructions and cancellation are available. Plugins, historical rollback, runtime forks and trajectory compilation remain unimplemented; offline record branches are available in the host.
 
 See [Kun implementation and limits](docs/KUN.md). Thanks to PiG and Pi contributors: selected source files, pinned revision, adaptations and preserved MIT licenses are recorded in [UPSTREAM.md](docs/UPSTREAM.md).
 

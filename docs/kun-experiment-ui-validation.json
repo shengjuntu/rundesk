@@ -1,0 +1,17 @@
+{
+  "version": "0.31.0",
+  "passed": true,
+  "scope": "real Chromium + RunDesk/Kun + local model; experiment actions offline",
+  "sourceModelCalls": 4,
+  "experimentModelCalls": 0,
+  "checks": [
+    "UI captures a fixed Kun run with bounded original-event chunks and literal text",
+    "child overlays output, marks all later records unverified, and leaves source revision/events/files/calls unchanged",
+    "late step-navigation response cannot overwrite a newer event selection",
+    "stepwise recording navigation and restore create a new lineage node without changing parents",
+    "late baseline response cannot overwrite a newer branch selection",
+    "new source run and page reload do not advance or mutate frozen branches",
+    "recordings survive host restart and source deletion; offline review has zero extra model calls and fits mobile"
+  ],
+  "pageErrors": []
+}

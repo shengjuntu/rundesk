@@ -44,6 +44,7 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 	s.instanceRoutes(mux)
 	s.kunRoutes(mux)
 	s.debugRoutes(mux)
+	s.experimentRoutes(mux)
 	s.applicationRoutes(mux)
 	s.skillBundleRoutes(mux)
 	s.runtimeRoutes(mux)

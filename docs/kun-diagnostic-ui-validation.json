@@ -1,5 +1,5 @@
 {
-  "version": "0.30.0",
+  "version": "0.31.0",
   "passed": true,
   "scope": "real Chromium + RunDesk + Kun worker + local model fixture; no real provider",
   "modelCalls": 4,

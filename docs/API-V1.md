@@ -237,3 +237,8 @@ OpenAPI 文档版本 1.2.0；48 个路径、57 个操作。应用执行协议仍
 Task and Schedule responses may contain `submittingKeyId` (a credential identifier, never its secret). This is server-assigned and is not accepted in request bodies. New application and inbound A2A jobs re-check the submitting credential before admission. Revoked, expired or out-of-scope jobs fail without starting; due schedules are disabled with `lastReason`. Running jobs require explicit cancellation. An application can save a schedule with a replacement credential to authorize future occurrences; existing queued occurrences retain their original credential. Admin edits preserve an existing binding. Legacy records without provenance and trusted internal/admin submissions retain prior behavior.
 
 任务与定时规则响应增加可选 `submittingKeyId`，只保存凭据 ID，不保存秘密，客户端不能指定。执行前授权失败时，任务为 `failed` 并记录 `reason`；定时规则到期停用并记录 `lastReason`。已运行任务需单独取消。新凭据重新保存定时规则只影响后续产生的任务；管理员编辑不会清除原绑定。没有来源记录的旧任务与可信内部／管理员提交保留原行为。
+
+
+## K3-A 离线记录实验（0.31.0）
+
+新增 `/api/v1/experiments` 管理员接口：冻结 Kun 单轮记录，创建不可变子分支，读取谱系、事件分块和同基线差异。两个 POST 复用既有 Idempotency-Key；应用 key 与成员入口默认拒绝。它们不调用 worker 或模型，不提供执行、运行时恢复或删除接口。完整请求字段、分页和留存边界见 [KUN-EXPERIMENTS.md](KUN-EXPERIMENTS.md) 及生成的 OpenAPI。
