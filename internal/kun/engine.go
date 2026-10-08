@@ -8,11 +8,17 @@ import (
 	"fmt"
 	p "github.com/shengjuntu/rundesk/internal/kunproto"
 	"path/filepath"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 )
 
 type Engine struct {
+	mcpSpecs       []p.MCPServer
+	connections    map[string]*mcpConnection
+	secrets        []string
+	exchange       int64
 	mu             sync.Mutex
 	j              *journal
 	state          p.State
@@ -37,16 +43,24 @@ func Open(path string) (*Engine, error) {
 	}
 	v := &Engine{j: j, state: s, wake: make(chan struct{}, 1), fatal: make(chan error, 1)}
 	if p.Active(s.Status) {
-		// Recovery is inspection-only in v0.1. An unfinished write is never retried.
+		// Recovery is inspection-only. An unfinished external action is never retried.
 		for id, status := range v.state.Actions {
 			if status == "dispatched" {
 				v.state.Actions[id] = "outcome_unknown"
+			} else if status == "prepared" {
+				v.state.Actions[id] = "cancelled"
 			}
 		}
 		for _, c := range v.state.Pending {
 			v.state.Messages = append(v.state.Messages, p.Message{Role: "tool", ToolCallID: c.ID, Content: "Interrupted. Recorded outcome: " + v.state.Actions[c.ID] + ". Do not automatically repeat side effects; inspect the workspace."})
 		}
 		v.state.Pending = nil
+		v.state.Approval = nil
+		for n := range v.state.MCP {
+			if v.state.MCP[n].Status != "failed" {
+				v.state.MCP[n].Status = "closed"
+			}
+		}
 		v.state.Status = "interrupted"
 		v.state.Error = "Worker stopped before completion; inspect recorded actions before a new turn."
 		if e = v.applyQueued("", true); e != nil {
@@ -101,8 +115,32 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 	if !filepath.IsAbs(in.Workspace) {
 		return p.State{}, fmt.Errorf("workspace must be absolute")
 	}
+	if len(in.MCP) > 16 {
+		return p.State{}, fmt.Errorf("at most 16 enabled MCP servers are supported")
+	}
+	names := map[string]bool{}
+	for _, spec := range in.MCP {
+		if err := spec.Validate(); err != nil {
+			return p.State{}, err
+		}
+		if names[spec.Name] {
+			return p.State{}, fmt.Errorf("duplicate MCP server")
+		}
+		names[spec.Name] = true
+	}
+	if in.ApprovalPolicy == "" {
+		in.ApprovalPolicy = "on-request"
+	}
+	if in.ApprovalPolicy != "on-request" && in.ApprovalPolicy != "never" {
+		return p.State{}, fmt.Errorf("unsupported MCP approval policy")
+	}
 	safe := in
 	safe.APIKey = ""
+	safe.MCP = append([]p.MCPServer(nil), in.MCP...)
+	for n := range safe.MCP {
+		safe.MCP[n].Environment = nil
+		safe.MCP[n].Headers = nil
+	}
 	hash := fingerprint(safe)
 	var previous string
 	err := e.j.db.QueryRow("SELECT fingerprint FROM runs WHERE id=?", in.RunID).Scan(&previous)
@@ -136,15 +174,45 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 	previousState := clone(e.state)
 	e.state = p.State{Schema: 1, SessionID: in.SessionID, RunID: in.RunID, Revision: e.state.Revision + 1, Status: "running", Phase: "before_model", Config: in.Config, Skills: in.Skills, Actions: map[string]string{}, Messages: append([]p.Message{{Role: "system", Content: prompt}}, kept...)}
 	e.state.Messages = append(e.state.Messages, p.Message{Role: "user", Content: in.Input})
+	e.state.ApprovalPolicy = in.ApprovalPolicy
+	for _, definition := range toolDefinitions(in.Config.AllowWrite) {
+		e.state.ToolDefinitions = append(e.state.ToolDefinitions, p.JSON(definition))
+	}
+	for _, spec := range in.MCP {
+		transport := "stdio"
+		if spec.URL != "" {
+			transport = "streamable-http"
+		}
+		e.state.MCP = append(e.state.MCP, p.MCPStatus{Name: spec.Name, Revision: spec.Revision, Transport: transport, Status: "pending"})
+	}
 	if len(p.JSON(e.state)) > 2<<20 {
 		e.state = previousState
 		return p.State{}, fmt.Errorf("context exceeds 2 MiB; start a new session")
 	}
-	if _, err = e.j.commit(e.state, "kun/run.started", map[string]any{"config": in.Config, "skills": in.Skills}, ""+in.RunID, hash, nil); err != nil {
+	if _, err = e.j.commit(e.state, "kun/run.started", map[string]any{"config": in.Config, "skills": in.Skills, "mcp": e.state.MCP, "approvalPolicy": in.ApprovalPolicy}, ""+in.RunID, hash, nil); err != nil {
 		e.state.Status = "failed"
 		return p.State{}, err
 	}
 	e.workspace, e.key = in.Workspace, in.APIKey
+	_ = json.Unmarshal(p.JSON(in.MCP), &e.mcpSpecs)
+	e.connections = map[string]*mcpConnection{}
+	e.exchange = 0
+	e.secrets = []string{in.APIKey}
+	for _, spec := range in.MCP {
+		for name, value := range spec.Environment {
+			lower := strings.ToLower(name)
+			if strings.Contains(lower, "key") || strings.Contains(lower, "token") || strings.Contains(lower, "secret") || strings.Contains(lower, "password") || strings.Contains(lower, "credential") || strings.Contains(lower, "auth") {
+				e.secrets = append(e.secrets, value)
+			}
+		}
+		for _, value := range spec.Headers {
+			e.secrets = append(e.secrets, value)
+			if strings.HasPrefix(value, "Bearer ") {
+				e.secrets = append(e.secrets, strings.TrimPrefix(value, "Bearer "))
+			}
+		}
+	}
+	sort.Slice(e.secrets, func(i, j int) bool { return len(e.secrets[i]) > len(e.secrets[j]) })
 	e.pause, e.single = in.Config.PauseBeforeModel, false
 	ctx, cancel := context.WithCancel(context.Background())
 	e.cancel = cancel
@@ -182,15 +250,28 @@ func (e *Engine) Control(c p.Control) (p.Receipt, error) {
 	receipt = p.Receipt{RequestID: c.RequestID, Status: "applied", Revision: e.state.Revision + 1}
 	switch c.Operation {
 	case "pause":
+		if e.state.Status == "paused" {
+			break
+		}
 		e.state.Queued = append(e.state.Queued, c)
 		e.pause = true
 		receipt.Status = "queued"
 	case "resume", "step":
+		if e.state.Approval != nil {
+			return receipt, fmt.Errorf("MCP tool approval is required; resume/step cannot authorize it")
+		}
 		if e.state.Status != "paused" {
 			return receipt, fmt.Errorf("run is not paused")
 		}
 		e.pause = false
 		e.single = c.Operation == "step"
+		e.state.Status = "running"
+	case "approve", "reject":
+		a := e.state.Approval
+		if a == nil || a.CallID != c.CallID || a.Decision != "" {
+			return receipt, fmt.Errorf("MCP approval conflict")
+		}
+		a.Decision = c.Operation
 		e.state.Status = "running"
 	case "cancel":
 		e.state.Queued = append(e.state.Queued, c)
@@ -285,13 +366,20 @@ func (e *Engine) loop(ctx context.Context) {
 		if r := recover(); r != nil {
 			failure = fmt.Errorf("Kun internal panic: %v", r)
 		}
-		e.mu.Lock()
-		defer e.mu.Unlock()
 		wasCanceled := ctx.Err() != nil
 		e.cancel()
+		e.closeMCP()
+		e.mu.Lock()
+		defer e.mu.Unlock()
+		e.state.Approval = nil
+		for n := range e.state.MCP {
+			if e.state.MCP[n].Status != "failed" {
+				e.state.MCP[n].Status = "closed"
+			}
+		}
 		if failure != nil {
 			e.state.Status = "failed"
-			e.state.Error = failure.Error()
+			e.state.Error = e.scrubText(failure.Error())
 			if wasCanceled {
 				e.state.Status = "interrupted"
 			}
@@ -311,7 +399,11 @@ func (e *Engine) loop(ctx context.Context) {
 		}
 		_ = e.applyQueued("", true)
 		_ = e.record("kun/run.finished", map[string]any{"status": e.state.Status, "error": e.state.Error})
+		e.secrets = nil
 	}()
+	if failure = e.discoverMCP(ctx); failure != nil {
+		return
+	}
 	for {
 		if failure = e.boundary(ctx, "before_model"); failure != nil {
 			return
@@ -389,19 +481,67 @@ func (e *Engine) loop(ctx context.Context) {
 			}
 			e.mu.Lock()
 			call := e.state.Pending[0]
+			tool, isMCP := e.mcpTool(call.Function.Name)
+			e.mu.Unlock()
+			if isMCP {
+				var allowed bool
+				allowed, failure = e.approveMCP(ctx, tool, call)
+				if failure != nil {
+					return
+				}
+				if !allowed {
+					output := "MCP tool was denied by the user or approval policy. No external call was made."
+					e.mu.Lock()
+					e.state.Actions[call.ID] = "declined"
+					e.state.Messages = append(e.state.Messages, p.Message{Role: "tool", ToolCallID: call.ID, Content: output})
+					e.state.Pending = e.state.Pending[1:]
+					e.state.Phase = "after_tool"
+					failure = e.record("kun/tool.completed", map[string]any{"call": call, "output": output, "isError": true, "status": "declined", "durationMs": 0, "step": e.state.Step, "mcp": map[string]string{"server": tool.Server, "tool": tool.Name}})
+					if e.single {
+						e.pause = true
+					}
+					e.mu.Unlock()
+					if failure != nil {
+						return
+					}
+					continue
+				}
+			}
+			e.mu.Lock()
+			if failure = ctx.Err(); failure != nil {
+				e.mu.Unlock()
+				return
+			}
 			e.state.Phase = "tool"
 			e.state.Actions[call.ID] = "dispatched"
-			failure = e.record("kun/tool.started", map[string]any{"call": call, "step": e.state.Step})
+			metadata := map[string]string{}
+			if isMCP {
+				metadata = map[string]string{"server": tool.Server, "tool": tool.Name}
+			}
+			failure = e.record("kun/tool.started", map[string]any{"call": call, "step": e.state.Step, "mcp": metadata})
 			workspace, allow := e.workspace, e.state.Config.AllowWrite
 			e.mu.Unlock()
 			if failure != nil {
 				return
 			}
 			started := time.Now()
-			output, err := executeTool(workspace, allow, call)
-			isError := err != nil
-			if isError {
-				output = err.Error()
+			var output string
+			var raw json.RawMessage
+			var err error
+			var isError bool
+			if isMCP {
+				output, raw, isError, err = e.callMCP(ctx, tool, call)
+				// A lost reply is not a failed action. End the run instead of inviting an automatic retry.
+				if err != nil {
+					failure = fmt.Errorf("MCP %s/%s outcome unknown: %w", tool.Server, tool.Name, err)
+					return
+				}
+			} else {
+				output, err = executeTool(workspace, allow, call)
+				isError = err != nil
+				if isError {
+					output = err.Error()
+				}
 			}
 			e.mu.Lock()
 			status := "succeeded"
@@ -412,7 +552,7 @@ func (e *Engine) loop(ctx context.Context) {
 			e.state.Messages = append(e.state.Messages, p.Message{Role: "tool", ToolCallID: call.ID, Content: output})
 			e.state.Pending = e.state.Pending[1:]
 			e.state.Phase = "after_tool"
-			failure = e.record("kun/tool.completed", map[string]any{"call": call, "output": output, "isError": isError, "durationMs": time.Since(started).Milliseconds(), "step": e.state.Step})
+			failure = e.record("kun/tool.completed", map[string]any{"call": call, "output": output, "isError": isError, "durationMs": time.Since(started).Milliseconds(), "step": e.state.Step, "mcp": metadata, "result": raw})
 			if e.single {
 				e.pause = true
 			}

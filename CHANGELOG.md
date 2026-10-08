@@ -1,3 +1,13 @@
+# 0.21.0 — Kun 0.2 / MCP
+
+- Kun 每轮独立连接 MCP：stdio、Streamable HTTP JSON/SSE、分页发现、工具过滤和稳定别名。
+- 复用 RunDesk MCP 配置、导入导出及工具权限页面；Kun 配置按实例独立保存，下一轮生效。
+- 默认逐次审批；显式“始终允许”直接执行；无交互模式拒绝需要询问的工具。应用凭据审批需 approvals scope。
+- 会话审批卡片、Sources 审批控制、Network 请求/响应、Elements 工具定义、Application MCP 状态。
+- 工具派发后发生超时/断连时标记 outcome_unknown 并停止，禁止自动重试；重启清除失效审批。
+- 选择性复制 PiG MCP SSE 解码文件并记录原始哈希与许可证。worker 协议升级为 2，两个二进制须配套更新。
+- 未实现 OAuth、旧 SSE 传输、MCP tasks、插件、分叉、JEV/JIT；详见 docs/KUN.md。
+
 # 0.20.0 — Kun 0.1
 
 - Kun 独立 worker、共享仓库、JSONL 协议和 SQLite 状态/事件/快照。

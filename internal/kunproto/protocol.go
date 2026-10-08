@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-const Version = 1
-const EngineVersion = "0.1.0"
+const Version = 2
+const EngineVersion = "0.2.0"
 const MaxMessage = 8 << 20
 
 type Envelope struct {
@@ -92,15 +92,18 @@ type Skill struct {
 	Hash    string `json:"hash"`
 }
 type Start struct {
-	SessionID string  `json:"sessionId"`
-	RunID     string  `json:"runId"`
-	Input     string  `json:"input"`
-	Workspace string  `json:"workspace"`
-	Config    Config  `json:"config"`
-	APIKey    string  `json:"apiKey,omitempty"`
-	Skills    []Skill `json:"skills,omitempty"`
+	MCP            []MCPServer `json:"mcp,omitempty"`
+	ApprovalPolicy string      `json:"approvalPolicy,omitempty"`
+	SessionID      string      `json:"sessionId"`
+	RunID          string      `json:"runId"`
+	Input          string      `json:"input"`
+	Workspace      string      `json:"workspace"`
+	Config         Config      `json:"config"`
+	APIKey         string      `json:"apiKey,omitempty"`
+	Skills         []Skill     `json:"skills,omitempty"`
 }
 type Control struct {
+	CallID           string `json:"callId,omitempty"`
 	RequestID        string `json:"requestId"`
 	RunID            string `json:"runId"`
 	ExpectedRevision int64  `json:"expectedStateRevision"`
@@ -113,20 +116,25 @@ type Receipt struct {
 	Revision  int64  `json:"revision"`
 }
 type State struct {
-	Queued    []Control         `json:"queuedControls,omitempty"`
-	Schema    int               `json:"schemaVersion"`
-	SessionID string            `json:"sessionId"`
-	RunID     string            `json:"runId"`
-	Revision  int64             `json:"revision"`
-	Status    string            `json:"status"`
-	Phase     string            `json:"phase"`
-	Step      int               `json:"step"`
-	Messages  []Message         `json:"messages"`
-	Pending   []ToolCall        `json:"pending,omitempty"`
-	Actions   map[string]string `json:"actions,omitempty"`
-	Config    Config            `json:"config"`
-	Skills    []Skill           `json:"skills,omitempty"`
-	Error     string            `json:"error,omitempty"`
+	ToolDefinitions []json.RawMessage `json:"toolDefinitions,omitempty"`
+	MCP             []MCPStatus       `json:"mcp,omitempty"`
+	MCPTools        []MCPTool         `json:"mcpTools,omitempty"`
+	Approval        *ToolApproval     `json:"approval,omitempty"`
+	ApprovalPolicy  string            `json:"approvalPolicy,omitempty"`
+	Queued          []Control         `json:"queuedControls,omitempty"`
+	Schema          int               `json:"schemaVersion"`
+	SessionID       string            `json:"sessionId"`
+	RunID           string            `json:"runId"`
+	Revision        int64             `json:"revision"`
+	Status          string            `json:"status"`
+	Phase           string            `json:"phase"`
+	Step            int               `json:"step"`
+	Messages        []Message         `json:"messages"`
+	Pending         []ToolCall        `json:"pending,omitempty"`
+	Actions         map[string]string `json:"actions,omitempty"`
+	Config          Config            `json:"config"`
+	Skills          []Skill           `json:"skills,omitempty"`
+	Error           string            `json:"error,omitempty"`
 }
 type Event struct {
 	Sequence  int64           `json:"sequence"`

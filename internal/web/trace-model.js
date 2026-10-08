@@ -222,16 +222,23 @@ const rdFormat=globalThis.rdFormat||((key,...values)=>key.replace(/\$\{(\d+)\}/g
         if(e.method.startsWith("kun/")){
           const data=d.data||{};
           if(e.method==="kun/run.finished"){this.closeRun(r,t,data.status||"unknown");if(data.error)this.add(e,r,{title:"Kun 运行错误",status:"failed",body:data.error});}
+          else if(e.method==="kun/approval.requested"){r.status="waiting";this.add(e,r,{id:"kun-approval-"+r.id+"-"+data.callId,title:"MCP 工具审批",body:data.server+" / "+data.tool,track:"approval",status:"pending",point:false,end:null,detail:data});}
           else if(e.method==="kun/run.paused"){r.status="waiting";this.add(e,r,{title:"Kun 已暂停",body:data.phase||"",track:"system"});}
           else if(e.method==="kun/control.queued"&&data.command?.operation==="steer"){this.add(e,r,{title:"补充指令",body:data.command.text||"",detail:data});}
-          else if(e.method==="kun/control.applied"){if(["resume","step"].includes(data.command?.operation))r.status="running";this.add(e,r,{title:"调试命令已生效",body:data.command?.operation||"",detail:data});}
+          else if(e.method==="kun/control.applied"){if(["resume","step","approve","reject"].includes(data.command?.operation))r.status="running";if(["approve","reject"].includes(data.command?.operation)){const a=this.rows.get("kun-approval-"+r.id+"-"+data.command.callId);if(a){a.end=t;a.status=data.command.operation==="approve"?"approved":"declined";this.ref(a,e);}}this.add(e,r,{title:"调试命令已生效",body:data.command?.operation||"",detail:data});}
+          else if(e.method==="kun/mcp.request"||e.method==="kun/mcp.response"){
+            const key="kun-mcp-"+r.id+"-"+data.exchangeId,done=e.method==="kun/mcp.response";
+            let row=this.rows.get(key);if(!row)row=this.add(e,r,{id:key,track:"tools",title:"MCP "+data.server+" / "+data.method,start:done?null:t,end:null,point:false,status:"running"});
+            this.ref(row,e);row.detail={...row.detail,...data};if(done){row.end=t;row.status=data.error?"failed":"completed";row.body=data.error||plain(data.result||{});}
+          }
+          else if(e.method==="kun/mcp.ready"){this.add(e,r,{track:"context",title:"MCP 工具清单快照",body:data.server?.name||"",detail:data});}
           else if(e.method==="kun/model.started"||e.method==="kun/model.completed"||e.method==="kun/tool.started"||e.method==="kun/tool.completed"){
             const model=e.method.includes("/model."),done=e.method.endsWith(".completed");
             const key="kun-"+r.id+"-"+(model?"model-"+data.step:"tool-"+data.call?.id);
             let row=this.rows.get(key);
             if(!row)row=this.add(e,r,{id:key,track:model?"model":"tools",title:model?"Kun 模型调用":data.call?.function?.name||"Kun 工具",start:done?null:t,end:null,point:false,status:"running"});
             this.ref(row,e);row.detail={...row.detail,...data,kunSequence:d.sequence};row.body=model?(data.message?.content||plain(data.request||{})):(data.output||data.call?.function?.arguments||"");
-            if(done){row.end=t;row.status=data.isError?"failed":"completed";if(model&&data.message?.content){this.add(e,r,{id:key+"-reply",track:"input",type:"agentMessage",title:"Kun 回复",body:data.message.content,detail:data.message});}}
+            if(done){row.end=t;row.status=data.status||(data.isError?"failed":"completed");if(model&&data.message?.content){this.add(e,r,{id:key+"-reply",track:"input",type:"agentMessage",title:"Kun 回复",body:data.message.content,detail:data.message});}}
           }
           continue;
         }

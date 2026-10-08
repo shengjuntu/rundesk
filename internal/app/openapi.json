@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Application API",
-    "version": "0.20.0",
-    "description": "RunDesk 0.20.0：Kun 独立进程、文本模型/文件工具循环、上下文快照和基础调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。"
+    "version": "0.21.0",
+    "description": "RunDesk 0.21.0：Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。"
   },
   "servers": [
     {
@@ -7702,7 +7702,7 @@
           }
         },
         "x-administrator-only": true,
-        "description": "Kun 0.1：本机独立 worker；上下文检查、边界暂停和单步。状态/快照要求在线 worker；控制需当前 runId 与 revision。无 MCP、检查点继续执行或分叉。",
+        "description": "Kun 0.2：本机独立 worker；上下文检查、边界暂停、单步及 MCP。状态/快照要求在线 worker；控制需当前 runId 与 revision；approve/reject 另需匹配 callId 与 approvals scope。无检查点继续执行或分叉。",
         "requestBody": {
           "required": true,
           "content": {
@@ -7801,7 +7801,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.1：本机独立 worker；上下文检查、边界暂停和单步。状态/快照要求在线 worker；控制需当前 runId 与 revision。无 MCP、检查点继续执行或分叉。",
+        "description": "Kun 0.2：本机独立 worker；上下文检查、边界暂停、单步及 MCP。状态/快照要求在线 worker；控制需当前 runId 与 revision；approve/reject 另需匹配 callId 与 approvals scope。无检查点继续执行或分叉。",
         "x-application-scopes": [
           "read"
         ]
@@ -7880,7 +7880,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.1：本机独立 worker；上下文检查、边界暂停和单步。状态/快照要求在线 worker；控制需当前 runId 与 revision。无 MCP、检查点继续执行或分叉。",
+        "description": "Kun 0.2：本机独立 worker；上下文检查、边界暂停、单步及 MCP。状态/快照要求在线 worker；控制需当前 runId 与 revision；approve/reject 另需匹配 callId 与 approvals scope。无检查点继续执行或分叉。",
         "requestBody": {
           "required": true,
           "content": {
@@ -7893,7 +7893,15 @@
         },
         "x-application-scopes": [
           "run"
-        ]
+        ],
+        "x-conditional-scopes": {
+          "approve": [
+            "approvals"
+          ],
+          "reject": [
+            "approvals"
+          ]
+        }
       }
     },
     "/sessions/{sid}/kun/snapshots/{sequence}": {
@@ -7990,7 +7998,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.1：本机独立 worker；上下文检查、边界暂停和单步。状态/快照要求在线 worker；控制需当前 runId 与 revision。无 MCP、检查点继续执行或分叉。",
+        "description": "Kun 0.2：本机独立 worker；上下文检查、边界暂停、单步及 MCP。状态/快照要求在线 worker；控制需当前 runId 与 revision；approve/reject 另需匹配 callId 与 approvals scope。无检查点继续执行或分叉。",
         "x-application-scopes": [
           "read"
         ]
@@ -12953,6 +12961,14 @@
             }
           }
         },
+        "x-conditional-scopes": {
+          "approve": [
+            "approvals"
+          ],
+          "reject": [
+            "approvals"
+          ]
+        },
         "x-personal-user-only": true
       }
     },
@@ -15542,12 +15558,18 @@
               "resume",
               "step",
               "cancel",
-              "steer"
+              "steer",
+              "approve",
+              "reject"
             ]
           },
           "text": {
             "type": "string",
             "maxLength": 262144
+          },
+          "callId": {
+            "type": "string",
+            "description": "Required for approve/reject; must match the pending call."
           }
         },
         "required": [
@@ -15724,6 +15746,37 @@
           },
           "error": {
             "type": "string"
+          },
+          "toolDefinitions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {},
+              "required": [],
+              "additionalProperties": true
+            }
+          },
+          "mcp": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KunMCPStatus"
+            }
+          },
+          "mcpTools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KunMCPTool"
+            }
+          },
+          "approval": {
+            "$ref": "#/components/schemas/KunToolApproval"
+          },
+          "approvalPolicy": {
+            "type": "string",
+            "enum": [
+              "on-request",
+              "never"
+            ]
           }
         },
         "required": [
@@ -15736,6 +15789,114 @@
           "step",
           "config",
           "messages"
+        ],
+        "additionalProperties": false
+      },
+      "KunMCPStatus": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "configRevision": {
+            "type": "string"
+          },
+          "transport": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "protocolVersion": {
+            "type": "string"
+          },
+          "toolCount": {
+            "type": "integer"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "configRevision",
+          "transport",
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "KunMCPTool": {
+        "type": "object",
+        "properties": {
+          "alias": {
+            "type": "string"
+          },
+          "server": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": true
+          },
+          "annotations": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": true
+          },
+          "approvalMode": {
+            "type": "string",
+            "enum": [
+              "approve",
+              "prompt"
+            ]
+          }
+        },
+        "required": [
+          "alias",
+          "server",
+          "name",
+          "inputSchema",
+          "approvalMode"
+        ],
+        "additionalProperties": false
+      },
+      "KunToolApproval": {
+        "type": "object",
+        "properties": {
+          "callId": {
+            "type": "string"
+          },
+          "server": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          },
+          "arguments": {
+            "type": "string"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approve",
+              "reject"
+            ]
+          }
+        },
+        "required": [
+          "callId",
+          "server",
+          "tool",
+          "arguments"
         ],
         "additionalProperties": false
       },
@@ -15761,12 +15922,18 @@
               "resume",
               "step",
               "cancel",
-              "steer"
+              "steer",
+              "approve",
+              "reject"
             ]
           },
           "text": {
             "type": "string",
             "maxLength": 262144
+          },
+          "callId": {
+            "type": "string",
+            "description": "Required for approve/reject; must match the pending call."
           }
         },
         "required": [

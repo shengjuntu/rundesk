@@ -306,7 +306,7 @@ async function selectSession(id) {
     if (state.events.length > 12000) state.events.splice(0, 1000);
     scheduleRender();
     if (
-      event.method.startsWith("approval/") ||
+      event.method.startsWith("approval/") || ["kun/approval.requested","kun/control.applied","kun/control.queued","kun/run.finished"].includes(event.method) ||
       event.method === "serverRequest/resolved" ||
       event.method === "turn/completed"
     )
@@ -811,6 +811,7 @@ async function uploadFiles(files) {
 }
 async function refreshApprovals(id = state.session?.id) {
   if (!id) return;
+  if(state.session?.runtimeKind==="kun"&&state.session.id===id)return refreshKunApproval(id);
   const approvals = await api(`/sessions/${id}/approvals`);
   if (state.session?.id !== id) return;
   const signature = JSON.stringify(approvals.map((a) => a.id));

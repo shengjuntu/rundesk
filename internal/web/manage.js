@@ -659,7 +659,7 @@ async function renderMCP(target) {
     "div",
     { class: "card" },
     el("h3", {}, rdText("MCP 工具配置")),
-    el("p", {class:"help"}, rdFormat("正在编辑 ${0} · ${1}。${2}",contextTitle(),RunDeskEnvironments.scopeLabel(),current.execution?.mode==="docker"?rdText("此项目环境的 MCP 在容器中执行，其他项目独立配置。"):rdText("项目层配置可能覆盖这里的值。"))),
+    el("p", {class:"help"}, rdFormat("正在编辑 ${0} · ${1}。${2}",contextTitle(),RunDeskEnvironments.scopeLabel(),info.runtime==="kun"?"Kun 配置按实例独立保存，当前运行保持原有快照，下一轮生效；Codex 配置可通过导出／导入迁移。":current.execution?.mode==="docker"?rdText("此项目环境的 MCP 在容器中执行，其他项目独立配置。"):rdText("项目层配置可能覆盖这里的值。"))),
 
   );
   const save = async (n, value, remove = false) => {
@@ -782,7 +782,7 @@ async function renderMCP(target) {
       el(
         "p",
         { class: "help" },
-        rdText("已有密钥以 [redacted] 隐藏，保留它可沿用原值。MCP 命令在运行 Codex 的主机上执行。"),
+        info.runtime==="kun"?"已有密钥以 [redacted] 隐藏。MCP 命令以 RunDesk 服务账号在本机执行，不受内置文件工具的工作区边界限制。":rdText("已有密钥以 [redacted] 隐藏，保留它可沿用原值。MCP 命令在运行 Codex 的主机上执行。"),
       ),
       el(
         "div",

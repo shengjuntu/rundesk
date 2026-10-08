@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/shengjuntu/rundesk/internal/kunproto"
 	"io"
 	"net/http"
 	"strings"
@@ -198,7 +199,13 @@ func (s *Server) checkApplication(r *http.Request, k *ApplicationKey) error {
 				return nil
 			}
 			if method == "POST" && p[3] == "control" && len(p) == 4 && k.scope("run") {
-				return nil
+				var command kunproto.Control
+				return rewriteBody(r, &command, func() error {
+					if (command.Operation == "approve" || command.Operation == "reject") && !k.scope("approvals") {
+						return forbidden()
+					}
+					return nil
+				})
 			}
 			return forbidden()
 		}

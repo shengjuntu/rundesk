@@ -66,7 +66,7 @@ func serve(e *k.Engine, input io.Reader, output io.Writer) error {
 		} else {
 			switch in.Method {
 			case "hello":
-				value = map[string]any{"engine": "kun", "engineVersion": p.EngineVersion, "protocolVersion": p.Version, "pid": os.Getpid(), "capabilities": map[string]bool{"inspect": true, "pause": true, "step": true, "steer": true, "replayEvents": true, "resumeCheckpoint": false, "fork": false, "mcp": false}}
+				value = map[string]any{"engine": "kun", "engineVersion": p.EngineVersion, "protocolVersion": p.Version, "pid": os.Getpid(), "capabilities": map[string]bool{"inspect": true, "pause": true, "step": true, "steer": true, "replayEvents": true, "resumeCheckpoint": false, "fork": false, "mcp": true, "mcpApproval": true}}
 			case "start":
 				var v p.Start
 				err = json.Unmarshal(in.Params, &v)

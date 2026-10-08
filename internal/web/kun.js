@@ -13,11 +13,11 @@ async function renderKunSettings(target){
  const write=el("input",{type:"checkbox"});write.checked=!!cfg.allowWrite;
  const pause=el("input",{type:"checkbox"});pause.checked=!!cfg.pauseBeforeModel;
  const status=el("p",{role:"status",class:"help"});
- const form=el("form",{class:"kun-config"},el("h3",{},"Agent 引擎"),el("p",{class:"help"},"选择后端后，新会话使用新引擎。已有会话保留后端归属。Kun 首版提供文本模型、项目文件工具、显式 Skills 和调试控制。"),
+ const form=el("form",{class:"kun-config"},el("h3",{},"Agent 引擎"),el("p",{class:"help"},"选择后端后，新会话使用新引擎。已有会话保留后端归属。Kun 提供文本模型、项目文件工具、显式 Skills、MCP 和调试控制。"),
  el("label",{},"运行后端",kind),endpoint.node,model.node,key.node,steps.node,timeout.node,el("label",{},"系统提示词",system),
- el("label",{class:"kun-check"},write,"允许 Kun 写入项目内文件（否则仅可读取和列目录）"),
+ el("label",{class:"kun-check"},write,"允许 Kun 写入项目内文件（仅限制内置文件工具）"),
  el("label",{class:"kun-check"},pause,"每次模型请求前暂停，供调试检查"),
- el("p",{class:"help"},"当前不支持 MCP、Shell、图像模型、检查点重执行、分叉或轨迹编译。模型响应完成后显示文本。"),
+ el("p",{class:"help"},"MCP 在工具 MCP 页面配置；其权限独立于内置文件工具。当前不支持 Shell、图像模型、检查点重执行、分叉或轨迹编译。"),
  el("button",{type:"submit",class:"primary"},"保存引擎配置"),status);
  form.onsubmit=async event=>{
   event.preventDefault();status.textContent="保存中…";
@@ -40,21 +40,22 @@ window.RunDeskKun={
   const tabs=el("div",{class:"tabs"}),controls=el("div",{class:"kun-controls"});
   let panel="network",current=null,selected=null,events=[];const snapshots=new Map();
   const selectedDetail=event=>panel==="elements"?{runId:event.data.runId,sequence:event.data.sequence,request:event.data.data.request,snapshot:snapshots.get(event.data.sequence)??"点击步骤以读取持久化快照"}:event.data;
-  const kinds={network:"Network · 调用",elements:"Elements · 上下文",sources:"Sources · 控制",performance:"Performance · 用量"};
+  const kinds={network:"Network · 调用",elements:"Elements · 上下文",sources:"Sources · 控制",performance:"Performance · 用量",application:"Application · MCP"};
   const redraw=()=>{
    list.replaceChildren();detail.textContent="";
    summary.textContent=current?"状态："+current.status+" · "+current.phase+" · 版本 "+current.revision+" · 模型步骤 "+current.step:"历史记录";
    for(const b of tabs.children)b.classList.toggle("selected",b.dataset.panel===panel);
    controls.classList.toggle("hidden",panel!=="sources");
-   if(panel==="sources"){detail.textContent=current?JSON.stringify({status:current.status,phase:current.phase,revision:current.revision,queuedControls:current.queuedControls,actions:current.actions},null,2):"启动任务后可进行控制。";return;}
+   if(panel==="sources"){detail.textContent=current?JSON.stringify({status:current.status,phase:current.phase,revision:current.revision,queuedControls:current.queuedControls,approval:current.approval,actions:current.actions},null,2):"启动任务后可进行控制。";return;}
+   if(panel==="application"){detail.textContent=current?JSON.stringify({servers:current.mcp||[],tools:current.mcpTools||[],approvalPolicy:current.approvalPolicy},null,2):"当前 worker 不在线；可在 Network 查看保留的 MCP 记录。";return;}
    if(panel==="performance"){
-    const rows=events.filter(e=>e.method==="kun/model.completed"||e.method==="kun/tool.completed").map(e=>({type:e.method,runId:e.data.runId,...e.data.data}));
-    detail.textContent=JSON.stringify(rows.map(r=>({type:r.type,runId:r.runId,step:r.step,durationMs:r.durationMs,usage:r.usage??"unknown",tool:r.call?.function?.name})),null,2);return;
+    const rows=events.filter(e=>e.method==="kun/model.completed"||e.method==="kun/tool.completed"||e.method==="kun/mcp.response").map(e=>({type:e.method,runId:e.data.runId,...e.data.data}));
+    detail.textContent=JSON.stringify(rows.map(r=>({type:r.type,runId:r.runId,step:r.step,durationMs:r.durationMs,usage:r.usage??"unknown",tool:r.call?.function?.name,server:r.server,method:r.method})),null,2);return;
    }
-   const calls=events.filter(e=>panel==="elements"?e.method==="kun/model.started":/^kun\/(model|tool)\.(started|completed)$/.test(e.method));
+   const calls=events.filter(e=>panel==="elements"?e.method==="kun/model.started":/^kun\/(model|tool)\.(started|completed)$/.test(e.method)||/^kun\/mcp\.(request|response)$/.test(e.method));
    for(const event of calls){
     const data=event.data.data||{};
-    const b=button("#"+event.data.sequence+" · "+(data.call?.function?.name||"模型 "+(data.step||""))+" · "+event.method.split(".").pop(),async()=>{
+    const b=button("#"+event.data.sequence+" · "+(data.call?.function?.name||(data.server?data.server+" / "+data.method:"模型 "+(data.step||"")))+" · "+event.method.split(".").pop(),async()=>{
      selected=event;
      if(panel==="elements"&&!snapshots.has(event.data.sequence)){try{snapshots.set(event.data.sequence,await api("/sessions/"+sid+"/kun/snapshots/"+event.data.sequence));}catch(e){feedback.textContent=e.message;}}
      redraw();
@@ -73,10 +74,10 @@ window.RunDeskKun={
    try{current=await api("/sessions/"+sid+"/kun/state");}catch(e){current=null;feedback.textContent=e.message;}
    redraw();
   };
-  for(const [op,label]of [["pause","暂停"],["resume","继续"],["step","单步"],["cancel","停止"]]){
+  for(const [op,label]of [["pause","暂停"],["resume","继续"],["step","单步"],["cancel","停止"],["approve","允许本次工具调用"],["reject","拒绝本次工具调用"]]){
    controls.append(button(label,async()=>{
     if(!current)return;try{
-     const receipt=await api("/sessions/"+sid+"/kun/control",{method:"POST",body:{requestId:crypto.randomUUID(),runId:current.runId,expectedStateRevision:current.revision,operation:op}});
+     const receipt=await api("/sessions/"+sid+"/kun/control",{method:"POST",body:{requestId:crypto.randomUUID(),runId:current.runId,expectedStateRevision:current.revision,operation:op,callId:current.approval?.callId}});
      feedback.textContent=receipt.status==="queued"?"命令已接收，等待安全点。":"命令已生效。";
      current=await api("/sessions/"+sid+"/kun/state");redraw();
     }catch(e){feedback.textContent=e.message;}
@@ -100,3 +101,19 @@ document.addEventListener("DOMContentLoaded",()=>{
  if(anchor)anchor.after(b);else document.querySelector("#messages")?.before(b);
  renderCapabilityStrip();
 });
+
+// Kun approvals belong to its persisted loop state, not to Codex server requests.
+async function refreshKunApproval(sid){
+ let current;
+ try{current=await api("/sessions/"+sid+"/kun/state");}catch(e){if(e.code!=="kun_offline")throw e;}
+ if(state.session?.id!==sid)return;
+ const target=$("#approvals"),approval=current?.approval;
+ if(!approval||approval.decision){target.replaceChildren();state.approvalSignature=null;return;}
+ const signature=JSON.stringify([current.runId,current.revision,approval.callId]);
+ if(signature===state.approvalSignature)return;state.approvalSignature=signature;
+ const status=el("p",{role:"status"});
+ const decide=async operation=>{
+  try{await api("/sessions/"+sid+"/kun/control",{method:"POST",body:{requestId:crypto.randomUUID(),runId:current.runId,expectedStateRevision:current.revision,operation,callId:approval.callId}});await refreshKunApproval(sid);}catch(e){status.textContent=e.message;state.approvalSignature=null;}
+ };
+ target.replaceChildren(el("section",{class:"card kun-approval"},el("h3",{},"Kun 请求调用 MCP 工具"),el("p",{},approval.server+" / "+approval.tool),el("pre",{},approval.arguments),el("p",{class:"help"},"本次工具尚未执行。要允许后续自动调用，可在工具 MCP 页面将该工具设为“始终允许”，下一轮生效。"),el("div",{class:"actions"},button("允许本次",()=>decide("approve"),"primary"),button("拒绝本次",()=>decide("reject"))),status));
+}

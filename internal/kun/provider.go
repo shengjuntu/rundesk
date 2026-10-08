@@ -21,7 +21,11 @@ type completion struct {
 }
 
 func requestBody(s p.State) map[string]any {
-	return map[string]any{"model": s.Config.Model, "messages": s.Messages, "tools": toolDefinitions(s.Config.AllowWrite), "stream": true}
+	var definitions any = s.ToolDefinitions
+	if len(s.ToolDefinitions) == 0 {
+		definitions = toolDefinitions(s.Config.AllowWrite)
+	}
+	return map[string]any{"model": s.Config.Model, "messages": s.Messages, "tools": definitions, "stream": true}
 }
 func modelCall(ctx context.Context, s p.State, key string) (completion, error) {
 	result := completion{Message: p.Message{Role: "assistant"}}

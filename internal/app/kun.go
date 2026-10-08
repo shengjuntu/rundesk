@@ -93,6 +93,11 @@ func (m *Manager) runKun(s Session, w Workspace, h *handle, in Input) {
 			return
 		}
 	}
+	mcpServers, err := m.kunRuntimeMCP(i.ID)
+	if err != nil {
+		m.finish(s.ID, "failed", err.Error())
+		return
+	}
 	skills, err := m.kunInputSkills(w, i, in.Skills)
 	if err != nil {
 		m.finish(s.ID, "failed", err.Error())
@@ -140,7 +145,7 @@ func (m *Manager) runKun(s Session, w Workspace, h *handle, in Input) {
 	}
 	var result p.State
 	ctx, cancel := context.WithTimeout(m.ctx, 15*time.Second)
-	err = client.Call(ctx, "start", p.Start{SessionID: s.ID, RunID: s.RunID, Input: input, Workspace: w.Path, Config: cfg, APIKey: key, Skills: skills}, &result)
+	err = client.Call(ctx, "start", p.Start{SessionID: s.ID, RunID: s.RunID, Input: input, Workspace: w.Path, Config: cfg, APIKey: key, Skills: skills, MCP: mcpServers, ApprovalPolicy: i.Permissions.normalized().ApprovalPolicy}, &result)
 	cancel()
 	if err != nil {
 		client.Close()
@@ -219,12 +224,12 @@ func (m *Manager) watchKun(session Session, h *handle, client *kc.Client) error 
 						next.Status = "running"
 					}
 					next.TurnID = ev.RunID
-				case "kun/run.paused":
+				case "kun/run.paused", "kun/approval.requested":
 					if next.Status != "stopping" {
 						next.Status = "waiting"
 					}
 				case "kun/control.applied":
-					if data.Command.Operation == "resume" || data.Command.Operation == "step" {
+					if data.Command.Operation == "resume" || data.Command.Operation == "step" || data.Command.Operation == "approve" || data.Command.Operation == "reject" {
 						next.Status = "running"
 					}
 				case "kun/run.finished":

@@ -34,7 +34,7 @@ Codex is an independently installed external executable and is not included in t
 
 ## Kun selected PiG source
 
-Kun incorporates the SSE decoder and a selected regression test from
+Kun incorporates the model SSE decoder, MCP SSE decoder, and a selected regression test from
 [MichaelKinsy/PiG](https://github.com/MichaelKinsy/PiG), commit
 `827932db70e545b34c3f1d9c04f58a70eacd3b28`, under MIT.
 

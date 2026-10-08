@@ -10,11 +10,11 @@
 
 ![RunDesk 对话界面](docs/screenshots/0.16.0/chat-zh.png)
 
-## Kun 内置引擎（0.20.0）
+## Kun 内置引擎（0.21.0）
 
 Kun 与 RunDesk 同仓库、分进程运行。使用 Go 1.25.12+ 执行 `make build`，然后运行 `./bin/rundesk --data ./data`；在配置页的 **Agent 引擎** 中选择 Kun、设置模型服务并新建会话。Kun 不需要安装 Codex。
 
-首版提供 OpenAI 兼容文本模型、项目文件工具、显式 Skills、持久化上下文快照，以及 Network / Elements / Sources / Performance 调试入口。支持暂停、单步、文本补充和停止。MCP、插件、检查点重执行、分叉和轨迹编译尚未实现。
+Kun 0.2 提供 OpenAI 兼容文本模型、项目文件工具、显式 Skills，以及 stdio / Streamable HTTP MCP。复用工具 MCP 配置页：默认逐次询问，设为“始终允许”后下一轮直接执行。DevTools 包括 Network、Elements、Sources、Performance 和 MCP 状态 Application 视图。支持暂停、单步、文本补充和停止。插件、检查点重执行、分叉和轨迹编译尚未实现。
 
 详见 [Kun 使用与实现边界](docs/KUN.md)。选择性复制的 PiG 源码、固定版本及感谢声明见 [来源记录](docs/UPSTREAM.md)；MIT 许可与版权声明随源码保留。
 

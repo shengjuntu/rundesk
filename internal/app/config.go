@@ -225,6 +225,16 @@ type nativeConfig struct {
 }
 
 func (m *Manager) readConfig(wid string, ids ...string) (nativeConfig, error) {
+	i, err := m.Instance(ids...)
+	if err != nil {
+		return nativeConfig{}, err
+	}
+	if i.AgentRuntime.Kind == "kun" {
+		if _, err = m.Workspace(wid); err != nil {
+			return nativeConfig{}, err
+		}
+		return m.kunReadConfig(i.ID)
+	}
 	w, e := m.Workspace(wid)
 	if e != nil {
 		return nativeConfig{}, e
@@ -283,6 +293,16 @@ func maskConfig(v any) any {
 	}
 }
 func (m *Manager) MCP(wid string, ids ...string) (any, error) {
+	i, err := m.Instance(ids...)
+	if err != nil {
+		return nil, err
+	}
+	if i.AgentRuntime.Kind == "kun" {
+		if _, err = m.Workspace(wid); err != nil {
+			return nil, err
+		}
+		return m.kunMCPView(i.ID)
+	}
 	c, e := m.readConfig(wid, ids...)
 	if e != nil {
 		return nil, e
@@ -324,6 +344,13 @@ func (m *Manager) SaveMCP(wid, name, version string, value map[string]any, remov
 	return m.writeMCP(wid, current, servers, ids...)
 }
 func (m *Manager) writeMCP(wid, current string, servers map[string]any, ids ...string) (any, error) {
+	i, err := m.Instance(ids...)
+	if err != nil {
+		return nil, err
+	}
+	if i.AgentRuntime.Kind == "kun" {
+		return m.writeKunMCP(i.ID, current, servers)
+	}
 	p := map[string]any{"keyPath": "mcp_servers", "value": servers, "mergeStrategy": "replace"}
 	if current != "" {
 		p["expectedVersion"] = current

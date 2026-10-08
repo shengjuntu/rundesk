@@ -10,7 +10,7 @@ function mcpPolicyEditor(info, cp, serverName) {
   const node = el("section",{class:"mcp-policy-editor"},el("h4",{},rdText("工具使用权限")),
     el("p",{class:"help"},rdText("设置仅作用于当前助手／应用。读取列表会连接已保存的服务，不执行工具；连接信息有改动时请先保存。")),
     el("div",{class:"actions"},load,more),status,rows,
-    el("p",{class:"help"},rdText("托管策略仍可能要求审批。已弹出的审批、工具自己的表单及登录请求需单独处理。")));
+    el("p",{class:"help"},info.runtime==="kun"?"Kun 默认每次询问；“始终允许”直接执行。尚不支持 auto/writes 自动判断。已开始的运行保持原有权限快照。":rdText("托管策略仍可能要求审批。已弹出的审批、工具自己的表单及登录请求需单独处理。")));
   function mode(name) {
     if(changes.has(name)) return changes.get(name);
     if(config.disabled_tools?.includes(name)||(Array.isArray(config.enabled_tools)&&!config.enabled_tools.includes(name)))return "disabled";

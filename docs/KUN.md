@@ -1,6 +1,6 @@
-# Kun 0.1 / RunDesk 0.20.0
+# Kun 0.2 / RunDesk 0.21.0
 
-首个可运行实现。采用已确认的结构：**分进程、同仓库、选择性复制 PiG 源码并自主发展**。本版完成基础模型／工具循环、运行记录、上下文检查和基础调试控制；不代表 KUN-DESIGN-v0.2 的所有阶段已经实现。
+在 0.1 的运行时基础上接入 MCP。采用已确认的结构：**分进程、同仓库、选择性复制 PiG 源码并自主发展**。本版完成模型／工具循环、MCP 配置与审批、运行记录、上下文检查和基础调试控制；不代表 KUN-DESIGN-v0.2 的所有阶段已经实现。
 
 ## 构建和启动
 
@@ -41,6 +41,7 @@ go build -buildvcs=false -trimpath -o bin/kun.exe ./cmd/kun
 | `internal/adapters/kun` | 启动独立 worker、握手和 JSONL 请求关联 |
 | `internal/kunproto` | 仅共享可序列化的协议与状态类型 |
 | `cmd/kun` | worker 命令入口、目录锁、stdin/stdout JSONL 协议 |
+| `internal/mcp` | Kun 与管理端诊断共用的有界 MCP 传输；不依赖 PiG 运行时 |
 | `internal/kun` | 模型调用、工具执行、状态机、控制命令、SQLite 记录 |
 | `internal/web/kun.js` | 引擎配置和 DevTools 面板 |
 
@@ -48,21 +49,23 @@ go build -buildvcs=false -trimpath -o bin/kun.exe ./cmd/kun
 
 Kun 独占 `<data>/kun/sessions/<sessionId>/state.db`，RunDesk 的业务数据库保存消费游标与事件投影。两侧独立事务，通过单调序号补取和去重衔接；不存在跨进程共享内存或跨库原子提交。
 
-## 首版能力
+## 当前能力
 
 | 能力 | 实现范围 |
 | --- | --- |
 | 模型 | OpenAI 兼容 Chat Completions；SSE 工具参数增量拼接，也接收完整 JSON 响应 |
 | 工具 | `read_file`、`list_files`、可显式启用的 `write_file`；相对项目路径 |
 | Skills | 扫描项目 `.agents/skills/*/SKILL.md` 和实例 Skills 目录；显式选取后注入，保存内容和 SHA-256 |
+| MCP | stdio、Streamable HTTP JSON/SSE；每轮固定服务、权限和工具定义 |
 | 会话 | 多轮文本历史；系统提示词按当前配置重新构建 |
-| Network | 模型请求体、完整模型结果、工具参数与结果、耗时 |
+| Network | 模型请求体、完整模型结果、工具参数与结果，以及 MCP initialize / tools/list / tools/call 请求与响应、耗时（均受大小上限约束） |
 | Elements | 请求时的有效消息、工具定义，以及对应持久化状态快照 |
-| Sources | 请求暂停、继续、执行一个模型／工具步骤、文本补充、停止 |
+| Sources | 请求暂停、继续、执行一个模型／工具步骤、文本补充、停止、单次 MCP 允许/拒绝 |
 | Performance | 模型／工具耗时和服务实际报告的 token 用量；不推算未报告数据或价格 |
+| Application | 本轮 MCP 服务状态、配置版本、工具映射与审批策略；尚无记忆存储视图 |
 | 记录 | 状态、事件、快照、命令回执、工具执行台账；API Key 字段不进入记录 |
 
-不支持：MCP、Shell、PiG 插件/Node 扩展、图像输入、自动 Skills 激活、压缩/记忆管理、条件断点、替换工具结果、检查点继续执行、分叉、确定性代码生成、JEV/JIT、Docker worker。四模块健康度、Application/Layers 面板尚未实现。Codex 仍沿用现有后端，Kun 控制接口不会控制 Codex 的循环。
+不支持：Shell、PiG 插件/Node 扩展、图像输入、自动 Skills 激活、压缩/记忆管理、条件断点、替换工具结果、检查点继续执行、分叉、确定性代码生成、JEV/JIT、Docker worker。四模块健康度和 Layers 面板尚未实现；Application 目前仅提供 MCP 状态。Codex 仍沿用现有后端，Kun 控制接口不会控制 Codex 的循环。
 
 模型文本在请求结束后显示，目前没有逐 token UI。模型服务调用仍会发送任务上下文到配置的服务地址；“本地记录”不代表模型离线运行。
 
@@ -71,14 +74,81 @@ Kun 独占 `<data>/kun/sessions/<sessionId>/state.db`，RunDesk 的业务数据�
 - **暂停**：命令先持久化为 `queued`，在下一个模型／工具边界生效；不会冻结正在执行的 HTTP 请求。
 - **单步**：在暂停状态允许一个模型调用或一个工具执行，随后在下一边界暂停；如果该步骤直接结束任务，则显示完成。
 - **补充指令**：在下一个模型请求前应用。模型返回最终回答期间收到的补充指令会继续触发下一步；暂停时补充后再继续，下一次请求即包含它。
-- **停止**：取消在途模型 HTTP 请求，工具不在中途回滚，任务标记为 interrupted。取消请求也有独立的生效回执。
+- **停止**：取消在途模型请求、终止 stdio 连接，对在途 MCP HTTP 请求尽力发送取消通知；服务端副作用不能保证停止或回滚，任务标记为 interrupted。取消请求也有独立的生效回执。
 - **幂等**：相同 requestId 与相同内容返回既有回执；不同内容复用 ID 拒绝。调试 API 要求当前 runId 与 expectedStateRevision，陈旧状态拒绝，需刷新。
-- **失联**：重开 worker 时，未完成运行标为 interrupted；已派发但无结果的工具标为 outcome_unknown。禁止自动重试或自动继续。后续新轮次会看到中断提示。
+- **失联**：重开 worker 时，未完成运行标为 interrupted；已派发但无结果的工具标为 outcome_unknown。禁止自动重试或自动继续。待审批请求失效、连接标记关闭，后续新轮次会看到中断提示。
 - **持久化失败**：停止 worker，RunDesk 结束当前任务并报告错误；不继续执行未被记录的下一步。
 
 DevTools 每 1.5 秒刷新。Elements 点击模型步骤时读取该步骤快照。当前只查询仍在线 worker 的完整快照；worker 回收后，RunDesk 轨迹保留模型请求/响应和工具事件。重新启动同一会话 worker 后可查询旧快照。本版不提供独立离线数据库浏览器。界面每次最多加载 20,000 条会话事件；API 可继续分页。
 
 删除 RunDesk 会话会关闭 worker，但保留其执行记录目录以便调查；本版没有自动清理这些目录的策略。状态与上下文默认保存在本机，包含任务内容；不要把真实 data 目录加入源码仓库。
+
+## MCP 配置与权限
+
+在 **工具 MCP** 页面保存服务。配置属于 Kun 实例，读写不启动 Codex；与 Codex 原生配置独立。可从原有 Codex 配置导出 RunDesk MCP JSON 再导入 Kun；导出的密钥为 `[redacted]`，新实例导入时需补齐实际值或改用环境变量引用。不会自动迁移或覆盖 Codex 配置。
+
+同一实例的项目共用这份 Kun MCP 配置，stdio 进程的工作目录为当前任务项目。每轮开始读取一次配置，建立连接、完成初始化和分页工具发现；当前运行固定工具清单及权限，新配置下一轮生效。管理页面的 `configured` 只表示已经保存；DevTools Application 中的 `ready` 才表示该轮连接成功。轮次结束时关闭连接，下轮重新发现。
+
+最小 HTTP 配置（服务地址与变量名替换为实际值）：
+
+```json
+{
+  "url": "https://example.com/mcp",
+  "bearer_token_env_var": "WEATHER_MCP_TOKEN",
+  "startup_timeout_sec": 30,
+  "tool_timeout_sec": 60,
+  "tools": {"lookup": {"approval_mode": "approve"}}
+}
+```
+
+最小 stdio 配置：
+
+```json
+{
+  "command": "/absolute/path/to/mcp-server",
+  "args": ["--stdio"],
+  "env_vars": ["SERVICE_API_KEY"],
+  "disabled_tools": ["delete_item"]
+}
+```
+
+- **默认 / 每次询问**：工具进入持久化审批暂停点，聊天区和 Sources 均可允许或拒绝本次。继续和单步不能绕过审批。请求须匹配 `runId`、`expectedStateRevision`、`callId`。
+- **始终允许（approve）**：下一轮开始后直接调用，不逐次弹窗。即使实例 `approvalPolicy=never`，显式允许仍然有效。
+- **禁用**：不向模型提供该工具；`enabled_tools` 是允许清单（空数组表示全部禁用），`disabled_tools` 优先。
+- **无交互审批（never）**：需要询问的工具直接返回拒绝结果，不等待交互。未实现 JEV 自动判断，`auto`、`writes` 和逐工具 `output_token_limit` 保存时明确拒绝，不静默降级。
+- MCP 的 `readOnlyHint` 等 annotations 作为调试资料保留，不将其视为权限依据。
+
+HTTP 支持静态请求头、`env_http_headers`、Bearer 环境变量引用，不跟随重定向。stdio 只继承 PATH、HOME、系统/临时目录、语言环境等基础变量，额外变量须通过 `env` / `env_vars` 指定。所有凭据引用在轮次开始解析，缺失则停止启动；已禁用服务不解析引用。服务命令不经过 shell 拆分。
+
+凭据配置字段不进入 Kun 状态与上下文快照。已知模型密钥、MCP 请求头值及名称含 key/token/secret/password/credential/auth 的环境变量值，会对返回文本做精确匹配脱敏；这不是通用敏感内容识别，任意业务内容和未知密钥仍可能保存在轨迹中。RunDesk 业务配置数据库会保存显式填写的环境变量/请求头值；优先使用环境变量引用。
+
+MCP 服务以 RunDesk 的操作系统账号在本机运行。`allowWrite=false` / read-only 限制的是 Kun **内置**文件工具，不会把外部 MCP 服务限制在项目内；允许 MCP 工具调用也可能允许其写文件或访问网络。Kun 本身无需 Node；用户配置的外部 MCP 命令可能依赖其他运行时。
+
+## MCP 协议范围与故障处理
+
+支持 MCP `2025-11-25`、`2025-06-18`、`2025-03-26` 握手版本的工具子集：initialize、initialized 通知、分页 tools/list、同步 tools/call。HTTP 保留会话 ID 和协商版本，POST 可返回 JSON 或 SSE；找到对应 RPC 响应即结束读取，不必等待服务关闭流。stdio 使用逐行 JSON。响应服务器 ping；其他服务器请求返回不支持，不宣告 sampling/elicitation 能力。
+
+尚不支持旧版 HTTP+SSE 双端点传输、HTTP GET 长连接/断点续流、OAuth、MCP tasks、resources/prompts 操作、服务端 sampling/elicitation、listChanged 实时重载。HTTP 会话过期不自动重新握手或重试当前工具；下一轮新建会话。仅实现上述同步工具子集，不宣称完整 MCP 兼容。
+
+模型可见名称由服务名、原工具名和哈希构成，实际调用保留原名。text、嵌入资源 text 和 structuredContent 进入文本模型；图片/音频/二进制内容只生成类型提示，有界原始结果保留在 Network 记录中。本版不是多模态模型接入。
+
+| 边界 | 限制 |
+| --- | --- |
+| 保存的服务 / 每轮启用服务 | 100 / 16 |
+| 单服务发现工具 / 所有服务向模型提供工具 | 256 / 128 |
+| tools/list 分页 | 32 页；拒绝重复游标与重复名称 |
+| 单次传输响应 / 保留结果 | 2 MiB / 512 KiB |
+| 单工具 schema / description | 64 KiB / 16 KiB |
+| 所有模型工具定义 | 512 KiB；仍受总上下文上限约束 |
+| 启动/单次调用超时 | 可配置 0.1–600 秒；默认 30 / 60 秒 |
+
+`isError=true` 是已知工具失败，保存为 failed 结果供模型处理。派发之后发生超时、断连、协议错误或结果超限，可能已经产生外部副作用：记录 `outcome_unknown`，停止该轮，不由 Kun 自动重试。同一工具在之后的新任务中仍可调用，用户应先核对外部结果。
+
+停止 stdio 会终止并等待其进程退出；Linux/macOS 终止所属进程组（不保证约束主动脱离进程组的后代），其他系统当前只终止直接子进程。HTTP 取消通知是尽力而为；断开连接不能证明远端任务取消成功。
+
+Network 记录 initialize、tools/list、tools/call 的业务请求/响应和耗时，不保留认证头、传输层通知或 DELETE 请求。Performance 展示条目耗时，MCP tools/call 与外层 tool 记录是嵌套关系，不能相加当作总耗时；不估算 MCP 价格。
+
+规范参考：[传输](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)、[生命周期](https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle)、[工具](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)。
 
 ## 工具边界与限制
 
@@ -90,7 +160,7 @@ DevTools 每 1.5 秒刷新。Elements 点击模型步骤时读取该步骤快照
 
 ## 协议与 API
 
-worker 协议版本 1，每行一个 JSON 对象；stdout 仅输出协议，stderr 输出诊断。方法包括 `hello`、`start`、`state`、`events`、`snapshot`、`control`。`hello` 宣告 `resumeCheckpoint=false`、`fork=false`、`mcp=false`。最大消息为 8 MiB。
+worker 协议版本 2，每行一个 JSON 对象；stdout 仅输出协议，stderr 输出诊断。方法包括 `hello`、`start`、`state`、`events`、`snapshot`、`control`。`hello` 宣告 `resumeCheckpoint=false`、`fork=false`、`mcp=true`、`mcpApproval=true`。最大消息为 8 MiB。升级时同时更新 RunDesk 与 Kun；旧版 worker 的握手会被拒绝。状态记录 schema 保持 1，新增字段为可选，旧记录可读取；恢复仍只用于检查。
 
 HTTP 同时支持 `/api` 和 `/api/v1`：
 - `PUT /instances/{iid}/agent-runtime`：管理员提交 `{revision, config}`。
@@ -99,7 +169,7 @@ HTTP 同时支持 `/api` 和 `/api/v1`：
 - `POST /sessions/{sid}/kun/control`：控制请求及 queued/applied/rejected 回执。
 - 既有 `/sessions/{sid}/events`、SSE、轨迹和会话导出沿用，Kun 事件使用 `kun/*` 命名。
 
-应用凭据仍受实例、项目和 read/run scopes 限制；控制要求 run scope，检查要求 read scope。管理配置只对管理员开放。
+应用凭据仍受实例、项目和 read/run scopes 限制；控制要求 run scope，approve/reject 还要求 approvals scope；检查要求 read scope。管理配置只对管理员开放。
 
 ```json
 {
@@ -114,8 +184,8 @@ HTTP 同时支持 `/api` 和 `/api/v1`：
 
 ## 参考与后续
 
-本版实际复制范围是 PiG SSE 解码实现和一项协议回归测试；Loop、持久化、RunDesk 适配与调试控制由 Kun 自行实现。来源、固定版本、许可证与改动见 [UPSTREAM.md](UPSTREAM.md)。
+本版实际复制范围是 PiG 模型 SSE、MCP SSE 解码实现和一项模型协议回归测试；Loop、持久化、RunDesk 适配与调试控制由 Kun 自行实现。来源、固定版本、许可证与改动见 [UPSTREAM.md](UPSTREAM.md)。
 
-后续按设计推进独立工具/提供商接口、MCP、模块快照、检查点与分叉，再考虑轨迹归纳代码与去优化守卫。AgentJIT 仅为前期提供资料中的研究参考，本版没有实现或验证其效果。
+后续按设计推进独立工具/提供商接口、模块快照、检查点与分叉，再考虑轨迹归纳代码与去优化守卫。AgentJIT 仅为前期提供资料中的研究参考，本版没有实现或验证其效果。
 
 验证范围、复现命令及已知测试时序问题见 [KUN-VALIDATION.md](KUN-VALIDATION.md)。

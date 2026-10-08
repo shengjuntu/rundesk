@@ -235,7 +235,7 @@ func TestRecoverDispatchedActionAsUnknown(t *testing.T) {
 		t.Fatal(err)
 	}
 	call := p.ToolCall{ID: "uncertain", Function: p.Function{Name: "write_file", Arguments: `{"path":"x","content":"x"}`}}
-	state := p.State{Schema: 1, SessionID: "s", RunID: "r", Status: "running", Actions: map[string]string{"uncertain": "dispatched"}, Pending: []p.ToolCall{call}}
+	state := p.State{Schema: 1, SessionID: "s", RunID: "r", Status: "running", Actions: map[string]string{"uncertain": "dispatched", "not-dispatched": "prepared"}, Pending: []p.ToolCall{call}, Approval: &p.ToolApproval{CallID: "not-dispatched"}, MCP: []p.MCPStatus{{Name: "fixture", Status: "ready"}}}
 	if _, err = j.commit(state, "kun/tool.started", nil, "", "", nil); err != nil {
 		t.Fatal(err)
 	}
@@ -246,7 +246,7 @@ func TestRecoverDispatchedActionAsUnknown(t *testing.T) {
 	}
 	defer e.Close()
 	s := e.State()
-	if s.Status != "interrupted" || s.Actions["uncertain"] != "outcome_unknown" || len(s.Pending) != 0 {
+	if s.Status != "interrupted" || s.Actions["uncertain"] != "outcome_unknown" || len(s.Pending) != 0 || s.Approval != nil || s.MCP[0].Status != "closed" || s.Actions["not-dispatched"] != "cancelled" {
 		t.Fatal(s)
 	}
 }
