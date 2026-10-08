@@ -1,0 +1,12 @@
+{
+  "checks": [
+    "disabled configured server tested without enabling",
+    "tools/list schema rendered",
+    "explicit tools/call result preserved",
+    "record replay does not execute",
+    "Chinese and English workbench",
+    "mobile has no horizontal overflow",
+    "no browser exceptions"
+  ],
+  "passed": 7
+}

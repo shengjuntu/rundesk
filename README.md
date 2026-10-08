@@ -112,8 +112,22 @@ Frontend assets and the Docker template are embedded in the executable. Rebuild 
 
 Stop the service and back up the existing data directory and Codex configuration before replacing binaries. Keep the same `--data` location. Existing applications and conversations are preserved.
 
-Version **0.16.0** adds the navigation/history split, bilingual UI infrastructure and documentation, environment setup/checks, task-first application details and an embedded Docker template entry point. Technical logs and user/model content remain in their original language. Some legacy detailed diagnostic messages retain their original wording.
+Version **0.17.0** adds a direct MCP test workbench, saved-result replay and idempotent test calls. It retains the bilingual interface and environment setup introduced in 0.16. Technical logs and user/model content remain in their original language. Some legacy detailed diagnostic messages retain their original wording.
 
-This release was checked with automated Go tests and browser scenarios. The packaged Docker template has not been built against a real Docker engine in the development environment; real model/provider and container deployments require local verification. See [release notes](docs/RELEASE-0.16.0.md).
+This release was checked with automated Go tests and browser scenarios. The packaged Docker template has not been built against a real Docker engine in the development environment; real model/provider and container deployments require local verification. See [release notes](docs/RELEASE-0.17.0.md).
 
 [License](LICENSE)
+
+## MCP test workbench (0.17)
+
+Open **Assistant settings → MCP → MCP test workbench** (or the application's MCP settings). Select a configured server, confirm direct-call access, load its tool list, inspect the schema, enter a JSON object, and execute. The result includes duration, protocol/transport errors and `isError` tool failures. **Replay record only reads saved data**; Execute tool makes a new real call.
+
+Local stdio and handshake-era Streamable HTTP (2025-03-26 / 2025-06-18 / 2025-11-25) are supported. Each test gets a new connection with a 30-second timeout and a 2 MiB response limit. This does not claim support for every MCP extension or the 2026 stateless protocol. Docker execution, OAuth login and server-initiated sampling/elicitation are not implemented. No host fallback is made for container applications. Only administrators may use this workbench. A disabled server can be tested explicitly without changing its enabled state; configured tool allow/deny lists still apply.
+
+Direct tests run with RunDesk's service identity, outside Codex's sandbox and approval flow. No credentials are accepted in the test form; existing server configuration is reused. Known configured secrets and common secret fields are masked, but arbitrary sensitive free text cannot be detected reliably. Saved test history can be deleted; idempotency receipts remain to prevent accidental re-execution. A timeout does not prove an external action failed or was cancelled.
+
+## Idempotent API submissions
+
+This capability already existed before 0.17. Send a stable `Idempotency-Key` (8–128 characters) for each logical POST to `/api/v1/tasks`, `/sessions`, `/sessions/{id}/turns`, or `/workspaces/{id}/mcp-tests`. Retry the **same request with the same key**; changed content returns 409. Keys are scoped to the authenticated caller. `Idempotency-Replayed: true` identifies a persisted acknowledgement, not current task status. Inspect `GET /api/v1/requests/{key}` or the task resource after a timeout. An interrupted acknowledgement can return `request_unconfirmed`; reconcile actual effects instead of changing keys and resubmitting. This is duplicate-submission protection, not an exactly-once guarantee for external tools.
+
+[Capability status and next steps](docs/CAPABILITY-STATUS-0.17.0.md)

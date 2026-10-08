@@ -760,6 +760,7 @@ async function renderMCP(target) {
       );
     });
   target.replaceChildren(
+    mcpTestPanel(info, cp),
     list,
     el(
       "div",

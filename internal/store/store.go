@@ -202,3 +202,8 @@ func (s *Store) LatestEvent(session, method string) (Event, error) {
 	e := s.db.QueryRow("SELECT id,time,direction,method,data FROM events WHERE session=? AND method=? ORDER BY id DESC LIMIT 1", session, method).Scan(&v.ID, &v.Time, &v.Direction, &v.Method, &v.Data)
 	return v, e
 }
+
+func (s *Store) DeleteObject(kind, id string) error {
+	_, e := s.db.Exec("DELETE FROM objects WHERE kind=? AND id=?", kind, id)
+	return e
+}
