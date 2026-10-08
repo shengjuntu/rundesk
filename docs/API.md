@@ -254,3 +254,9 @@ Hybrid 后续模型重算，工具严格回放，未命中停止。Live 使用�
 原 `POST /sessions/{sid}/kun/control` 增加仅管理员的 `set_harness`：携带精确 `requestId`、`runId`、`expectedStateRevision`、`harness` 和 1–2048 字符的 `reason`。同 requestId/同内容返回持久化回执，改内容冲突；应用 key 和成员不能调用。仅普通运行在 before_model 已暂停、无工具/审批/待应用控制及未决动作时允许。只支持两套内置组合，清除 memory/planning 状态，保留预算、权限、历史、工具目录；保持暂停。
 
 `state.config` 仍是原始启动配置，`state.runtimeHarness` 是当前运行的组合覆盖；`state.harness` 为实际实现与 revision。`kun/control.applied.data.harnessChange` 记录原/新定义、迁移范围、阶段、步骤和原因，与新状态、回执及检查点一起提交。恢复和分叉保留该覆盖；普通新轮次回到实例默认值。Layers 提供只读预览和明确应用，不自动继续执行。详见 [KUN-HARNESS.md](KUN-HARNESS.md)。
+
+## 同基线分支对照（0.36.0）
+
+`GET /kun-forks/comparisons/{fid}` 仅管理员可用；旧 `/api` 与 `/api/v1` 共用相同实现。可选 `against` 为另一同基线预览；默认比较来源后续执行和 fid 的目标分支。`leftThrough`、`rightThrough` 是固定宿主事件上界，须保留零值；与 worker sequence 不同。
+
+查询只读宿主数据库，不启动 worker/模型/MCP、不读项目文件。返回继承预算、两侧新增用量、工具真实派发/回放计数及有界回复；日志或用量缺失时相关差值为 null。未知/重复参数 400，不同基线/无效上界 409，载荷超限 413。说明与上限见 [KUN-COMPARISON.md](KUN-COMPARISON.md)。

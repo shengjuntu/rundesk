@@ -10,6 +10,12 @@
 
 ![RunDesk 对话界面](docs/screenshots/0.16.0/chat-zh.png)
 
+## Kun 来源与分支对照（0.36.0）
+
+RunDesk 0.36.0 新增来源运行与 Hybrid/Live 分支、同一安全点不同分支的跨会话对照。两侧固定宿主日志上界，单列继承预算，统计新增模型/规划调用、已报告 token、活动/等待时间及真实派发/回放工具；并列查看新增回复和精确事件。记录不完整或用量缺失时不计算相关差值。只读查询不启动 worker、模型或工具，也不读取项目文件。
+
+这仍是描述性实验检查；跨会话评分基准和 K4 优化尚未实现。Kun 保持 0.11.0 / 协议 v11，0.35 记录和预览保持原兼容性。操作见 [对照说明](docs/KUN-COMPARISON.md)，验证见 [验证记录](docs/KUN-VALIDATION.md)。
+
 ## Kun 运行中组合切换（0.35.0）
 
 管理员现在可以让普通 Kun 运行在模型请求前安全暂停，再从 Layers 预览并切换 Tool Loop / Plan-Act。切换固定当前 run 和状态版本，要求填写原因；应用后仍保持暂停，清除当前计划、保留历史与已用预算，并生成新的 Harness revision。检查点和分叉保留有效组合，普通新轮次回到配置默认值。见 [组合说明](docs/KUN-HARNESS.md)、[验证记录](docs/KUN-VALIDATION.md) 和 [完成度](docs/KUN-PROGRESS.md)。

@@ -150,6 +150,11 @@ func TestLiveHostConfirmationExecutionAndCredentialDrift(t *testing.T) {
 	var branch Session
 	_ = json.Unmarshal(r.Body.Bytes(), &branch)
 	waitState(t, m, branch.ID, "completed")
+	comparisonResponse := call("GET", "/kun-forks/comparisons/"+preview.ID, nil, "")
+	var comparison KunForkComparison
+	if comparisonResponse.Code != 200 || json.Unmarshal(comparisonResponse.Body.Bytes(), &comparison) != nil || !comparison.Left.Complete || !comparison.Right.Complete || comparison.Right.ModelCalls != 1 || comparison.Right.ReportedTokens != 5 || len(comparison.Right.Tools) != 2 || comparison.Right.Tools[0].Dispatched != 1 || comparison.Right.Tools[1].Dispatched != 1 || comparison.Right.Tools[0].Replayed != 0 {
+		t.Fatal("Live comparison", comparisonResponse.Code, comparisonResponse.Body.String())
+	}
 	if models.Load() != 3 || connections.Load() != 2 || branch.KunFork.Mode != "live" {
 		t.Fatal(branch, models.Load(), connections.Load())
 	}

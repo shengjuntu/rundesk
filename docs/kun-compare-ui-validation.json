@@ -1,0 +1,16 @@
+{
+  "version": "0.36.0",
+  "passed": true,
+  "scope": "Node DOM stub + shipped view; no browser layout acceptance",
+  "checks": [
+    "GET only and explicit read",
+    "duplicate request guard",
+    "unknown and partial usage",
+    "literal reply text",
+    "zero cursor retained",
+    "same-source candidates",
+    "selection invalidates pinned view",
+    "late and closed responses ignored",
+    "branch response identity"
+  ]
+}

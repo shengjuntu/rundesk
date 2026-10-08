@@ -10,6 +10,12 @@ Built with Go and plain HTML/JavaScript. Node.js is not required to run RunDesk 
 
 ![RunDesk conversation workspace](docs/screenshots/0.16.0/chat-en.png)
 
+## Kun source and fork comparison (0.36.0)
+
+RunDesk 0.36.0 adds read-only source/fork and same-checkpoint fork/fork comparisons. Both host event cursors are fixed, inherited usage is separate, and new model/planning calls, reported tokens, active/wait time and real/replayed tools are shown alongside bounded reply previews and evidence links. Missing logs or usage suppress affected deltas. Inspection never starts a worker, calls models/tools or reads project files.
+
+This is descriptive inspection; scored cross-session benchmarks and K4 optimization remain pending. Kun stays at 0.11.0 / protocol v11 with the same 0.35 compatibility. See [comparison guide](docs/KUN-COMPARISON.md) and [validation](docs/KUN-VALIDATION.md).
+
 ## Kun runtime Harness switching (0.35.0)
 
 RunDesk 0.35.0 lets administrators switch an ordinary Kun run between Tool Loop and Plan-Act at a safe pause before a model request. Layers provides a fixed preview with a reason and exact state revision. Applying keeps the run paused, resets planning state, preserves history, permissions and spent budgets, and records a new Harness revision. Recovery and forks preserve the effective composition; a new ordinary run uses the configured default. See [Harness guide](docs/KUN-HARNESS.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md).

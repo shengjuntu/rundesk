@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.36.0
+
+- Add administrator-only source/fork and same-checkpoint fork/fork comparisons using retained host logs. Reads never start or resume workers, call providers/MCP, read project files or modify execution.
+- Pin both host cursors (including zero), preserve the immutable source boundary, separate inherited budgets from newly observed model/token/time/tool activity, and distinguish actual dispatch, replay, failure, refusal and unsettled results.
+- Reject different baselines; incomplete logs or missing usage suppress affected deltas. Show bounded last-reply previews and exact event links; no quality score, price estimate or optimization claim.
+- Fork workbench supports same-source candidates, fixed-range re-read and explicit refresh, with stale-response and duplicate-click guards.
+- One new GET route: `/api/v1/kun-forks/comparisons/{fid}`. Kun remains 0.11.0 / protocol v11 / fork schema 2; 0.35 checkpoints and previews retain their compatibility. No new dependencies.
+- See KUN-VALIDATION.md for current tests and remaining real-service/browser acceptance limits.
+
 ## 0.35.0
 
 - First runtime Harness switching: administrators can switch ordinary paused runs between Tool Loop and Plan-Act at before_model, with no pending tools, approvals, controls or uncertain actions. A reason and exact run/state revision are required.

@@ -46,7 +46,7 @@ window.RunDeskKunForks=(()=>{
    finally{setBusy(false);}
   }
   function renderPreview(p){
-   const live=p.origin.mode==='live';
+   const live=p.origin.mode==='live',previewTicket=ticket;
    if(!['hybrid','live'].includes(p.origin.mode)||(live&&!p.live)){detail.replaceChildren(el('p',{},'不支持的分叉预览，请更新两端并重新创建。'));return;}
    const confirm=el('input',{type:'checkbox','aria-label':'确认 Live 真实执行'});confirm.checked=false;
    const start=button(live?'确认启动或打开 Live 分支':'启动或打开 Hybrid 分支',async()=>{
@@ -65,6 +65,7 @@ window.RunDeskKunForks=(()=>{
     kunFacts([['来源会话',p.origin.sessionId],['来源轮次',p.origin.runId],['安全边界','#'+p.origin.sequence+' · '+p.phase],['记录截止','#'+p.origin.through],['待处理工具',p.pending],['可回放结果',live?'不使用录制结果':p.recordCount],['继承模型调用',p.step+' / '+p.maxSteps],['继承工具预算',p.budget.toolCalls+' / '+p.limits.maxToolCalls],['继承已报告 token',p.budget.reportedTokens],['目标会话',p.targetSessionId]]),
     el('p',{},live?'Live 将访问项目当前文件和真实 MCP，可能产生费用、覆盖文件或重复来源运行已经执行的外部动作。只有会话和执行记录独立；文件系统与外部服务不回滚、不复制。': '新增模型调用会消耗用量。继承所选时点的预算；工具名称、定义、参数、目录和顺序必须匹配录制，未命中立即停止。不会连接真实 MCP、读写项目文件或回滚外部系统。'),
     el('h4',{},'上下文变化'),el('p',{class:'help'},live?'自动标记历史观测与当前 Live 执行。已有待处理工具保持原参数，先核对当前目录和审批再执行；补充指令在下一次模型调用前加入，不会改写这些待处理动作。':'自动加入 Hybrid 模拟说明。补充指令在下一次模型调用前加入；已有待处理工具先按录制回放。'),el('pre',{},p.instruction||'无补充指令'));
+   if(window.RunDeskKunCompare)detail.append(window.RunDeskKunCompare.create({preview:p,isActive:()=>alive(previewTicket)&&current?.id===p.id}).node);
    if(live){
     detail.append(el('h4',{},'真实执行范围'),kunFacts([['当前项目工作区',p.live.workspace],['内置文件写入',p.live.allowWrite?'允许':'禁止'],['当前 MCP 工具数',p.live.mcpTools],['审批策略',p.live.approvalPolicy]]),el('p',{class:'help'},'MCP 权限独立于内置文件写入。重新读取当前配置及凭据，重连并核对工具目录；需逐次审批的工具重新询问。参数仅作有界预览，常见密钥字段脱敏，截断内容应在来源快照核对。'));
     for(const call of p.live.pendingTools||[])detail.append(el('details',{},el('summary',{},call.name+' · '+call.callId),el('pre',{},call.argumentsPreview+(call.truncated?'\n…已截断，请核对来源快照':''))));

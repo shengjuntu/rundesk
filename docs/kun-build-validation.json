@@ -1,19 +1,21 @@
 {
-  "version": "0.35.0",
+  "version": "0.36.0",
   "kunVersion": "0.11.0",
   "protocolVersion": 11,
   "forkSchema": 2,
   "date": "2026-10-08",
   "passed": true,
-  "scope": "local core/protocol tests and compilation; not full product acceptance",
+  "scope": "local core/protocol/HTTP/Node tests and compilation; not full product acceptance",
   "goVersion": "go1.25.12",
   "checks": {
     "goTestAll": "passed",
     "goVet": "passed",
-    "focusedRace": "passed: RuntimeHarness, KunRuntimeHarness, PlanAct, KunPlanAct, Hybrid, Live, ProjectionHybrid",
-    "linuxAmd64": "rundesk and kun built; host rebuilt after final OpenAPI description update",
+    "focusedRace": "passed: TestKunCompar*, TestHybridHostLifecycle, TestLiveHostConfirmation*, TestHybridAuthorization* in app/store",
+    "linuxAmd64": "rundesk and kun built",
+    "node": "69 syntax files and 7 interaction suites passed",
+    "realHTTP": "real host/worker plus local model: source, Hybrid, Live comparisons; 6 total model calls, reads add none",
     "windowsAmd64": "rundesk and kun cross-compiled; no Windows runtime test",
-    "node": "66 syntax files and 6 interaction suites passed"
+    "finalTargetedRegression": "TestKunCompar* passed after resume-status correction; Linux/Windows host rebuilt"
   },
   "notAccepted": [
     "real browser layout/focus/mobile behavior",
@@ -21,5 +23,5 @@
     "Windows runtime",
     "production workload"
   ],
-  "browserNote": "Not run in 0.35; prior Chromium launch was blocked by environment local socket restrictions."
+  "browserNote": "Chromium launch blocked: process singleton socket() failed: Operation not permitted."
 }

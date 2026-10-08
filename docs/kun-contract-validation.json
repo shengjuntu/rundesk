@@ -1,14 +1,13 @@
 {
-  "version": "0.35.0",
+  "version": "0.36.0",
   "passed": true,
-  "javascriptFiles": 66,
-  "nodeInteractionSuites": 6,
-  "openapiPaths": 150,
-  "openapiOperations": 180,
+  "javascriptFiles": 69,
+  "nodeInteractionSuites": 7,
+  "openapiPaths": 151,
+  "openapiOperations": 181,
   "uniqueParameters": true,
-  "runtimeHarnessSchema": true,
-  "harnessControlSchema": true,
-  "conditionalAdministratorOperation": "set_harness",
-  "dependenciesUnchangedFrom": "0.34.0",
-  "browserAcceptance": "not_run"
+  "comparisonSchema": true,
+  "comparisonAdministratorOnly": true,
+  "dependenciesUnchangedFrom": "0.35.0",
+  "browserAcceptance": "blocked"
 }

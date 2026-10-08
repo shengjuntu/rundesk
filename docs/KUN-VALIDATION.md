@@ -1,54 +1,57 @@
-# RunDesk 0.35.0 / Kun 0.11.0 验证记录
+# RunDesk 0.36.0 / Kun 0.11.0 验证记录
 
-日期：2026-10-08。Linux amd64，Go 1.25.12，worker 协议 v11。**本地核心、协议及构建检查通过；真实浏览器、远程服务与生产验收未完成。**
+日期：2026-10-08。Linux amd64，Go 1.25.12；Kun 0.11.0、协议 v11、fork schema 2 均未变更。**本地代码、协议、实际 worker/HTTP 与 Node 交互通过；真实浏览器启动被环境权限阻止，远程服务和生产验收未完成。**
 
-| 检查 | 本次结果 |
+| 检查 | 本版结果 |
 | --- | --- |
-| `go test ./... -count=1 -timeout=180s` | 全量通过；含实际 Kun 子进程、本地模型/MCP fixture |
+| `go test ./... -count=1 -timeout=180s` | 全量通过；internal/app 75.908s，包含实际 Kun 子进程与本地模型/MCP fixture |
 | `go vet ./...` | 通过 |
-| 专项 race | kun、app、tracequery 的 RuntimeHarness / KunRuntimeHarness / PlanAct / KunPlanAct / Hybrid / Live / ProjectionHybrid 用例通过；未运行全项目 race |
-| JavaScript/CJS 语法 | 66 个文件 `node --check` 通过 |
-| Node 交互 | 检查器、面板、Hybrid、Live、Harness 对照、运行组合切换六组通过；DOM stub，不代表浏览器布局 |
-| Linux amd64 | RunDesk、Kun 编译通过；最终 OpenAPI 文案更新后重新构建宿主 |
-| Windows amd64 | 两个命令交叉构建通过；未在 Windows 实机运行 |
-| CLI 与 worker hello | RunDesk 0.35.0、Kun 0.11.0、协议 v11；runtimeHarness / planAct / harnessComposition / forkHybrid / forkLive=true |
-| Debug MCP | initialize / tools/list / ping / EOF 正常；版本 0.35.0、19 个工具；没有调用真实会话服务 |
-| OpenAPI | 150 路径 / 180 操作；set_harness、reason、runtimeHarness 契约和参数唯一性通过；普通与成员路由均声明 set_harness 仅管理员 |
-| 依赖 | go.mod / go.sum 与 0.34.0 一致 |
-| 真实浏览器 | 本版未执行；先前 Chromium 启动被环境套接字权限阻止，没有本版成功截图 |
+| 专项 race | app/store 的 TestKunCompar*、TestHybridHostLifecycle、TestLiveHostConfirmation*、TestHybridAuthorization* 通过；未运行全项目 race |
+| JavaScript/CJS 语法 | 69 文件 node --check 通过 |
+| Node 交互 | 检查器、面板、Hybrid、Live、Harness 对照、安全组合切换、新增跨会话对照共 7 组通过；DOM stub，不是布局验收 |
+| 独立 HTTP 冒烟 | 实际 RunDesk/Kun，来源/Hybrid/Live 共 6 次本地模型调用；读取两种对照不增加调用，真实派发/回放与用量分离正确 |
+| Linux amd64 | RunDesk、Kun 构建通过 |
+| Windows amd64 | 两个命令交叉构建通过；未实机运行 |
+| CLI | RunDesk 0.36.0、Kun 0.11.0、hello/EOF 正常；worker 能力未改变 |
+| OpenAPI | 151 路径 / 181 操作；新 GET 契约、schema 引用、参数唯一性与管理员标记检查通过 |
+| 依赖/引擎 | go.mod / go.sum 与 0.35.0 一致；没有修改 internal/kun 或 internal/kunproto |
+| 真实浏览器 | 本版已尝试；Chromium process singleton 的 socket() 被环境拒绝（Operation not permitted），没有成功布局截图 |
 | 真实 Codex、远程模型/MCP、业务系统、生产压力 | 未执行 |
 
-## 本批专项证据
+## 本版专项证据
 
-- 真实内核与本地模型 HTTP：普通 Tool Loop 在 before_model 暂停时切换 Plan-Act，保持暂停且模型调用数为零，原始配置、上下文与预算保持不变，Harness revision 加 1；单步后才产生一次禁用工具的规划调用。
-- 切出 Plan-Act 后，下一请求不再注入旧计划；再显式切入会重新规划，原有模型次数和 token 不退款。以前的固定快照逐字保持一致。
-- 取消/关闭并重开真实执行数据库，使用原始配置可恢复切换后的 Harness 与已完成计划；改变原始启动配置则拒绝。恢复不会重复规划；Hybrid/Live 分叉也保留该有效组合和计划。
-- 新普通轮次清除 runtimeHarness，回到实例默认 Tool Loop，并记录正确的新 Harness revision。分叉和诊断会话不能通过 set_harness 更换固定组合。
-- 不安全阶段、待处理工具、已有审批决定、排队 steer、prepared/unknown 动作、未知模块版本及耗尽模型/token 预算被拒绝，状态不变；缺失/超长原因、不兼容配对和夹带 steer 等无效命令同样拒绝。
-- 同 requestId/同命令重试返回原回执，不再变更 revision；改内容冲突，旧 revision 拒绝。注入数据库提交失败，验证迁移不会保留在内存、不会留下成功回执，执行停止。
-- 实际 RunDesk 管理器 + Kun 子进程 + HTTP：应用 key 即使有 read/run/approvals，也在 v1 和旧路由上被拒绝；管理员切换后宿主仍显示暂停，实例默认值不改。实际 cancel → checkpoint → resume 保留有效组合；切换证据进入宿主事件投影，下一普通轮次恢复默认。
-- Node 使用实际前端代码验证原因必填、只读预览、文本不解释为 HTML、状态和目标编辑使提案失效、历史只读、不安全状态禁用、响应丢失时保留原命令身份、重复点击保护、不自动继续，以及选择变化/关闭后的迟到结果不建立可执行提案。
+- 实际 Hybrid 运行后对照：来源真实读取一次，分支仅回放一次，两侧各 2 次新增模型调用及 10 个已报告 token；不返回私有工具正文，查询不增加模型调用。
+- 实际 Live 运行后对照：继承模型步骤单列，新增 1 次模型调用及 5 token，两个工具为真实派发，不误计为回放。
+- 离线宿主 fixture：模型/worker 路径设为不存在仍可读取，未创建 handle；相同安全点的 Hybrid/Live 可比较，不同模型/基线拒绝。
+- 双宿主游标固定，包括尚未启动分支时的 0；分支后来开始、来源后来进入新轮次，重读原范围的结果保持不变。来源删除后不把缺失记录当成零，也不启动恢复。
+- 区分缺少 usage、缺失开始事件、缺失/空预算、未完成调用及规划文本；不产生错误的 token/时间差值，不把规划当作回复。
+- 会话/轮次/序号冲突拒绝；真实派发、回放、失败、审批/参数拒绝和未见结果分别统计。Unicode 回复预览有界，完整指纹和事件证据保留。
+- 原 /api、/api/v1 与成员代理入口对应用/成员凭据默认拒绝；未知/重复/空或负游标参数拒绝。
+- Store 在同一只读事务里测量载荷并读取固定范围；跨会话/轮次事件排除，未来超大记录不污染旧范围；4096 条及 8 MiB 单条上限回归通过，总载荷硬限制 32 MiB。
+- 最终核对修复“暂停后已恢复”的记录状态显示，并复跑 TestKunCompar* 与 Linux/Windows 宿主构建通过。
+- 新前端使用实际发布的 JS，验证显式 GET、重复读取保护、空游标保留、未知/部分用量显示、同源候选过滤、文本不解释为 HTML、选择变化和关闭后的迟到响应不覆盖结果。
 
-HTTP 模型/MCP 均为可控本地 fixture；以上不是远程服务兼容性、真实业务效果或优化收益验收。运行中切换只覆盖两套内置组合，不代表任意插件热替换或通用状态迁移。
-
-## 记录与复现
-
-本版机器记录为 kun-build-validation.json、kun-contract-validation.json、kun-cli-validation.json，以及四份 kun-*-ui-validation.json：harness、hybrid、live、runtime-harness。检查器和面板测试输出在命令结果中。0.34 记录归档为 *-0.34.0.json，说明见 [KUN-VALIDATION-0.34.0.md](KUN-VALIDATION-0.34.0.md)；旧浏览器报告保留原版本字段，不代表本版验收。
+## 复现
 
 ```bash
 go test ./... -count=1 -timeout=180s
 go vet ./...
-go test -race ./internal/kun ./internal/app ./internal/tracequery -run 'TestRuntimeHarness|TestKunRuntimeHarness|TestPlanAct|TestKunPlanAct|TestHybrid|TestLive|TestProjectionHybrid' -count=1 -timeout=120s
+go test -race ./internal/app ./internal/store -run 'TestKunCompar|TestHybridHostLifecycle|TestLiveHostConfirmation|TestHybridAuthorization' -count=1 -timeout=120s
 node scripts/kun-inspect-test.cjs
 node scripts/kun-panels-test.cjs
 node scripts/kun-hybrid-ui-test.cjs
 node scripts/kun-live-ui-test.cjs
 node scripts/kun-harness-test.cjs
 node scripts/kun-runtime-harness-test.cjs
+node scripts/kun-compare-test.cjs
 python3 scripts/generate-openapi.py
 make build
+# 需要可运行的 Chromium 与 Playwright；CHROMIUM_PATH 可指定已安装浏览器。
+node scripts/kun-compare-ui-smoke.cjs
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -buildvcs=false -trimpath -o /tmp/rundesk.exe ./cmd/rundesk
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -buildvcs=false -trimpath -o /tmp/kun.exe ./cmd/kun
 ```
 
-更多模块迁移、跨会话基准与 K4 尚未实现。升级时同时更新两个程序；旧检查点/分叉预览不能跨版本执行。使用说明见 [KUN-HARNESS.md](KUN-HARNESS.md)，阶段进度见 [KUN-PROGRESS.md](KUN-PROGRESS.md)。
+机器记录：kun-build-validation.json、kun-contract-validation.json、kun-cli-validation.json、kun-compare-ui-validation.json、kun-compare-browser-validation.json。0.35 的当前记录已归档为 *-0.35.0。旧版本浏览器截图/报告保留原版本，不代表本版验收。
+
+本版没有业务质量评分、成本节省结论或 K4 优化收益。功能范围见 [KUN-COMPARISON.md](KUN-COMPARISON.md)，进度见 [KUN-PROGRESS.md](KUN-PROGRESS.md)。
