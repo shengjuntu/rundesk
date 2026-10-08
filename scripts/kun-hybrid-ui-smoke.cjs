@@ -3,8 +3,8 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
 const {spawn}=require('node:child_process'),http=require('node:http'),fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 (async()=>{
  const root=path.resolve(__dirname,'..'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'rd-hybrid-')),base='http://127.0.0.1:38737',pause=ms=>new Promise(r=>setTimeout(r,ms)),checks=[],errors=[];
- const reportPath=root+'/docs/kun-hybrid-browser-validation.json',pictures=root+'/docs/screenshots/0.34.0';let host,browser,model,source,modelCalls=0,mode='match';
- const report=extra=>fs.writeFileSync(reportPath,JSON.stringify({version:'0.34.0',scope:'real host and worker, local model fixture; browser separately reported',modelCalls,checks,pageErrors:errors,...extra},null,2)+'\n');
+ const reportPath=root+'/docs/kun-hybrid-browser-validation.json',pictures=root+'/docs/screenshots/0.35.0';let host,browser,model,source,modelCalls=0,mode='match';
+ const report=extra=>fs.writeFileSync(reportPath,JSON.stringify({version:'0.35.0',scope:'real host and worker, local model fixture; browser separately reported',modelCalls,checks,pageErrors:errors,...extra},null,2)+'\n');
  const api=async(p,body,method)=>{const r=await fetch(base+'/api/v1'+p,{method:method||(body?'POST':'GET'),headers:{'Content-Type':'application/json','Idempotency-Key':crypto.randomUUID()},body:body?JSON.stringify(body):undefined});assert(r.ok,await r.clone().text());return r.json()};
  const stopped=async(id,want='completed')=>{for(let n=0;n<100;n++){const s=await api('/sessions/'+id);if(s.status===want)return s;if(['completed','failed','interrupted'].includes(s.status))throw Error(JSON.stringify(s));await pause(100)}throw Error('run did not stop')};
  try{

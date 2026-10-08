@@ -1,6 +1,6 @@
 {
-  "rundesk": "RunDesk 0.35.0",
-  "kun": "Kun 0.11.0",
+  "rundesk": "RunDesk 0.34.0",
+  "kun": "Kun 0.10.0",
   "hello": {
     "capabilities": {
       "argumentValidation": true,
@@ -21,16 +21,15 @@
       "planAct": true,
       "replayEvents": true,
       "resumeCheckpoint": true,
-      "runtimeHarness": true,
       "snapshotDiff": true,
       "steer": true,
       "step": true
     },
     "engine": "kun",
-    "engineVersion": "0.11.0",
-    "protocolVersion": 11
+    "engineVersion": "0.10.0",
+    "protocolVersion": 10
   },
   "debugMCPTools": 19,
-  "debugMCPVersion": "0.35.0",
+  "debugMCPVersion": "0.34.0",
   "passed": true
 }

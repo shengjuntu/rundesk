@@ -18,8 +18,8 @@ func configuredModules(c p.Config) (modules, error) {
 	return m, nil
 }
 
-// A new ordinary run may change the composition. Active runs, recovery and
-// Hybrid snapshots retain the exact recorded composition and state versions.
+// A new ordinary run takes the configured default. Runtime overrides belong
+// to the current run and survive checkpoints and forks only.
 func (e *Engine) nextHarness(c p.Config) p.Harness {
 	m, _ := configuredModules(c) // An unsupported candidate produces a nonmatching manifest.
 	if m.policy == nil {
@@ -37,7 +37,7 @@ func (e *Engine) nextHarness(c p.Config) p.Harness {
 }
 
 func compatibleHarness(s p.State) bool {
-	m, err := configuredModules(s.Config)
+	m, err := configuredStateModules(s)
 	if err != nil || s.Harness.Revision < 1 || s.Manifest == nil {
 		return false
 	}

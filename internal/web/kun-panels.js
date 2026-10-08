@@ -135,7 +135,7 @@ function kunRenderLayers(s,selected,events,navigate){
  const node=kunPanel("四模块记录","layers",s,selected);
  if(!s){node.append(el("p",{},"此时点的模块状态不可用。"));return node;}
  const h=s.harness||{},scoped=kunScopedEvents(events,s,selected);
- node.append(kunFacts([["LoopPolicy",h.id],["版本",h.version],["Harness 版本",h.revision]]),el("p",{class:"help"},"下列是模块最后记录的状态，不是实时健康评分。支持 Tool Loop / Plan-Act 两套内置组合；新轮次可更换，运行中不可替换。Plan-Act 的计划仅是建议，后续指令和工具结果优先；本版不自动重规划。"));
+ node.append(kunFacts([["LoopPolicy",h.id],["版本",h.version],["Harness 版本",h.revision]]),el("p",{class:"help"},"下列是模块最后记录的状态，不是实时健康评分。支持 Tool Loop / Plan-Act 两套内置组合；普通运行可在模型请求前安全暂停时明确切换；配置默认值不变。Plan-Act 的计划仅是建议，后续指令和工具结果优先；本版不自动重规划。"));
  const cards=el("div",{class:"kun-module-grid"});
  for(const [name,title]of [["memory","Memory · 上下文"],["planning","Planning · 规划"],["action","Action · 动作"],["capability","Capability · 工具目录"]]){
   const m=s.modules?.[name],v=m?.implementation||h.modules?.[name]||{},d=m?.data||{};
@@ -147,7 +147,9 @@ function kunRenderLayers(s,selected,events,navigate){
   if(name==="capability")facts=[["工具数",d.toolCount],["Schema 方言",d.schemaDialect],["format 语义",d.format]];
   card.append(kunFacts(facts),kunEvidenceLink(kunModuleEvidence(name,m,scoped),navigate),kunRaw("模块原始状态",m||null));cards.append(card);
  }
- node.append(cards,kunRaw("Harness 原始定义",h));return node;
+ const changes=scoped.filter(e=>e.method==="kun/control.applied"&&e.data.data?.harnessChange).slice(-50).reverse();
+ node.append(cards,kunFacts([["启动配置的组合",s.config?.harness?.loopPolicy],["当前运行覆盖",s.runtimeHarness?.loopPolicy||"无"]]),el("h4",{},"组合切换记录"),
+  kunTable(["原组合 / 版本","新组合 / 版本","原因","证据"],changes.map(e=>{const c=e.data.data.harnessChange;return [c.previous.id+" / "+c.previous.revision,c.current.id+" / "+c.current.revision,c.reason,kunEvidenceLink(e,navigate)];})),kunRaw("Harness 原始定义",h));return node;
 }
 
 function kunRenderHarnessComparison(from,to){

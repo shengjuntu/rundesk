@@ -25,7 +25,7 @@ async function renderKunSettings(target){
  const debuggerConfig=kunPolicyEditor(cfg.debug);
  const status=el("p",{role:"status",class:"help"});
  const form=el("form",{class:"kun-config"},el("h3",{},"Agent 引擎"),el("p",{class:"help"},"选择后端后，新会话使用新引擎。已有会话保留后端归属。Kun 提供文本模型、项目文件工具、显式 Skills、MCP 和调试控制。"),
- el("label",{},"运行后端",kind),el("label",{},"Kun 模块组合",harness),el("p",{class:"help"},"Plan-Act 每个新轮次先生成一份显式计划，规划禁用工具，额外调用计入模型次数、token 和活动时间预算。保存后下一次新轮次生效；当前运行和检查点续跑保留原组合。其余三个模块使用完整历史、参数校验和固定目录。"),endpoint.node,model.node,key.node,steps.node,timeout.node,toolBudget.node,tokenBudget.node,activeBudget.node,failureBudget.node,el("p",{class:"help"},"token 阈值按服务报告的用量，在下一动作前检查；不能保证当前请求不超额。启用后如服务未报告用量，将停止后续执行。费用暂不估算。"),el("label",{},"系统提示词",system),
+ el("label",{},"运行后端",kind),el("label",{},"Kun 模块组合",harness),el("p",{class:"help"},"Plan-Act 每个新轮次先生成一份显式计划，规划禁用工具，额外调用计入模型次数、token 和活动时间预算。保存后下一次新轮次生效；当前运行可在 Layers 通过明确预览切换，检查点续跑保留已记录的有效组合。其余三个模块使用完整历史、参数校验和固定目录。"),endpoint.node,model.node,key.node,steps.node,timeout.node,toolBudget.node,tokenBudget.node,activeBudget.node,failureBudget.node,el("p",{class:"help"},"token 阈值按服务报告的用量，在下一动作前检查；不能保证当前请求不超额。启用后如服务未报告用量，将停止后续执行。费用暂不估算。"),el("label",{},"系统提示词",system),
  el("label",{class:"kun-check"},write,"允许 Kun 写入项目内文件（仅限制内置文件工具）"),
  el("label",{class:"kun-check"},pause,"每次模型请求前暂停，供调试检查"),
  el("p",{class:"help"},"MCP 在工具 MCP 页面配置；其权限独立于内置文件工具。支持 Hybrid 录制回放与需明确确认的 Live 真实分叉。当前不支持 Shell、图像模型、文件回滚或轨迹编译。"),
@@ -71,7 +71,7 @@ window.RunDeskKun={
    detail.scrollTop=scroll;detailKey=key;
   };
   const paint=()=>{
-   list.replaceChildren();detail.replaceChildren();diffView.update();updateControlButtons();
+   list.replaceChildren();detail.replaceChildren();diffView.update();updateControlButtons();harnessSwitch.update();
    dialog.dataset.panel=panel;list.classList.toggle("hidden",!["network","elements"].includes(panel));
    summary.textContent=current?"状态："+current.status+" · "+current.phase+" · 版本 "+current.revision+" · 模型步骤 "+current.step:"历史记录";
    if(current?.fork)summary.textContent+=current.fork.origin.mode==="live"?" · Live · 真实工具执行":" · Hybrid · 工具仅回放";
@@ -86,7 +86,7 @@ window.RunDeskKun={
    if(panel==="console")return;
    if(panel==="sources"){detail.append(kunRenderSources(current,selected,events,openEvidence));return;}
    if(panel==="application"){detail.append(kunRenderApplication(inspected,selected,events,openEvidence,()=>{panel="sources";redraw();}));return;}
-   if(panel==="layers"){harnessView.update();detail.append(kunRenderLayers(inspected,selected,events,openEvidence),harnessView.node);return;}
+   if(panel==="layers"){harnessView.update();detail.append(kunRenderLayers(inspected,selected,events,openEvidence),harnessSwitch.node,harnessView.node);return;}
    if(panel==="performance"){detail.append(kunRenderPerformance(inspected,selected,events,openEvidence));return;}
    if(panel==="elements"){
     for(const event of events.filter(e=>e.method==="kun/model.started")){
@@ -175,6 +175,7 @@ window.RunDeskKun={
    el("p",{class:"help"},"先读取当前规则再编辑。清空规则不会解除已有暂停，也不改变模型前固定暂停。重新读取会替换当前草稿。"),policyLoad,policyApply,policyHint,policyStatus));
   const diffView=kunDiffView({sid,getSelected:()=>selected});
   const harnessView=kunHarnessCompare({sid,getSelected:()=>selected});
+  const harnessSwitch=kunHarnessSwitch({sid,getCurrent:()=>current,getSelected:()=>selected,refresh,isActive:()=>dialog.isConnected&&dialog.open});
   const consoleView=kunConsole({sid,getCurrent:()=>current,getSelected:()=>selected,refresh});
   const steer=el("textarea",{rows:"2",placeholder:"给当前运行补充文本指令"});
   const recoveryStatus=el("p",{role:"status",class:"help"});

@@ -1,7 +1,7 @@
 {
-  "version": "0.34.0",
-  "kunVersion": "0.10.0",
-  "protocolVersion": 10,
+  "version": "0.35.0",
+  "kunVersion": "0.11.0",
+  "protocolVersion": 11,
   "forkSchema": 2,
   "date": "2026-10-08",
   "passed": true,
@@ -10,10 +10,10 @@
   "checks": {
     "goTestAll": "passed",
     "goVet": "passed",
-    "focusedRace": "passed: TestLive, TestHybrid, TestPlanAct, TestKunPlanAct, TestProjectionHybrid",
-    "linuxAmd64": "rundesk and kun built; CLI checked",
-    "windowsAmd64": "rundesk and kun cross-compiled with -buildvcs=false -trimpath; no Windows runtime test",
-    "node": "65 syntax files and 5 interaction suites passed"
+    "focusedRace": "passed: RuntimeHarness, KunRuntimeHarness, PlanAct, KunPlanAct, Hybrid, Live, ProjectionHybrid",
+    "linuxAmd64": "rundesk and kun built; host rebuilt after final OpenAPI description update",
+    "windowsAmd64": "rundesk and kun cross-compiled; no Windows runtime test",
+    "node": "66 syntax files and 6 interaction suites passed"
   },
   "notAccepted": [
     "real browser layout/focus/mobile behavior",
@@ -21,5 +21,5 @@
     "Windows runtime",
     "production workload"
   ],
-  "browserNote": "Not run in 0.34. Previous 0.32 Chromium launch was blocked by the environment; its report is retained separately."
+  "browserNote": "Not run in 0.35; prior Chromium launch was blocked by environment local socket restrictions."
 }

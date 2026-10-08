@@ -57,7 +57,7 @@ func Open(path string) (*Engine, error) {
 		return nil, e
 	}
 	v := &Engine{epoch: fmt.Sprintf("%x", epoch), modules: defaultModules(), j: j, state: s, wake: make(chan struct{}, 1), fatal: make(chan error, 1)}
-	if selected, err := configuredModules(s.Config); err == nil {
+	if selected, err := configuredStateModules(s); err == nil {
 		v.modules = selected
 	}
 	if p.Active(s.Status) {
@@ -352,11 +352,23 @@ func (e *Engine) Control(c p.Control) (p.Receipt, error) {
 	if c.ExpectedRevision != e.state.Revision && !(c.ExpectedRevision == -1 && (c.Operation == "cancel" || c.Operation == "steer")) {
 		return receipt, fmt.Errorf("state revision conflict; refresh and retry")
 	}
+	if (c.Harness != nil || c.Reason != "") && c.Operation != "set_harness" {
+		return receipt, fmt.Errorf("harness and reason require set_harness")
+	}
 	if c.Debug != nil && c.Operation != "set_breakpoints" {
 		return receipt, fmt.Errorf("debug policy requires set_breakpoints")
 	}
 	receipt = p.Receipt{RequestID: c.RequestID, Status: "applied", Revision: e.state.Revision + 1}
+	var change map[string]any
+	var prior p.State
+	priorModules := e.modules
 	switch c.Operation {
+	case "set_harness":
+		prior = clone(e.state)
+		change, err = e.setHarnessLocked(c)
+		if err != nil {
+			return receipt, err
+		}
 	case "set_breakpoints":
 		if c.Debug == nil {
 			return receipt, fmt.Errorf("debug policy is required")
@@ -410,7 +422,14 @@ func (e *Engine) Control(c p.Control) (p.Receipt, error) {
 		return receipt, fmt.Errorf("unsupported control operation")
 	}
 	e.state.Revision++
-	if _, err = e.j.commit(e.state, "kun/control."+receipt.Status, map[string]any{"command": c, "receipt": receipt}, c.RequestID, hash, &receipt); err != nil {
+	data := map[string]any{"command": c, "receipt": receipt}
+	if change != nil {
+		data["harnessChange"] = change
+	}
+	if _, err = e.j.commit(e.state, "kun/control."+receipt.Status, data, c.RequestID, hash, &receipt); err != nil {
+		if change != nil {
+			e.state, e.modules = prior, priorModules
+		}
 		e.cancel()
 		return receipt, err
 	}

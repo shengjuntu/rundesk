@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.35.0
+
+- First runtime Harness switching: administrators can switch ordinary paused runs between Tool Loop and Plan-Act at before_model, with no pending tools, approvals, controls or uncertain actions. A reason and exact run/state revision are required.
+- Keep the run paused. Reset memory/planning state, preserve context, permissions and spent budgets, and commit the new Harness revision, migration evidence, receipt and checkpoint atomically. Failed commits roll back the in-memory migration.
+- Preserve the immutable admission config separately from runtimeHarness. Recovery and Hybrid/Live forks keep the effective composition and completed plan; new ordinary runs return to the configured default.
+- Layers adds preview/apply, invalidates stale or edited proposals, guards duplicate clicks, and shows change history. Application/member credentials cannot invoke set_harness.
+- Kun 0.11.0 / protocol v11. Upgrade both binaries; old checkpoints/fork previews do not execute across versions. No added runtime dependencies or API paths.
+- Core/HTTP/Node, recovery, fork, budget and authorization validation included. Real browser and remote-service acceptance, arbitrary module migrations, cross-session benchmarks and K4 remain pending.
+
 ## 0.34.0
 
 - First K3-C Live forks: mode-bound immutable preview, explicit confirmation, independent session/run and real tools against the current project workspace. No filesystem rollback or isolation; source execution records remain unchanged.

@@ -269,6 +269,9 @@ func (e *Engine) forkLocked(in p.Start, hash string) (p.State, error) {
 	if o.PreviewID == "" || o.SessionID != s.SessionID || o.SessionID == in.SessionID || o.RunID != s.RunID || o.BundleHash != b.ContentHash || o.Sequence != b.Selection.Sequence || o.Through != b.Selection.Through || o.RunID != b.Selection.SourceRunID || fingerprint(in.Config) != fingerprint(s.Config) || in.ApprovalPolicy != s.ApprovalPolicy || utf8.RuneCountInString(f.Instruction) > 16000 {
 		return p.State{}, fmt.Errorf("fork source or configuration mismatch")
 	}
+	if err := e.restoreStateModules(s); err != nil {
+		return p.State{}, err
+	}
 	if live {
 		if !f.ConfirmLive {
 			return p.State{}, fmt.Errorf("Live fork requires explicit execution confirmation")

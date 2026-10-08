@@ -120,7 +120,7 @@ func (e *Engine) checkpointLocked() (p.CheckpointCheck, p.State, error) {
 	if len(saved.Pending) > 0 {
 		next = "tool"
 	}
-	if e.modules.policy.Next(saved) == "complete" {
+	if stateNext(saved) == "complete" {
 		next = "complete"
 	}
 	if reason := budgetReason(saved, next); reason != "" {
@@ -139,7 +139,7 @@ func (e *Engine) CheckpointFor(in p.Start) (p.CheckpointCheck, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	check, saved, err := e.checkpointLocked()
-	if err == nil && check.Eligible && (in.SessionID != saved.SessionID || fingerprint(e.manifest(in)) != fingerprint(saved.Manifest) || in.ApprovalPolicy != saved.ApprovalPolicy) {
+	if err == nil && check.Eligible && (in.SessionID != saved.SessionID || fingerprint(e.manifestForState(in, saved)) != fingerprint(saved.Manifest) || in.ApprovalPolicy != saved.ApprovalPolicy) {
 		check.Eligible = false
 		check.Reason = "runtime_manifest_changed"
 	}
@@ -156,11 +156,14 @@ func (e *Engine) resumeLocked(in p.Start, hash string) (p.State, error) {
 	if *in.Resume != check.Selection {
 		return p.State{}, fmt.Errorf("checkpoint selection is stale; inspect again")
 	}
-	if fingerprint(e.manifest(in)) != fingerprint(saved.Manifest) || in.ApprovalPolicy != saved.ApprovalPolicy {
+	if fingerprint(e.manifestForState(in, saved)) != fingerprint(saved.Manifest) || in.ApprovalPolicy != saved.ApprovalPolicy {
 		return p.State{}, fmt.Errorf("checkpoint runtime manifest changed")
 	}
 	if in.RunID == saved.RunID {
 		return p.State{}, fmt.Errorf("resume needs a new run ID")
+	}
+	if err := e.restoreStateModules(saved); err != nil {
+		return p.State{}, err
 	}
 	previous := e.state
 	e.expectedCatalog = catalogFingerprint(saved)

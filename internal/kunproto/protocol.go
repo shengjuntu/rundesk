@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-const Version = 10
-const EngineVersion = "0.10.0"
+const Version = 11
+const EngineVersion = "0.11.0"
 const MaxMessage = 8 << 20
 
 type Envelope struct {
@@ -133,13 +133,15 @@ type Start struct {
 	Skills          []Skill              `json:"skills,omitempty"`
 }
 type Control struct {
-	Debug            *DebugPolicy `json:"debug,omitempty"`
-	CallID           string       `json:"callId,omitempty"`
-	RequestID        string       `json:"requestId"`
-	RunID            string       `json:"runId"`
-	ExpectedRevision int64        `json:"expectedStateRevision"`
-	Operation        string       `json:"operation"`
-	Text             string       `json:"text,omitempty"`
+	Harness          *HarnessConfig `json:"harness,omitempty"`
+	Reason           string         `json:"reason,omitempty"`
+	Debug            *DebugPolicy   `json:"debug,omitempty"`
+	CallID           string         `json:"callId,omitempty"`
+	RequestID        string         `json:"requestId"`
+	RunID            string         `json:"runId"`
+	ExpectedRevision int64          `json:"expectedStateRevision"`
+	Operation        string         `json:"operation"`
+	Text             string         `json:"text,omitempty"`
 }
 type Receipt struct {
 	RequestID string `json:"requestId"`
@@ -147,6 +149,7 @@ type Receipt struct {
 	Revision  int64  `json:"revision"`
 }
 type State struct {
+	RuntimeHarness  *HarnessConfig         `json:"runtimeHarness,omitempty"`
 	Fork            *ForkState             `json:"fork,omitempty"`
 	Diagnostic      *DiagnosticScope       `json:"diagnostic,omitempty"`
 	Debug           DebugState             `json:"debug"`

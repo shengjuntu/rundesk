@@ -210,6 +210,9 @@ func (s *Server) checkApplication(r *http.Request, k *ApplicationKey) error {
 			if method == "POST" && p[3] == "control" && len(p) == 4 && k.scope("run") {
 				var command kunproto.Control
 				return rewriteBody(r, &command, func() error {
+					if command.Operation == "set_harness" {
+						return forbidden()
+					}
 					if (command.Operation == "approve" || command.Operation == "reject") && !k.scope("approvals") {
 						return forbidden()
 					}

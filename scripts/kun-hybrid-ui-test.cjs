@@ -42,6 +42,6 @@ const buttons=d=>d.querySelectorAll('button'),byText=(d,text)=>buttons(d).find(n
  // Closing while start is pending never navigates away from a later selection.
  delayed=deferred();const last=byText(d,'启动或打开 Hybrid 分支').click();d.close();delayed.resolve({id:'target-two'});await last;delayed=null;assert.deepEqual(selected,['target-one']);
  assert(writes.every(v=>v.path==='/kun-forks'||/^\/kun-forks\/[^/]+\/start$/.test(v.path)),'dialog controlled source');
- const report={version:'0.34.0',passed:true,scope:'Node DOM stub + shipped view code; browser layout not tested',checks:['preview does not start models','fixed source selection and expected hash','edits invalidate preview','duplicate start click guarded','literal text rendering','stale preview response ignored','closing dialog suppresses late navigation','no source control routes']};
+ const report={version:'0.35.0',passed:true,scope:'Node DOM stub + shipped view code; browser layout not tested',checks:['preview does not start models','fixed source selection and expected hash','edits invalidate preview','duplicate start click guarded','literal text rendering','stale preview response ignored','closing dialog suppresses late navigation','no source control routes']};
  fs.writeFileSync(root+'/docs/kun-hybrid-ui-validation.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
 })().catch(e=>{console.error(e);process.exitCode=1});

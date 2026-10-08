@@ -10,17 +10,15 @@
 
 ![RunDesk 对话界面](docs/screenshots/0.16.0/chat-zh.png)
 
-## Kun Live 分叉与调试（0.34.0）
+## Kun 运行中组合切换（0.35.0）
 
-本版接通 K3-C 的 Live 分叉首批：从已停止的普通 Kun 运行选择安全边界，生成固定预览，检查当前工作区和待处理动作，明确确认后创建独立运行。Live 使用当前项目文件，重新连接 MCP 并核验配置、目录和审批；它可能重复写入或外部操作，独立的是执行记录，不会复制或回滚项目文件。见 [分叉说明](docs/KUN-FORKS.md)、[验证记录](docs/KUN-VALIDATION.md) 和 [完成度](docs/KUN-PROGRESS.md)。
+管理员现在可以让普通 Kun 运行在模型请求前安全暂停，再从 Layers 预览并切换 Tool Loop / Plan-Act。切换固定当前 run 和状态版本，要求填写原因；应用后仍保持暂停，清除当前计划、保留历史与已用预算，并生成新的 Harness revision。检查点和分叉保留有效组合，普通新轮次回到配置默认值。见 [组合说明](docs/KUN-HARNESS.md)、[验证记录](docs/KUN-VALIDATION.md) 和 [完成度](docs/KUN-PROGRESS.md)。
 
-已有离线记录实验、严格工具录制回放的 Hybrid、Plan-Act、两套内置组合与 Harness 快照对照。Hybrid 未命中仍停止，不自动转为 Live。运行中换模块、跨会话基准、任意插件和 K4 优化尚未实现；真实浏览器、真实远程模型/MCP 与生产验收仍待完成。
+已有离线记录实验、Hybrid 严格工具录制回放、Live 当前工作区真实执行及 Harness 快照对照。更广泛的模块迁移、任意插件、跨会话基准和 K4 优化尚未实现；真实浏览器、远程模型/MCP 和生产验收仍待完成。
 
-Kun **0.10.0 / 协议 v10**，两个二进制需一起更新；旧执行记录仍可查看，旧检查点与分叉预览不能跨版本执行。Codex 保留只读检查与原生分析路径，内部单步、条件断点和完整上下文快照仍未提供。
+Kun **0.11.0 / 协议 v11**，两个程序需一起更新；旧执行记录仍可查看，旧检查点和分叉预览不能跨版本执行。Codex 保留只读检查与原生分析路径，内部单步、条件断点和完整上下文快照仍未提供。
 
-Kun 与 RunDesk 同仓库、分进程运行。使用 Go 1.25.12+ 执行 `make build`，然后运行 `./bin/rundesk --data ./data`；在配置页的 **Agent 引擎** 中选择 Kun、设置模型服务并新建会话。Kun 不需要安装 Codex。
-
-Kun 提供 OpenAI 兼容文本模型、项目文件工具、显式 Skills，以及 stdio / Streamable HTTP MCP。DevTools 包括 Network、Elements、Sources、Performance、Console、Layers 和 MCP 状态 Application，支持暂停、单步、文本补充和停止。详见 [Kun 使用与实现边界](docs/KUN.md)。选择性复制的 PiG 源码、固定版本及感谢声明见 [来源记录](docs/UPSTREAM.md)；MIT 许可与版权声明随源码保留。
+使用 Go 1.25.12+ 执行 `make build`，运行 `./bin/rundesk --data ./data`，在配置页的 **Agent 引擎** 中选择 Kun、设置模型服务并新建会话。Kun 不需要安装 Codex。使用范围见 [Kun 说明](docs/KUN.md)；选择性复制的 PiG 源码与许可证记录见 [UPSTREAM](docs/UPSTREAM.md)。
 
 ## Codex 快速开始
 
