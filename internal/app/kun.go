@@ -348,6 +348,7 @@ func (m *Manager) steerKun(s Session, in SteerInput) (SteerReceipt, error) {
 	return receipt, e
 }
 func (s *Server) kunRoutes(mux *http.ServeMux) {
+	s.diagnosticReviewRoutes(mux)
 	s.kunCheckpointRoutes(mux)
 	s.kunDebugRoutes(mux)
 	mux.HandleFunc("PUT /api/instances/{iid}/agent-runtime", func(w http.ResponseWriter, r *http.Request) {

@@ -1,45 +1,48 @@
-# RunDesk 0.29.0 / Kun 0.7.0 验证记录
+# RunDesk 0.30.0 / Kun 0.7.0 验证记录
 
-日期：2026-10-06。Linux amd64，Go 1.25.12，Chromium Headless Shell 138.0.7204.92。worker 协议升级到 v7；本版实现 Kun 独立诊断会话、固定来源查询和待审核建议。
+日期：2026-10-06。Linux amd64，Go 1.25.12，Chromium Headless Shell 138.0.7204.92。本版新增宿主侧建议审核、当前版本预览、明确发送与回执关联；Kun 引擎仍为 0.7.0，worker 协议仍为 v7。
 
 | 检查 | 本次结果 |
 | --- | --- |
-| `go test ./... -count=1 -timeout=180s` | 全部通过，app 包 65.645 秒；包含真实 Kun worker 子进程与本地模型/MCP fixture |
+| `go test ./... -count=1 -timeout=180s` | 全部通过；app 包 68.242 秒，含真实 Kun 子进程和本地模型/MCP fixture |
 | `go vet ./...` | 通过 |
-| 本次改动范围 `go test -race` | tracequery、kun、app 的诊断/建议/分析专项通过；没有重跑全项目 race |
-| 来源快照大小专项 | 后补的 store 测试通过：固定游标排除未来超大事件；纳入超过 8 MiB 的事件时拒绝导出且不发布文件 |
-| JavaScript/CJS `node --check` | 57 个文件通过 |
-| `node scripts/kun-inspect-test.cjs` | 通过 |
-| `node scripts/kun-panels-test.cjs` | 通过 |
-| Linux amd64 `make build` | RunDesk、Kun 构建成功 |
-| Windows amd64 交叉构建 | RunDesk、Kun 构建成功，PE32+ x86-64；未在 Windows 实机运行 |
-| 已构建 CLI 冒烟 | RunDesk 0.29.0、Kun 0.7.0；Kun hello 返回 v7 与 diagnosticSession；debug-mcp initialize/initialized/tools-list/ping/EOF 正常，19 个工具，stdout 仅协议 JSON |
-| OpenAPI | 138 个路径、165 个操作；固定 through 与 Kun diagnostic scope 已生成 |
-| Kun 独立诊断真实浏览器 | 通过；真实宿主 + worker + 本地模型 fixture，4 次模型请求，零页面异常；最终文本输入限制也已回归 |
-| Codex 检查页真实浏览器 | 通过；真实宿主 + 明确的 Codex 协议 DEMO，零真实 Codex/模型调用 |
-| Kun 调试真实浏览器 | 通过；真实 worker + 本地模型 fixture，3 次模型请求，零页面异常 |
-| Kun MCP 审批真实浏览器 | 通过；真实 worker + 本地模型/MCP fixture，4 次模型请求、2 次工具调用、3 次工具发现，零页面异常 |
-| 第三方运行时依赖 | `go.mod` / `go.sum` 与 0.28.0 一致 |
-| 真实 Codex、远程模型/MCP、news2douyin 业务、生产压力 | 未运行；不声明真实服务及生产环境验收 |
+| 本次改动范围 `go test -race` | app 的 DiagnosticReview / KunDiagnostic、store 的 TraceSnapshot 专项通过；未运行全项目 race |
+| 后补成员权限专项 | 管理员原路径与成员代理路径上的 GET/preview/apply 均拒绝成员凭据；测试通过 |
+| JavaScript/CJS `node --check` | 58 个文件通过 |
+| `kun-inspect-test.cjs` / `kun-panels-test.cjs` | 两组 Node 回归通过 |
+| Linux amd64 `make build` | RunDesk 与 Kun 构建成功 |
+| Windows amd64 交叉构建 | 两个 PE32+ x86-64 命令构建成功；未在 Windows 实机运行 |
+| 已构建 CLI | RunDesk 0.30.0、Kun 0.7.0；Kun hello 返回 v7；debug-mcp initialize/initialized/tools-list/ping/EOF 正常，19 个工具，stdout 仅 JSON 协议 |
+| OpenAPI | 140 个路径、168 个操作；3 个审核操作均标记仅管理员，未投影到成员 API |
+| 诊断与审核 Chromium 流程 | 通过；4 次诊断模型请求，单独继续来源后 1 次业务模型请求；零页面异常 |
+| Codex 检查 Chromium 回归 | 通过；明确的 Codex 协议 DEMO，零真实 Codex/模型调用 |
+| Kun 常规调试 Chromium 回归 | 通过；本地模型 3 次请求，零页面异常 |
+| Kun MCP 审批 Chromium 回归 | 通过；本地模型 4 次请求、2 次工具调用、3 次工具发现，零页面异常 |
+| 依赖 | `go.mod` / `go.sum` 与 0.29.0 一致 |
+| 真实 Codex、远程模型/MCP、news2douyin 业务、生产压力 | 未运行；不声明真实服务或生产环境验收 |
 
-## 本次专项覆盖
+## 关键验证
 
-- Kun 诊断使用独立会话和 worker 状态，仅提供六个固定来源查询和一个 `trace_propose` 工具。继承的文件工具、业务 MCP、Skills、项目提示词、任务断点被排除；模型伪造 `write_file` 请求被拒绝且没有输出文件。
-- 来源 `sessionId/runId/through` 在诊断的多轮追问及 worker 重启后保持不变；会话不能切换诊断模式或换来源。通过实际 worker 子进程验证诊断时来源仍暂停，revision、事件和用量不变，诊断的模型请求与用量单独记录。
-- 提前固定 through 排除随后到达的事件。快照只包含来源会话及范围内事件，查询输出脱敏；模型不能读其他会话或未来记录。导出有事件数、总大小和单条大小上限。
-- 建议引用拒绝其他运行、其他会话、未来、缺失或重复的事件；严格参数适配拒绝未知/不适用参数、未知建议类型和嵌套执行字段。引用身份通过不代表模型的诊断结论真实，建议没有自动执行入口。
-- Kun 诊断拒绝附件、Skills、检查点恢复；前端关闭附件和技能入口，长文本保持为问题文本。原业务 Kun 的单步、补充指令、条件断点、审批及检查点回归仍通过。
-- 浏览器验证明确创建并启动独立诊断、待审核建议卡片、固定范围的证据跳转、刷新持久化、同源追问、HTML 样文本安全和 390px 窄屏；没有向来源发送 turn 请求。桌面和移动截图已检查。
-- 创建诊断继续受管理员路由授权限制；应用 key 创建请求被拒绝。through=0 不被偷偷解释为最新，超前游标与后端变更被拒绝。
+- 建议来自真实 Kun worker 的 `trace_propose` 完成事件。拒绝非建议事件、其他诊断的 reviewId、检查类建议、空文本，以及客户端附加的目标或执行字段。
+- 预览记录固定审核文本、来源运行编号与当前 revision。创建预览不改变来源 revision、事件或模型调用数；编辑文本使页面预览失效。
+- 另一个控制改变来源 revision 后，旧预览返回 409，不产生排队指令。来源结束或切换新轮次后，旧建议不能重新预览并重定向。
+- 模拟 worker 已接收命令而宿主未保存回执，再使用同一个审核记录发送；实际 worker 的命令账本去重，队列仅一条，revision 不重复增加，来源保持暂停。
+- 浏览器主动丢弃成功 apply 的 HTTP 响应，通过记录查询恢复为 queued；重试同一 reviewId 不重复排队、不调用来源模型。
+- 明确通过常规控制继续来源后，模型输入只出现一次审核后的文本，原建议文本不被发送；后续 applied 回执关联到原始宿主事件。applied 表示文本进入上下文，未断言业务目标达成。
+- 宿主重启后仍能读取已导入的回执和历史审核记录；已知回执重试不启动 worker。
+- 应用 key 无审核读取/创建/发送权限，成员与成员代理入口同样拒绝。原有应用调试控制权限保持既有边界。
+- 浏览器验证审核对话框、文本安全、错误反馈、预览失效、回执链接、刷新持久化和 390px 布局；桌面与移动截图已检查。
 
-机器结果见 `kun-diagnostic-ui-validation.json`、`debug-ui-validation.json`、`kun-ui-validation.json`、`kun-mcp-ui-validation.json`；截图见 `screenshots/0.29.0/`。Kun 常规调试浏览器首次运行曾在 Sources 入口等待超时，重跑通过；本次未将该次失败算作通过记录。浏览器上游均为本地服务夹具，不能替代真实服务验收。
+浏览器中的预期 409 分别覆盖过期版本和已结束来源，不能把这些拒绝当成执行成功。开发时修正了测试对空队列省略字段及重复状态提示元素的选择假设，最终完整流程通过。
+
+机器结果见 `kun-diagnostic-ui-validation.json`、`debug-ui-validation.json`、`kun-ui-validation.json`、`kun-mcp-ui-validation.json`；本次截图位于 `screenshots/0.30.0/`。所有上游模型/MCP 由本地 fixture 响应，不能代替真实服务验收。
 
 ## 复现
 
 ```bash
 go test ./... -count=1 -timeout=180s
 go vet ./...
-go test -race ./internal/tracequery ./internal/kun ./internal/app -run 'Test(TraceProposal|Diagnostic|KunDiagnostic|TraceAnalysis)' -count=1 -timeout=150s
+go test -race ./internal/app ./internal/store -run 'Test(DiagnosticReview|KunDiagnostic|TraceSnapshot)' -count=1 -timeout=100s
 node scripts/kun-inspect-test.cjs
 node scripts/kun-panels-test.cjs
 make build
@@ -52,4 +55,4 @@ CHROMIUM_PATH=/absolute/path/to/chromium node scripts/kun-ui-smoke.cjs
 CHROMIUM_PATH=/absolute/path/to/chromium node scripts/kun-mcp-ui-smoke.cjs
 ```
 
-上一版记录保留为 [KUN-VALIDATION-0.28.0.md](KUN-VALIDATION-0.28.0.md)。本版使用说明见 [KUN-DIAGNOSIS.md](KUN-DIAGNOSIS.md)，完成度与未实现项见 [KUN-PROGRESS.md](KUN-PROGRESS.md)。Codex 原生分析仍沿用其既有沙箱/工具配置，不能套用 Kun 的七工具独占隔离保证；Codex 内部逐步控制仍未实现。源码包不含构建产物。
+上一版记录见 [KUN-VALIDATION-0.29.0.md](KUN-VALIDATION-0.29.0.md)，实现范围见 [KUN-DIAGNOSIS.md](KUN-DIAGNOSIS.md)，阶段状态见 [KUN-PROGRESS.md](KUN-PROGRESS.md)。当前只有 Kun steer 建议的审核发送，检查/配置建议与 Codex 原生建议未接入；K2 未宣称完成全部验收。

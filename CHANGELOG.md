@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.30.0
+
+- Administrator review for Kun steering suggestions: resolve the retained proposal event, edit text, preview the current run/revision, and explicitly dispatch the immutable command.
+- Reject stale state, changed runs, foreign reviews and unsupported suggestion kinds. Diagnostic models retain their seven-tool catalog and cannot apply suggestions.
+- Persist review/command records before dispatch; reuse the worker request ID on retry, reconcile queued/applied/rejected receipts from retained events, and provide evidence navigation after reload or host restart.
+- New default-denied administrator API and browser review dialog; text edits invalidate previews. No automatic resume, MCP approval or configuration edits.
+- Kun remains 0.7.0 / worker protocol v7. No new third-party runtime dependencies.
+
 ## 0.29.0
 
 - Kun 0.7.0 / worker protocol v7: separate diagnostic conversations on a fixed source snapshot, with an exclusive seven-tool trace/suggestion catalog. No inherited file tools, MCP servers, Skills, project notes or task-specific system prompt.

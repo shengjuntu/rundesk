@@ -89,6 +89,7 @@ type handle struct {
 }
 type Manager struct {
 	Kun                 string
+	diagnosticReviewMu  sync.Mutex
 	collabMu            sync.Mutex
 	a2aMu               sync.Mutex
 	libraryMu           sync.Mutex

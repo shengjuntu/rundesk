@@ -1,4 +1,4 @@
-> 实现进度：RunDesk 0.29.0 / Kun 0.7 已有固定模块、预算、安全恢复、条件断点、快照差异、结构化 DevTools、统一只读 DebugService/MCP 和宿主轨迹重建；本版补 Kun 独立诊断会话、固定证据与建议工具。K2 仍待真实服务验收与提案应用整合，K3/K4 尚未完成。逐阶段证据见 [KUN-PROGRESS.md](KUN-PROGRESS.md)，验证结果见 [KUN-VALIDATION.md](KUN-VALIDATION.md)。
+> 实现进度：RunDesk 0.30.0 / Kun 0.7 已有固定模块、预算、安全恢复、条件断点、快照差异、结构化 DevTools、统一只读 DebugService/MCP 和宿主轨迹重建；已有 Kun 独立诊断会话、固定证据与建议工具；本版接通补充指令建议审核、当前版本预览与幂等发送回执。K2 仍待真实服务验收、配置类建议应用与诊断器选择，K3/K4 尚未完成。逐阶段证据见 [KUN-PROGRESS.md](KUN-PROGRESS.md)，验证结果见 [KUN-VALIDATION.md](KUN-VALIDATION.md)。
 
 # Kun + Agent DevTools：RunDesk 内置 Agent Loop 与调试器设计
 

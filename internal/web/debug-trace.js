@@ -112,9 +112,12 @@ window.RunDeskDebug=(()=>{
   d.onclose=()=>{closed=true;epoch++;d.remove();};document.body.append(d);d.showModal();syncDiagnosis();refresh(true);return d;
  }
  function validSuggestion(p,origin){return !!origin&&p?.status==='suggestion_only'&&p.sessionId===origin.sessionId&&p.runId===origin.runId&&p.through===origin.through&&['inspect','steer','configuration'].includes(p.kind)&&typeof p.text==='string'&&typeof p.reason==='string'&&Array.isArray(p.evidenceIds)&&p.evidenceIds.length>0&&p.evidenceIds.length<=16&&p.evidenceIds.every(id=>Number.isSafeInteger(id)&&id>0&&id<=origin.through);}
- function renderSuggestion(node,p,origin){
+ function renderSuggestion(node,p,origin,context={}){
   if(!validSuggestion(p,origin))return;
   node.replaceChildren(el('h3',{},'待审核建议 · '+({inspect:'补充检查',steer:'补充指令',configuration:'配置调整'}[p.kind])),el('p',{},p.reason),el('pre',{},p.text),el('p',{class:'help'},'尚未执行。事件引用已校验归属，模型判断仍需审核；应用前请重新核对当前状态。'),el('div',{class:'debug-event-buttons'},...p.evidenceIds.map(id=>button('来源事件 #'+id,async()=>{const source=await api('/sessions/'+encodeURIComponent(p.sessionId));open(source,{runId:p.runId,through:p.through,eventId:id});}))),el('small',{},p.id));
+  node.querySelector('.help').textContent='这是历史建议。事件引用已校验归属，模型判断仍需审核；最新处理情况见审核与执行记录。';
+  if(p.kind==='steer'&&context.sessionId&&Number.isSafeInteger(context.eventId))node.append(button('审核与执行记录',()=>RunDeskDiagnosticReview.open(context,p)));
+  else node.append(el('p',{class:'help'},'检查和配置建议请人工处理，未自动执行。'));
  }
  return {open,validSuggestion,renderSuggestion};
 })();

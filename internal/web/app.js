@@ -418,7 +418,7 @@ function renderMessages() {
     } else if (ev.method === "kun/model.completed" && ev.data.data?.message?.content) {
       items.push({_key:"kun:"+ev.id,type:"agentMessage",text:ev.data.data.message.content,_eventId:ev.id});
     } else if (ev.method === "kun/tool.completed" && ev.data.data?.call?.function?.name === "trace_propose" && ev.data.data?.status === "succeeded" && !ev.data.data?.isError && RunDeskDebug.validSuggestion(ev.data.data?.result,state.session.traceOrigin)) {
-      items.push({_key:"diagnosis:"+ev.id,type:"diagnosticSuggestion",proposal:ev.data.data.result});
+      items.push({_key:"diagnosis:"+ev.id,type:"diagnosticSuggestion",proposal:ev.data.data.result,eventId:ev.id,diagnosticSessionId:state.session.id});
     } else if (ev.method === "kun/control.queued" && ev.data.data?.command?.operation === "steer") {
       items.push({_key:"kun-steer:"+ev.id,type:"user",text:ev.data.data.command.text,steering:true});
     } else if (ev.method === "run/steer") {
@@ -542,7 +542,7 @@ function renderMessages() {
               ]
             : []),
         );
-      else if (item.type === "diagnosticSuggestion") RunDeskDebug.renderSuggestion(node,item.proposal,state.session.traceOrigin);
+      else if (item.type === "diagnosticSuggestion") RunDeskDebug.renderSuggestion(node,item.proposal,state.session.traceOrigin,{sessionId:item.diagnosticSessionId,eventId:item.eventId});
       else if (item.type === "agentMessage")
         renderAssistant(node, item);
       else if (item.type === "error") {

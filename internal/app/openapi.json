@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Application API",
-    "version": "0.29.0",
-    "description": "RunDesk 0.29.0：Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。"
+    "version": "0.30.0",
+    "description": "RunDesk 0.30.0：建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。"
   },
   "servers": [
     {
@@ -2129,6 +2129,284 @@
         "x-application-scopes": [
           "read"
         ]
+      }
+    },
+    "/sessions/{sid}/diagnostic/reviews": {
+      "get": {
+        "operationId": "get_sessions_sid_diagnostic_reviews",
+        "summary": "Kun diagnostic suggestion review: history",
+        "parameters": [
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "proposalEventId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DiagnosticReview"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "来源已改变、旧轮次、worker 离线、过期预览或控制被拒绝。"
+          },
+          "502": {
+            "description": "发送结果未知。查询记录或用同一 rid 重试。"
+          }
+        },
+        "x-administrator-only": true,
+        "description": "仅管理员。只接通成功的 Kun trace_propose steer 建议；目标由宿主原始事件与固定来源确定。preview 保存审核文本和当前 runId/revision，不控制来源。apply 仅接受空对象，使用不可变预览和相同 worker requestId；状态变化拒绝，不重定向新运行。发送只排队，不继续运行或审批。queued 不表示已生效，applied 不表示业务成功。结果未知时刷新记录或重试同一 rid；不要另建预览重复发送。GET 返回此建议最近 20 条记录，结合宿主保留回执，不启动 worker。"
+      },
+      "post": {
+        "operationId": "post_sessions_sid_diagnostic_reviews",
+        "summary": "Kun diagnostic suggestion review: preview",
+        "parameters": [
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticReview"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "来源已改变、旧轮次、worker 离线、过期预览或控制被拒绝。"
+          },
+          "502": {
+            "description": "发送结果未知。查询记录或用同一 rid 重试。"
+          }
+        },
+        "x-administrator-only": true,
+        "description": "仅管理员。只接通成功的 Kun trace_propose steer 建议；目标由宿主原始事件与固定来源确定。preview 保存审核文本和当前 runId/revision，不控制来源。apply 仅接受空对象，使用不可变预览和相同 worker requestId；状态变化拒绝，不重定向新运行。发送只排队，不继续运行或审批。queued 不表示已生效，applied 不表示业务成功。结果未知时刷新记录或重试同一 rid；不要另建预览重复发送。GET 返回此建议最近 20 条记录，结合宿主保留回执，不启动 worker。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiagnosticReviewInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/{sid}/diagnostic/reviews/{rid}/apply": {
+      "post": {
+        "operationId": "post_sessions_sid_diagnostic_reviews_rid_apply",
+        "summary": "Kun diagnostic suggestion review: apply",
+        "parameters": [
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticReview"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "来源已改变、旧轮次、worker 离线、过期预览或控制被拒绝。"
+          },
+          "502": {
+            "description": "发送结果未知。查询记录或用同一 rid 重试。"
+          }
+        },
+        "x-administrator-only": true,
+        "description": "仅管理员。只接通成功的 Kun trace_propose steer 建议；目标由宿主原始事件与固定来源确定。preview 保存审核文本和当前 runId/revision，不控制来源。apply 仅接受空对象，使用不可变预览和相同 worker requestId；状态变化拒绝，不重定向新运行。发送只排队，不继续运行或审批。queued 不表示已生效，applied 不表示业务成功。结果未知时刷新记录或重试同一 rid；不要另建预览重复发送。GET 返回此建议最近 20 条记录，结合宿主保留回执，不启动 worker。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
       }
     },
     "/login": {
@@ -8028,7 +8306,7 @@
           }
         },
         "x-administrator-only": true,
-        "description": "Kun 0.6：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
+        "description": "Kun 0.7：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
         "requestBody": {
           "required": true,
           "content": {
@@ -8127,7 +8405,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.6：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
+        "description": "Kun 0.7：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
         "x-application-scopes": [
           "read"
         ]
@@ -8206,7 +8484,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.6：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。 set_breakpoints 必须带 debug，替换本 run 的规则并重置命中计数；不解除已有暂停，默认配置不变。未知条件字段被拒绝。",
+        "description": "Kun 0.7：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。 set_breakpoints 必须带 debug，替换本 run 的规则并重置命中计数；不解除已有暂停，默认配置不变。未知条件字段被拒绝。",
         "requestBody": {
           "required": true,
           "content": {
@@ -8324,7 +8602,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.6：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
+        "description": "Kun 0.7：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
         "x-application-scopes": [
           "read"
         ]
@@ -8403,7 +8681,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.6：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
+        "description": "Kun 0.7：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
         "x-application-scopes": [
           "read"
         ]
@@ -8492,7 +8770,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.6：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
+        "description": "Kun 0.7：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
         "requestBody": {
           "required": true,
           "content": {
@@ -8620,7 +8898,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.6：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。 context 在 model.started 快照返回实际 model_request，其余为 state_context；evidence 返回精确事件；diff 返回 KunSnapshotDiff，先脱敏再比较，有界预览，不执行回滚。需要在线 worker。",
+        "description": "Kun 0.7：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。 context 在 model.started 快照返回实际 model_request，其余为 state_context；evidence 返回精确事件；diff 返回 KunSnapshotDiff，先脱敏再比较，有界预览，不执行回滚。需要在线 worker。",
         "x-application-scopes": [
           "read"
         ]
@@ -17808,6 +18086,146 @@
           "runId",
           "expectedStateRevision",
           "operation"
+        ],
+        "additionalProperties": false
+      },
+      "DiagnosticProposal": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "suggestion_only"
+            ]
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "through": {
+            "type": "integer"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "inspect",
+              "steer",
+              "configuration"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "sessionId",
+          "runId",
+          "through",
+          "kind",
+          "reason",
+          "text",
+          "evidenceIds"
+        ],
+        "additionalProperties": false
+      },
+      "DiagnosticReviewInput": {
+        "type": "object",
+        "properties": {
+          "proposalEventId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "proposalEventId",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "DiagnosticReview": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "diagnosticSessionId": {
+            "type": "string"
+          },
+          "proposalEventId": {
+            "type": "integer"
+          },
+          "proposal": {
+            "$ref": "#/components/schemas/DiagnosticProposal"
+          },
+          "command": {
+            "$ref": "#/components/schemas/KunControl"
+          },
+          "observedStatus": {
+            "type": "string"
+          },
+          "observedPhase": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "submittedAt": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "preview",
+              "unknown",
+              "queued",
+              "applied",
+              "rejected"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "receipt": {
+            "$ref": "#/components/schemas/KunReceipt"
+          },
+          "receiptEventId": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "diagnosticSessionId",
+          "proposalEventId",
+          "proposal",
+          "command",
+          "observedStatus",
+          "observedPhase",
+          "createdAt",
+          "outcome"
         ],
         "additionalProperties": false
       },
