@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Application API",
-    "version": "0.23.0",
-    "description": "RunDesk 0.23.0：Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。"
+    "version": "0.24.0",
+    "description": "RunDesk 0.24.0：Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。"
   },
   "servers": [
     {
@@ -7702,7 +7702,7 @@
           }
         },
         "x-administrator-only": true,
-        "description": "Kun 0.4：本机独立 worker。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
+        "description": "Kun 0.5：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
         "requestBody": {
           "required": true,
           "content": {
@@ -7801,7 +7801,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.4：本机独立 worker。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
+        "description": "Kun 0.5：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
         "x-application-scopes": [
           "read"
         ]
@@ -7880,7 +7880,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.4：本机独立 worker。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
+        "description": "Kun 0.5：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。 set_breakpoints 必须带 debug，替换本 run 的规则并重置命中计数；不解除已有暂停，默认配置不变。未知条件字段被拒绝。",
         "requestBody": {
           "required": true,
           "content": {
@@ -7998,7 +7998,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.4：本机独立 worker。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
+        "description": "Kun 0.5：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
         "x-application-scopes": [
           "read"
         ]
@@ -8077,7 +8077,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.4：本机独立 worker。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
+        "description": "Kun 0.5：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
         "x-application-scopes": [
           "read"
         ]
@@ -8166,7 +8166,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "Kun 0.4：本机独立 worker。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
+        "description": "Kun 0.5：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
         "requestBody": {
           "required": true,
           "content": {
@@ -8179,6 +8179,112 @@
         },
         "x-application-scopes": [
           "run"
+        ]
+      }
+    },
+    "/sessions/{sid}/kun/query": {
+      "get": {
+        "operationId": "get_sessions_sid_kun_query",
+        "summary": "Kun independent worker: query",
+        "parameters": [
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "run",
+                "context",
+                "tools",
+                "budget",
+                "modules",
+                "breakpoints",
+                "actions"
+              ]
+            }
+          },
+          {
+            "name": "sequence",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "0 或省略：当前状态；正数：同一会话事件快照。查询不更改状态、不调用模型或工具。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KunDebugResult"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Worker 离线、状态版本变化、ID 冲突或控制操作不适用；刷新状态后处理。"
+          }
+        },
+        "x-administrator-only": false,
+        "description": "Kun 0.5：本机独立 worker；条件断点、暂停期限、只读结构化查询。checkpoint 可重开离线 worker，仅核对最近安全检查点，不执行模型/MCP；resume 需 selection 与 Idempotency-Key，新 run 沿用上下文和预算、MCP 重连后核对工具并重新审批。旧版本、未知结果、配置变化、过期 selection 不可恢复。无历史回滚或分叉。control 需当前 runId/revision；approve/reject 另需 approvals scope。",
+        "x-application-scopes": [
+          "read"
         ]
       }
     },
@@ -13446,6 +13552,118 @@
         "x-personal-user-only": true
       }
     },
+    "/member/{grantId}/sessions/{sid}/kun/query": {
+      "get": {
+        "operationId": "member_get_sessions_sid_kun_query",
+        "summary": "Kun independent worker: query",
+        "parameters": [
+          {
+            "name": "grantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "run",
+                "context",
+                "tools",
+                "budget",
+                "modules",
+                "breakpoints",
+                "actions"
+              ]
+            }
+          },
+          {
+            "name": "sequence",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "0 或省略：当前状态；正数：同一会话事件快照。查询不更改状态、不调用模型或工具。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KunDebugResult"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Worker 离线、状态版本变化、ID 冲突或控制操作不适用；刷新状态后处理。"
+          }
+        },
+        "x-administrator-only": false,
+        "description": "个人访问码或成员 Cookie。grantId 必须属于当前用户；仅允许授权应用项目。viewer 仅 GET；runner 可提交、上传、审批。任务和文件在同项目共享。变更为本机执行后禁止成员写入。",
+        "x-personal-user-only": true
+      }
+    },
     "/member/{grantId}/sessions/{sid}/messages/{eid}": {
       "get": {
         "operationId": "member_get_sessions_sid_messages_eid",
@@ -15984,6 +16202,184 @@
         "required": [],
         "additionalProperties": false
       },
+      "KunBreakpoint": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "before_model",
+              "after_model",
+              "before_tool",
+              "after_tool"
+            ]
+          },
+          "tool": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "model": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "minStep": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "minToolCalls": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3200
+          },
+          "minFailures": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "minReportedTokens": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000000
+          },
+          "once": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "phase"
+        ],
+        "additionalProperties": false
+      },
+      "KunDebugPolicy": {
+        "type": "object",
+        "properties": {
+          "breakpoints": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/KunBreakpoint"
+            },
+            "maxItems": 16
+          },
+          "pauseTimeoutSeconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 86400
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "KunDebugPause": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "phase": {
+            "type": "string"
+          },
+          "ruleIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "callId": {
+            "type": "string"
+          },
+          "policyRevision": {
+            "type": "integer"
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "reason",
+          "phase",
+          "policyRevision"
+        ],
+        "additionalProperties": false
+      },
+      "KunDebugState": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "integer"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/KunDebugPolicy"
+          },
+          "hits": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "pause": {
+            "$ref": "#/components/schemas/KunDebugPause"
+          }
+        },
+        "required": [
+          "revision",
+          "policy"
+        ],
+        "additionalProperties": false
+      },
+      "KunDebugResult": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "sequence": {
+            "type": "integer"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "run",
+              "context",
+              "tools",
+              "budget",
+              "modules",
+              "breakpoints",
+              "actions"
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "sessionId",
+          "runId",
+          "revision",
+          "sequence",
+          "kind",
+          "data"
+        ],
+        "additionalProperties": false
+      },
       "KunConfig": {
         "type": "object",
         "properties": {
@@ -16025,6 +16421,9 @@
           },
           "budget": {
             "$ref": "#/components/schemas/KunBudgetLimits"
+          },
+          "debug": {
+            "$ref": "#/components/schemas/KunDebugPolicy"
           }
         },
         "required": [
@@ -16056,8 +16455,12 @@
               "cancel",
               "steer",
               "approve",
-              "reject"
+              "reject",
+              "set_breakpoints"
             ]
+          },
+          "debug": {
+            "$ref": "#/components/schemas/KunDebugPolicy"
           },
           "text": {
             "type": "string",
@@ -16242,6 +16645,9 @@
           },
           "error": {
             "type": "string"
+          },
+          "debug": {
+            "$ref": "#/components/schemas/KunDebugState"
           },
           "harness": {
             "$ref": "#/components/schemas/KunHarness"
@@ -16535,8 +16941,12 @@
               "cancel",
               "steer",
               "approve",
-              "reject"
+              "reject",
+              "set_breakpoints"
             ]
+          },
+          "debug": {
+            "$ref": "#/components/schemas/KunDebugPolicy"
           },
           "text": {
             "type": "string",

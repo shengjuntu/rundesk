@@ -10,14 +10,14 @@
 
 ![RunDesk 对话界面](docs/screenshots/0.16.0/chat-zh.png)
 
-## Kun 内置引擎（0.23.0）
+## Kun 内置引擎（0.24.0）
 
-Kun 0.4 支持停止或重启后，从最近安全检查点显式继续。保留已完成工具结果和消耗预算，重新校验配置、技能、MCP 工具目录；逐次审批重新询问。协议升级到 v4，须同时更新两个可执行文件。使用方式及限制见 [检查点恢复](docs/KUN-CHECKPOINTS.md)。
+Kun 0.5 新增模型/工具前后条件断点、可选暂停超时和结构化 Console；查询只读，控制先预览再提交。规则与命中记录可随安全检查点恢复。协议升级到 v5，须同时更新两个可执行文件。使用方式及限制见 [调试说明](docs/KUN-DEBUG.md) 和 [检查点恢复](docs/KUN-CHECKPOINTS.md)。
 
 
 Kun 与 RunDesk 同仓库、分进程运行。使用 Go 1.25.12+ 执行 `make build`，然后运行 `./bin/rundesk --data ./data`；在配置页的 **Agent 引擎** 中选择 Kun、设置模型服务并新建会话。Kun 不需要安装 Codex。
 
-Kun 0.4 提供 OpenAI 兼容文本模型、项目文件工具、显式 Skills，以及 stdio / Streamable HTTP MCP。复用工具 MCP 配置页：默认逐次询问，设为“始终允许”后下一轮直接执行。DevTools 包括 Network、Elements、Sources、Performance 和 MCP 状态 Application 视图。支持暂停、单步、文本补充和停止。插件、任意历史回滚、分叉和轨迹编译尚未实现。
+Kun 0.5 提供 OpenAI 兼容文本模型、项目文件工具、显式 Skills，以及 stdio / Streamable HTTP MCP。复用工具 MCP 配置页：默认逐次询问，设为“始终允许”后下一轮直接执行。DevTools 包括 Network、Elements、Sources、Performance、Console、Layers 和 MCP 状态 Application 视图。支持暂停、单步、文本补充和停止。插件、任意历史回滚、分叉和轨迹编译尚未实现。
 
 详见 [Kun 使用与实现边界](docs/KUN.md)。选择性复制的 PiG 源码、固定版本及感谢声明见 [来源记录](docs/UPSTREAM.md)；MIT 许可与版权声明随源码保留。
 

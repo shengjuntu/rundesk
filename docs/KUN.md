@@ -1,8 +1,8 @@
-# Kun 0.4 / RunDesk 0.23.0
+# Kun 0.5 / RunDesk 0.24.0
 
 在 0.2 的 MCP 基础上增加 K1 核心模块与执行约束。采用已确认的结构：**分进程、同仓库、选择性复制 PiG 源码并自主发展**。本版包含模型／工具循环、MCP 配置与审批、固定四模块、调用前参数校验、预算、运行记录、上下文检查和基础调试控制；不代表 KUN-DESIGN-v0.2 的所有阶段已经实现。
 
-固定模块与预算见 [K1 核心说明](KUN-K1-CORE.md)。本版新增 [安全检查点恢复](KUN-CHECKPOINTS.md)，变更见 [0.23.0 发布记录](RELEASE-0.23.0.md)。
+固定模块与预算见 [K1 核心说明](KUN-K1-CORE.md)。安全续跑见 [检查点恢复](KUN-CHECKPOINTS.md)。本版新增 [条件断点与 Console](KUN-DEBUG.md)，变更见 [0.24.0 发布记录](RELEASE-0.24.0.md)。
 
 ## 构建和启动
 
@@ -62,14 +62,15 @@ Kun 独占 `<data>/kun/sessions/<sessionId>/state.db`，RunDesk 的业务数据�
 | 会话 | 多轮文本历史；系统提示词按当前配置重新构建 |
 | Network | 模型请求体、完整模型结果、工具参数与结果，以及 MCP initialize / tools/list / tools/call 请求与响应、耗时（均受大小上限约束） |
 | Elements | 请求时的有效消息、工具定义，以及对应持久化状态快照 |
-| Sources | 请求暂停、继续、执行一个模型／工具步骤、文本补充、停止、单次 MCP 允许/拒绝、最近检查点恢复 |
+| Sources | 请求暂停、继续、执行一个模型／工具步骤、文本补充、停止、单次 MCP 允许/拒绝、最近检查点恢复、条件断点与暂停期限 |
 | Performance | 模型／工具耗时和服务实际报告的 token 用量；不推算未报告数据或价格 |
 | Application | MCP 服务状态、配置版本、工具映射与审批策略；可固定历史快照，尚无记忆存储视图 |
+| Console | 结构化只读查询，使用当前状态或固定历史快照；预览并执行当前运行控制，不含自然语言诊断 |
 | Layers | Memory/Planning/Action/Capability 的固定实现版本及有证据的状态；无健康评分或模块热替换 |
 | 预算 | 模型/工具调用次数、活动时间、连续工具失败、可选已报告 token 阈值；等待时间单独统计 |
 | 记录 | 状态、事件、快照、命令回执、工具执行台账；API Key 字段不进入记录 |
 
-不支持：Shell、PiG 插件/Node 扩展、图像输入、自动 Skills 激活、压缩/记忆管理、条件断点、替换工具结果、任意历史回滚、分叉、确定性代码生成、JEV/JIT、Docker worker。四模块健康度、Console、模块替换与第二种 LoopPolicy 尚未实现；Layers 是状态检查首版，Application 目前仅提供 MCP 状态。Codex 仍沿用现有后端，Kun 控制接口不会控制 Codex 的循环。
+不支持：Shell、PiG 插件/Node 扩展、图像输入、自动 Skills 激活、压缩/记忆管理、高级模块/费用断点、替换工具结果、任意历史回滚、分叉、确定性代码生成、JEV/JIT、Docker worker。四模块健康度、自然语言诊断、模块替换与第二种 LoopPolicy 尚未实现；Layers 是状态检查首版，Application 目前仅提供 MCP 状态。Codex 仍沿用现有后端，Kun 控制接口不会控制 Codex 的循环。
 
 模型文本在请求结束后显示，目前没有逐 token UI。模型服务调用仍会发送任务上下文到配置的服务地址；“本地记录”不代表模型离线运行。
 
@@ -165,13 +166,14 @@ Network 记录 initialize、tools/list、tools/call 的业务请求/响应和耗
 
 ## 协议与 API
 
-worker 协议版本 4，每行一个 JSON 对象；stdout 仅输出协议，stderr 输出诊断。方法包括 `hello`、`start`、`state`、`events`、`snapshot`、`control`、`checkpoint`；`start.resume` 用于显式恢复。`hello` 宣告 `resumeCheckpoint=true`、`fork=false`、`mcp=true`、`mcpApproval=true`。最大消息为 8 MiB。升级时同时更新 RunDesk 与 Kun；旧版 worker 的握手会被拒绝。状态记录 schema 保持 1，新增字段为可选，旧记录可读取，但没有 v0.4 检查点的旧记录不允许恢复。
+worker 协议版本 5，每行一个 JSON 对象；stdout 仅输出协议，stderr 输出诊断。方法包括 `hello`、`start`、`state`、`events`、`snapshot`、`control`、`checkpoint`、`query`；`start.resume` 用于显式恢复。`hello` 宣告 `resumeCheckpoint=true`、`fork=false`、`mcp=true`、`mcpApproval=true`。最大消息为 8 MiB。升级时同时更新 RunDesk 与 Kun；旧版 worker 的握手会被拒绝。状态记录 schema 保持 1，新增字段为可选，旧记录可读取，但不匹配当前引擎版本或缺少恢复清单的记录不允许恢复。
 
 HTTP 同时支持 `/api` 和 `/api/v1`：
 - `PUT /instances/{iid}/agent-runtime`：管理员提交 `{revision, config}`。
 - `GET /sessions/{sid}/kun/state`：当前状态。
 - `GET /sessions/{sid}/kun/snapshots/{sequence}`：事件序号对应快照。
-- `POST /sessions/{sid}/kun/control`：控制请求及 queued/applied/rejected 回执。
+- `POST /sessions/{sid}/kun/control`：控制请求及 queued/applied/rejected 回执；set_breakpoints 替换当前 run 断点规则。
+- `GET /sessions/{sid}/kun/query?kind=run&sequence=0`：只读结构化状态投影；正数 sequence 固定历史快照。
 - `GET /sessions/{sid}/kun/checkpoint`：最近安全检查点资格；可重开离线 worker 读取记录，不调用模型或 MCP。
 - `POST /sessions/{sid}/kun/resume`：提交上述 selection，v1 需 Idempotency-Key；新 run 沿用原上下文及预算，提交成功不代表重连校验或执行已经成功。
 - 既有 `/sessions/{sid}/events`、SSE、轨迹和会话导出沿用，Kun 事件使用 `kun/*` 命名。

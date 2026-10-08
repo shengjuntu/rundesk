@@ -68,6 +68,7 @@ func Open(path string) (*Engine, error) {
 		}
 		v.state.Pending = nil
 		v.state.Approval = nil
+		v.state.Debug.Pause = nil
 		for n := range v.state.MCP {
 			if v.state.MCP[n].Status != "failed" {
 				v.state.MCP[n].Status = "closed"
@@ -121,6 +122,11 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 		return p.State{}, fmt.Errorf("worker closed")
 	}
 	in.Config = in.Config.Normalized()
+	var frozen p.Config
+	if err := json.Unmarshal(p.JSON(in.Config), &frozen); err != nil {
+		return p.State{}, err
+	}
+	in.Config = frozen
 	if err := in.Config.Validate(); err != nil {
 		return p.State{}, err
 	}
@@ -200,6 +206,7 @@ func (e *Engine) Start(in p.Start) (p.State, error) {
 	previousState := clone(e.state)
 	e.state = p.State{Schema: 1, SessionID: in.SessionID, RunID: in.RunID, Revision: e.state.Revision + 1, Status: "running", Phase: "before_model", Config: in.Config, Skills: in.Skills, Actions: map[string]string{}, Messages: append([]p.Message{{Role: "system", Content: prompt}}, kept...)}
 	e.state.Messages = append(e.state.Messages, p.Message{Role: "user", Content: in.Input})
+	e.state.Debug = p.DebugState{Revision: 1, Policy: in.Config.Debug, Hits: map[string]int{}}
 	e.state.Harness = e.modules.harness()
 	e.state.Manifest = e.manifest(in)
 	e.state.Modules = map[string]p.ModuleState{}
@@ -283,8 +290,25 @@ func (e *Engine) Control(c p.Control) (p.Receipt, error) {
 	if c.ExpectedRevision != e.state.Revision && !(c.ExpectedRevision == -1 && (c.Operation == "cancel" || c.Operation == "steer")) {
 		return receipt, fmt.Errorf("state revision conflict; refresh and retry")
 	}
+	if c.Debug != nil && c.Operation != "set_breakpoints" {
+		return receipt, fmt.Errorf("debug policy requires set_breakpoints")
+	}
 	receipt = p.Receipt{RequestID: c.RequestID, Status: "applied", Revision: e.state.Revision + 1}
 	switch c.Operation {
+	case "set_breakpoints":
+		if c.Debug == nil {
+			return receipt, fmt.Errorf("debug policy is required")
+		}
+		if err := c.Debug.Validate(); err != nil {
+			return receipt, err
+		}
+		var policy p.DebugPolicy
+		if err := json.Unmarshal(p.JSON(c.Debug), &policy); err != nil {
+			return receipt, err
+		}
+		e.state.Debug.Policy = policy
+		e.state.Debug.Revision++
+		e.state.Debug.Hits = map[string]int{}
 	case "pause":
 		if e.state.Status == "paused" {
 			break
@@ -300,6 +324,7 @@ func (e *Engine) Control(c p.Control) (p.Receipt, error) {
 			return receipt, fmt.Errorf("run is not paused")
 		}
 		e.pause = false
+		e.state.Debug.Pause = nil
 		e.single = c.Operation == "step"
 		e.state.Status = "running"
 	case "approve", "reject":
@@ -359,44 +384,6 @@ func (e *Engine) applyQueued(phase string, terminal bool) error {
 	}
 	return nil
 }
-func (e *Engine) boundary(ctx context.Context, phase string) error {
-	e.mu.Lock()
-	e.state.Phase = phase
-	if err := e.applyQueued(phase, false); err != nil {
-		e.mu.Unlock()
-		return err
-	}
-	shouldPause := e.pause || (phase == "before_model" && e.state.Config.PauseBeforeModel)
-	if shouldPause {
-		e.setWaiting(true)
-		e.pause = true
-		e.state.Status = "paused"
-		if err := e.record("kun/run.paused", map[string]string{"phase": phase}); err != nil {
-			e.mu.Unlock()
-			return err
-		}
-	}
-	e.mu.Unlock()
-	for {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		e.mu.Lock()
-		paused := e.pause
-		if !paused {
-			e.setWaiting(false)
-			err := e.applyQueued(phase, false)
-			e.mu.Unlock()
-			return err
-		}
-		e.mu.Unlock()
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-e.wake:
-		}
-	}
-}
 func (e *Engine) loop(ctx context.Context) {
 	defer close(e.done)
 	var failure error
@@ -411,6 +398,7 @@ func (e *Engine) loop(ctx context.Context) {
 		defer e.mu.Unlock()
 		e.setWaiting(false)
 		e.state.Approval = nil
+		e.state.Debug.Pause = nil
 		for n := range e.state.MCP {
 			if e.state.MCP[n].Status != "failed" {
 				e.state.MCP[n].Status = "closed"
@@ -508,6 +496,14 @@ func (e *Engine) loop(ctx context.Context) {
 			if e.single {
 				e.pause = true
 			}
+			e.mu.Unlock()
+			if failure != nil {
+				return
+			}
+			if failure = e.boundary(ctx, "after_model"); failure != nil {
+				return
+			}
+			e.mu.Lock()
 			nextPhase := e.modules.policy.Next(clone(e.state))
 			if nextPhase == "complete" {
 				e.state.Status = "completing"
@@ -543,6 +539,9 @@ func (e *Engine) loop(ctx context.Context) {
 				if failure != nil {
 					return
 				}
+				if failure = e.boundary(ctx, "after_tool", call); failure != nil {
+					return
+				}
 				continue
 			}
 			e.moduleState("action", "validated", map[string]any{"callId": call.ID, "tool": intent.Name, "schemaHash": intent.SchemaHash, "argumentsHash": fingerprint(call.Function.Arguments)})
@@ -562,6 +561,9 @@ func (e *Engine) loop(ctx context.Context) {
 					failure = e.finishTool(call, intent, toolResult{Output: "MCP tool was denied by the user or approval policy. No external call was made.", IsError: true}, "declined", 0)
 					e.mu.Unlock()
 					if failure != nil {
+						return
+					}
+					if failure = e.boundary(ctx, "after_tool", call); failure != nil {
 						return
 					}
 					continue
@@ -603,6 +605,9 @@ func (e *Engine) loop(ctx context.Context) {
 			failure = e.finishTool(call, intent, out, status, time.Since(started))
 			e.mu.Unlock()
 			if failure != nil {
+				return
+			}
+			if failure = e.boundary(ctx, "after_tool", call); failure != nil {
 				return
 			}
 		}

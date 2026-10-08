@@ -66,7 +66,7 @@ func serve(e *k.Engine, input io.Reader, output io.Writer) error {
 		} else {
 			switch in.Method {
 			case "hello":
-				value = map[string]any{"engine": "kun", "engineVersion": p.EngineVersion, "protocolVersion": p.Version, "pid": os.Getpid(), "capabilities": map[string]bool{"inspect": true, "pause": true, "step": true, "steer": true, "replayEvents": true, "resumeCheckpoint": true, "fork": false, "mcp": true, "mcpApproval": true, "modules": true, "budgets": true, "argumentValidation": true}}
+				value = map[string]any{"engine": "kun", "engineVersion": p.EngineVersion, "protocolVersion": p.Version, "pid": os.Getpid(), "capabilities": map[string]bool{"inspect": true, "pause": true, "step": true, "steer": true, "replayEvents": true, "resumeCheckpoint": true, "fork": false, "mcp": true, "mcpApproval": true, "modules": true, "budgets": true, "argumentValidation": true, "conditionalBreakpoints": true, "debugQueries": true}}
 			case "start":
 				var v p.Start
 				err = json.Unmarshal(in.Params, &v)
@@ -78,6 +78,12 @@ func serve(e *k.Engine, input io.Reader, output io.Writer) error {
 				err = json.Unmarshal(in.Params, &v)
 				if err == nil {
 					value, err = e.CheckpointFor(v)
+				}
+			case "query":
+				var v p.DebugQuery
+				err = json.Unmarshal(in.Params, &v)
+				if err == nil {
+					value, err = e.Query(v)
 				}
 			case "state":
 				value = e.State()

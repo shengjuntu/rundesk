@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-const Version = 4
-const EngineVersion = "0.4.0"
+const Version = 5
+const EngineVersion = "0.5.0"
 const MaxMessage = 8 << 20
 
 type Envelope struct {
@@ -23,6 +23,7 @@ type Envelope struct {
 	Event   *Event          `json:"event,omitempty"`
 }
 type Config struct {
+	Debug            DebugPolicy  `json:"debug"`
 	Budget           BudgetLimits `json:"budget"`
 	Kind             string       `json:"kind"`
 	Endpoint         string       `json:"endpoint"`
@@ -55,6 +56,9 @@ func (c Config) Validate() error {
 	}
 	if c.Kind == "codex" {
 		return nil
+	}
+	if err := c.Debug.Validate(); err != nil {
+		return err
 	}
 	if err := c.Budget.Validate(); err != nil {
 		return err
@@ -110,12 +114,13 @@ type Start struct {
 	Skills          []Skill              `json:"skills,omitempty"`
 }
 type Control struct {
-	CallID           string `json:"callId,omitempty"`
-	RequestID        string `json:"requestId"`
-	RunID            string `json:"runId"`
-	ExpectedRevision int64  `json:"expectedStateRevision"`
-	Operation        string `json:"operation"`
-	Text             string `json:"text,omitempty"`
+	Debug            *DebugPolicy `json:"debug,omitempty"`
+	CallID           string       `json:"callId,omitempty"`
+	RequestID        string       `json:"requestId"`
+	RunID            string       `json:"runId"`
+	ExpectedRevision int64        `json:"expectedStateRevision"`
+	Operation        string       `json:"operation"`
+	Text             string       `json:"text,omitempty"`
 }
 type Receipt struct {
 	RequestID string `json:"requestId"`
@@ -123,6 +128,7 @@ type Receipt struct {
 	Revision  int64  `json:"revision"`
 }
 type State struct {
+	Debug           DebugState             `json:"debug"`
 	Manifest        *RunManifest           `json:"manifest,omitempty"`
 	ResumedFrom     *CheckpointSelection   `json:"resumedFrom,omitempty"`
 	Harness         Harness                `json:"harness"`

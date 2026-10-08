@@ -1,5 +1,5 @@
 {
-  "version": "0.23.0",
+  "version": "0.24.0",
   "status": "not_run",
   "passed": null,
   "reason": "No Chromium executable in this validation environment. JavaScript syntax checked; updated Playwright script supplied.",

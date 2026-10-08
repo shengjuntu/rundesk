@@ -195,7 +195,7 @@ func (s *Server) checkApplication(r *http.Request, k *ApplicationKey) error {
 			return forbidden()
 		}
 		if len(p) >= 4 && p[2] == "kun" {
-			if method == "GET" && k.scope("read") && ((p[3] == "state" || p[3] == "checkpoint") && len(p) == 4 || p[3] == "snapshots" && len(p) == 5) {
+			if method == "GET" && k.scope("read") && ((p[3] == "state" || p[3] == "checkpoint" || p[3] == "query") && len(p) == 4 || p[3] == "snapshots" && len(p) == 5) {
 				return nil
 			}
 			if method == "POST" && p[3] == "resume" && len(p) == 4 && k.scope("run") {

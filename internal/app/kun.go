@@ -341,6 +341,7 @@ func (m *Manager) steerKun(s Session, in SteerInput) (SteerReceipt, error) {
 }
 func (s *Server) kunRoutes(mux *http.ServeMux) {
 	s.kunCheckpointRoutes(mux)
+	s.kunDebugRoutes(mux)
 	mux.HandleFunc("PUT /api/instances/{iid}/agent-runtime", func(w http.ResponseWriter, r *http.Request) {
 		var in struct {
 			Revision int      `json:"revision"`

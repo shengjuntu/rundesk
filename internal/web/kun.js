@@ -18,16 +18,17 @@ async function renderKunSettings(target){
  const system=el("textarea",{rows:"5"},cfg.systemPrompt||"");
  const write=el("input",{type:"checkbox"});write.checked=!!cfg.allowWrite;
  const pause=el("input",{type:"checkbox"});pause.checked=!!cfg.pauseBeforeModel;
+ const debuggerConfig=kunPolicyEditor(cfg.debug);
  const status=el("p",{role:"status",class:"help"});
  const form=el("form",{class:"kun-config"},el("h3",{},"Agent 引擎"),el("p",{class:"help"},"选择后端后，新会话使用新引擎。已有会话保留后端归属。Kun 提供文本模型、项目文件工具、显式 Skills、MCP 和调试控制。"),
  el("label",{},"运行后端",kind),endpoint.node,model.node,key.node,steps.node,timeout.node,toolBudget.node,tokenBudget.node,activeBudget.node,failureBudget.node,el("p",{class:"help"},"token 阈值按服务报告的用量，在下一动作前检查；不能保证当前请求不超额。启用后如服务未报告用量，将停止后续执行。费用暂不估算。"),el("label",{},"系统提示词",system),
  el("label",{class:"kun-check"},write,"允许 Kun 写入项目内文件（仅限制内置文件工具）"),
  el("label",{class:"kun-check"},pause,"每次模型请求前暂停，供调试检查"),
  el("p",{class:"help"},"MCP 在工具 MCP 页面配置；其权限独立于内置文件工具。当前不支持 Shell、图像模型、历史回滚、分叉或轨迹编译。"),
- el("button",{type:"submit",class:"primary"},"保存引擎配置"),status);
+ debuggerConfig.node,el("button",{type:"submit",class:"primary"},"保存引擎配置"),status);
  form.onsubmit=async event=>{
   event.preventDefault();status.textContent="保存中…";
-  try{const updated=await api("/instances/"+i.id+"/agent-runtime",{method:"PUT",body:{revision:i.revision,config:{kind:kind.value,endpoint:endpoint.input.value.trim(),model:model.input.value.trim(),apiKeyEnv:key.input.value.trim(),systemPrompt:system.value,maxSteps:Number(steps.input.value),timeoutSeconds:Number(timeout.input.value),allowWrite:write.checked,pauseBeforeModel:pause.checked,budget:{maxToolCalls:Number(toolBudget.input.value),maxTotalTokens:Number(tokenBudget.input.value),maxActiveSeconds:Number(activeBudget.input.value),maxConsecutiveFailures:Number(failureBudget.input.value)}}}});
+  try{const updated=await api("/instances/"+i.id+"/agent-runtime",{method:"PUT",body:{revision:i.revision,config:{kind:kind.value,endpoint:endpoint.input.value.trim(),model:model.input.value.trim(),apiKeyEnv:key.input.value.trim(),systemPrompt:system.value,maxSteps:Number(steps.input.value),timeoutSeconds:Number(timeout.input.value),allowWrite:write.checked,pauseBeforeModel:pause.checked,debug:debuggerConfig.get(),budget:{maxToolCalls:Number(toolBudget.input.value),maxTotalTokens:Number(tokenBudget.input.value),maxActiveSeconds:Number(activeBudget.input.value),maxConsecutiveFailures:Number(failureBudget.input.value)}}}});
    state.instances=state.instances.map(v=>v.id===updated.id?updated:v);if(!state.session&&kind.value==="kun")$("#model").value=updated.agentRuntime.model;status.textContent="已保存，请新建会话使用。";i.revision=updated.revision;
   }catch(e){status.textContent=e.message;}
  };
@@ -48,7 +49,7 @@ window.RunDeskKun={
   const inspectState=()=>selected?snapshots.get(selected.data.sequence)?.state:null;
   const loadSelected=async()=>{if(selected&&!snapshots.has(selected.data.sequence)){try{snapshots.set(selected.data.sequence,await api("/sessions/"+sid+"/kun/snapshots/"+selected.data.sequence));}catch(e){feedback.textContent=e.message;}}};
   const selectedDetail=event=>panel==="elements"?{runId:event.data.runId,sequence:event.data.sequence,request:event.data.data.request,snapshot:snapshots.get(event.data.sequence)??"点击步骤以读取持久化快照"}:event.data;
-  const kinds={network:"Network · 调用",elements:"Elements · 上下文",sources:"Sources · 控制",performance:"Performance · 用量",application:"Application · MCP",layers:"Layers · 模块"};
+  const kinds={network:"Network · 调用",elements:"Elements · 上下文",sources:"Sources · 控制",performance:"Performance · 用量",application:"Application · MCP",layers:"Layers · 模块",console:"Console · 查询"};
   const redraw=()=>{
    list.replaceChildren();detail.textContent="";
    summary.textContent=current?"状态："+current.status+" · "+current.phase+" · 版本 "+current.revision+" · 模型步骤 "+current.step:"历史记录";
@@ -56,7 +57,10 @@ window.RunDeskKun={
    const inspected=selected?inspectState():current;
    for(const b of tabs.children)b.classList.toggle("selected",b.dataset.panel===panel);
    controls.classList.toggle("hidden",panel!=="sources");
-   if(panel==="sources"){detail.textContent=current?JSON.stringify({controlTarget:"当前运行（历史快照只读）",selectedSequence:selected?.data.sequence,status:current.status,phase:current.phase,revision:current.revision,queuedControls:current.queuedControls,approval:current.approval,actions:current.actions,budget:current.budget},null,2):"启动任务后可进行控制。";return;}
+   consoleView.node.classList.toggle("hidden",panel!=="console");consoleView.update();
+   if(current?.debug?.pause)summary.textContent+=" · 暂停："+(current.debug.pause.ruleIds?.join(", ")||current.debug.pause.reason)+(current.debug.pause.deadline?" · 到期 "+new Date(current.debug.pause.deadline).toLocaleTimeString():"");
+   if(panel==="console")return;
+   if(panel==="sources"){detail.textContent=current?JSON.stringify({controlTarget:"当前运行（历史快照只读）",selectedSequence:selected?.data.sequence,status:current.status,phase:current.phase,revision:current.revision,queuedControls:current.queuedControls,approval:current.approval,debug:current.debug,actions:current.actions,budget:current.budget},null,2):"启动任务后可进行控制。";return;}
    if(panel==="application"){detail.textContent=inspected?JSON.stringify({sequence:selected?.data.sequence,servers:inspected.mcp||[],tools:inspected.mcpTools||[],approvalPolicy:inspected.approvalPolicy},null,2):"当前快照不可用；可在 Network 查看保留的 MCP 记录。";return;}
    if(panel==="layers"){detail.textContent=inspected?JSON.stringify({sequence:selected?.data.sequence,harness:inspected.harness,modules:inspected.modules,budget:inspected.budget},null,2):"请选择可用快照或启动 worker。";return;}
    if(panel==="performance"){
@@ -94,6 +98,15 @@ window.RunDeskKun={
     }catch(e){feedback.textContent=e.message;}
    }));
   }
+  const runtimePolicy=kunPolicyEditor(),policyStatus=el("p",{role:"status"});let policyBase=null;
+  controls.append(runtimePolicy.node,el("p",{class:"help"},"运行中编辑只影响当前 run 及它的检查点续跑；新任务使用配置页默认值。先读取当前规则再编辑。清空规则不会自动解除已有暂停，也不改变“每次模型前暂停”设置。"),
+   button("读取当前断点",async()=>{try{current=await api("/sessions/"+sid+"/kun/state");runtimePolicy.set(current.debug?.policy);policyBase={runId:current.runId,revision:current.revision};policyStatus.textContent="已读取规则版本 "+(current.debug?.revision||0)+"，状态版本 "+current.revision;redraw();}catch(e){policyStatus.textContent=e.message;}}),
+   button("应用断点到当前运行",async()=>{if(!policyBase){policyStatus.textContent="请先读取当前断点。";return;}
+    try{const receipt=await api("/sessions/"+sid+"/kun/control",{method:"POST",body:{requestId:crypto.randomUUID(),runId:policyBase.runId,expectedStateRevision:policyBase.revision,operation:"set_breakpoints",debug:runtimePolicy.get()}});
+     policyStatus.textContent="规则已更新："+receipt.status+"。已有暂停需显式继续。";policyBase=null;await refresh();
+    }catch(e){policyStatus.textContent=e.message;}
+   }),policyStatus);
+  const consoleView=kunConsole({sid,getCurrent:()=>current,getSelected:()=>selected,refresh});
   const steer=el("textarea",{rows:"2",placeholder:"给当前运行补充文本指令"});
   const recoveryStatus=el("p",{role:"status",class:"help"});
   const recoveryReasons={run_not_stopped:"当前运行尚未结束",run_still_closing:"运行正在关闭，请稍后重试",inflight_action_or_unapplied_control:"模型/工具结果未知，或有未应用指令",no_safe_checkpoint:"没有可用安全检查点（旧版本记录不能恢复）",runtime_manifest_changed:"配置、项目版本、凭据或技能已变化",checkpoint_incompatible:"引擎或模块版本不兼容",checkpoint_consumed:"检查点已使用",no_run:"会话没有运行记录"};
@@ -116,7 +129,7 @@ window.RunDeskKun={
   controls.append(steer,button("提交补充指令",async()=>{
    if(!current)return;try{const v=await api("/sessions/"+sid+"/kun/control",{method:"POST",body:{requestId:crypto.randomUUID(),runId:current.runId,expectedStateRevision:current.revision,operation:"steer",text:steer.value}});feedback.textContent="补充指令："+v.status;steer.value="";}catch(e){feedback.textContent=e.message;}
   }));
-  dialog.append(el("div",{class:"dialog-head"},title,close),summary,tabs,button("刷新记录",refresh),button("跟随现场",()=>{selected=null;redraw();}),controls,feedback,el("div",{class:"kun-inspector"},list,detail));
+  dialog.append(el("div",{class:"dialog-head"},title,close),summary,tabs,button("刷新记录",refresh),button("跟随现场",()=>{selected=null;redraw();}),controls,consoleView.node,feedback,el("div",{class:"kun-inspector"},list,detail));
   document.body.append(dialog);dialog.showModal();await refresh();
   let refreshing=false;
   const timer=setInterval(async()=>{if(!dialog.isConnected||!dialog.open){clearInterval(timer);return;}if(refreshing)return;refreshing=true;try{await refresh();}catch(e){feedback.textContent=e.message;}finally{refreshing=false;}},1500);

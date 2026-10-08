@@ -159,6 +159,7 @@ func (e *Engine) resumeLocked(in p.Start, hash string) (p.State, error) {
 	saved.ResumedFrom = in.Resume
 	saved.Approval = nil // A prior one-time decision never authorizes a recovered call.
 	saved.Queued = nil
+	saved.Debug.Pause = nil
 	saved.ToolDefinitions = nil
 	for _, definition := range toolDefinitions(in.Config.AllowWrite) {
 		saved.ToolDefinitions = append(saved.ToolDefinitions, p.JSON(definition))
