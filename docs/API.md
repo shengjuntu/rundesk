@@ -266,3 +266,9 @@ Hybrid 后续模型重算，工具严格回放，未命中停止。Live 使用�
 `GET /api/v1/kun-forks/recordings/{fid}` 读取当前版本未修改 Hybrid 的有界录制摘要；`POST /api/v1/kun-forks/{fid}/hypotheses` 接收 `{expectedHash, position, recordHash, output, reason, title}` 和 `Idempotency-Key`，创建独立不可变假设预览。原录制不变，不启动执行。随后核对固定全文，用原 start 接口和新 hash 显式启动。
 
 output 必须存在、可为空，最多 64 KiB UTF-8；reason 最多 1000 字符。Live、叠加替换、旧引擎预览拒绝。对照区分 `replayed`（原录制）与 `hypothetical`，返回假设指纹、applied/not_reached/unknown 及使用事件。仅管理员，成员/应用默认拒绝。详情见 [KUN-HYPOTHESES.md](KUN-HYPOTHESES.md)。
+
+## 固定规则评分（0.38.0）
+
+新增管理员 `POST/GET /api/v1/kun-rubrics`、`GET /api/v1/kun-rubrics/{rid}`、`POST/GET /api/v1/kun-evaluations`、`GET /api/v1/kun-evaluations/{eid}`。两个 POST 均要求 Idempotency-Key。规则绑定来源基线；评分须显式提交两侧宿主上界（含零）与 rubric/comparison hash，使用完整最终回复并保留未知。已保存报告不依赖后续原日志留存，不重新评分。
+
+比较响应新增 `hash`、`baseline.hash`。host 0.38 不改变 Kun 0.12 / worker v12 / fork schema 3；同基线规则评分不构成独立验证集成绩。完整字段、上限及语义见 [KUN-EVALUATION.md](KUN-EVALUATION.md)。

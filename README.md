@@ -10,6 +10,12 @@ Built with Go and plain HTML/JavaScript. Node.js is not required to run RunDesk 
 
 ![RunDesk conversation workspace](docs/screenshots/0.16.0/chat-en.png)
 
+## Kun fixed-rule evaluation (0.38.0)
+
+Save a rubric for a fixed fork baseline, select a frozen source/fork or fork/fork comparison, and save an immutable evaluation report. Literal contains/excludes/equality rules use the complete final reply, with a separate completion requirement. Missing evidence stays unknown; reports preserve rule results, hashes and event links without starting models or tools.
+
+This is reproducible rule scoring, not an independent benchmark or external fact/artifact verification. Kun remains **0.12.0 / protocol v12 / fork schema 3**, compatible with 0.37. See [evaluation](docs/KUN-EVALUATION.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md).
+
 ## Kun hypothetical tool results (0.37.0)
 
 Create a new Hybrid preview with one user-authored tool output, review its complete replacement, then explicitly recompute the model branch. The original private recording is retained; tool identity, arguments, order, success/error status and inherited budgets stay fixed. Hypothetical results have distinct execution evidence and comparison counts, including whether the selected assumption was used.

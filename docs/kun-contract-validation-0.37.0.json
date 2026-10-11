@@ -1,0 +1,11 @@
+{
+  "version": "0.37.0",
+  "passed": true,
+  "javascriptFiles": 72,
+  "nodeInteractionSuites": 8,
+  "openapiPaths": 153,
+  "openapiOperations": 183,
+  "uniqueParameters": true,
+  "hypothesisSchemasAndIdempotency": true,
+  "noNewDependencies": true
+}

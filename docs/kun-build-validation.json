@@ -1,26 +1,29 @@
 {
-  "version": "0.37.0",
+  "version": "0.38.0",
   "kunVersion": "0.12.0",
   "protocolVersion": 12,
   "forkSchema": 3,
   "date": "2026-10-08",
-  "passed": true,
-  "scope": "local core/protocol/HTTP/Node tests and compilation; not full product acceptance",
-  "goVersion": "go1.25.12",
+  "passed": false,
+  "status": "partially_verified",
+  "scope": "Collected targeted Go result, actual local HTTP/worker fixture, CLI, Node and static contract checks; final full Go regression receipt unavailable",
   "checks": {
-    "goTestAll": "passed; app 78.507s",
-    "goVet": "passed",
-    "focusedRace": "passed: TestHypothesis*, TestHybrid*, TestKunHypothesis*, TestKunCompar* in kun/kunproto/app",
-    "linuxAmd64": "rundesk and kun built",
-    "node": "72 syntax files and 8 interaction suites passed",
-    "realHTTP": "real host/worker with local model: source, recorded Hybrid and hypothetical Hybrid; 6 total model calls; 1 assumed result observed; reads add none",
-    "windowsAmd64": "rundesk and kun cross-compiled; no Windows runtime test"
+    "targetedGo": "passed: TestKunEvaluation|TestKunCompar|TestKunHypothesis, app 2.082s; before final unknown-terminal-status correction and zero-cursor test addition",
+    "goTestAll": "unconfirmed: execution session expired before final output could be collected; Go toolchain unavailable for rerun",
+    "goVet": "unconfirmed: execution session expired before final output could be collected",
+    "focusedRace": "unconfirmed: execution session expired before final output could be collected",
+    "linuxAmd64": "binaries generated; current 0.38.0 host and 0.12.0 worker exercised by actual HTTP fixture and CLI",
+    "node": "75 syntax files and 9 interaction suites passed",
+    "realHTTP": "passed: actual host/worker with local model; 6 model calls; immutable rubric/report, idempotency, recorded/hypothetical comparisons; evaluation adds no model calls",
+    "windowsAmd64": "two AMD64 PE artifacts verified; final compiler receipt unavailable, no Windows runtime test"
   },
   "notAccepted": [
+    "final complete Go regression, vet and race results",
     "real browser layout/focus/mobile behavior",
-    "real Codex or remote model/MCP",
+    "remote model/MCP or real Codex",
     "Windows runtime",
-    "production workload"
+    "production workload",
+    "independent holdout evaluation"
   ],
-  "browserNote": "No new browser attempt. Prior release Chromium process singleton socket() failed: Operation not permitted; DOM tests are not browser acceptance."
+  "browserNote": "No new browser attempt. Prior Chromium socket() was blocked by the environment; DOM checks are not browser acceptance."
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.38.0
+
+- Add immutable same-baseline rubrics and pinned evaluation reports: literal full-final-reply contains/excludes/equality rules plus a required successful-run item.
+- Reuse the exact bounded event reads behind comparison hashes. Never grade truncated display text, inherited/planning replies or an earlier answer superseded by a later act response.
+- Preserve unknown evidence and nullable scores; save results, comparison summaries, reply fingerprints and evidence links across restart/log deletion. Lists omit bodies, writes are idempotent and administrator-only.
+- Add rule authoring, saved rubric selection, explicit fixed-range grading, historical report browsing and stale-response guards. No model/tool invocation, script evaluation, independent-test claim or optimization promotion.
+- Kun 0.12.0 / protocol v12 / fork schema 3 unchanged; compatible with 0.37 checkpoints/previews. No dependencies added. Browser/remote-service/production acceptance and independent validation sets remain pending.
+
 ## 0.37.0
 
 - Add immutable, single-output hypotheses derived from fixed Hybrid recordings; retain original tape and bind parent, record and replacement fingerprints. Creating previews never starts execution.

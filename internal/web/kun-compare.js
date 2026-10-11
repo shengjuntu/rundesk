@@ -36,22 +36,23 @@ window.RunDeskKunCompare=(()=>{
  }
  function create({preview,isActive=()=>true}){
   let generation=0,busy=false,fixed=null,offset=0,more=true,listBusy=false;
+  const evaluation=window.RunDeskKunEvaluation?.create({preview,isActive});
   const choice=el('select',{'aria-label':'对照来源或同源分支'},el('option',{value:''},'来源运行 · 安全点之后'));choice.value='';
   const info=el('p',{role:'status'}),result=el('div',{}),candidates=el('p',{class:'help'}),loaded=new Set();
   const latest=button('读取最新对照',()=>read(false)),repeat=button('重读固定范围',()=>read(true)),loadMore=button('加载同源分支',loadCandidates);
   function update(){latest.disabled=busy;repeat.disabled=busy||!fixed;loadMore.disabled=listBusy||!more;}
-  function invalidate(){generation++;busy=false;fixed=null;result.replaceChildren();info.textContent='对照对象已变化，请重新读取。';update();}
+  function invalidate(){generation++;busy=false;fixed=null;evaluation?.setComparison(null);result.replaceChildren();info.textContent='对照对象已变化，请重新读取。';update();}
   choice.addEventListener('change',invalidate);
   async function read(pinned){
    if(busy||!isActive()||(pinned&&!fixed))return;
    const ticket=++generation,against=choice.value,params=new URLSearchParams();if(against)params.set('against',against);
    if(pinned){params.set('leftThrough',fixed.left.through);params.set('rightThrough',fixed.right.through);}
-   busy=true;update();info.textContent='读取保留记录…';
+   busy=true;evaluation?.setComparison(null);update();info.textContent='读取保留记录…';
    try{
     const report=await api('/kun-forks/comparisons/'+enc(preview.id)+(params.size?'?'+params:''));
     if(!isActive()||ticket!==generation)return;
     if(report.previewId!==preview.id||report.against!==against||report.right.sessionId!==preview.targetSessionId||report.baseline.sequence!==preview.origin.sequence||report.baseline.runId!==preview.origin.runId||report.baseline.through!==preview.origin.through||(!against&&report.left.sessionId!==preview.origin.sessionId)||(against&&report.left.previewId!==against))throw Error('对照响应身份不匹配，请重新读取。');
-    fixed=report;result.replaceChildren(render(report,async(side,eventId)=>{
+    fixed=report;evaluation?.setComparison(report);result.replaceChildren(render(report,async(side,eventId)=>{
      if(!isActive()||ticket!==generation)return;
      try{const session=await api('/sessions/'+enc(side.sessionId));if(isActive()&&ticket===generation)window.RunDeskDebug.open(session,{runId:side.runId,through:side.through,eventId});}
      catch(e){if(isActive()&&ticket===generation)info.textContent=e.message;}
@@ -68,7 +69,7 @@ window.RunDeskKunCompare=(()=>{
    }catch(e){if(isActive())candidates.textContent=e.message;}
    finally{listBusy=false;if(isActive())update();}
   }
-  const node=el('section',{class:'kun-comparison'},el('h3',{},'来源与分支对照'),el('p',{class:'help'},'无需启动分支即可检查已有记录。可对照同一安全点的其他 Hybrid / Live 分支；未运行或记录缺失时明确显示未知。'),el('label',{},'左侧对照对象',choice),el('div',{class:'actions'},loadMore,latest,repeat),candidates,info,result);update();return {node};
+  const node=el('section',{class:'kun-comparison'},el('h3',{},'来源与分支对照'),el('p',{class:'help'},'无需启动分支即可检查已有记录。可对照同一安全点的其他 Hybrid / Live 分支；未运行或记录缺失时明确显示未知。'),el('label',{},'左侧对照对象',choice),el('div',{class:'actions'},loadMore,latest,repeat),candidates,info,result,evaluation?.node);update();return {node};
  }
  return {create,render};
 })();

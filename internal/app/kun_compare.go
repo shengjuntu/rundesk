@@ -75,12 +75,14 @@ type KunCompareDelta struct {
 	WaitMillis     *int64 `json:"waitMillis"`
 }
 type KunForkComparison struct {
+	Hash      string `json:"hash"`
 	Schema    int    `json:"schema"`
 	PreviewID string `json:"previewId"`
 	Against   string `json:"against"`
 	ReadOnly  bool   `json:"readOnly"`
 	Benchmark bool   `json:"benchmark"`
 	Baseline  struct {
+		Hash      string        `json:"hash"`
 		SessionID string        `json:"sessionId"`
 		RunID     string        `json:"runId"`
 		Sequence  int64         `json:"sequence"`
@@ -309,7 +311,7 @@ func reduceKunComparison(side KunCompareSide, events []store.Event, baseline p.S
 	return side, nil
 }
 
-func (m *Manager) kunCompareSide(ctx context.Context, d kunForkDraft, source bool, through *int64) (KunCompareSide, error) {
+func (m *Manager) kunCompareSide(ctx context.Context, d kunForkDraft, source bool, through *int64, retained *[]store.Event) (KunCompareSide, error) {
 	s := d.Bundle.State
 	side := KunCompareSide{SessionID: s.SessionID, RunID: s.RunID, Mode: "source", AfterSequence: d.Preview.Origin.Sequence}
 	end := d.Preview.Origin.Through
@@ -335,13 +337,34 @@ func (m *Manager) kunCompareSide(ctx context.Context, d kunForkDraft, source boo
 		}
 		side.RunID = first.RunID
 	}
+	if retained != nil {
+		*retained = events
+	}
 	side.Through = upper
 	return reduceKunComparison(side, events, s, end, origin)
 }
 
+type kunComparisonEvidence struct{ Left, Right []store.Event }
+
+func kunBaselineHash(d kunForkDraft) string {
+	return forkDigest(struct {
+		State                        p.State
+		RunID                        string
+		Sequence, Through            int64
+		EnvironmentHash, CatalogHash string
+	}{d.Bundle.State, d.Bundle.Selection.SourceRunID, d.Bundle.Selection.Sequence, d.Bundle.Selection.Through, d.Bundle.EnvironmentHash, d.Bundle.CatalogHash})
+}
+func kunComparisonHash(v KunForkComparison) string { v.Hash = ""; return forkDigest(v) }
+func (m *Manager) CompareKunFork(ctx context.Context, id, against string, leftThrough, rightThrough *int64) (KunForkComparison, error) {
+	return m.compareKunFork(ctx, id, against, leftThrough, rightThrough, nil)
+}
+
 // No worker, provider, project files or external service is touched. Same-source
 // previews are compared using their immutable checkpoint plus fixed host logs.
-func (m *Manager) CompareKunFork(ctx context.Context, id, against string, leftThrough, rightThrough *int64) (KunForkComparison, error) {
+func (m *Manager) compareKunFork(ctx context.Context, id, against string, leftThrough, rightThrough *int64, evidence *kunComparisonEvidence) (KunForkComparison, error) {
+	if evidence == nil {
+		evidence = &kunComparisonEvidence{}
+	}
 	out := KunForkComparison{Schema: 1, PreviewID: id, Against: against, ReadOnly: true, Benchmark: false, Warnings: []string{"这是固定记录的描述性对照；未进行独立任务评分或实际费用核算，不判断哪条路径更优。"}}
 	d, err := m.kunForkDraft(id)
 	if err != nil {
@@ -356,21 +379,22 @@ func (m *Manager) CompareKunFork(ctx context.Context, id, against string, leftTh
 		if err != nil {
 			return out, err
 		}
-		if forkDigest(left.Bundle.State) != forkDigest(d.Bundle.State) || left.Bundle.Selection.SourceRunID != d.Bundle.Selection.SourceRunID || left.Bundle.Selection.Sequence != d.Bundle.Selection.Sequence || left.Bundle.Selection.Through != d.Bundle.Selection.Through || left.Bundle.EnvironmentHash != d.Bundle.EnvironmentHash || left.Bundle.CatalogHash != d.Bundle.CatalogHash {
+		if kunBaselineHash(left) != kunBaselineHash(d) {
 			return out, failure(409, "comparison_baseline_mismatch", "只能对照同一来源轮次、同一安全点和记录截止的分支")
 		}
 	}
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	out.Left, err = m.kunCompareSide(ctx, left, against == "", leftThrough)
+	out.Left, err = m.kunCompareSide(ctx, left, against == "", leftThrough, &evidence.Left)
 	if err != nil {
 		return out, err
 	}
-	out.Right, err = m.kunCompareSide(ctx, d, false, rightThrough)
+	out.Right, err = m.kunCompareSide(ctx, d, false, rightThrough, &evidence.Right)
 	if err != nil {
 		return out, err
 	}
 	s := d.Bundle.State
+	out.Baseline.Hash = kunBaselineHash(d)
 	out.Baseline.SessionID, out.Baseline.RunID, out.Baseline.Sequence, out.Baseline.Through = s.SessionID, s.RunID, d.Preview.Origin.Sequence, d.Preview.Origin.Through
 	out.Baseline.Model, out.Baseline.Harness, out.Baseline.Step, out.Baseline.Budget = s.Config.Model, s.Harness, s.Step, s.Budget
 	if out.Left.Complete && out.Right.Complete {
@@ -401,6 +425,7 @@ func (m *Manager) CompareKunFork(ctx context.Context, id, against string, leftTh
 	if forkDigest(out.Left.Harness) != forkDigest(out.Right.Harness) {
 		out.Warnings = append(out.Warnings, "所选范围结束时的 Harness 不同；数值差异不能单独归因于组合变化。")
 	}
+	out.Hash = kunComparisonHash(out)
 	return out, nil
 }
 

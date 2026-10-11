@@ -1,11 +1,13 @@
 {
-  "version": "0.37.0",
+  "version": "0.38.0",
   "passed": true,
-  "javascriptFiles": 72,
-  "nodeInteractionSuites": 8,
-  "openapiPaths": 153,
-  "openapiOperations": 183,
+  "scope": "JSON structure and refs, required idempotency headers, administrator flags, unchanged dependencies, JavaScript syntax and Node interaction reports; full Go contract suite completion unconfirmed",
+  "javascriptFiles": 75,
+  "nodeInteractionSuites": 9,
+  "openapiPaths": 157,
+  "openapiOperations": 189,
   "uniqueParameters": true,
-  "hypothesisSchemasAndIdempotency": true,
+  "localReferencesResolve": true,
+  "evaluationSchemasAndIdempotency": true,
   "noNewDependencies": true
 }

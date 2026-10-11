@@ -2,3 +2,5 @@
 
 #kun-fork-workbench select{width:100%;box-sizing:border-box;padding:9px}#kun-fork-workbench .experiment-detail{margin-bottom:24px}
 .kun-comparison{border-top:1px solid var(--border,#d1d5db);margin-top:24px;padding-top:12px}.kun-comparison-table{overflow-x:auto;max-width:100%}.kun-comparison-table table{width:100%;border-collapse:collapse}.kun-comparison-table th,.kun-comparison-table td{padding:8px;text-align:left;border-bottom:1px solid var(--border,#d1d5db);vertical-align:top}.kun-comparison-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.kun-comparison-columns section{min-width:0}.kun-comparison-columns pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto}@media(max-width:850px){.kun-comparison-columns{grid-template-columns:minmax(0,1fr)}}
+
+.kun-rule-row{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin:12px 0;padding:12px;border:1px solid var(--border,#d1d5db);border-radius:8px}.kun-rule-row button{justify-self:start}.kun-comparison details pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto}

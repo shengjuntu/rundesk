@@ -100,7 +100,7 @@ requests={
  ('PUT','/workspaces/{wid}/mcp/{name}'):obj({'version':st(),'config':obj(extra=True),'remove':bool_},['version']),
  ('POST','/workspaces/{wid}/mcp/import'):obj({'version':st(),'bundle':obj(extra=True),'overwrite':bool_},['version','bundle']),
 }
-idempotent={('POST',p) for p in ['/kun-forks','/kun-forks/{fid}/start','/kun-forks/{fid}/hypotheses','/experiments','/experiments/{eid}/branches','/instances','/workspaces','/sessions','/sessions/{sid}/turns','/sessions/{sid}/recover','/sessions/{sid}/kun/resume','/tasks','/schedules','/workspaces/{wid}/mcp-tests']}
+idempotent={('POST',p) for p in ['/kun-rubrics','/kun-evaluations','/kun-forks','/kun-forks/{fid}/start','/kun-forks/{fid}/hypotheses','/experiments','/experiments/{eid}/branches','/instances','/workspaces','/sessions','/sessions/{sid}/turns','/sessions/{sid}/recover','/sessions/{sid}/kun/resume','/tasks','/schedules','/workspaces/{wid}/mcp-tests']}
 summaries={
  '/instances/{iid}/images':'管理员：GET 读取持久化镜像目录及环境差异；POST 检查并登记本机镜像，不构建、不拉取、不启动容器',
  '/instances/{iid}/images/{vid}/check':'管理员：按固定 Image ID 核对可用性；失败仍返回记录，检查 availability 和 error',
@@ -406,7 +406,7 @@ compare_hypothesis={**{k:st() for k in ['parentPreviewId','hash','originalOutput
 schemas['KunCompareHypothesis']=obj(compare_hypothesis,[k for k in compare_hypothesis if k!='eventId'])
 compare_side={'hypothesis':ref('KunCompareHypothesis'),'previewId':st(),**{k:st() for k in ['sessionId','runId','mode','status']},**{k:integer for k in ['through','afterSequence','lastSequence','eventCount','firstEventId','lastEventId','modelCalls','planningCalls','modelCompletions','reportedTokens','usageMissing']},'complete':bool_,'harness':ref('KunHarness'),'tokenUsageComplete':bool_,'activeMillis':nullable_int,'waitMillis':nullable_int,'tools':arr(ref('KunCompareTool')),'lastReply':{'anyOf':[ref('KunCompareReply'),{'type':'null'}]},'warnings':arr(st())}
 schemas['KunCompareSide']=obj(compare_side,[k for k in compare_side if k not in ['previewId','hypothesis']])
-schemas['KunForkComparison']=obj({'schema':{'type':'integer','const':1},'previewId':st(),'against':st(),'readOnly':{'const':True},'benchmark':{'const':False},'baseline':obj({'sessionId':st(),'runId':st(),'sequence':integer,'through':integer,'model':st(),'harness':ref('KunHarness'),'step':integer,'budget':ref('KunBudgetUsage')},['sessionId','runId','sequence','through','model','harness','step','budget']),'left':ref('KunCompareSide'),'right':ref('KunCompareSide'),'delta':obj({k:nullable_int for k in ['modelCalls','reportedTokens','activeMillis','waitMillis']},['modelCalls','reportedTokens','activeMillis','waitMillis']),'warnings':arr(st())},['schema','previewId','against','readOnly','benchmark','baseline','left','right','delta','warnings'])
+schemas['KunForkComparison']=obj({'hash':st(),'schema':{'type':'integer','const':1},'previewId':st(),'against':st(),'readOnly':{'const':True},'benchmark':{'const':False},'baseline':obj({'hash':st(),'sessionId':st(),'runId':st(),'sequence':integer,'through':integer,'model':st(),'harness':ref('KunHarness'),'step':integer,'budget':ref('KunBudgetUsage')},['hash','sessionId','runId','sequence','through','model','harness','step','budget']),'left':ref('KunCompareSide'),'right':ref('KunCompareSide'),'delta':obj({k:nullable_int for k in ['modelCalls','reportedTokens','activeMillis','waitMillis']},['modelCalls','reportedTokens','activeMillis','waitMillis']),'warnings':arr(st())},['hash','schema','previewId','against','readOnly','benchmark','baseline','left','right','delta','warnings'])
 op=paths['/kun-forks/comparisons/{fid}']['get']
 op['x-administrator-only']=True
 op['summary']='Kun 来源与分支的固定范围对照'
@@ -414,6 +414,40 @@ op['description']='只读管理员接口，不启动/恢复 worker，不连接�
 op['parameters'] += [{'name':'against','in':'query','schema':st(maxLength=128),'description':'同一基线的另一分叉预览 ID；省略或空串表示来源运行。'}]+[{'name':k,'in':'query','schema':{'type':'integer','minimum':0},'description':'固定宿主事件上界，零也是有效的空范围。'} for k in ['leftThrough','rightThrough']]
 op['responses']['200']['content']['application/json']['schema']=ref('KunForkComparison')
 for code,description in [('400','无效、未知或重复参数；同一分支与自身比较。'),('403','应用和成员不允许读取该管理员对照。'),('404','分叉预览不存在。'),('409','基线不同、游标无效或证据身份不一致。'),('413','保留记录或响应超过有界读取限制。')]:op['responses'][code]={'description':description}
+
+# Fixed host-side rubric scoring; no execution or independent validation claim.
+rule_kind=st(enum=['reply_contains','reply_not_contains','reply_equals'])
+rule_status=st(enum=['pass','fail','unknown'])
+score_number={'type':['number','null'],'minimum':0,'maximum':100}
+schemas['KunReplyRule']=obj({'kind':rule_kind,'value':st(minLength=1,maxLength=2048)},['kind','value'])
+rubric_props={'schema':{'const':1},'evaluator':{'const':'reply-rules-v1'},**{k:st() for k in ['id','hash','title','createdAt','previewId','baselineHash']},'ruleCount':{'type':'integer','minimum':2,'maximum':13},'rules':{'type':'array','items':ref('KunReplyRule'),'minItems':1,'maxItems':12}}
+schemas['KunRubric']=obj(rubric_props,list(rubric_props))
+schemas['KunRubricSummary']=obj({k:rubric_props[k] for k in ['id','hash','title','createdAt','baselineHash','ruleCount']},['id','hash','title','createdAt','baselineHash','ruleCount'])
+schemas['KunRuleResult']=obj({'index':integer,'kind':st(enum=['run_completed','reply_contains','reply_not_contains','reply_equals']),'status':rule_status,'reason':st(),'eventId':integer},['index','kind','status','reason'])
+schemas['KunEvaluationReply']=obj({'status':st(enum=['available','missing','incomplete','too_large']),'hash':st(),'eventId':integer,'sequence':integer,'bytes':integer},['status','bytes'])
+evaluation_side={'status':rule_status,**{k:integer for k in ['passed','failed','unknown','total']},'score':score_number,'reply':ref('KunEvaluationReply'),'results':arr(ref('KunRuleResult'))}
+schemas['KunEvaluationSide']=obj(evaluation_side,list(evaluation_side))
+evaluation_props={'schema':{'const':1},'evaluator':{'const':'reply-rules-v1'},**{k:st() for k in ['id','hash','createdAt','previewId']},'rubric':ref('KunRubric'),'comparison':ref('KunForkComparison'),'left':ref('KunEvaluationSide'),'right':ref('KunEvaluationSide'),'scoreDelta':{'type':['number','null'],'minimum':-100,'maximum':100},'independentValidation':{'const':False},'warnings':arr(st())}
+schemas['KunEvaluation']=obj(evaluation_props,list(evaluation_props))
+evaluation_summary={**{k:st() for k in ['id','hash','title','createdAt','against']},'leftStatus':rule_status,'rightStatus':rule_status}
+schemas['KunEvaluationSummary']=obj(evaluation_summary,list(evaluation_summary))
+for path,method,response,body in [
+ ('/kun-rubrics','post',ref('KunRubric'),obj({'previewId':st(minLength=1),'expectedPreviewHash':st(minLength=1),'title':st(minLength=1,maxLength=120),'rules':rubric_props['rules']},['previewId','expectedPreviewHash','title','rules'])),
+ ('/kun-rubrics','get',obj({'items':arr(ref('KunRubricSummary')),'nextOffset':integer,'hasMore':bool_},['items','nextOffset','hasMore']),None),
+ ('/kun-rubrics/{rid}','get',ref('KunRubric'),None),
+ ('/kun-evaluations','post',ref('KunEvaluation'),obj({**{k:st(minLength=1) for k in ['rubricId','expectedRubricHash','previewId','expectedComparisonHash']},'against':st(maxLength=128),**{k:{'type':'integer','minimum':0} for k in ['leftThrough','rightThrough']}},['rubricId','expectedRubricHash','previewId','expectedComparisonHash','leftThrough','rightThrough'])),
+ ('/kun-evaluations','get',obj({'items':arr(ref('KunEvaluationSummary')),'nextOffset':integer,'hasMore':bool_},['items','nextOffset','hasMore']),None),
+ ('/kun-evaluations/{eid}','get',ref('KunEvaluation'),None)
+]:
+ op=paths[path][method];op['x-administrator-only']=True
+ op['summary']='Kun 固定规则与评分报告'
+ op['description']='管理员专用；不启动 worker/模型/工具，不读项目文件。规则绑定完整来源基线，预览 hash 必須一致；1–12 条文本规则，逐字匹配（大小写、空白与 Unicode 编码敏感），每条最多 2048 字符，合计最多 16 KiB，禁止重复和全空白规则。另固定加入运行成功结束项，所有项等权。评分请求显式提交 rubric hash、comparison hash 和两侧宿主上界，零不得省略；同一次有界日志读取产生摘要与完整回复评分，记录变化则 409。评分只用最后一次非规划执行响应的新增 assistant 文本，后续请求/空响应/工具调用/拒绝会使早先答案不再合格，不评继承文本。回复最多 256 KiB，超限或日志不完整为 unknown；完整日志没有最终回复则文本规则失败（含不包含规则）。有未知项时 score/scoreDelta 为 null；有确定失败时总体 fail，否则有未知为 unknown，全部通过才 pass。分数只反映规则项通过比例，不是事实验证、产物验收、独立测试集或优化收益。报告保存规则、比较摘要、结果及证据指纹，不保存完整回复；GET 已保存报告不依赖来源日志仍存在，但事件链接依赖留存。规则及报告不可改写，无删除/自动执行/模型裁判接口。'
+ op['parameters']=[v for v in op['parameters'] if v['in']!='query']
+ if method=='get' and '{' not in path:
+  op['parameters'] += [{'name':'previewId','in':'query','required':True,'schema':st(minLength=1,maxLength=128),'description':'rubrics 列出同基线规则，evaluations 列出以此预览为右侧的报告。'},{'name':'offset','in':'query','schema':{'type':'integer','minimum':0,'maximum':20971520}},{'name':'limit','in':'query','schema':{'type':'integer','minimum':1,'maximum':50,'default':20}}]
+ op['responses']['200']['content']['application/json']['schema']=response
+ for code,desc in [('400','缺少/未知字段、规则/查询参数无效、缺少明确固定上界或幂等 Key。'),('403','应用与成员不得访问评分规则和报告。'),('404','规则、预览或报告不存在。'),('409','来源基线不符、指纹改变、日志删除/变更或持久化内容校验失败。'),('413','日志有界读取或 4 MiB 响应上限。')]:op['responses'][code]={'description':desc}
+ if body is not None:op['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
 
 # Unified read-only debug facade. Existing Kun aliases retain their response shape.
 debug_kinds=['overview','run','events','event','context','tools','budget','modules','breakpoints','actions','snapshot','evidence','diff','runs','steps','step','issues','statistics']
@@ -520,6 +554,6 @@ if '/usage' in paths:
 if '/setup/docker-template' in paths:
  paths['/setup/docker-template']['get']['parameters']=[{'name':'version','in':'query','required':True,'schema':st(),'description':'Exact Codex release'}]
  paths['/setup/docker-template']['get']['responses']['200']={'description':'Pinned base image build context','content':{'application/zip':{'schema':st(format='binary')}}}
-spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk 0.37.0：Kun 0.12 / 协议 v12 / fork schema 3；固定单条工具输出假设与可审核 Hybrid 重算、不可变谱系与原录制保留、假设使用证据；来源与分支跨会话固定日志对照；普通运行安全点 Harness 切换与迁移记录；Live 固定预览、明确确认与当前工具真实执行；Plan-Act 显式规划、两套内置模块组合与 Harness 固定快照对照； 安全检查点独立 Hybrid 分支，模型重算、工具严格录制回放、未命中停止；K3-A 离线记录基线、不可变实验分支、保守失效与谱系差异；建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
+spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk 0.38.0：Kun 0.12 / 协议 v12 / fork schema 3；固定同基线文本规则评分、完整回复与证据检查、不可变评分报告；固定单条工具输出假设与可审核 Hybrid 重算、不可变谱系与原录制保留、假设使用证据；来源与分支跨会话固定日志对照；普通运行安全点 Harness 切换与迁移记录；Live 固定预览、明确确认与当前工具真实执行；Plan-Act 显式规划、两套内置模块组合与 Harness 固定快照对照； 安全检查点独立 Hybrid 分支，模型重算、工具严格录制回放、未命中停止；K3-A 离线记录基线、不可变实验分支、保守失效与谱系差异；建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

@@ -1,35 +1,34 @@
-# RunDesk 0.37.0 / Kun 0.12.0 验证记录
+# Kun 0.12 / RunDesk 0.38.0 验证记录
 
-日期：2026-10-08。Linux amd64，Go 1.25.12；worker v12，fork schema 3。**本地内核、协议、实际 worker/HTTP、界面交互语义及构建通过；真实浏览器布局、远程服务和生产验收未完成。**
+验证日期：2026-10-08。worker protocol 12、fork schema 3 保持不变。
 
-| 检查 | 本次结果 |
+本次为**部分验证完成的开发交付**。已取得的通过结果如下；全量 Go、vet 和 race 虽已启动，但执行会话失效前未取回最终输出，随后 Go 工具链不可用，因此这些项目记为未确认，不能视为全量回归通过。
+
+| 项目 | 本次结果与范围 |
 | --- | --- |
-| 全量 `go test ./... -count=1 -timeout=180s` | 全部通过；app 包 78.507s，包含实际 Kun 子进程、本地模型/MCP fixture |
-| `go vet ./...` | 通过 |
-| 专项 race | kun、kunproto、app：TestHypothesis*、TestHybrid*、TestKunHypothesis*、TestKunCompar* 通过；未运行全项目 race |
-| JavaScript/CJS 语法 | 72 文件 `node --check` 通过 |
-| Node 交互 | 检查器、面板、Hybrid、Live、Harness 对照、安全组合切换、跨会话对照、假设编辑共 8 组通过；DOM stub，不是浏览器布局验收 |
-| 独立 HTTP 冒烟 | 实际 RunDesk + Kun + 本地模型：来源/原录制 Hybrid/假设 Hybrid 共 6 次调用；1 次请求观察到假设 tool 文本及显式说明；原文件删除后仍回放，读取对照不增加调用 |
-| Linux amd64 | RunDesk、Kun 构建通过 |
-| Windows amd64 | RunDesk、Kun 交叉构建通过；未实机运行 |
-| CLI / worker | RunDesk 0.37.0、Kun 0.12.0、hello/EOF 正常；forkHypothesis=true；旧 v11 请求被拒绝 |
-| OpenAPI | 153 路径 / 183 操作；schema 引用、参数唯一性、两个新接口的管理员标记、POST 幂等 Key 和列表精简契约通过 |
-| 依赖 | go.mod/go.sum 无变化 |
+| 专项 Go | `TestKunEvaluation\|TestKunCompar\|TestKunHypothesis` 通过，app 2.082s；发生在最后一次未知终态修正及零游标测试补充之前，不代表最终源码全量通过 |
+| 实际 HTTP + worker | 通过；RunDesk 0.38.0、Kun 0.12.0 和本地模型夹具，来源/普通 Hybrid/假设 Hybrid 共 6 次模型调用；规则与评分报告固定、幂等保存/读取不新增模型调用 |
+| 界面交互 | 9 组 Node 交互检查通过；包含评分、对照、假设、Hybrid、Live、Harness、运行时切换、inspect 与 panels；不等于真实浏览器验收 |
+| 静态契约 | 75 个 JS/CJS 语法检查通过；OpenAPI 157 paths / 189 operations，本地引用、参数唯一性、两项新增 POST 的必填幂等头检查通过；依赖未变化 |
+| Linux CLI | 当前宿主/worker 版本、hello/EOF 和旧协议拒绝通过；实际 HTTP 已运行构建产物 |
+| Windows | 两个 AMD64 PE 构建产物存在并通过文件头检查；最终编译日志未取回，未做 Windows 运行验收 |
+| 全量 Go / vet / race | **未确认**；执行结果未取回，不能沿用上一版本通过记录 |
 
-## 新增证据
+专项测试覆盖固定规则/范围、完整回复超出显示节选的评分、缺失/被替代/超大回复、不可变报告持久化、幂等与权限。最后增加的未知终态及零游标后端用例须在 Go 工具链恢复后重跑；零游标界面行为已由 Node 检查覆盖。
 
-- `internal/kunproto/hypothesis_test.go`：父 bundle、录制与原/新输出指纹绑定，Live/位置/篡改拒绝，UTF-8 和 64 KiB 上限、理由约束，明确空字符串及同值替换拒绝。
-- `internal/kun/fork_test.go`：假设和空输出进入分支上下文，完成事件带假设指纹、原/新输出指纹和 executed=false；匹配失败不使用假设，未重复源写入，也没有在分支工作区写入或连接 MCP；篡改叠加项即使重新计算 bundle hash 仍被拒绝。
-- `internal/app/kun_hypothesis_test.go`：摘要脱敏/截断和大整数保留；预览无执行；幂等响应身份、字段/指纹拒绝；原 tape 不变、原失败状态保留；列表不返回假设正文/理由；对照已使用/未使用/未知及证据；真实 worker 在来源删除、宿主重启后消费假设，重复启动不重复调用，删除目标后不复活。
-- `internal/app/kun_fork_test.go`：应用、成员 runner/viewer、旧/新 API 和成员代理拒绝读取录制及写入假设。
-- `scripts/kun-hypothesis-test.cjs`：显式摘要读取、父指纹核对、原节选不进入替换框、UTF-8 字节限制、切换结果清空输入、空输出、重复请求保护、关闭/异步过期响应忽略、Live/叠加编辑禁止和字面文本渲染。
-- `scripts/kun-hybrid-ui-test.cjs`：集成编辑器保存后切换到子预览；不自动启动；显式启动提交子 ID 和新 hash。
-- `scripts/kun-hypothesis-http-test.cjs`：实际 HTTP 与 worker 完整闭环、同基线对照、固定范围重复读取、服务端嵌入新界面资源和新契约。
+## 复验命令
 
-## 未验收和历史记录
+在安装项目 `go.mod` 要求的 Go 版本后，于源码根目录运行：
 
-0.36 的 Chromium 启动被 `process singleton socket() failed: Operation not permitted` 阻止，原证据保存在 `kun-compare-browser-validation-0.36.0.json`。本轮没有再次尝试绕过此限制，也没有执行真实浏览器：新编辑器的布局、焦点、移动端和浏览器兼容性仍待验收。Node DOM 与实际 HTTP 测试不能替代这些检查。
+```sh
+go test ./... -count=1 -timeout=300s
+go vet ./...
+go test -race ./internal/app -run 'TestKunEvaluation|TestKunCompar|TestKunHypothesis' -count=1 -timeout=180s
+make build
+node scripts/kun-evaluation-test.cjs
+node scripts/kun-evaluation-http-test.cjs
+```
 
-没有使用真实 Codex、远程模型账号、真实远程 MCP、Windows 实机或生产负载；没有独立任务质量评分、费用测算和优化收益结论。历史验证文件保留原版本与原结果，不代表新版本已完成同类验收。
+实际 HTTP 脚本使用本地模型夹具，不证明真实远程服务效果。真实浏览器布局/焦点/移动端、真实 Codex/模型/MCP、生产负载、独立验证集和 Windows 运行仍未验收。此前 Chromium 因环境禁止 socket 而无法启动，本次没有重复尝试。
 
-当前机器报告：`kun-build-validation.json`、`kun-contract-validation.json`、`kun-cli-validation.json`、`kun-hypothesis-ui-validation.json`、`kun-hypothesis-http-validation.json` 及对应既有 Node suite 报告。0.36 当前报告已复制到带 `-0.36.0` 的文件供追溯。
+机器可读证据见 `kun-build-validation.json`、`kun-contract-validation.json`、`kun-cli-validation.json`、`kun-evaluation-http-validation.json` 和各 `kun-*-ui-validation.json`。上一版原始结果保留在对应 `*-0.37.0.*` 文件中，不作为本次全量通过证据。

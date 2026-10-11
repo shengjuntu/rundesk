@@ -10,11 +10,17 @@
 
 ![RunDesk 对话界面](docs/screenshots/0.16.0/chat-zh.png)
 
+## 固定规则与评分报告（0.38.0）
+
+同基线分叉可共用固定验收规则，在两侧明确的日志范围内评分。支持完整最终回复包含、不包含、完全等于指定文本，并要求运行成功结束；缺失证据保留未知。报告保存规则、范围、回复指纹和事件证据，不调用模型或工具。
+
+这是 K3 的规则评分基础，独立验证集、真实业务验收和 K4 仍待完成。Kun 保持 **0.12.0 / worker v12 / fork schema 3**，与 0.37 兼容。说明见 [固定评分](docs/KUN-EVALUATION.md)、[验证](docs/KUN-VALIDATION.md)、[完成度](docs/KUN-PROGRESS.md)。
+
 ## 工具结果假设与 Hybrid 重算（0.37.0）
 
 从固定 Hybrid 预览选择一条录制结果，填写完整替换文本，核对新的固定预览后显式启动。原录制、工具身份、参数、顺序、原成功/失败状态与预算保留；模型重新调用，工具不真实执行。检查器与同基线对照分别标记人工假设、原录制回放及真实派发，显示假设是否使用与事件证据。
 
-当前版本 **RunDesk 0.37.0 / Kun 0.12.0 / worker v12 / fork schema 3**。需一起更新两个二进制；旧记录可只读查看，旧检查点/预览不能跨版本执行或创建假设。说明见 [工具结果假设](docs/KUN-HYPOTHESES.md)、[发布记录](docs/RELEASE-0.37.0.md)、[验证](docs/KUN-VALIDATION.md) 与 [开发计划完成度](docs/KUN-PROGRESS.md)。真实浏览器和远程服务、独立任务评分与 K4 仍未完成。
+0.37 版本 **RunDesk 0.37.0 / Kun 0.12.0 / worker v12 / fork schema 3**。需一起更新两个二进制；旧记录可只读查看，旧检查点/预览不能跨版本执行或创建假设。说明见 [工具结果假设](docs/KUN-HYPOTHESES.md)、[发布记录](docs/RELEASE-0.37.0.md)、[验证](docs/KUN-VALIDATION.md) 与 [开发计划完成度](docs/KUN-PROGRESS.md)。真实浏览器和远程服务、独立任务评分与 K4 仍未完成。
 
 ## Kun 来源与分支对照（0.36.0）
 
