@@ -100,7 +100,7 @@ requests={
  ('PUT','/workspaces/{wid}/mcp/{name}'):obj({'version':st(),'config':obj(extra=True),'remove':bool_},['version']),
  ('POST','/workspaces/{wid}/mcp/import'):obj({'version':st(),'bundle':obj(extra=True),'overwrite':bool_},['version','bundle']),
 }
-idempotent={('POST',p) for p in ['/kun-rubrics','/kun-evaluations','/kun-forks','/kun-forks/{fid}/start','/kun-forks/{fid}/hypotheses','/experiments','/experiments/{eid}/branches','/instances','/workspaces','/sessions','/sessions/{sid}/turns','/sessions/{sid}/recover','/sessions/{sid}/kun/resume','/tasks','/schedules','/workspaces/{wid}/mcp-tests']}
+idempotent={('POST',p) for p in ['/kun-task-sets','/kun-rubrics','/kun-evaluations','/kun-forks','/kun-forks/{fid}/start','/kun-forks/{fid}/hypotheses','/experiments','/experiments/{eid}/branches','/instances','/workspaces','/sessions','/sessions/{sid}/turns','/sessions/{sid}/recover','/sessions/{sid}/kun/resume','/tasks','/schedules','/workspaces/{wid}/mcp-tests']}
 summaries={
  '/instances/{iid}/images':'管理员：GET 读取持久化镜像目录及环境差异；POST 检查并登记本机镜像，不构建、不拉取、不启动容器',
  '/instances/{iid}/images/{vid}/check':'管理员：按固定 Image ID 核对可用性；失败仍返回记录，检查 availability 和 error',
@@ -449,6 +449,25 @@ for path,method,response,body in [
  for code,desc in [('400','缺少/未知字段、规则/查询参数无效、缺少明确固定上界或幂等 Key。'),('403','应用与成员不得访问评分规则和报告。'),('404','规则、预览或报告不存在。'),('409','来源基线不符、指纹改变、日志删除/变更或持久化内容校验失败。'),('413','日志有界读取或 4 MiB 响应上限。')]:op['responses'][code]={'description':desc}
  if body is not None:op['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
 
+# Immutable fixed-input task sets; these routes never execute a case.
+task_case={'key':st(minLength=1,maxLength=64,pattern='^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$'),'title':st(minLength=1,maxLength=120),'input':st(minLength=1,maxLength=8192),'rules':rubric_props['rules']}
+schemas['KunTaskCase']=obj(task_case,list(task_case))
+task_input={'title':st(minLength=1,maxLength=120),'cases':{'type':'array','items':ref('KunTaskCase'),'minItems':1,'maxItems':20}}
+schemas['KunTaskSetInput']=obj(task_input,list(task_input))
+task_props={'schema':{'const':1},'evaluator':{'const':'reply-rules-v1'},**{k:st() for k in ['id','hash','title','createdAt']},'caseCount':{'type':'integer','minimum':1,'maximum':20},'cases':task_input['cases']}
+schemas['KunTaskSet']=obj(task_props,list(task_props))
+task_summary={k:task_props[k] for k in ['id','hash','title','createdAt','caseCount']}
+schemas['KunTaskSetSummary']=obj(task_summary,list(task_summary))
+for path,method,response in [('/kun-task-sets','post',ref('KunTaskSet')),('/kun-task-sets','get',obj({'items':arr(ref('KunTaskSetSummary')),'nextOffset':integer,'hasMore':bool_},['items','nextOffset','hasMore'])),('/kun-task-sets/{tid}','get',ref('KunTaskSet'))]:
+ op=paths[path][method];op['x-administrator-only']=True;op['summary']='Kun 固定输入任务集'
+ op['description']='管理员专用。保存不可变的 1–20 个有序案例，每个案例包含唯一 ASCII 标识、标题、完整固定输入与 1–12 条文本规则；固定要求运行成功结束。标识大小写敏感，禁止重复；输入最多 8192 Unicode 字符/32 KiB UTF-8，每案例规则文本最多 16 KiB，总文本最多 256 KiB。保留原有空白，不执行输入、正则、脚本、模型或工具。创建只接受 title/cases，身份、指纹、时间均由服务端生成；无原位修改、删除、运行或评分接口。查看完整对象校验指纹；列表只投影有界元数据，不返回输入或规则正文。不是自动批量执行、预注册、独立验证集隔离或 K4 成绩。'
+ op['parameters']=[v for v in op['parameters'] if v['in']!='query']
+ if method=='get' and '{' not in path:
+  op['parameters'] += [{'name':'offset','in':'query','schema':{'type':'integer','minimum':0,'maximum':20971520}},{'name':'limit','in':'query','schema':{'type':'integer','minimum':1,'maximum':50,'default':20}}]
+ if method=='post':op['requestBody']={'required':True,'content':{'application/json':{'schema':ref('KunTaskSetInput')}}}
+ op['responses']['200']['content']['application/json']['schema']=response
+ for code,desc in [('400','字段、案例、规则、总量或查询参数无效；缺少幂等 Key。'),('403','应用与成员不得访问任务集。'),('404','任务集不存在。'),('409','持久化内容校验失败或幂等 Key 用于不同请求。')]:op['responses'][code]={'description':desc}
+
 # Unified read-only debug facade. Existing Kun aliases retain their response shape.
 debug_kinds=['overview','run','events','event','context','tools','budget','modules','breakpoints','actions','snapshot','evidence','diff','runs','steps','step','issues','statistics']
 schemas['DebugCapability']=obj({'supported':bool_,'available':bool_,'reason':st()},['supported','available'])
@@ -554,6 +573,6 @@ if '/usage' in paths:
 if '/setup/docker-template' in paths:
  paths['/setup/docker-template']['get']['parameters']=[{'name':'version','in':'query','required':True,'schema':st(),'description':'Exact Codex release'}]
  paths['/setup/docker-template']['get']['responses']['200']={'description':'Pinned base image build context','content':{'application/zip':{'schema':st(format='binary')}}}
-spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk 0.38.1：Kun 0.12 / 协议 v12 / fork schema 3；固定同基线文本规则评分、完整回复与证据检查、不可变评分报告；固定单条工具输出假设与可审核 Hybrid 重算、不可变谱系与原录制保留、假设使用证据；来源与分支跨会话固定日志对照；普通运行安全点 Harness 切换与迁移记录；Live 固定预览、明确确认与当前工具真实执行；Plan-Act 显式规划、两套内置模块组合与 Harness 固定快照对照； 安全检查点独立 Hybrid 分支，模型重算、工具严格录制回放、未命中停止；K3-A 离线记录基线、不可变实验分支、保守失效与谱系差异；建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
+spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk 0.39.0：Kun 0.12 / 协议 v12 / fork schema 3；固定同基线文本规则评分、完整回复与证据检查、不可变评分报告；固定单条工具输出假设与可审核 Hybrid 重算、不可变谱系与原录制保留、假设使用证据；来源与分支跨会话固定日志对照；普通运行安全点 Harness 切换与迁移记录；Live 固定预览、明确确认与当前工具真实执行；Plan-Act 显式规划、两套内置模块组合与 Harness 固定快照对照； 安全检查点独立 Hybrid 分支，模型重算、工具严格录制回放、未命中停止；K3-A 离线记录基线、不可变实验分支、保守失效与谱系差异；建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

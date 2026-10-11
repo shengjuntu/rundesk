@@ -272,3 +272,7 @@ output 必须存在、可为空，最多 64 KiB UTF-8；reason 最多 1000 字�
 新增管理员 `POST/GET /api/v1/kun-rubrics`、`GET /api/v1/kun-rubrics/{rid}`、`POST/GET /api/v1/kun-evaluations`、`GET /api/v1/kun-evaluations/{eid}`。两个 POST 均要求 Idempotency-Key。规则绑定来源基线；评分须显式提交两侧宿主上界（含零）与 rubric/comparison hash，使用完整最终回复并保留未知。已保存报告不依赖后续原日志留存，不重新评分。
 
 比较响应新增 `hash`、`baseline.hash`。host 0.38 不改变 Kun 0.12 / worker v12 / fork schema 3；同基线规则评分不构成独立验证集成绩。完整字段、上限及语义见 [KUN-EVALUATION.md](KUN-EVALUATION.md)。
+
+## Kun 固定输入任务集（0.39）
+
+管理员专用：`POST /api/v1/kun-task-sets`（必需 Idempotency-Key）、`GET /api/v1/kun-task-sets?offset&limit`、`GET /api/v1/kun-task-sets/{tid}`。固定 1–20 个案例及输入/规则，保存不启动执行；无原位修改、删除或成绩接口。边界和示例见 [KUN-TASK-SETS.md](KUN-TASK-SETS.md)。

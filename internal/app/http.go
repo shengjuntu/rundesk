@@ -49,6 +49,7 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 	s.kunComparisonRoutes(mux)
 	s.kunHypothesisRoutes(mux)
 	s.kunEvaluationRoutes(mux)
+	s.kunTaskSetRoutes(mux)
 	s.applicationRoutes(mux)
 	s.skillBundleRoutes(mux)
 	s.runtimeRoutes(mux)

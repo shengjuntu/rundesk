@@ -1,30 +1,30 @@
 {
-  "version": "0.38.1",
+  "version": "0.39.0",
   "kunVersion": "0.12.0",
   "protocolVersion": 12,
   "forkSchema": 3,
   "date": "2026-10-08",
   "passed": true,
   "status": "passed",
-  "scope": "local regression, CLI, actual host/worker/local-model HTTP, Node and compilation; not full product acceptance",
+  "scope": "local Go/CLI/HTTP/Node regression and compilation; not full product acceptance",
   "goVersion": "go1.25.12",
-  "sourceSHA256": "b993515d1ae4b2a24ffa4e3a511c82af7dc15716732f2cad6a7974441139bb14",
-  "receipt": "validation/kun-0.38.1/summary.json",
+  "sourceSHA256": "f654c1654db73becce944547ae22ec98236fafa1f1b67755e5704fc1d6843a48",
+  "receipt": "validation/kun-0.39.0/summary.json",
   "checks": {
-    "goTestAll": "passed; app 81.621s; includes final unknown-terminal-status and zero-cursor backend tests",
+    "goTestAll": "passed; app 77.596s",
     "goVet": "passed",
-    "focusedRace": "passed: TestKunEvaluation|TestKunCompar|TestKunHypothesis in internal/app; 3.322s",
+    "focusedRace": "passed: TestKunEvaluation|TestKunCompar|TestKunHypothesis|TestKunTaskSet in internal/app; 3.604s",
     "linuxAmd64": "rundesk and kun built and exercised",
-    "windowsAmd64": "rundesk and kun cross-compiled successfully; no Windows runtime test",
-    "node": "75 syntax files and 9 interaction suites passed",
-    "realHTTP": "passed: rebuilt host/worker with local model; 6 model calls; rubric/report persistence and idempotency without extra model calls"
+    "windowsAmd64": "rundesk and kun cross-compiled; no Windows runtime test",
+    "node": "77 syntax files and 10 interaction suites passed",
+    "realHTTP": "passed: fixed-input task-set immutable/idempotent save, read and metadata list with zero model calls; existing Hybrid/hypothesis/evaluation fixture remains at 6 calls"
   },
   "notAccepted": [
     "real browser layout/focus/mobile behavior",
-    "remote model/MCP or real Codex",
+    "real Codex/remote model/MCP",
     "Windows runtime",
     "production workload",
-    "independent holdout evaluation"
-  ],
-  "browserNote": "No browser attempt in this batch; DOM checks are not browser acceptance."
+    "batch task-set execution and run/result binding",
+    "aggregate scoring and independent holdout isolation"
+  ]
 }

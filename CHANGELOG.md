@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.39.0
+
+- Add immutable fixed-input task sets with 1–20 ordered cases, unique case keys, full authored inputs and bounded literal reply rules. Reuse reply-rules-v1 semantics without executing cases.
+- Add administrator-only, idempotent create and bounded metadata/full-definition reads; validate stored hashes, preserve exact input text and keep copied drafts independent.
+- Add task-set workbench and focused Go/Node/HTTP coverage to the durable validation runner. No new dependencies or worker/protocol changes.
+- This is the definition layer; batch execution, run/result binding, aggregate scoring and independent holdout isolation remain pending.
+
 ## 0.38.1
 
 - Add a reproducible local validation runner with per-step logs, source fingerprint, exit statuses and atomic JSON receipts; preserve failed, timed-out and interrupted checks instead of reusing stale results.

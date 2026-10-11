@@ -1,14 +1,14 @@
 {
-  "version": "0.38.1",
+  "version": "0.39.0",
   "passed": true,
-  "javascriptFiles": 75,
-  "nodeInteractionSuites": 9,
-  "openapiPaths": 157,
-  "openapiOperations": 189,
+  "javascriptFiles": 77,
+  "nodeInteractionSuites": 10,
+  "openapiPaths": 159,
+  "openapiOperations": 192,
   "uniqueParameters": true,
   "localReferencesResolve": true,
-  "evaluationSchemasAndIdempotency": true,
+  "taskSetSchemasAdminAndIdempotency": true,
   "noNewDependencies": true,
-  "scope": "full Go suite, static OpenAPI refs/parameters/admin/idempotency checks, JS syntax and 9 Node interaction suites",
-  "receipt": "validation/kun-0.38.1/summary.json"
+  "scope": "full Go suite, static OpenAPI refs/parameters/admin/idempotency checks, JS syntax and Node interactions",
+  "receipt": "validation/kun-0.39.0/summary.json"
 }

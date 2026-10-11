@@ -4,3 +4,7 @@
 .kun-comparison{border-top:1px solid var(--border,#d1d5db);margin-top:24px;padding-top:12px}.kun-comparison-table{overflow-x:auto;max-width:100%}.kun-comparison-table table{width:100%;border-collapse:collapse}.kun-comparison-table th,.kun-comparison-table td{padding:8px;text-align:left;border-bottom:1px solid var(--border,#d1d5db);vertical-align:top}.kun-comparison-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.kun-comparison-columns section{min-width:0}.kun-comparison-columns pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto}@media(max-width:850px){.kun-comparison-columns{grid-template-columns:minmax(0,1fr)}}
 
 .kun-rule-row{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin:12px 0;padding:12px;border:1px solid var(--border,#d1d5db);border-radius:8px}.kun-rule-row button{justify-self:start}.kun-comparison details pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto}
+
+.kun-task-case { border: 1px solid var(--line, #d8dde5); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.kun-task-sets pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; }
+.kun-task-sets label { display: grid; gap: 4px; margin: 8px 0; }

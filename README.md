@@ -10,6 +10,10 @@ Built with Go and plain HTML/JavaScript. Node.js is not required to run RunDesk 
 
 ![RunDesk conversation workspace](docs/screenshots/0.16.0/chat-en.png)
 
+## Fixed-input task sets (0.39.0)
+
+Author and save 1–20 ordered cases, each with a fixed input and literal reply rules. The administrator workbench supports immutable save, full inspection, metadata pagination and copying to a new draft. Saving never starts a run. Batch execution, result binding, aggregate scoring and independent holdout isolation remain pending. See [task sets](docs/KUN-TASK-SETS.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md).
+
 ## Repeatable local validation (0.38.1)
 
 Run `python3 scripts/validate-kun.py` to retain per-step logs and an atomic JSON receipt for Go tests, vet, focused race checks, builds, JavaScript syntax, UI interactions and the local HTTP fixture. A run never overwrites earlier evidence or grades a stale binary after a failed build. See [validation](docs/KUN-VALIDATION.md) and [release notes](docs/RELEASE-0.38.1.md).

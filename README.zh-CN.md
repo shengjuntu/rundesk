@@ -10,6 +10,10 @@
 
 ![RunDesk 对话界面](docs/screenshots/0.16.0/chat-zh.png)
 
+## 固定输入任务集（0.39.0）
+
+在“评测任务集”中创建 1–20 个有序案例，为每个案例固定输入与文本验收规则。支持不可变保存、完整查看、元数据分页和复制为新草稿；保存不会启动模型。批量执行、逐案例结果绑定、汇总评分与独立验证集隔离仍待接入。说明见 [任务集](docs/KUN-TASK-SETS.md)、[验证记录](docs/KUN-VALIDATION.md)、[完成度](docs/KUN-PROGRESS.md)。
+
 ## 可复验与保留结果（0.38.1）
 
 新增 `python3 scripts/validate-kun.py`：逐项保存全量 Go、vet、专项 race、构建、JS 语法、界面交互和本地 HTTP 流程的日志与 JSON 状态。每次使用新的结果目录，构建失败后不会沿用旧二进制进行 HTTP 验收。具体结果见 [验证记录](docs/KUN-VALIDATION.md)，变更见 [发布记录](docs/RELEASE-0.38.1.md)。
