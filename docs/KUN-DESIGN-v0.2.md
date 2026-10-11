@@ -1,4 +1,4 @@
-> 实现进度：RunDesk 0.38.0 / Kun 0.12 已有 K3-A 离线记录实验、K3-B Hybrid、K3-C Plan-Act、两套内置组合、Harness 对照、Live、普通运行安全点组合切换及同基线跨会话日志对照与单条工具结果假设 Hybrid 重算、固定规则评分首批。更多模块迁移、独立多案例验证集及 K4 尚未实现；真实服务和本版真实浏览器验收未完成。证据见 [KUN-PROGRESS.md](KUN-PROGRESS.md)，范围见 [KUN-HARNESS.md](KUN-HARNESS.md)。
+> 实现进度：RunDesk 0.38.1 / Kun 0.12 已有 K3-A 离线记录实验、K3-B Hybrid、K3-C Plan-Act、两套内置组合、Harness 对照、Live、普通运行安全点组合切换及同基线跨会话日志对照与单条工具结果假设 Hybrid 重算、固定规则评分首批。更多模块迁移、独立多案例验证集及 K4 尚未实现；真实服务和本版真实浏览器验收未完成。证据见 [KUN-PROGRESS.md](KUN-PROGRESS.md)，范围见 [KUN-HARNESS.md](KUN-HARNESS.md)。
 
 # Kun + Agent DevTools：RunDesk 内置 Agent Loop 与调试器设计
 

@@ -10,6 +10,10 @@ Built with Go and plain HTML/JavaScript. Node.js is not required to run RunDesk 
 
 ![RunDesk conversation workspace](docs/screenshots/0.16.0/chat-en.png)
 
+## Repeatable local validation (0.38.1)
+
+Run `python3 scripts/validate-kun.py` to retain per-step logs and an atomic JSON receipt for Go tests, vet, focused race checks, builds, JavaScript syntax, UI interactions and the local HTTP fixture. A run never overwrites earlier evidence or grades a stale binary after a failed build. See [validation](docs/KUN-VALIDATION.md) and [release notes](docs/RELEASE-0.38.1.md).
+
 ## Kun fixed-rule evaluation (0.38.0)
 
 Save a rubric for a fixed fork baseline, select a frozen source/fork or fork/fork comparison, and save an immutable evaluation report. Literal contains/excludes/equality rules use the complete final reply, with a separate completion requirement. Missing evidence stays unknown; reports preserve rule results, hashes and event links without starting models or tools.

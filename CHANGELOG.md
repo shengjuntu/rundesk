@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.38.1
+
+- Add a reproducible local validation runner with per-step logs, source fingerprint, exit statuses and atomic JSON receipts; preserve failed, timed-out and interrupted checks instead of reusing stale results.
+- Require a successful build from the same validation run before the HTTP fixture. Retain earlier runs in separate directories.
+- Close the 0.38.0 regression evidence gap; exact collected results and remaining environment acceptance limits are recorded in KUN-VALIDATION.md. No new runtime features or dependencies; Kun 0.12.0 / protocol v12 / fork schema 3 unchanged.
+
 ## 0.38.0
 
 - Add immutable same-baseline rubrics and pinned evaluation reports: literal full-final-reply contains/excludes/equality rules plus a required successful-run item.

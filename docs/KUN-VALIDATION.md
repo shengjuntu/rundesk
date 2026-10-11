@@ -1,34 +1,41 @@
-# Kun 0.12 / RunDesk 0.38.0 验证记录
+# Kun 0.12 / RunDesk 0.38.1 验证记录
 
-验证日期：2026-10-08。worker protocol 12、fork schema 3 保持不变。
+验证日期：2026-10-08。Go 1.25.12，Kun 0.12.0 / worker protocol 12 / fork schema 3。本批已补齐 0.38.0 未确认的最终回归结果，所有下列本地检查均已取得退出码 0；未新增业务功能或依赖。
 
-本次为**部分验证完成的开发交付**。已取得的通过结果如下；全量 Go、vet 和 race 虽已启动，但执行会话失效前未取回最终输出，随后 Go 工具链不可用，因此这些项目记为未确认，不能视为全量回归通过。
-
-| 项目 | 本次结果与范围 |
+| 项目 | 已确认结果 |
 | --- | --- |
-| 专项 Go | `TestKunEvaluation\|TestKunCompar\|TestKunHypothesis` 通过，app 2.082s；发生在最后一次未知终态修正及零游标测试补充之前，不代表最终源码全量通过 |
-| 实际 HTTP + worker | 通过；RunDesk 0.38.0、Kun 0.12.0 和本地模型夹具，来源/普通 Hybrid/假设 Hybrid 共 6 次模型调用；规则与评分报告固定、幂等保存/读取不新增模型调用 |
-| 界面交互 | 9 组 Node 交互检查通过；包含评分、对照、假设、Hybrid、Live、Harness、运行时切换、inspect 与 panels；不等于真实浏览器验收 |
-| 静态契约 | 75 个 JS/CJS 语法检查通过；OpenAPI 157 paths / 189 operations，本地引用、参数唯一性、两项新增 POST 的必填幂等头检查通过；依赖未变化 |
-| Linux CLI | 当前宿主/worker 版本、hello/EOF 和旧协议拒绝通过；实际 HTTP 已运行构建产物 |
-| Windows | 两个 AMD64 PE 构建产物存在并通过文件头检查；最终编译日志未取回，未做 Windows 运行验收 |
-| 全量 Go / vet / race | **未确认**；执行结果未取回，不能沿用上一版本通过记录 |
+| 全量 Go | `go test ./... -count=1 -timeout=300s` 通过；app 81.621s，包含未知终态和零游标后端用例 |
+| 静态检查 | `go vet ./...` 通过 |
+| 专项 race | 评分、对照、工具结果假设的 app 测试通过，3.322s |
+| Linux 构建与 CLI | 两个程序构建通过；版本、worker hello/EOF、旧协议拒绝通过 |
+| Windows 交叉编译 | 两个 amd64 程序编译通过；未在 Windows 运行 |
+| JS 与界面 | 75 个 JS/CJS 语法检查、9 组 Node 交互检查通过 |
+| 实际 HTTP | 本次重新构建的 RunDesk + Kun + 本地模型夹具通过；来源/普通 Hybrid/假设 Hybrid 共 6 次模型调用；固定规则、评分报告和幂等读写不增加模型调用 |
+| API 契约 | 157 paths / 189 operations；引用解析、参数唯一性、管理员标识及新增 POST 必填幂等头通过 |
 
-专项测试覆盖固定规则/范围、完整回复超出显示节选的评分、缺失/被替代/超大回复、不可变报告持久化、幂等与权限。最后增加的未知终态及零游标后端用例须在 Go 工具链恢复后重跑；零游标界面行为已由 Node 检查覆盖。
+## 原始证据
 
-## 复验命令
+- [验证运行汇总](validation/kun-0.38.1/summary.json)：开始/结束时间、每项状态、退出码和源码 SHA256。
+- [全量 Go](validation/kun-0.38.1/go-test.log)、[vet](validation/kun-0.38.1/go-vet.log)、[专项 race](validation/kun-0.38.1/go-race.log)。
+- [当前平台构建](validation/kun-0.38.1/build.log)、[Windows 交叉编译](validation/kun-0.38.1/windows.log)。
+- [JS 语法](validation/kun-0.38.1/syntax.log)、[界面交互](validation/kun-0.38.1/ui.log)、[实际 HTTP](validation/kun-0.38.1/http.log)。
 
-在安装项目 `go.mod` 要求的 Go 版本后，于源码根目录运行：
+评分相关测试覆盖固定规则/范围、完整回复超出显示节选的评分、缺失/被替代/超大回复、未知终态、固定零游标、报告跨日志删除/重启持久化、幂等与权限。已通过本次全量和专项 race；不再依赖上一版未取回的进程输出。
+
+## 一键复验
+
+在源码根目录执行；需要 Python 3、Node、`go.mod` 指定版本的 Go，以及 race 所需的 C 编译器：
 
 ```sh
-go test ./... -count=1 -timeout=300s
-go vet ./...
-go test -race ./internal/app -run 'TestKunEvaluation|TestKunCompar|TestKunHypothesis' -count=1 -timeout=180s
-make build
-node scripts/kun-evaluation-test.cjs
-node scripts/kun-evaluation-http-test.cjs
+python3 scripts/validate-kun.py --output validation/kun-local-1
 ```
 
-实际 HTTP 脚本使用本地模型夹具，不证明真实远程服务效果。真实浏览器布局/焦点/移动端、真实 Codex/模型/MCP、生产负载、独立验证集和 Windows 运行仍未验收。此前 Chromium 因环境禁止 socket 而无法启动，本次没有重复尝试。
+Go 未在 PATH 中时增加 `--go /absolute/path/to/go`。可用 `--checks go-test,go-vet,go-race` 选择子集；HTTP 复验必须同时选择 `build`。每次换一个输出目录，脚本拒绝覆盖已有目录。默认执行所有 8 组检查。
 
-机器可读证据见 `kun-build-validation.json`、`kun-contract-validation.json`、`kun-cli-validation.json`、`kun-evaluation-http-validation.json` 和各 `kun-*-ui-validation.json`。上一版原始结果保留在对应 `*-0.37.0.*` 文件中，不作为本次全量通过证据。
+脚本在每项开始/结束时原子更新 `summary.json`，并直接写入对应日志；某项失败不会被后续成功覆盖。超时/中断保存明确状态；若进程被外部强制终止，`running` 表示未完成，不能视为通过。汇总中的 `sourceSHA256` 覆盖 `cmd`、`internal`、`scripts`、`go.mod`、`go.sum` 与 Makefile；说明文档和生成的验证结果不计入此指纹。
+
+## 尚未验收
+
+真实浏览器布局/焦点/移动端、真实 Codex/远程模型/MCP、Windows 运行、生产负载与独立验证集仍未验收。Node DOM 检查和本地模型夹具不能替代这些项目。本批没有重复尝试受环境限制的浏览器启动。
+
+机器摘要见 `kun-build-validation.json`、`kun-contract-validation.json`、`kun-cli-validation.json` 和 `kun-evaluation-http-validation.json`。0.38.0 的部分验证记录原样保留在 `*-0.38.0.*` 中；本次记录独立保存。

@@ -1,0 +1,13 @@
+{
+  "version": "0.38.0",
+  "passed": true,
+  "scope": "JSON structure and refs, required idempotency headers, administrator flags, unchanged dependencies, JavaScript syntax and Node interaction reports; full Go contract suite completion unconfirmed",
+  "javascriptFiles": 75,
+  "nodeInteractionSuites": 9,
+  "openapiPaths": 157,
+  "openapiOperations": 189,
+  "uniqueParameters": true,
+  "localReferencesResolve": true,
+  "evaluationSchemasAndIdempotency": true,
+  "noNewDependencies": true
+}

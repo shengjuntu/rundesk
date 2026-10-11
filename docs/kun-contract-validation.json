@@ -1,7 +1,6 @@
 {
-  "version": "0.38.0",
+  "version": "0.38.1",
   "passed": true,
-  "scope": "JSON structure and refs, required idempotency headers, administrator flags, unchanged dependencies, JavaScript syntax and Node interaction reports; full Go contract suite completion unconfirmed",
   "javascriptFiles": 75,
   "nodeInteractionSuites": 9,
   "openapiPaths": 157,
@@ -9,5 +8,7 @@
   "uniqueParameters": true,
   "localReferencesResolve": true,
   "evaluationSchemasAndIdempotency": true,
-  "noNewDependencies": true
+  "noNewDependencies": true,
+  "scope": "full Go suite, static OpenAPI refs/parameters/admin/idempotency checks, JS syntax and 9 Node interaction suites",
+  "receipt": "validation/kun-0.38.1/summary.json"
 }
