@@ -94,6 +94,8 @@ type handle struct {
 	requests       map[string]Approval
 }
 type Manager struct {
+	kunBenchmarkMu      sync.Mutex
+	kunBenchmarkActive  string
 	kunForkMu           sync.Mutex
 	Kun                 string
 	diagnosticReviewMu  sync.Mutex

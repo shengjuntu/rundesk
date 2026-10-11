@@ -1,5 +1,5 @@
 {
-  "version": "0.40.0",
+  "version": "0.41.0",
   "passed": true,
   "scope": "actual RunDesk HTTP + Kun process + local model fixture; browser and remote services not tested",
   "modelCalls": 6,

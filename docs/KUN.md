@@ -1,14 +1,16 @@
-# Kun 0.12 / RunDesk 0.39.0
+# Kun 0.13 / RunDesk 0.41.0
 
 在 0.2 的 MCP 基础上增加 K1 核心模块与执行约束。采用已确认的结构：**分进程、同仓库、选择性复制 PiG 源码并自主发展**。本版包含模型／工具循环、MCP 配置与审批、四模块与两套内置组合、调用前参数校验、预算、运行记录、上下文检查和基础调试控制；不代表 KUN-DESIGN-v0.2 的所有阶段已经实现。
 
-固定模块与预算见 [K1 核心说明](KUN-K1-CORE.md)。安全续跑见 [检查点恢复](KUN-CHECKPOINTS.md)。调试控制见 [条件断点与 Console](KUN-DEBUG.md)。调用证据与快照差异见 [检查说明](KUN-INSPECT.md)，四面板见 [结构化检查](KUN-PANELS.md)。已有 Codex/Kun 轮次、步骤、异常与统计的 [统一只读检查和 MCP](DEBUG-SERVICE.md)，已有 [独立诊断会话与建议审核](KUN-DIAGNOSIS.md)，以及 [K3-A 离线记录实验](KUN-EXPERIMENTS.md) 和 [K3-B/C Hybrid 与 Live 分叉](KUN-FORKS.md)；阶段状态见 [开发进度](KUN-PROGRESS.md)，新增 [K3-C 内置组合与 Harness 对照](KUN-HARNESS.md)，变更见 [0.39.0 发布记录](RELEASE-0.39.0.md)。
+固定模块与预算见 [K1 核心说明](KUN-K1-CORE.md)。安全续跑见 [检查点恢复](KUN-CHECKPOINTS.md)。调试控制见 [条件断点与 Console](KUN-DEBUG.md)。调用证据与快照差异见 [检查说明](KUN-INSPECT.md)，四面板见 [结构化检查](KUN-PANELS.md)。已有 Codex/Kun 轮次、步骤、异常与统计的 [统一只读检查和 MCP](DEBUG-SERVICE.md)，已有 [独立诊断会话与建议审核](KUN-DIAGNOSIS.md)，以及 [K3-A 离线记录实验](KUN-EXPERIMENTS.md) 和 [K3-B/C Hybrid 与 Live 分叉](KUN-FORKS.md)；阶段状态见 [开发进度](KUN-PROGRESS.md)，新增 [K3-C 内置组合与 Harness 对照](KUN-HARNESS.md)，变更见 [0.41.0 发布记录](RELEASE-0.41.0.md)。
 
 0.36 新增 [同基线跨会话对照](KUN-COMPARISON.md)，从已保存分叉预览读取来源和分支的固定宿主记录。没有新增模型调用、运行控制或 worker 协议变更。
 
 0.37 新增 [单条工具结果假设与 Hybrid 重算](KUN-HYPOTHESES.md)：原录制保留，另存不可变替换；显式启动后记录真实使用证据。Kun 0.12.0 / 协议 v12 / fork schema 3，须一起升级两个命令；旧检查点/预览不能跨版本执行。
 
 0.38 新增 [固定规则评分与不可变报告](KUN-EVALUATION.md)，评分只读宿主保留日志，不启动模型/工具。引擎和 worker 协议不变，0.37 检查点/预览保持原兼容性。
+
+0.40 完成 [K4 参数化 Skill、独立验证门槛和守卫回退](KUN-K4.md)，使用 Kun 0.13.0 / worker v13。0.41 新增 [固定多次采样对照](KUN-BENCHMARKS.md)，保持同一 worker 协议与既有数据兼容。上方版本段落记录各版本当时范围。
 
 ## 构建和启动
 
@@ -76,9 +78,11 @@ Kun 独占 `<data>/kun/sessions/<sessionId>/state.db`，RunDesk 的业务数据�
 | 预算 | 模型/工具调用次数、活动时间、连续工具失败、可选已报告 token 阈值；等待时间单独统计 |
 | Hybrid | 最近已停止普通 Kun 运行的安全边界 → 固定预览 → 独立会话；模型重算，工具严格录制回放；继承预算，未命中停止 |
 | Live | 固定预览与明确确认后，继承上下文/计划/预算并在当前项目真实执行；重新核验 MCP 目录与审批，独立执行记录但不隔离或回滚文件 |
+| K4 | 固定案例、受限 IR Skill 候选、独立验证、指定应用启用和不重放副作用的回退 |
+| 多次采样对照 | 固定配对与交替顺序、后台顺序执行、不可变描述性报告；无环境重置或统计推断 |
 | 记录 | 状态、事件、快照、命令回执、工具执行台账；API Key 字段不进入记录 |
 
-不支持：Shell、PiG 插件/Node 扩展、图像输入、自动 Skills 激活、压缩/记忆管理、高级模块/费用断点、运行时替换工具结果、任意历史回滚、嵌套分叉、确定性代码生成、JEV/JIT、Docker worker。已有 Kun 独立自然语言诊断和宿主离线记录分支；已有普通运行安全点组合切换；四模块健康度、任意模块替换和迁移尚未实现；已有 Plan-Act 第二种 LoopPolicy 与两套内置组合，Layers 提供模块状态与固定快照对照，Application 目前仅覆盖 MCP。Codex 仍沿用现有后端，Kun 控制接口不会控制 Codex 的循环。
+不支持：Shell、PiG 插件/Node 扩展、图像输入、自动 Skills 激活、压缩/记忆管理、高级模块/费用断点、运行时替换工具结果、任意历史回滚、嵌套分叉、任意代码生成/JIT、学习型 JEV、Docker worker。已有 Kun 独立自然语言诊断和宿主离线记录分支；已有普通运行安全点组合切换；四模块健康度、任意模块替换和迁移尚未实现；已有 Plan-Act 第二种 LoopPolicy 与两套内置组合，Layers 提供模块状态与固定快照对照，Application 调试面板目前覆盖 MCP；K4 候选与启用记录在 Skill 工作台管理。Codex 仍沿用现有后端，Kun 控制接口不会控制 Codex 的循环。
 
 模型文本在请求结束后显示，目前没有逐 token UI。模型服务调用仍会发送任务上下文到配置的服务地址；“本地记录”不代表模型离线运行。
 

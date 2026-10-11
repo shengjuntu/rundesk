@@ -1,0 +1,5 @@
+$ ["/workspace/scratch/3dce8d85f3e5/toolchain-0381/go/bin/go", "test", "./...", "-count=1", "-timeout=300s"]
+ok  	github.com/shengjuntu/rundesk/cmd/kun	0.009s
+ok  	github.com/shengjuntu/rundesk/cmd/rundesk	0.007s
+?   	github.com/shengjuntu/rundesk/examples/docker	[no test files]
+?   	github.com/shengjuntu/rundesk/internal/adapters/kun	[no test files]

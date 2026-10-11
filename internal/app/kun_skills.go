@@ -59,6 +59,7 @@ type KunCaseScore struct {
 	Summary       KunCompareSide    `json:"summary"`
 	Evaluation    KunEvaluationSide `json:"evaluation"`
 	FastCompleted bool              `json:"fastCompleted"`
+	FastFallback  bool              `json:"fastFallback,omitempty"`
 	EvidenceHash  string            `json:"evidenceHash"`
 }
 type KunSkillReport struct {
@@ -120,6 +121,7 @@ func (m *Manager) KunCaseScore(ctx context.Context, id string) (KunCaseScore, er
 		_ = json.Unmarshal(raw.Data, &ev)
 		if ev.Type == "kun/fast.fallback" {
 			out.FastCompleted = false
+			out.FastFallback = true
 			break
 		}
 		if ev.Type == "kun/fast.completed" {

@@ -20,7 +20,7 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 UI = ["kun-inspect-test.cjs", "kun-panels-test.cjs", "kun-hybrid-ui-test.cjs",
       "kun-harness-test.cjs", "kun-live-ui-test.cjs", "kun-runtime-harness-test.cjs",
-      "kun-compare-test.cjs", "kun-hypothesis-test.cjs", "kun-evaluation-test.cjs", "kun-task-sets-test.cjs", "kun-k4-ui-test.cjs"]
+      "kun-compare-test.cjs", "kun-hypothesis-test.cjs", "kun-evaluation-test.cjs", "kun-task-sets-test.cjs", "kun-k4-ui-test.cjs", "kun-benchmarks-ui-test.cjs"]
 
 
 def now():
@@ -103,7 +103,7 @@ def main():
     commands = {
         "go-test": ([[go, "test", "./...", "-count=1", "-timeout=300s"]], 420, {}),
         "go-vet": ([[go, "vet", "./..."]], 180, {}),
-        "go-race": ([[go, "test", "-race", "./internal/app", "./internal/kun", "-run", "TestKunEvaluation|TestKunCompar|TestKunHypothesis|TestKunTaskSet|TestKunCase|TestKunSkill|TestFast", "-count=1", "-timeout=180s"]], 300, {}),
+        "go-race": ([[go, "test", "-race", "./internal/app", "./internal/kun", "./internal/store", "-run", "TestKunEvaluation|TestKunCompar|TestKunHypothesis|TestKunTaskSet|TestKunCase|TestKunBenchmark|TestKunSkill|TestFast", "-count=1", "-timeout=180s"]], 300, {}),
         "build": ([[go, "build", "-buildvcs=false", "-trimpath", "-o", "bin/" + binary, "./cmd/" + binary] for binary in ("rundesk", "kun")], 180, {"CGO_ENABLED": "0"}),
         "windows": ([[go, "build", "-buildvcs=false", "-trimpath", "-o", "bin/" + binary + "-windows-amd64.exe", "./cmd/" + binary] for binary in ("rundesk", "kun")], 180, {"GOOS": "windows", "GOARCH": "amd64", "CGO_ENABLED": "0"}),
         "syntax": ([["node", "--check", str(p.relative_to(ROOT))] for folder in ("internal/web", "scripts") for p in sorted((ROOT / folder).rglob("*")) if p.suffix in (".js", ".cjs")], 30, {}),

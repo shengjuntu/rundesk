@@ -28,6 +28,7 @@ type KunCaseRunInput struct {
 	InstanceID          string `json:"instanceId"`
 }
 type KunCaseRunPreview struct {
+	BenchmarkID     string      `json:"benchmarkId,omitempty"`
 	CandidateID     string      `json:"candidateId,omitempty"`
 	CandidateHash   string      `json:"candidateHash,omitempty"`
 	Schema          int         `json:"schema"`
@@ -75,8 +76,8 @@ func caseDraftHash(d kunCaseDraft) string { d.Preview.Hash = ""; return forkDige
 // Model API keys may rotate; the endpoint/model/config must still match.
 func caseRequestHash(v p.Start) string { v.APIKey = ""; return forkDigest(v) }
 
-func (m *Manager) CreateKunCaseRun(in KunCaseRunInput) (KunCaseRunView, error) {
-	var out KunCaseRunView
+func (m *Manager) prepareKunCaseRun(in KunCaseRunInput) (kunCaseDraft, error) {
+	var out kunCaseDraft
 	set, err := m.KunTaskSet(in.TaskSetID)
 	if err != nil {
 		return out, err
@@ -155,8 +156,15 @@ func (m *Manager) CreateKunCaseRun(in KunCaseRunInput) (KunCaseRunView, error) {
 	if len(p.JSON(draft)) > 512<<10 {
 		return out, failure(413, "case_preview_too_large", "案例运行预览超过 512 KiB")
 	}
-	if err = m.Store.Put("kun_case_plan", id, draft); err != nil {
-		return out, err
+	return draft, nil
+}
+func (m *Manager) CreateKunCaseRun(in KunCaseRunInput) (KunCaseRunView, error) {
+	draft, err := m.prepareKunCaseRun(in)
+	if err != nil {
+		return KunCaseRunView{}, err
+	}
+	if err = m.Store.Put("kun_case_plan", draft.Preview.ID, draft); err != nil {
+		return KunCaseRunView{}, err
 	}
 	return KunCaseRunView{Preview: draft.Preview, Status: "planned"}, nil
 }
@@ -197,12 +205,18 @@ func (m *Manager) KunCaseRun(id string) (KunCaseRunView, error) {
 	return out, nil
 }
 func (m *Manager) StartKunCaseRun(id, expected string, confirmed bool) (Session, error) {
+	return m.startKunCaseRun(id, expected, confirmed, "")
+}
+func (m *Manager) startKunCaseRun(id, expected string, confirmed bool, benchmarkID string) (Session, error) {
 	// Shared with fork starts and deletion: an old preview cannot resurrect a session.
 	m.kunForkMu.Lock()
 	defer m.kunForkMu.Unlock()
 	view, err := m.KunCaseRun(id)
 	if err != nil {
 		return Session{}, err
+	}
+	if view.Preview.BenchmarkID != benchmarkID {
+		return Session{}, failure(409, "benchmark_start_only", "对照案例只能由其固定批次按顺序启动")
 	}
 	if expected == "" || expected != view.Preview.Hash {
 		return Session{}, failure(409, "case_plan_changed", "请重新核对案例运行预览")

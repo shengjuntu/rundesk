@@ -1,87 +1,87 @@
 {
-  "version": "0.40.0",
+  "version": "0.41.0",
   "passed": true,
-  "receipt": "validation/kun-0.40.0-final/summary.json",
-  "sourceSHA256": "6ae1eaf0773491430a0f1f12eeac870b1b605c2dc0bcdc9d97811c0185bc2c65",
+  "receipt": "validation/kun-0.41.0-final2/summary.json",
+  "sourceSHA256": "47f9d1ce6e5fd8a7b877d6a78d9ef335296676c9275a50640edc25ca9eb5bb95",
   "checks": [
     {
       "name": "go-test",
       "status": "passed",
-      "startedAt": "2026-10-08T16:05:17.585586+00:00",
+      "startedAt": "2026-10-08T21:30:45.962280+00:00",
       "log": "go-test.log",
       "exitCode": 0,
-      "finishedAt": "2026-10-08T16:06:44.716974+00:00",
-      "durationSeconds": 87.131
+      "finishedAt": "2026-10-08T21:32:10.212548+00:00",
+      "durationSeconds": 84.25
     },
     {
       "name": "go-vet",
       "status": "passed",
-      "startedAt": "2026-10-08T16:06:44.718536+00:00",
+      "startedAt": "2026-10-08T21:32:10.214341+00:00",
       "log": "go-vet.log",
       "exitCode": 0,
-      "finishedAt": "2026-10-08T16:06:45.854948+00:00",
-      "durationSeconds": 1.136
+      "finishedAt": "2026-10-08T21:32:11.204079+00:00",
+      "durationSeconds": 0.989
     },
     {
       "name": "go-race",
       "status": "passed",
-      "startedAt": "2026-10-08T16:06:45.855670+00:00",
+      "startedAt": "2026-10-08T21:32:11.204596+00:00",
       "log": "go-race.log",
       "exitCode": 0,
-      "finishedAt": "2026-10-08T16:07:00.342623+00:00",
-      "durationSeconds": 14.486
+      "finishedAt": "2026-10-08T21:32:24.462228+00:00",
+      "durationSeconds": 13.257
     },
     {
       "name": "build",
       "status": "passed",
-      "startedAt": "2026-10-08T16:07:00.343630+00:00",
+      "startedAt": "2026-10-08T21:32:24.463003+00:00",
       "log": "build.log",
       "exitCode": 0,
-      "finishedAt": "2026-10-08T16:07:04.212941+00:00",
-      "durationSeconds": 3.868
+      "finishedAt": "2026-10-08T21:32:27.344272+00:00",
+      "durationSeconds": 2.879
     },
     {
       "name": "windows",
       "status": "passed",
-      "startedAt": "2026-10-08T16:07:04.213500+00:00",
+      "startedAt": "2026-10-08T21:32:27.344908+00:00",
       "log": "windows.log",
       "exitCode": 0,
-      "finishedAt": "2026-10-08T16:07:07.783661+00:00",
-      "durationSeconds": 3.57
+      "finishedAt": "2026-10-08T21:32:30.242236+00:00",
+      "durationSeconds": 2.897
     },
     {
       "name": "syntax",
       "status": "passed",
-      "startedAt": "2026-10-08T16:07:07.784252+00:00",
+      "startedAt": "2026-10-08T21:32:30.242814+00:00",
       "log": "syntax.log",
       "exitCode": 0,
-      "finishedAt": "2026-10-08T16:07:17.020581+00:00",
-      "durationSeconds": 9.235
+      "finishedAt": "2026-10-08T21:32:38.239868+00:00",
+      "durationSeconds": 7.996
     },
     {
       "name": "ui",
       "status": "passed",
-      "startedAt": "2026-10-08T16:07:17.021216+00:00",
+      "startedAt": "2026-10-08T21:32:38.240818+00:00",
       "log": "ui.log",
       "exitCode": 0,
-      "finishedAt": "2026-10-08T16:07:18.374325+00:00",
-      "durationSeconds": 1.353
+      "finishedAt": "2026-10-08T21:32:39.566905+00:00",
+      "durationSeconds": 1.326
     },
     {
       "name": "http",
       "status": "passed",
-      "startedAt": "2026-10-08T16:07:18.375566+00:00",
+      "startedAt": "2026-10-08T21:32:39.567706+00:00",
       "log": "http.log",
       "exitCode": 0,
-      "finishedAt": "2026-10-08T16:07:26.835997+00:00",
-      "durationSeconds": 8.46
+      "finishedAt": "2026-10-08T21:32:57.188403+00:00",
+      "durationSeconds": 17.62
     }
   ],
   "binaries": {
-    "rundesk": 21720369,
+    "kun-windows-amd64.exe": 16435200,
     "kun": 16136508,
-    "rundesk-windows-amd64.exe": 22010368,
-    "kun-windows-amd64.exe": 16435200
+    "rundesk": 21853800,
+    "rundesk-windows-amd64.exe": 22145024
   },
-  "scope": "full local suite, vet, focused race, both Linux builds and Windows cross-compilation; no Windows execution"
+  "scope": "full local suite, vet, focused race including store, Linux build, Windows cross-compilation; no Windows execution"
 }

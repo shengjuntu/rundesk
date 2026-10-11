@@ -625,6 +625,48 @@ for path,method,body,response in k4routes:
  if body is not None:op['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
  paths.setdefault(path,{})[method]=op
 
-spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk 0.40.0：Kun 0.13 / 协议 v13 / fork schema 3；K4 固定案例、参数化 Skill、独立验证启用门槛、受限快速路径与守卫回退；固定同基线文本规则评分、完整回复与证据检查、不可变评分报告；固定单条工具输出假设与可审核 Hybrid 重算、不可变谱系与原录制保留、假设使用证据；来源与分支跨会话固定日志对照；普通运行安全点 Harness 切换与迁移记录；Live 固定预览、明确确认与当前工具真实执行；Plan-Act 显式规划、两套内置模块组合与 Harness 固定快照对照； 安全检查点独立 Hybrid 分支，模型重算、工具严格录制回放、未命中停止；K3-A 离线记录基线、不可变实验分支、保守失效与谱系差异；建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
+
+# K4 repeated, fixed paired execution. It is descriptive and cannot promote Skills.
+paths.pop('/kun-benchmarks/{bid}/',None) # Dynamic route prefix is not an endpoint.
+schemas['KunCaseRunPreview']['properties']['benchmarkId']=st()
+schemas['KunCaseScore']['properties']['fastFallback']=bool_
+bi={'title':st(maxLength=120),'candidateId':st(),'expectedCandidateHash':st(),'repetitions':{'type':'integer','minimum':2,'maximum':5}}
+schemas['KunBenchmarkInput']=obj(bi,list(bi))
+bp={k:st() for k in ['planId','planHash','sessionId','runId','caseKey']}|{'sample':integer,'arm':st(enum=['dynamic','fast'])}
+schemas['KunBenchmarkPlan']=obj(bp,list(bp))
+bm={k:st() for k in ['id','hash','title','candidateId','candidateHash','createdAt','environmentHash']}|{'schema':{'const':1},'repetitions':integer,'taskSet':ref('KunTaskSet'),'environment':ref('KunCaseRunPreview'),'plans':arr(ref('KunBenchmarkPlan'))}
+schemas['KunBenchmark']=obj(bm,list(bm))
+bx={'status':st(enum=['planned','running','waiting','stopped','interrupted','blocked','completed']),'next':integer,'total':integer}|{k:st() for k in ['planId','sessionId','error','updatedAt']}
+schemas['KunBenchmarkExecution']=obj(bx,['status','next','total'])
+schemas['KunBenchmarkView']=obj({'benchmark':ref('KunBenchmark'),'execution':ref('KunBenchmarkExecution')},['benchmark','execution'])
+nullable_number={'type':['number','null']}
+metric={'count':integer,'missing':integer}|{k:nullable_number for k in ['total','mean','min','max']}
+schemas['KunBenchmarkMetric']=obj(metric,list(metric))
+metrics={k:ref('KunBenchmarkMetric') for k in ['modelCalls','reportedTokens','runMillis']}
+schemas['KunBenchmarkMetrics']=obj(metrics,list(metrics))
+ba={k:integer for k in ['total','passed','failed','unknown','fastCompleted','fallbacks']}|{'passRate':nullable_number,'metrics':ref('KunBenchmarkMetrics')}
+schemas['KunBenchmarkArm']=obj(ba,list(ba))
+br={'plan':ref('KunBenchmarkPlan'),'score':ref('KunCaseScore')}
+schemas['KunBenchmarkResult']=obj(br,list(br))
+pair={k:st() for k in ['caseKey','dynamicPlanId','fastPlanId']}|{'sample':integer,'outcome':st(enum=['unknown','both_pass','both_fail','fast_only_pass','dynamic_only_pass'])}
+schemas['KunBenchmarkPair']=obj(pair,list(pair))
+report={k:st() for k in ['id','hash','createdAt','benchmarkId','benchmarkHash','candidateId','candidateHash']}|{'schema':{'const':1},'status':st(enum=['complete','partial']),'dynamic':ref('KunBenchmarkArm'),'fast':ref('KunBenchmarkArm'),'pairedDelta':ref('KunBenchmarkMetrics'),'pairs':arr(ref('KunBenchmarkPair')),'results':arr(ref('KunBenchmarkResult')),'warnings':arr(st())}
+schemas['KunBenchmarkReport']=obj(report,list(report))
+for path,method,body,response in [
+ ('/kun-benchmarks','post',ref('KunBenchmarkInput'),ref('KunBenchmarkView')),
+ ('/kun-benchmarks','get',None,page),('/kun-benchmarks/{bid}','get',None,ref('KunBenchmarkView')),
+ ('/kun-benchmarks/{bid}/start','post',start,ref('KunBenchmarkView')),
+ ('/kun-benchmarks/{bid}/stop','post',expect,ref('KunBenchmarkView')),
+ ('/kun-benchmarks/{bid}/evaluate','post',expect,ref('KunBenchmarkReport')),
+ ('/kun-benchmark-reports','get',None,page),('/kun-benchmark-reports/{rid}','get',None,ref('KunBenchmarkReport'))]:
+ params=[{'name':n,'in':'path','required':True,'schema':st()} for n in re.findall(r'\{(.*?)\}',path)]
+ if method=='post':params.append({'name':'Idempotency-Key','in':'header','required':True,'schema':st(pattern='^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$')})
+ if method=='get' and path in ['/kun-benchmarks','/kun-benchmark-reports']:
+  params += [{'name':'offset','in':'query','schema':{'type':'integer','minimum':0,'maximum':20971520}},{'name':'limit','in':'query','schema':{'type':'integer','minimum':1,'maximum':50,'default':20}},{'name':'candidateId' if path=='/kun-benchmarks' else 'benchmarkId','in':'query','required':True,'schema':st()}]
+ op={'summary':'Kun K4 多次采样对照','description':'管理员专用。原子保存全部固定案例、环境和交替执行顺序；每例重复 2–5 次，总运行最多 100。整批一次确认后后台逐次运行，遵守共享容量与审批。stop 只停止后续派发，在途运行继续；宿主重启不自动继续，中断/失败/删除的样本不会重跑。逐次案例不能单独启动。报告不可变、逐次固定日志证据；回退成功计为通过并单列回退次数；未知不按零，总值须完整，均值及范围仅覆盖 count 个已知样本，pairedDelta 为 fast − dynamic。此描述性结果不证明因果或统计显著性，不重置工作区/外部服务，不计算货币成本，也不能替代独立验证启用门槛。','x-administrator-only':True,'parameters':params,'responses':{'200':{'description':'成功；start 仅接收批次，使用 GET 查询执行状态','content':{'application/json':{'schema':response}}},'400':{'description':'输入、分页或幂等 Key 无效'},'403':{'description':'仅管理员'},'404':{'description':'对象不存在'},'409':{'description':'指纹/绑定变化、未确认、另一批次在执行或先前运行结果不确定'},'413':{'description':'预览或报告超出界限'}}}
+ if body is not None:op['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
+ paths.setdefault(path,{})[method]=op
+
+spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk 0.41.0：固定多次采样对照、顺序执行与可追溯报告；Kun 0.13 / 协议 v13 / fork schema 3；K4 固定案例、参数化 Skill、独立验证启用门槛、受限快速路径与守卫回退；固定同基线文本规则评分、完整回复与证据检查、不可变评分报告；固定单条工具输出假设与可审核 Hybrid 重算、不可变谱系与原录制保留、假设使用证据；来源与分支跨会话固定日志对照；普通运行安全点 Harness 切换与迁移记录；Live 固定预览、明确确认与当前工具真实执行；Plan-Act 显式规划、两套内置模块组合与 Harness 固定快照对照； 安全检查点独立 Hybrid 分支，模型重算、工具严格录制回放、未命中停止；K3-A 离线记录基线、不可变实验分支、保守失效与谱系差异；建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

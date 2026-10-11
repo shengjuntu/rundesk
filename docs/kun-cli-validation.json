@@ -1,6 +1,6 @@
 {
-  "version": "0.40.0",
-  "rundesk": "RunDesk 0.40.0",
+  "version": "0.41.0",
+  "rundesk": "RunDesk 0.41.0",
   "kun": "Kun 0.13.0",
   "hello": {
     "capabilities": {
@@ -37,5 +37,5 @@
   },
   "oldProtocolRejected": true,
   "passed": true,
-  "scope": "Linux CLI, hello/EOF, protocol 12 rejection and K4 capabilities; Windows was cross-compiled only"
+  "scope": "Linux CLI, hello/EOF, protocol 12 rejection; Windows cross-compilation only"
 }

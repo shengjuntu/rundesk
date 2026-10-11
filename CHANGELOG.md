@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.41.0
+
+- Add atomic fixed paired batches: 2–5 repeats, at most 100 real runs, alternating order, independent sessions, immutable case and environment bindings.
+- Run authorized batches sequentially with shared capacity and approvals. Stop prevents later dispatch; completed samples are not replayed and uncertain/failed/deleted runs block continuation.
+- Add immutable per-sample reports, quality and fallback counts, model/token/runtime summaries with missingness, and paired differences. These descriptive reports cannot promote Skills.
+- Add the benchmark workbench, metadata history, eight administrator-only idempotent API operations, local process/HTTP and UI checks, rollback/capacity/compatibility regression coverage.
+- No new dependencies or worker/IR changes: Kun 0.13.0 / protocol v13 / fork schema 3. Existing 0.40 Skill report hashes remain valid.
+
 ## 0.40.0
 
 - Complete the K4 foundation: immutable case previews and single-run bindings, source-backed parameterized Skill candidates, fixed independent holdout batches, durable scoring and application-scoped promotion/disable.

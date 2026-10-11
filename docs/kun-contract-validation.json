@@ -1,15 +1,15 @@
 {
-  "version": "0.40.0",
+  "version": "0.41.0",
   "passed": true,
-  "javascriptFiles": 81,
-  "nodeInteractionSuites": 11,
-  "openapiPaths": 173,
-  "openapiOperations": 208,
-  "newK4Operations": 16,
+  "javascriptFiles": 83,
+  "nodeInteractionSuites": 12,
+  "openapiPaths": 180,
+  "openapiOperations": 216,
+  "newBenchmarkOperations": 8,
   "uniqueParameters": true,
   "localReferencesResolve": true,
-  "k4AdminAndIdempotency": true,
+  "benchmarkAdminAndIdempotency": true,
   "noNewDependencies": true,
   "sourceFingerprintMatches": true,
-  "receipt": "validation/kun-0.40.0-final/summary.json"
+  "receipt": "validation/kun-0.41.0-final2/summary.json"
 }

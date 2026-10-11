@@ -10,6 +10,12 @@ Built with Go and plain HTML/JavaScript. Node.js is not required to run RunDesk 
 
 ![RunDesk conversation workspace](docs/screenshots/0.16.0/chat-en.png)
 
+## Repeated K4 comparisons (0.41.0)
+
+Compare dynamic execution and a candidate Skill on fixed, paired cases, repeated 2–5 times. Freeze all identities and alternating order before execution, authorize the batch once, and run samples sequentially through existing capacity and approval gates. Stop prevents later dispatch; host restart never silently reruns interrupted work.
+
+Immutable reports preserve every sample, quality and fallback counts, reported model usage, engine timing, and matched-pair differences. Missing values stay unknown. This is a descriptive comparison, without workspace reset, statistical significance claims, or automatic Skill promotion. **Kun 0.13.0 / protocol v13 / fork schema 3 stay unchanged**; existing K4 records remain compatible. See [guide](docs/KUN-BENCHMARKS.md), [validation](docs/KUN-VALIDATION.md), [release notes](docs/RELEASE-0.41.0.md) and [progress](docs/KUN-PROGRESS.md).
+
 ## K4 parameterized Skills (0.40.0)
 
 Compile successful cases into a bounded tool workflow, validate it on a fixed independent set, and enable it only for a selected application after every case passes. Runtime guards preserve tool approvals and budgets; fallback retains completed results and prevents identical completed side effects from being dispatched again. Includes fixed case previews, a Skill workbench, immutable reports and explicit disable.

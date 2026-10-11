@@ -183,7 +183,7 @@ func TestKunCaseAndSkillAPIAuthorization(t *testing.T) {
 	m, user, code, _, viewer, source, _ := userFixture(t)
 	_, _, key := setupKey(t, m, "skill-key", source.WorkspaceID, "read", "run", "approvals")
 	h := NewHandler(m, userTestAdmin, true)
-	routes := []struct{ method, path string }{{"POST", "/kun-skills"}, {"GET", "/kun-skills/id"}, {"POST", "/kun-skills/id/promote"}, {"POST", "/kun-skills/id/disable"}, {"POST", "/kun-skills/id/validations"}, {"GET", "/kun-skill-validations/id"}, {"POST", "/kun-skill-validations/id/start"}, {"POST", "/kun-skill-validations/id/evaluate"}, {"GET", "/kun-skill-reports/id"}, {"GET", "/kun-case-runs/id/score"}, {"POST", "/kun-case-runs"}, {"GET", "/kun-case-runs"}, {"GET", "/kun-case-runs/id"}, {"POST", "/kun-case-runs/id/start"}}
+	routes := []struct{ method, path string }{{"POST", "/kun-benchmarks"}, {"GET", "/kun-benchmarks"}, {"GET", "/kun-benchmarks/id"}, {"POST", "/kun-benchmarks/id/start"}, {"POST", "/kun-benchmarks/id/stop"}, {"POST", "/kun-benchmarks/id/evaluate"}, {"GET", "/kun-benchmark-reports"}, {"GET", "/kun-benchmark-reports/id"}, {"POST", "/kun-skills"}, {"GET", "/kun-skills/id"}, {"POST", "/kun-skills/id/promote"}, {"POST", "/kun-skills/id/disable"}, {"POST", "/kun-skills/id/validations"}, {"GET", "/kun-skill-validations/id"}, {"POST", "/kun-skill-validations/id/start"}, {"POST", "/kun-skill-validations/id/evaluate"}, {"GET", "/kun-skill-reports/id"}, {"GET", "/kun-case-runs/id/score"}, {"POST", "/kun-case-runs"}, {"GET", "/kun-case-runs"}, {"GET", "/kun-case-runs/id"}, {"POST", "/kun-case-runs/id/start"}}
 	for _, token := range []string{code, viewer, key} {
 		for _, prefix := range []string{"/api", "/api/v1", "/api/v1/member/" + user.Grants[0].ID} {
 			for _, route := range routes {

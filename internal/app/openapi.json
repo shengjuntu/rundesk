@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Application API",
-    "version": "0.40.0",
-    "description": "RunDesk 0.40.0：Kun 0.13 / 协议 v13 / fork schema 3；K4 固定案例、参数化 Skill、独立验证启用门槛、受限快速路径与守卫回退；固定同基线文本规则评分、完整回复与证据检查、不可变评分报告；固定单条工具输出假设与可审核 Hybrid 重算、不可变谱系与原录制保留、假设使用证据；来源与分支跨会话固定日志对照；普通运行安全点 Harness 切换与迁移记录；Live 固定预览、明确确认与当前工具真实执行；Plan-Act 显式规划、两套内置模块组合与 Harness 固定快照对照； 安全检查点独立 Hybrid 分支，模型重算、工具严格录制回放、未命中停止；K3-A 离线记录基线、不可变实验分支、保守失效与谱系差异；建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。"
+    "version": "0.41.0",
+    "description": "RunDesk 0.41.0：固定多次采样对照、顺序执行与可追溯报告；Kun 0.13 / 协议 v13 / fork schema 3；K4 固定案例、参数化 Skill、独立验证启用门槛、受限快速路径与守卫回退；固定同基线文本规则评分、完整回复与证据检查、不可变评分报告；固定单条工具输出假设与可审核 Hybrid 重算、不可变谱系与原录制保留、假设使用证据；来源与分支跨会话固定日志对照；普通运行安全点 Harness 切换与迁移记录；Live 固定预览、明确确认与当前工具真实执行；Plan-Act 显式规划、两套内置模块组合与 Harness 固定快照对照； 安全检查点独立 Hybrid 分支，模型重算、工具严格录制回放、未命中停止；K3-A 离线记录基线、不可变实验分支、保守失效与谱系差异；建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。"
   },
   "servers": [
     {
@@ -9408,6 +9408,233 @@
         "x-application-scopes": [
           "read"
         ]
+      }
+    },
+    "/kun-benchmarks": {
+      "post": {
+        "summary": "Kun K4 多次采样对照",
+        "description": "管理员专用。原子保存全部固定案例、环境和交替执行顺序；每例重复 2–5 次，总运行最多 100。整批一次确认后后台逐次运行，遵守共享容量与审批。stop 只停止后续派发，在途运行继续；宿主重启不自动继续，中断/失败/删除的样本不会重跑。逐次案例不能单独启动。报告不可变、逐次固定日志证据；回退成功计为通过并单列回退次数；未知不按零，总值须完整，均值及范围仅覆盖 count 个已知样本，pairedDelta 为 fast − dynamic。此描述性结果不证明因果或统计显著性，不重置工作区/外部服务，不计算货币成本，也不能替代独立验证启用门槛。",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；start 仅接收批次，使用 GET 查询执行状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KunBenchmarkView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "输入、分页或幂等 Key 无效"
+          },
+          "403": {
+            "description": "仅管理员"
+          },
+          "404": {
+            "description": "对象不存在"
+          },
+          "409": {
+            "description": "指纹/绑定变化、未确认、另一批次在执行或先前运行结果不确定"
+          },
+          "413": {
+            "description": "预览或报告超出界限"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KunBenchmarkInput"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Kun K4 多次采样对照",
+        "description": "管理员专用。原子保存全部固定案例、环境和交替执行顺序；每例重复 2–5 次，总运行最多 100。整批一次确认后后台逐次运行，遵守共享容量与审批。stop 只停止后续派发，在途运行继续；宿主重启不自动继续，中断/失败/删除的样本不会重跑。逐次案例不能单独启动。报告不可变、逐次固定日志证据；回退成功计为通过并单列回退次数；未知不按零，总值须完整，均值及范围仅覆盖 count 个已知样本，pairedDelta 为 fast − dynamic。此描述性结果不证明因果或统计显著性，不重置工作区/外部服务，不计算货币成本，也不能替代独立验证启用门槛。",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20971520
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          },
+          {
+            "name": "candidateId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；start 仅接收批次，使用 GET 查询执行状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {},
+                        "required": [],
+                        "additionalProperties": true
+                      }
+                    },
+                    "nextOffset": {
+                      "type": "integer"
+                    },
+                    "hasMore": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextOffset",
+                    "hasMore"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "输入、分页或幂等 Key 无效"
+          },
+          "403": {
+            "description": "仅管理员"
+          },
+          "404": {
+            "description": "对象不存在"
+          },
+          "409": {
+            "description": "指纹/绑定变化、未确认、另一批次在执行或先前运行结果不确定"
+          },
+          "413": {
+            "description": "预览或报告超出界限"
+          }
+        }
+      }
+    },
+    "/kun-benchmarks/{bid}": {
+      "get": {
+        "summary": "Kun K4 多次采样对照",
+        "description": "管理员专用。原子保存全部固定案例、环境和交替执行顺序；每例重复 2–5 次，总运行最多 100。整批一次确认后后台逐次运行，遵守共享容量与审批。stop 只停止后续派发，在途运行继续；宿主重启不自动继续，中断/失败/删除的样本不会重跑。逐次案例不能单独启动。报告不可变、逐次固定日志证据；回退成功计为通过并单列回退次数；未知不按零，总值须完整，均值及范围仅覆盖 count 个已知样本，pairedDelta 为 fast − dynamic。此描述性结果不证明因果或统计显著性，不重置工作区/外部服务，不计算货币成本，也不能替代独立验证启用门槛。",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "bid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；start 仅接收批次，使用 GET 查询执行状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KunBenchmarkView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "输入、分页或幂等 Key 无效"
+          },
+          "403": {
+            "description": "仅管理员"
+          },
+          "404": {
+            "description": "对象不存在"
+          },
+          "409": {
+            "description": "指纹/绑定变化、未确认、另一批次在执行或先前运行结果不确定"
+          },
+          "413": {
+            "description": "预览或报告超出界限"
+          }
+        }
+      }
+    },
+    "/kun-benchmark-reports/{rid}": {
+      "get": {
+        "summary": "Kun K4 多次采样对照",
+        "description": "管理员专用。原子保存全部固定案例、环境和交替执行顺序；每例重复 2–5 次，总运行最多 100。整批一次确认后后台逐次运行，遵守共享容量与审批。stop 只停止后续派发，在途运行继续；宿主重启不自动继续，中断/失败/删除的样本不会重跑。逐次案例不能单独启动。报告不可变、逐次固定日志证据；回退成功计为通过并单列回退次数；未知不按零，总值须完整，均值及范围仅覆盖 count 个已知样本，pairedDelta 为 fast − dynamic。此描述性结果不证明因果或统计显著性，不重置工作区/外部服务，不计算货币成本，也不能替代独立验证启用门槛。",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "rid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；start 仅接收批次，使用 GET 查询执行状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KunBenchmarkReport"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "输入、分页或幂等 Key 无效"
+          },
+          "403": {
+            "description": "仅管理员"
+          },
+          "404": {
+            "description": "对象不存在"
+          },
+          "409": {
+            "description": "指纹/绑定变化、未确认、另一批次在执行或先前运行结果不确定"
+          },
+          "413": {
+            "description": "预览或报告超出界限"
+          }
+        }
       }
     },
     "/kun-case-runs": {
@@ -19020,6 +19247,312 @@
           }
         }
       }
+    },
+    "/kun-benchmarks/{bid}/start": {
+      "post": {
+        "summary": "Kun K4 多次采样对照",
+        "description": "管理员专用。原子保存全部固定案例、环境和交替执行顺序；每例重复 2–5 次，总运行最多 100。整批一次确认后后台逐次运行，遵守共享容量与审批。stop 只停止后续派发，在途运行继续；宿主重启不自动继续，中断/失败/删除的样本不会重跑。逐次案例不能单独启动。报告不可变、逐次固定日志证据；回退成功计为通过并单列回退次数；未知不按零，总值须完整，均值及范围仅覆盖 count 个已知样本，pairedDelta 为 fast − dynamic。此描述性结果不证明因果或统计显著性，不重置工作区/外部服务，不计算货币成本，也不能替代独立验证启用门槛。",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "bid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；start 仅接收批次，使用 GET 查询执行状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KunBenchmarkView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "输入、分页或幂等 Key 无效"
+          },
+          "403": {
+            "description": "仅管理员"
+          },
+          "404": {
+            "description": "对象不存在"
+          },
+          "409": {
+            "description": "指纹/绑定变化、未确认、另一批次在执行或先前运行结果不确定"
+          },
+          "413": {
+            "description": "预览或报告超出界限"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedHash": {
+                    "type": "string"
+                  },
+                  "confirmExecute": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "expectedHash",
+                  "confirmExecute"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kun-benchmarks/{bid}/stop": {
+      "post": {
+        "summary": "Kun K4 多次采样对照",
+        "description": "管理员专用。原子保存全部固定案例、环境和交替执行顺序；每例重复 2–5 次，总运行最多 100。整批一次确认后后台逐次运行，遵守共享容量与审批。stop 只停止后续派发，在途运行继续；宿主重启不自动继续，中断/失败/删除的样本不会重跑。逐次案例不能单独启动。报告不可变、逐次固定日志证据；回退成功计为通过并单列回退次数；未知不按零，总值须完整，均值及范围仅覆盖 count 个已知样本，pairedDelta 为 fast − dynamic。此描述性结果不证明因果或统计显著性，不重置工作区/外部服务，不计算货币成本，也不能替代独立验证启用门槛。",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "bid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；start 仅接收批次，使用 GET 查询执行状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KunBenchmarkView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "输入、分页或幂等 Key 无效"
+          },
+          "403": {
+            "description": "仅管理员"
+          },
+          "404": {
+            "description": "对象不存在"
+          },
+          "409": {
+            "description": "指纹/绑定变化、未确认、另一批次在执行或先前运行结果不确定"
+          },
+          "413": {
+            "description": "预览或报告超出界限"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedHash": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "expectedHash"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kun-benchmarks/{bid}/evaluate": {
+      "post": {
+        "summary": "Kun K4 多次采样对照",
+        "description": "管理员专用。原子保存全部固定案例、环境和交替执行顺序；每例重复 2–5 次，总运行最多 100。整批一次确认后后台逐次运行，遵守共享容量与审批。stop 只停止后续派发，在途运行继续；宿主重启不自动继续，中断/失败/删除的样本不会重跑。逐次案例不能单独启动。报告不可变、逐次固定日志证据；回退成功计为通过并单列回退次数；未知不按零，总值须完整，均值及范围仅覆盖 count 个已知样本，pairedDelta 为 fast − dynamic。此描述性结果不证明因果或统计显著性，不重置工作区/外部服务，不计算货币成本，也不能替代独立验证启用门槛。",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "bid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；start 仅接收批次，使用 GET 查询执行状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KunBenchmarkReport"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "输入、分页或幂等 Key 无效"
+          },
+          "403": {
+            "description": "仅管理员"
+          },
+          "404": {
+            "description": "对象不存在"
+          },
+          "409": {
+            "description": "指纹/绑定变化、未确认、另一批次在执行或先前运行结果不确定"
+          },
+          "413": {
+            "description": "预览或报告超出界限"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedHash": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "expectedHash"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kun-benchmark-reports": {
+      "get": {
+        "summary": "Kun K4 多次采样对照",
+        "description": "管理员专用。原子保存全部固定案例、环境和交替执行顺序；每例重复 2–5 次，总运行最多 100。整批一次确认后后台逐次运行，遵守共享容量与审批。stop 只停止后续派发，在途运行继续；宿主重启不自动继续，中断/失败/删除的样本不会重跑。逐次案例不能单独启动。报告不可变、逐次固定日志证据；回退成功计为通过并单列回退次数；未知不按零，总值须完整，均值及范围仅覆盖 count 个已知样本，pairedDelta 为 fast − dynamic。此描述性结果不证明因果或统计显著性，不重置工作区/外部服务，不计算货币成本，也不能替代独立验证启用门槛。",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20971520
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          },
+          {
+            "name": "benchmarkId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；start 仅接收批次，使用 GET 查询执行状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {},
+                        "required": [],
+                        "additionalProperties": true
+                      }
+                    },
+                    "nextOffset": {
+                      "type": "integer"
+                    },
+                    "hasMore": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextOffset",
+                    "hasMore"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "输入、分页或幂等 Key 无效"
+          },
+          "403": {
+            "description": "仅管理员"
+          },
+          "404": {
+            "description": "对象不存在"
+          },
+          "409": {
+            "description": "指纹/绑定变化、未确认、另一批次在执行或先前运行结果不确定"
+          },
+          "413": {
+            "description": "预览或报告超出界限"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -24610,6 +25143,9 @@
           },
           "candidateHash": {
             "type": "string"
+          },
+          "benchmarkId": {
+            "type": "string"
           }
         },
         "required": [
@@ -24890,6 +25426,9 @@
           },
           "evidenceHash": {
             "type": "string"
+          },
+          "fastFallback": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -25001,6 +25540,428 @@
           "reportHash",
           "updatedAt",
           "enabled"
+        ],
+        "additionalProperties": false
+      },
+      "KunBenchmarkInput": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "candidateId": {
+            "type": "string"
+          },
+          "expectedCandidateHash": {
+            "type": "string"
+          },
+          "repetitions": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 5
+          }
+        },
+        "required": [
+          "title",
+          "candidateId",
+          "expectedCandidateHash",
+          "repetitions"
+        ],
+        "additionalProperties": false
+      },
+      "KunBenchmarkPlan": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string"
+          },
+          "planHash": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "caseKey": {
+            "type": "string"
+          },
+          "sample": {
+            "type": "integer"
+          },
+          "arm": {
+            "type": "string",
+            "enum": [
+              "dynamic",
+              "fast"
+            ]
+          }
+        },
+        "required": [
+          "planId",
+          "planHash",
+          "sessionId",
+          "runId",
+          "caseKey",
+          "sample",
+          "arm"
+        ],
+        "additionalProperties": false
+      },
+      "KunBenchmark": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "candidateId": {
+            "type": "string"
+          },
+          "candidateHash": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "environmentHash": {
+            "type": "string"
+          },
+          "schema": {
+            "const": 1
+          },
+          "repetitions": {
+            "type": "integer"
+          },
+          "taskSet": {
+            "$ref": "#/components/schemas/KunTaskSet"
+          },
+          "environment": {
+            "$ref": "#/components/schemas/KunCaseRunPreview"
+          },
+          "plans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KunBenchmarkPlan"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "hash",
+          "title",
+          "candidateId",
+          "candidateHash",
+          "createdAt",
+          "environmentHash",
+          "schema",
+          "repetitions",
+          "taskSet",
+          "environment",
+          "plans"
+        ],
+        "additionalProperties": false
+      },
+      "KunBenchmarkExecution": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "planned",
+              "running",
+              "waiting",
+              "stopped",
+              "interrupted",
+              "blocked",
+              "completed"
+            ]
+          },
+          "next": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "planId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "next",
+          "total"
+        ],
+        "additionalProperties": false
+      },
+      "KunBenchmarkView": {
+        "type": "object",
+        "properties": {
+          "benchmark": {
+            "$ref": "#/components/schemas/KunBenchmark"
+          },
+          "execution": {
+            "$ref": "#/components/schemas/KunBenchmarkExecution"
+          }
+        },
+        "required": [
+          "benchmark",
+          "execution"
+        ],
+        "additionalProperties": false
+      },
+      "KunBenchmarkMetric": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer"
+          },
+          "missing": {
+            "type": "integer"
+          },
+          "total": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "mean": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "min": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "max": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "count",
+          "missing",
+          "total",
+          "mean",
+          "min",
+          "max"
+        ],
+        "additionalProperties": false
+      },
+      "KunBenchmarkMetrics": {
+        "type": "object",
+        "properties": {
+          "modelCalls": {
+            "$ref": "#/components/schemas/KunBenchmarkMetric"
+          },
+          "reportedTokens": {
+            "$ref": "#/components/schemas/KunBenchmarkMetric"
+          },
+          "runMillis": {
+            "$ref": "#/components/schemas/KunBenchmarkMetric"
+          }
+        },
+        "required": [
+          "modelCalls",
+          "reportedTokens",
+          "runMillis"
+        ],
+        "additionalProperties": false
+      },
+      "KunBenchmarkArm": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "passed": {
+            "type": "integer"
+          },
+          "failed": {
+            "type": "integer"
+          },
+          "unknown": {
+            "type": "integer"
+          },
+          "fastCompleted": {
+            "type": "integer"
+          },
+          "fallbacks": {
+            "type": "integer"
+          },
+          "passRate": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/KunBenchmarkMetrics"
+          }
+        },
+        "required": [
+          "total",
+          "passed",
+          "failed",
+          "unknown",
+          "fastCompleted",
+          "fallbacks",
+          "passRate",
+          "metrics"
+        ],
+        "additionalProperties": false
+      },
+      "KunBenchmarkResult": {
+        "type": "object",
+        "properties": {
+          "plan": {
+            "$ref": "#/components/schemas/KunBenchmarkPlan"
+          },
+          "score": {
+            "$ref": "#/components/schemas/KunCaseScore"
+          }
+        },
+        "required": [
+          "plan",
+          "score"
+        ],
+        "additionalProperties": false
+      },
+      "KunBenchmarkPair": {
+        "type": "object",
+        "properties": {
+          "caseKey": {
+            "type": "string"
+          },
+          "dynamicPlanId": {
+            "type": "string"
+          },
+          "fastPlanId": {
+            "type": "string"
+          },
+          "sample": {
+            "type": "integer"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "both_pass",
+              "both_fail",
+              "fast_only_pass",
+              "dynamic_only_pass"
+            ]
+          }
+        },
+        "required": [
+          "caseKey",
+          "dynamicPlanId",
+          "fastPlanId",
+          "sample",
+          "outcome"
+        ],
+        "additionalProperties": false
+      },
+      "KunBenchmarkReport": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "benchmarkId": {
+            "type": "string"
+          },
+          "benchmarkHash": {
+            "type": "string"
+          },
+          "candidateId": {
+            "type": "string"
+          },
+          "candidateHash": {
+            "type": "string"
+          },
+          "schema": {
+            "const": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "complete",
+              "partial"
+            ]
+          },
+          "dynamic": {
+            "$ref": "#/components/schemas/KunBenchmarkArm"
+          },
+          "fast": {
+            "$ref": "#/components/schemas/KunBenchmarkArm"
+          },
+          "pairedDelta": {
+            "$ref": "#/components/schemas/KunBenchmarkMetrics"
+          },
+          "pairs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KunBenchmarkPair"
+            }
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KunBenchmarkResult"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "hash",
+          "createdAt",
+          "benchmarkId",
+          "benchmarkHash",
+          "candidateId",
+          "candidateHash",
+          "schema",
+          "status",
+          "dynamic",
+          "fast",
+          "pairedDelta",
+          "pairs",
+          "results",
+          "warnings"
         ],
         "additionalProperties": false
       }

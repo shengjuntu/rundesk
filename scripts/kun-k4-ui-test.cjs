@@ -10,7 +10,7 @@ const el=(...a)=>new Element(...a),button=(label,click)=>{const b=el('button',{}
 const all=n=>[n,...n.children.filter(c=>c instanceof Element).flatMap(all)],byText=(n,s)=>all(n).find(v=>v.tagName==='BUTTON'&&v.textContent===s),field=(n,label)=>all(n).find(v=>v.attrs['aria-label']===label),cases=n=>all(n).filter(v=>v.tagName==='FIELDSET');
 const pending=[],requests=[],api=(url,options)=>new Promise((resolve,reject)=>{const r={url,options,resolve,reject};pending.push(r);requests.push(r)});
 const root=path.resolve(__dirname,'..'),ctx=vm.createContext({window:{},document:{addEventListener(){}},el,button,api,encodeURIComponent,TextEncoder,URLSearchParams,JSON,console});
-for(const name of ['kun-case-runs','kun-skills'])vm.runInContext(fs.readFileSync(root+'/internal/web/'+name+'.js','utf8'),ctx);
+for(const name of ['kun-case-runs','kun-benchmarks','kun-skills'])vm.runInContext(fs.readFileSync(root+'/internal/web/'+name+'.js','utf8'),ctx);
 const input=(node,label,value,type='input')=>{const f=field(node,label);f.value=value;f.emit(type);return f};
 const result=async(task,value)=>{assert(pending.length);pending.shift().resolve(value);await task};
 (async()=>{
@@ -38,5 +38,5 @@ const result=async(task,value)=>{assert(pending.length);pending.shift().resolve(
  const promote=byText(k,'启用此验证通过的 Skill').click();assert.equal(pending[0].options.body.expectedAppRevision,7);assert.equal(pending[0].options.body.reportHash,'report-hash');await result(promote,{candidateId:'skill'});assert(k.textContent.includes('已启用到'));
  await result(byText(k,'停用所选应用的此 Skill').click(),{});assert(k.textContent.includes('已停用'));
  const late=byText(k,'读取 Skill 候选').click();active=false;await result(late,{...candidate,title:'LATE'});assert(!k.textContent.includes('LATE'));
- const proof={version:'0.40.0',passed:true,scope:'shipped K4 UI in Node DOM fixture; not browser layout acceptance',checks:['no automatic runtime requests','local Kun environment filtering','fixed identity and explicit execution confirmation','duplicate clicks suppressed','closed responses ignored','literal text rendering','fixed validation batch binding','unknown report cannot promote','application environment filtering and revision binding','explicit disable']};fs.writeFileSync(root+'/docs/kun-k4-ui-validation.json',JSON.stringify(proof,null,2)+'\n');console.log(JSON.stringify(proof));
+ const proof={version:'0.41.0',passed:true,scope:'shipped K4 UI in Node DOM fixture; not browser layout acceptance',checks:['no automatic runtime requests','local Kun environment filtering','fixed identity and explicit execution confirmation','duplicate clicks suppressed','closed responses ignored','literal text rendering','fixed validation batch binding','unknown report cannot promote','application environment filtering and revision binding','explicit disable']};fs.writeFileSync(root+'/docs/kun-k4-ui-validation.json',JSON.stringify(proof,null,2)+'\n');console.log(JSON.stringify(proof));
 })().catch(e=>{console.error(e);process.exitCode=1});

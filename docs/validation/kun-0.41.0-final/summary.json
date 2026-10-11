@@ -1,0 +1,29 @@
+{
+  "version": "0.41.0",
+  "startedAt": "2026-10-08T21:27:07.944362+00:00",
+  "status": "interrupted",
+  "passed": false,
+  "sourceSHA256": "1e2c8e12e7ae1a5a6f08c9b5f6c576d7e6a7028bca334eb7ec523b6c971c87ca",
+  "selectedChecks": [
+    "go-test",
+    "go-vet",
+    "go-race",
+    "build",
+    "windows",
+    "syntax",
+    "ui",
+    "http"
+  ],
+  "goVersion": "go version go1.25.12 linux/amd64",
+  "checks": [
+    {
+      "name": "go-test",
+      "status": "interrupted",
+      "startedAt": "2026-10-08T21:27:07.956108+00:00",
+      "log": "go-test.log",
+      "reason": "Execution session was interrupted before an exit receipt."
+    }
+  ],
+  "finishedAt": "2026-10-08T21:27:39.908268+00:00",
+  "interruptionReason": "Stopped by developer to correct a legacy-hash test that compared map serialization with struct serialization; no completion receipt. Not release evidence."
+}
