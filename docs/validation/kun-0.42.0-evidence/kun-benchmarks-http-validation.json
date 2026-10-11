@@ -1,0 +1,181 @@
+{
+  "version": "0.42.0",
+  "passed": true,
+  "scope": "local model fixture; not a real-service performance benchmark",
+  "modelCalls": 48,
+  "primary": {
+    "dynamic": {
+      "failed": 0,
+      "fallbacks": 0,
+      "fastCompleted": 0,
+      "metrics": {
+        "modelCalls": {
+          "count": 4,
+          "max": 2,
+          "mean": 2,
+          "min": 2,
+          "missing": 0,
+          "total": 8
+        },
+        "reportedTokens": {
+          "count": 4,
+          "max": 24,
+          "mean": 24,
+          "min": 24,
+          "missing": 0,
+          "total": 96
+        },
+        "runMillis": {
+          "count": 4,
+          "max": 59,
+          "mean": 21.25,
+          "min": 8,
+          "missing": 0,
+          "total": 85
+        }
+      },
+      "passRate": 100,
+      "passed": 4,
+      "total": 4,
+      "unknown": 0
+    },
+    "fast": {
+      "failed": 0,
+      "fallbacks": 0,
+      "fastCompleted": 4,
+      "metrics": {
+        "modelCalls": {
+          "count": 4,
+          "max": 0,
+          "mean": 0,
+          "min": 0,
+          "missing": 0,
+          "total": 0
+        },
+        "reportedTokens": {
+          "count": 4,
+          "max": 0,
+          "mean": 0,
+          "min": 0,
+          "missing": 0,
+          "total": 0
+        },
+        "runMillis": {
+          "count": 4,
+          "max": 5,
+          "mean": 4.25,
+          "min": 4,
+          "missing": 0,
+          "total": 17
+        }
+      },
+      "passRate": 100,
+      "passed": 4,
+      "total": 4,
+      "unknown": 0
+    },
+    "pairedDelta": {
+      "modelCalls": {
+        "count": 4,
+        "max": -2,
+        "mean": -2,
+        "min": -2,
+        "missing": 0,
+        "total": -8
+      },
+      "reportedTokens": {
+        "count": 4,
+        "max": -24,
+        "mean": -24,
+        "min": -24,
+        "missing": 0,
+        "total": -96
+      },
+      "runMillis": {
+        "count": 4,
+        "max": -4,
+        "mean": -17,
+        "min": -54,
+        "missing": 0,
+        "total": -68
+      }
+    }
+  },
+  "fallback": {
+    "dynamic": {
+      "failed": 0,
+      "fallbacks": 0,
+      "fastCompleted": 0,
+      "metrics": {
+        "modelCalls": {
+          "count": 10,
+          "max": 2,
+          "mean": 2,
+          "min": 2,
+          "missing": 0,
+          "total": 20
+        },
+        "reportedTokens": {
+          "count": 10,
+          "max": 24,
+          "mean": 24,
+          "min": 24,
+          "missing": 0,
+          "total": 240
+        },
+        "runMillis": {
+          "count": 10,
+          "max": 9,
+          "mean": 7.8,
+          "min": 7,
+          "missing": 0,
+          "total": 78
+        }
+      },
+      "passRate": 100,
+      "passed": 10,
+      "total": 10,
+      "unknown": 0
+    },
+    "fast": {
+      "failed": 0,
+      "fallbacks": 10,
+      "fastCompleted": 0,
+      "metrics": {
+        "modelCalls": {
+          "count": 10,
+          "max": 1,
+          "mean": 1,
+          "min": 1,
+          "missing": 0,
+          "total": 10
+        },
+        "reportedTokens": {
+          "count": 10,
+          "max": 12,
+          "mean": 12,
+          "min": 12,
+          "missing": 0,
+          "total": 120
+        },
+        "runMillis": {
+          "count": 10,
+          "max": 8,
+          "mean": 6.4,
+          "min": 5,
+          "missing": 0,
+          "total": 64
+        }
+      },
+      "passRate": 100,
+      "passed": 10,
+      "total": 10,
+      "unknown": 0
+    }
+  },
+  "checks": [
+    "8 fixed counterbalanced runs; no preview calls; one batch confirmation; stop while active and restart preserve identities; 4 paired reports with exact model/token differences",
+    "20-run batch exceeds process ceiling via completed-worker release; fallback success remains quality pass, counted separately; completed writes not replayed; benchmark reports never become promotion reports",
+    "reply success with wrong or missing artifacts fails independent validation, promotion, source admission and repeated comparisons; repairing file later cannot rewrite failed score"
+  ]
+}

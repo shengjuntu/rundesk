@@ -1,7 +1,7 @@
 {
-  "version": "0.42.0",
-  "rundesk": "RunDesk 0.42.0",
-  "kun": "Kun 0.14.0",
+  "version": "0.43.0",
+  "rundesk": "RunDesk 0.43.0",
+  "kun": "Kun 0.15.0",
   "hello": {
     "capabilities": {
       "argumentValidation": true,
@@ -30,13 +30,14 @@
       "runtimeHarness": true,
       "snapshotDiff": true,
       "steer": true,
-      "step": true
+      "step": true,
+      "workspaceFixtures": true
     },
     "engine": "kun",
-    "engineVersion": "0.14.0",
-    "protocolVersion": 14
+    "engineVersion": "0.15.0",
+    "protocolVersion": 15
   },
   "oldProtocolRejected": true,
   "passed": true,
-  "scope": "Linux CLI, hello/EOF, protocol 13 rejection; Windows cross-compilation only"
+  "scope": "Linux CLI, hello/EOF, protocol 14 rejection; Windows cross-compilation only"
 }

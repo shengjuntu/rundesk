@@ -13,11 +13,12 @@ import (
 // A task set freezes authored inputs and rules, not runs or benchmark results.
 // Execution must bind a future run to this immutable definition explicitly.
 type KunTaskCase struct {
-	Key           string           `json:"key"`
-	Title         string           `json:"title"`
-	Input         string           `json:"input"`
-	Rules         []KunReplyRule   `json:"rules"`
-	ArtifactRules []p.ArtifactRule `json:"artifactRules,omitempty"`
+	WorkspaceFixture *p.WorkspaceFixture `json:"workspaceFixture,omitempty"`
+	Key              string              `json:"key"`
+	Title            string              `json:"title"`
+	Input            string              `json:"input"`
+	Rules            []KunReplyRule      `json:"rules"`
+	ArtifactRules    []p.ArtifactRule    `json:"artifactRules,omitempty"`
 }
 type KunTaskSetInput struct {
 	Title string        `json:"title"`
@@ -73,6 +74,14 @@ func validateKunTaskSet(in KunTaskSetInput) error {
 		for _, r := range c.ArtifactRules {
 			total += len(r.Path) + len(r.Kind) + len(r.Value)
 		}
+		if err := p.ValidateWorkspaceFixture(c.WorkspaceFixture); err != nil {
+			return failure(400, "workspace_fixture_invalid", err.Error())
+		}
+		if c.WorkspaceFixture != nil {
+			for _, f := range c.WorkspaceFixture.Files {
+				total += len(f.Path) + len(f.Content)
+			}
+		}
 		total += len(c.Key) + len(c.Title) + len(c.Input)
 		for _, r := range c.Rules {
 			total += len(r.Kind) + len(r.Value)
@@ -94,6 +103,11 @@ func (m *Manager) CreateKunTaskSet(in KunTaskSetInput) (KunTaskSet, error) {
 		cases[i] = c
 		cases[i].Rules = append([]KunReplyRule(nil), c.Rules...)
 		cases[i].ArtifactRules = append([]p.ArtifactRule(nil), c.ArtifactRules...)
+		if c.WorkspaceFixture != nil {
+			copy := *c.WorkspaceFixture
+			copy.Files = append([]p.FixtureFile{}, copy.Files...)
+			cases[i].WorkspaceFixture = &copy
+		}
 	}
 	out = KunTaskSet{Schema: 1, Evaluator: kunEvaluator, ID: store.ID(), Title: in.Title, CreatedAt: store.Now(), CaseCount: len(cases), Cases: cases}
 	out.Hash = taskSetHash(out)

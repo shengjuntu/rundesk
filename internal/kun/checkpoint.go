@@ -42,7 +42,7 @@ func (e *Engine) manifest(in p.Start) *p.RunManifest {
 		workspace = real
 	}
 	// Persist digests only, never the resolved MCP environment/headers or API key.
-	return &p.RunManifest{EngineVersion: p.EngineVersion, Workspace: workspace, ConfigHash: fingerprint(in.Config.Normalized()), MCPHash: fingerprint(in.MCP), SkillsHash: fingerprint(in.Skills), HarnessHash: fingerprint(e.nextHarness(in.Config)), ContextRevision: in.ContextRevision}
+	return &p.RunManifest{WorkspaceMode: p.FixtureMode(in.WorkspaceFixture), EngineVersion: p.EngineVersion, Workspace: workspace, ConfigHash: fingerprint(in.Config.Normalized()), MCPHash: fingerprint(in.MCP), SkillsHash: fingerprint(in.Skills), HarnessHash: fingerprint(e.nextHarness(in.Config)), ContextRevision: in.ContextRevision}
 }
 func catalogFingerprint(s p.State) string {
 	// JSON object key order and server tool listing order are not semantic changes.
@@ -67,6 +67,9 @@ func (e *Engine) checkpointLocked() (p.CheckpointCheck, p.State, error) {
 	block := func(reason string) (p.CheckpointCheck, p.State, error) {
 		check.Reason = reason
 		return check, p.State{}, nil
+	}
+	if e.state.WorkspaceFixture != nil {
+		return block("fixture_case_single_run")
 	}
 	if e.state.Fast != nil {
 		return block("fast_path_single_run_inspect_ledger")

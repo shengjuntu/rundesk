@@ -1,0 +1,18 @@
+{
+  "version": "0.36.0",
+  "passed": true,
+  "scope": "Node DOM stub; not browser layout acceptance",
+  "checks": [
+    "read-only preview",
+    "reason required",
+    "literal text rendering",
+    "revision invalidates proposal",
+    "target edits invalidate proposal",
+    "history is read-only",
+    "unsafe and fork/diagnostic states disabled",
+    "same request retained after lost response",
+    "duplicate apply guarded",
+    "apply does not continue",
+    "late selection and closed view ignored"
+  ]
+}

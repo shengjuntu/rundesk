@@ -9,6 +9,7 @@ type CheckpointSelection struct {
 	WorkerEpoch      string `json:"workerEpoch"`
 }
 type RunManifest struct {
+	WorkspaceMode   string `json:"workspaceMode,omitempty"`
 	EngineVersion   string `json:"engineVersion"`
 	Workspace       string `json:"workspace"`
 	ConfigHash      string `json:"configHash"`

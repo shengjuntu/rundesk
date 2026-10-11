@@ -134,6 +134,17 @@ func (e *Engine) Start(in p.Start) (out p.State, startErr error) {
 		return p.State{}, fmt.Errorf("artifact rules require an ordinary fresh run")
 	}
 	in.ArtifactRules = append([]p.ArtifactRule(nil), in.ArtifactRules...)
+	if err := p.ValidateWorkspaceFixture(in.WorkspaceFixture); err != nil {
+		return p.State{}, err
+	}
+	if in.WorkspaceFixture != nil {
+		if in.Resume != nil || in.Fork != nil || in.Diagnostic != nil || len(in.MCP) > 0 || len(in.Skills) > 0 {
+			return p.State{}, fmt.Errorf("isolated fixtures require a fresh built-in-file-only run")
+		}
+		var frozen p.WorkspaceFixture
+		_ = json.Unmarshal(p.JSON(in.WorkspaceFixture), &frozen)
+		in.WorkspaceFixture = &frozen
+	}
 	in.Config = in.Config.Normalized()
 	var frozen p.Config
 	if err := json.Unmarshal(p.JSON(in.Config), &frozen); err != nil {
@@ -201,6 +212,9 @@ func (e *Engine) Start(in p.Start) (out p.State, startErr error) {
 	if err != sql.ErrNoRows {
 		return p.State{}, err
 	}
+	if e.state.WorkspaceFixture != nil || (in.WorkspaceFixture != nil && e.state.SessionID != "") {
+		return p.State{}, fmt.Errorf("isolated fixture sessions are single-run; create a fresh session")
+	}
 	if e.state.Fork != nil {
 		return p.State{}, fmt.Errorf("Fork sessions are single-run; create a new fork to retry")
 	}
@@ -266,6 +280,9 @@ func (e *Engine) Start(in p.Start) (out p.State, startErr error) {
 		}
 	}
 	prompt := "You are Kun, the RunDesk agent. Use the provided tools when needed. Paths are workspace-relative. Report tool failures honestly.\n" + in.Config.SystemPrompt
+	if in.WorkspaceFixture != nil {
+		prompt += "\nThis is an isolated evaluation directory containing only declared input fixtures. Paths are relative to this directory. Other project files and previous outputs are unavailable."
+	}
 	if in.Diagnostic != nil {
 		prompt = diagnosticInstructions(in.Diagnostic.DiagnosticScope)
 	}
@@ -309,7 +326,17 @@ func (e *Engine) Start(in p.Start) (out p.State, startErr error) {
 		e.state = previousState
 		return p.State{}, fmt.Errorf("context exceeds 2 MiB; start a new session")
 	}
-	if _, err = e.j.commit(e.state, "kun/run.started", map[string]any{"harness": e.state.Harness, "previousHarness": previousState.Harness, "config": in.Config, "skills": in.Skills, "mcp": e.state.MCP, "approvalPolicy": in.ApprovalPolicy}, ""+in.RunID, hash, nil); err != nil {
+	fixture, err := prepareWorkspaceFixture(in)
+	if err != nil {
+		e.state = previousState
+		return p.State{}, err
+	}
+	e.state.WorkspaceFixture = fixture
+	started := map[string]any{"harness": e.state.Harness, "previousHarness": previousState.Harness, "config": in.Config, "skills": in.Skills, "mcp": e.state.MCP, "approvalPolicy": in.ApprovalPolicy}
+	if fixture != nil {
+		started["workspaceFixture"] = fixture
+	}
+	if _, err = e.j.commit(e.state, "kun/run.started", started, ""+in.RunID, hash, nil); err != nil {
 		e.state.Status = "failed"
 		return p.State{}, err
 	}
@@ -320,6 +347,9 @@ func (e *Engine) Start(in p.Start) (out p.State, startErr error) {
 }
 func (e *Engine) launchLocked(in p.Start) {
 	e.workspace, e.key = in.Workspace, in.APIKey
+	if e.state.WorkspaceFixture != nil {
+		e.workspace = e.state.WorkspaceFixture.Root
+	}
 	_ = json.Unmarshal(p.JSON(in.MCP), &e.mcpSpecs)
 	e.connections = map[string]*mcpConnection{}
 	e.exchange = 0

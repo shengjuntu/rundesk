@@ -103,12 +103,12 @@ def main():
     commands = {
         "go-test": ([[go, "test", "./...", "-count=1", "-timeout=300s"]], 420, {}),
         "go-vet": ([[go, "vet", "./..."]], 180, {}),
-        "go-race": ([[go, "test", "-race", "./internal/app", "./internal/kun", "./internal/store", "-run", "TestKunEvaluation|TestKunCompar|TestKunHypothesis|TestKunTaskSet|TestKunCase|TestKunBenchmark|TestKunSkill|TestKunArtifact|TestFast", "-count=1", "-timeout=180s"]], 300, {}),
+        "go-race": ([[go, "test", "-race", "./internal/app", "./internal/kun", "./internal/store", "-run", "TestKunEvaluation|TestKunCompar|TestKunHypothesis|TestKunTaskSet|TestKunCase|TestKunBenchmark|TestKunSkill|TestKunArtifact|TestKunFixture|TestFast", "-count=1", "-timeout=180s"]], 300, {}),
         "build": ([[go, "build", "-buildvcs=false", "-trimpath", "-o", "bin/" + binary, "./cmd/" + binary] for binary in ("rundesk", "kun")], 180, {"CGO_ENABLED": "0"}),
         "windows": ([[go, "build", "-buildvcs=false", "-trimpath", "-o", "bin/" + binary + "-windows-amd64.exe", "./cmd/" + binary] for binary in ("rundesk", "kun")], 180, {"GOOS": "windows", "GOARCH": "amd64", "CGO_ENABLED": "0"}),
         "syntax": ([["node", "--check", str(p.relative_to(ROOT))] for folder in ("internal/web", "scripts") for p in sorted((ROOT / folder).rglob("*")) if p.suffix in (".js", ".cjs")], 30, {}),
         "ui": ([["node", "scripts/" + script] for script in UI], 60, {}),
-        "http": ([["node", "scripts/kun-evaluation-http-test.cjs"], ["node", "scripts/kun-k4-http-test.cjs"]], 120, {}),
+        "http": ([["node", "scripts/kun-evaluation-http-test.cjs"], ["node", "scripts/kun-k4-http-test.cjs"], ["node", "scripts/kun-fixtures-http-test.cjs"]], 120, {}),
     }
     save()
     try:

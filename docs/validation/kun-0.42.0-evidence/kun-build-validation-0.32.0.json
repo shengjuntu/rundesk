@@ -1,0 +1,40 @@
+{
+  "version": "0.32.0",
+  "engineVersion": "0.8.0",
+  "workerProtocol": 8,
+  "date": "2026-10-08",
+  "go": "1.25.12",
+  "fullGoTests": "passed",
+  "goVet": "passed",
+  "focusedRace": "passed: TestHybrid|TestProjectionHybrid in internal/kun, internal/app, internal/tracequery",
+  "linuxBuild": "passed",
+  "windowsCrossBuild": "passed; not run on Windows",
+  "browser": "blocked: Chromium local socket denied by environment",
+  "realServices": "not run",
+  "tests": [
+    "ok  \tgithub.com/shengjuntu/rundesk/cmd/kun\t0.008s",
+    "ok  \tgithub.com/shengjuntu/rundesk/cmd/rundesk\t0.008s",
+    "?   \tgithub.com/shengjuntu/rundesk/examples/docker\t[no test files]",
+    "?   \tgithub.com/shengjuntu/rundesk/internal/adapters/kun\t[no test files]",
+    "ok  \tgithub.com/shengjuntu/rundesk/internal/app\t71.907s",
+    "ok  \tgithub.com/shengjuntu/rundesk/internal/containerruntime\t0.579s",
+    "ok  \tgithub.com/shengjuntu/rundesk/internal/debugapi\t0.007s",
+    "ok  \tgithub.com/shengjuntu/rundesk/internal/debugmcp\t0.129s",
+    "ok  \tgithub.com/shengjuntu/rundesk/internal/experiment\t0.012s",
+    "ok  \tgithub.com/shengjuntu/rundesk/internal/kun\t3.166s",
+    "?   \tgithub.com/shengjuntu/rundesk/internal/kunproto\t[no test files]",
+    "ok  \tgithub.com/shengjuntu/rundesk/internal/mcp\t0.134s",
+    "ok  \tgithub.com/shengjuntu/rundesk/internal/mcptest\t0.106s",
+    "?   \tgithub.com/shengjuntu/rundesk/internal/redaction\t[no test files]",
+    "ok  \tgithub.com/shengjuntu/rundesk/internal/rpc\t0.528s",
+    "ok  \tgithub.com/shengjuntu/rundesk/internal/servicelock\t0.025s",
+    "ok  \tgithub.com/shengjuntu/rundesk/internal/store\t0.333s",
+    "ok  \tgithub.com/shengjuntu/rundesk/internal/tracequery\t0.129s",
+    "ok  \tgithub.com/shengjuntu/rundesk/internal/web\t0.007s"
+  ],
+  "race": [
+    "ok  \tgithub.com/shengjuntu/rundesk/internal/kun\t1.874s",
+    "ok  \tgithub.com/shengjuntu/rundesk/internal/app\t3.400s",
+    "ok  \tgithub.com/shengjuntu/rundesk/internal/tracequery\t1.042s"
+  ]
+}

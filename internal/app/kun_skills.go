@@ -54,14 +54,15 @@ type KunSkillValidation struct {
 	Plans         []KunCaseRunPreview `json:"plans"`
 }
 type KunCaseScore struct {
-	PlanID        string              `json:"planId"`
-	CaseKey       string              `json:"caseKey"`
-	Summary       KunCompareSide      `json:"summary"`
-	Evaluation    KunEvaluationSide   `json:"evaluation"`
-	FastCompleted bool                `json:"fastCompleted"`
-	FastFallback  bool                `json:"fastFallback,omitempty"`
-	EvidenceHash  string              `json:"evidenceHash"`
-	Artifacts     *p.ArtifactEvidence `json:"artifacts,omitempty"`
+	WorkspaceFixture *p.WorkspaceFixtureState `json:"workspaceFixture,omitempty"`
+	PlanID           string                   `json:"planId"`
+	CaseKey          string                   `json:"caseKey"`
+	Summary          KunCompareSide           `json:"summary"`
+	Evaluation       KunEvaluationSide        `json:"evaluation"`
+	FastCompleted    bool                     `json:"fastCompleted"`
+	FastFallback     bool                     `json:"fastFallback,omitempty"`
+	EvidenceHash     string                   `json:"evidenceHash"`
+	Artifacts        *p.ArtifactEvidence      `json:"artifacts,omitempty"`
 }
 type KunSkillReport struct {
 	ID            string         `json:"id"`
@@ -116,6 +117,7 @@ func (m *Manager) KunCaseScore(ctx context.Context, id string) (KunCaseScore, er
 	if err != nil {
 		return out, err
 	}
+	out.WorkspaceFixture = scoreKunWorkspaceFixture(&out.Evaluation, out.Summary, events, v.Preview)
 	out.Artifacts = scoreKunArtifacts(&out.Evaluation, out.Summary, events, v.Preview.Case.ArtifactRules)
 	out.EvidenceHash = forkDigest(events)
 	for _, raw := range events {
@@ -278,6 +280,11 @@ func (m *Manager) CreateKunSkill(in KunSkillInput) (KunSkill, error) {
 			}
 		}
 		guard := kun.FastGuardFor(state)
+		for _, task := range set.Cases {
+			if p.FixtureMode(task.WorkspaceFixture) != guard.WorkspaceMode {
+				return out, failure(409, "skill_workspace_mode", "来源与全部验证案例必须使用相同的工作区模式")
+			}
+		}
 		if n == 0 {
 			out.InstanceID = v.Preview.InstanceID
 			out.WorkspaceID = v.Preview.WorkspaceID
@@ -391,6 +398,9 @@ func (m *Manager) PromoteKunSkill(id, expected, reportID, reportHash, appID stri
 	c, err := m.KunSkill(id)
 	if err != nil {
 		return out, err
+	}
+	if c.Program.Guard.WorkspaceMode != "" {
+		return out, failure(409, "skill_evaluation_only", "独立目录候选只用于评测；常规应用需在实际工作区重新生成并验证候选")
 	}
 	var report KunSkillReport
 	if err = m.Store.Get("kun_skill_report", reportID, &report); err != nil {

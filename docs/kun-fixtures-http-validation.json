@@ -1,0 +1,571 @@
+{
+  "version": "0.43.0",
+  "passed": true,
+  "scope": "actual host and subprocess with local model fixtures; directory separation is not an OS/process/network sandbox",
+  "modelCalls": 24,
+  "checks": [
+    "preview performs no filesystem setup; source reads fixed seed, writes only private directory and records setup evidence",
+    "isolated fast path passes two fixed holdouts with zero extra models; mixed workspace modes and production promotion rejected",
+    "eight unique directories; every dynamic/fast sample starts from its own seed; stop and host restart skip completed identities without resetting edited outputs",
+    "guard/assertion fallback stays inside same initialized directory and captured artifact scope",
+    "empty fixture cannot pass using preexisting project output; preexisting evaluation directory rejected without deleting or overwriting it"
+  ],
+  "validation": {
+    "candidateHash": "a5170e00370d23c41730587f7975432e43e5b515136ee3f9ca0dde41f51a1c72",
+    "candidateId": "c0543e036375f6160d1518fb",
+    "cases": [
+      {
+        "artifacts": {
+          "results": [
+            {
+              "bytes": 5,
+              "index": 0,
+              "kind": "file_equals",
+              "path": "state.txt",
+              "reason": "matched",
+              "sha256": "73ab66a033c267e00b7429bb256f6deb2734ebc4cd4ff5b564a8c9f9b2c8a719",
+              "status": "pass"
+            }
+          ],
+          "rulesHash": "f6ca929d8356d6232787fcbab0961b3c42b6117377ae90f4ee160cc73112c1ec"
+        },
+        "caseKey": "alpha",
+        "evaluation": {
+          "failed": 0,
+          "passed": 4,
+          "reply": {
+            "bytes": 5,
+            "eventId": 43,
+            "hash": "a46569a5723019a5c28399318e42189bac9da2bcd8d44f4960315c52bc23a99a",
+            "sequence": 19,
+            "status": "available"
+          },
+          "results": [
+            {
+              "eventId": 44,
+              "index": 0,
+              "kind": "run_completed",
+              "reason": "completed",
+              "status": "pass"
+            },
+            {
+              "eventId": 43,
+              "index": 1,
+              "kind": "reply_equals",
+              "reason": "matched",
+              "status": "pass"
+            },
+            {
+              "eventId": 25,
+              "index": 2,
+              "kind": "workspace_fixture_ready",
+              "reason": "fresh_fixture_recorded",
+              "status": "pass"
+            },
+            {
+              "eventId": 44,
+              "index": 3,
+              "kind": "file_equals",
+              "reason": "matched",
+              "status": "pass"
+            }
+          ],
+          "score": 100,
+          "status": "pass",
+          "total": 4,
+          "unknown": 0
+        },
+        "evidenceHash": "9cfeb533ed8f6409283e660ac95e60a9bf96fa5903b22955177af1449c90b80b",
+        "fastCompleted": true,
+        "planId": "acfe7092df4152c880e674cf",
+        "summary": {
+          "activeMillis": 8,
+          "afterSequence": 0,
+          "complete": true,
+          "eventCount": 20,
+          "firstEventId": 25,
+          "harness": {
+            "id": "",
+            "modules": null,
+            "revision": 0,
+            "version": ""
+          },
+          "lastEventId": 44,
+          "lastReply": {
+            "characters": 5,
+            "eventId": 43,
+            "hash": "a46569a5723019a5c28399318e42189bac9da2bcd8d44f4960315c52bc23a99a",
+            "sequence": 19,
+            "text": "ALPHA",
+            "truncated": false
+          },
+          "lastSequence": 20,
+          "mode": "case",
+          "modelCalls": 0,
+          "modelCompletions": 0,
+          "planningCalls": 0,
+          "reportedTokens": 0,
+          "runId": "6b647c7716122824ba141646",
+          "sessionId": "f292c48b1844c85b02a57c08",
+          "status": "completed",
+          "through": 45,
+          "tokenUsageComplete": true,
+          "tools": [
+            {
+              "declined": 0,
+              "dispatched": 1,
+              "failed": 0,
+              "hypothetical": 0,
+              "name": "list_files",
+              "replayed": 0,
+              "reused": 0,
+              "unsettled": 0
+            },
+            {
+              "declined": 0,
+              "dispatched": 2,
+              "failed": 0,
+              "hypothetical": 0,
+              "name": "read_file",
+              "replayed": 0,
+              "reused": 0,
+              "unsettled": 0
+            },
+            {
+              "declined": 0,
+              "dispatched": 1,
+              "failed": 0,
+              "hypothetical": 0,
+              "name": "write_file",
+              "replayed": 0,
+              "reused": 0,
+              "unsettled": 0
+            }
+          ],
+          "usageMissing": 0,
+          "waitMillis": 0,
+          "warnings": []
+        },
+        "workspaceFixture": {
+          "bytes": 10,
+          "fileCount": 1,
+          "hash": "3251b2611dc28842a6c9cd404317bbe3aedde6693a48ddd010ff544ebc64f205",
+          "mode": "isolated-fixture-v1",
+          "root": "/tmp/rd-fixtures-trXl1M/data/workspaces/0c01ef2f5b1a4836fe0dcd6b/outputs/f292c48b1844c85b02a57c08/evaluation"
+        }
+      },
+      {
+        "artifacts": {
+          "results": [
+            {
+              "bytes": 4,
+              "index": 0,
+              "kind": "file_equals",
+              "path": "state.txt",
+              "reason": "matched",
+              "sha256": "639181fd63cbad6e274ecd205b79f5c3e7c11971cac617ee8bddcac6e79b20e7",
+              "status": "pass"
+            }
+          ],
+          "rulesHash": "dd71a20c11002f92177caa6f3e60964a8a75f34b4f0e8968710daeba96347325"
+        },
+        "caseKey": "beta",
+        "evaluation": {
+          "failed": 0,
+          "passed": 4,
+          "reply": {
+            "bytes": 4,
+            "eventId": 65,
+            "hash": "bfb34b831697075cfce4ef85505dd2df5e71858f40564e321b8a7f1c0e885393",
+            "sequence": 19,
+            "status": "available"
+          },
+          "results": [
+            {
+              "eventId": 66,
+              "index": 0,
+              "kind": "run_completed",
+              "reason": "completed",
+              "status": "pass"
+            },
+            {
+              "eventId": 65,
+              "index": 1,
+              "kind": "reply_equals",
+              "reason": "matched",
+              "status": "pass"
+            },
+            {
+              "eventId": 47,
+              "index": 2,
+              "kind": "workspace_fixture_ready",
+              "reason": "fresh_fixture_recorded",
+              "status": "pass"
+            },
+            {
+              "eventId": 66,
+              "index": 3,
+              "kind": "file_equals",
+              "reason": "matched",
+              "status": "pass"
+            }
+          ],
+          "score": 100,
+          "status": "pass",
+          "total": 4,
+          "unknown": 0
+        },
+        "evidenceHash": "cc20ab394ffa385978c278dd1f891003537a15d945da2926ce657bd513979578",
+        "fastCompleted": true,
+        "planId": "b883a78fcc75ea05f80d160a",
+        "summary": {
+          "activeMillis": 9,
+          "afterSequence": 0,
+          "complete": true,
+          "eventCount": 20,
+          "firstEventId": 47,
+          "harness": {
+            "id": "",
+            "modules": null,
+            "revision": 0,
+            "version": ""
+          },
+          "lastEventId": 66,
+          "lastReply": {
+            "characters": 4,
+            "eventId": 65,
+            "hash": "bfb34b831697075cfce4ef85505dd2df5e71858f40564e321b8a7f1c0e885393",
+            "sequence": 19,
+            "text": "BETA",
+            "truncated": false
+          },
+          "lastSequence": 20,
+          "mode": "case",
+          "modelCalls": 0,
+          "modelCompletions": 0,
+          "planningCalls": 0,
+          "reportedTokens": 0,
+          "runId": "8119df11fbe494a04018c317",
+          "sessionId": "73411f11316280daf6538217",
+          "status": "completed",
+          "through": 67,
+          "tokenUsageComplete": true,
+          "tools": [
+            {
+              "declined": 0,
+              "dispatched": 1,
+              "failed": 0,
+              "hypothetical": 0,
+              "name": "list_files",
+              "replayed": 0,
+              "reused": 0,
+              "unsettled": 0
+            },
+            {
+              "declined": 0,
+              "dispatched": 2,
+              "failed": 0,
+              "hypothetical": 0,
+              "name": "read_file",
+              "replayed": 0,
+              "reused": 0,
+              "unsettled": 0
+            },
+            {
+              "declined": 0,
+              "dispatched": 1,
+              "failed": 0,
+              "hypothetical": 0,
+              "name": "write_file",
+              "replayed": 0,
+              "reused": 0,
+              "unsettled": 0
+            }
+          ],
+          "usageMissing": 0,
+          "waitMillis": 0,
+          "warnings": []
+        },
+        "workspaceFixture": {
+          "bytes": 9,
+          "fileCount": 1,
+          "hash": "8b097aff6456d0c2e2845d4bd0f9b5e93465638639a98d2e93a2e291534e2e7d",
+          "mode": "isolated-fixture-v1",
+          "root": "/tmp/rd-fixtures-trXl1M/data/workspaces/0c01ef2f5b1a4836fe0dcd6b/outputs/73411f11316280daf6538217/evaluation"
+        }
+      }
+    ],
+    "createdAt": "2026-10-09T02:10:19.435238042Z",
+    "failed": 0,
+    "hash": "4eb118723ab4cf39798b65783f2766b10598a3fac01ffc3174d214536fb359ef",
+    "id": "913e6121b7211abf403a897e",
+    "passed": 2,
+    "score": 100,
+    "status": "pass",
+    "total": 2,
+    "unknown": 0,
+    "validationId": "832562e178d334ef0043d2a0"
+  },
+  "comparison": {
+    "dynamic": {
+      "failed": 0,
+      "fallbacks": 0,
+      "fastCompleted": 0,
+      "metrics": {
+        "modelCalls": {
+          "count": 4,
+          "max": 2,
+          "mean": 2,
+          "min": 2,
+          "missing": 0,
+          "total": 8
+        },
+        "reportedTokens": {
+          "count": 4,
+          "max": 24,
+          "mean": 24,
+          "min": 24,
+          "missing": 0,
+          "total": 96
+        },
+        "runMillis": {
+          "count": 4,
+          "max": 60,
+          "mean": 23.25,
+          "min": 10,
+          "missing": 0,
+          "total": 93
+        }
+      },
+      "passRate": 100,
+      "passed": 4,
+      "total": 4,
+      "unknown": 0
+    },
+    "fast": {
+      "failed": 0,
+      "fallbacks": 0,
+      "fastCompleted": 4,
+      "metrics": {
+        "modelCalls": {
+          "count": 4,
+          "max": 0,
+          "mean": 0,
+          "min": 0,
+          "missing": 0,
+          "total": 0
+        },
+        "reportedTokens": {
+          "count": 4,
+          "max": 0,
+          "mean": 0,
+          "min": 0,
+          "missing": 0,
+          "total": 0
+        },
+        "runMillis": {
+          "count": 4,
+          "max": 11,
+          "mean": 8.5,
+          "min": 7,
+          "missing": 0,
+          "total": 34
+        }
+      },
+      "passRate": 100,
+      "passed": 4,
+      "total": 4,
+      "unknown": 0
+    }
+  },
+  "fallback": {
+    "dynamic": {
+      "failed": 0,
+      "fallbacks": 0,
+      "fastCompleted": 0,
+      "metrics": {
+        "modelCalls": {
+          "count": 4,
+          "max": 2,
+          "mean": 2,
+          "min": 2,
+          "missing": 0,
+          "total": 8
+        },
+        "reportedTokens": {
+          "count": 4,
+          "max": 24,
+          "mean": 24,
+          "min": 24,
+          "missing": 0,
+          "total": 96
+        },
+        "runMillis": {
+          "count": 4,
+          "max": 11,
+          "mean": 10,
+          "min": 9,
+          "missing": 0,
+          "total": 40
+        }
+      },
+      "passRate": 100,
+      "passed": 4,
+      "total": 4,
+      "unknown": 0
+    },
+    "fast": {
+      "failed": 0,
+      "fallbacks": 4,
+      "fastCompleted": 0,
+      "metrics": {
+        "modelCalls": {
+          "count": 4,
+          "max": 1,
+          "mean": 1,
+          "min": 1,
+          "missing": 0,
+          "total": 4
+        },
+        "reportedTokens": {
+          "count": 4,
+          "max": 12,
+          "mean": 12,
+          "min": 12,
+          "missing": 0,
+          "total": 48
+        },
+        "runMillis": {
+          "count": 4,
+          "max": 14,
+          "mean": 11,
+          "min": 9,
+          "missing": 0,
+          "total": 44
+        }
+      },
+      "passRate": 100,
+      "passed": 4,
+      "total": 4,
+      "unknown": 0
+    }
+  },
+  "negative": {
+    "artifacts": {
+      "results": [
+        {
+          "index": 0,
+          "kind": "file_equals",
+          "path": "state.txt",
+          "reason": "missing",
+          "status": "fail"
+        }
+      ],
+      "rulesHash": "162f8d97b230cf1ad5dc280810fbbe31b056c0ae00410d1892f139cff65442ce"
+    },
+    "caseKey": "empty",
+    "evaluation": {
+      "failed": 1,
+      "passed": 3,
+      "reply": {
+        "bytes": 8,
+        "eventId": 435,
+        "hash": "593e51c943ef5cd87a0a873cf987dcf37ec41e450bf03a113c0eace311a4db36",
+        "sequence": 11,
+        "status": "available"
+      },
+      "results": [
+        {
+          "eventId": 436,
+          "index": 0,
+          "kind": "run_completed",
+          "reason": "completed",
+          "status": "pass"
+        },
+        {
+          "eventId": 435,
+          "index": 1,
+          "kind": "reply_equals",
+          "reason": "matched",
+          "status": "pass"
+        },
+        {
+          "eventId": 425,
+          "index": 2,
+          "kind": "workspace_fixture_ready",
+          "reason": "fresh_fixture_recorded",
+          "status": "pass"
+        },
+        {
+          "eventId": 436,
+          "index": 3,
+          "kind": "file_equals",
+          "reason": "missing",
+          "status": "fail"
+        }
+      ],
+      "score": 75,
+      "status": "fail",
+      "total": 4,
+      "unknown": 0
+    },
+    "evidenceHash": "1340f75bc85a34532f429112a1b9a357dfb16c7a2a23c9061d4736f6d39c25f9",
+    "fastCompleted": false,
+    "planId": "fd3a25b2f428eb125e6f63fc",
+    "summary": {
+      "activeMillis": 7,
+      "afterSequence": 0,
+      "complete": true,
+      "eventCount": 12,
+      "firstEventId": 425,
+      "harness": {
+        "id": "",
+        "modules": null,
+        "revision": 0,
+        "version": ""
+      },
+      "lastEventId": 436,
+      "lastReply": {
+        "characters": 8,
+        "eventId": 435,
+        "hash": "593e51c943ef5cd87a0a873cf987dcf37ec41e450bf03a113c0eace311a4db36",
+        "sequence": 11,
+        "text": "ORIGINAL",
+        "truncated": false
+      },
+      "lastSequence": 12,
+      "mode": "case",
+      "modelCalls": 2,
+      "modelCompletions": 2,
+      "planningCalls": 0,
+      "reportedTokens": 24,
+      "runId": "bc3b2a8104484060aafa6a6b",
+      "sessionId": "cdc8809e9a4f846aa6dd1fab",
+      "status": "completed",
+      "through": 437,
+      "tokenUsageComplete": true,
+      "tools": [
+        {
+          "declined": 0,
+          "dispatched": 1,
+          "failed": 1,
+          "hypothetical": 0,
+          "name": "read_file",
+          "replayed": 0,
+          "reused": 0,
+          "unsettled": 0
+        }
+      ],
+      "usageMissing": 0,
+      "waitMillis": 0,
+      "warnings": []
+    },
+    "workspaceFixture": {
+      "bytes": 0,
+      "fileCount": 0,
+      "hash": "602e35a92eec4bc0a2ec6ae113f07bfc6933322fb69fe8dee416e5a67217e2a2",
+      "mode": "isolated-fixture-v1",
+      "root": "/tmp/rd-fixtures-trXl1M/data/workspaces/0c01ef2f5b1a4836fe0dcd6b/outputs/cdc8809e9a4f846aa6dd1fab/evaluation"
+    }
+  }
+}

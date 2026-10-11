@@ -24,6 +24,17 @@ window.RunDeskKunTaskSets=(()=>{
     if(!artifactKinds[r.kind]||bytes(r.value)>8192||artifactSeen.has(key)||(r.kind==='file_exists'&&r.value!=='')||(r.kind==='file_contains'&&!r.value)||(r.kind==='file_sha256'&&!/^[0-9a-f]{64}$/.test(r.value)))return '请检查产物规则类型、内容、SHA-256 和重复项；值最多 8 KiB。';
     artifactSeen.add(key);total+=bytes(r.path)+bytes(r.kind)+bytes(r.value);
    }
+   if(c.workspaceFixture){
+    const files=c.workspaceFixture.files;if(files.length>16)return '独立评测目录最多 16 个固定输入文件。';
+    const names=[];let fileBytes=0;
+    for(const f of files){const parts=f.path.split('/'),key=f.path.toLowerCase();
+     if(!f.path||bytes(f.path)>512||/[\\:\x00-\x1f\x7f<>"|?*]/.test(f.path)||parts.some(p=>!p||p==='.'||p==='..'||/[. ]$/.test(p)||/^(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(?:\.|$)/i.test(p)))return '固定文件需要有效的相对路径。';
+     if(names.some(n=>n===key||n.startsWith(key+'/')||key.startsWith(n+'/')))return '固定文件路径重复或与目录冲突。';
+     if(bytes(f.content)>32768||f.content.includes('\0'))return '每个固定文件最多 32 KiB UTF-8，不能包含 NUL。';
+     names.push(key);fileBytes+=bytes(f.content);total+=bytes(f.path)+bytes(f.content);
+    }
+    if(fileBytes>131072)return '固定文件总计最多 128 KiB。';
+   }
    total+=bytes(c.key)+bytes(c.title)+bytes(c.input);
   }
   return total>262144?'任务集文本合计不能超过 256 KiB。':'';
@@ -36,7 +47,7 @@ window.RunDeskKunTaskSets=(()=>{
   function alive(g){return isActive()&&g===generation;}
   function update(){
    save.disabled=add.disabled=fresh.disabled=title.disabled=busy;add.disabled=busy||cases.length>=20;
-   for(const c of cases){for(const f of [c.key,c.title,c.input,c.add])f.disabled=busy;c.add.disabled=busy||c.rules.length>=12;c.addArtifact.disabled=busy||c.artifacts.length>=8;for(const r of c.artifacts){r.path.disabled=r.kind.disabled=r.remove.disabled=busy;r.value.disabled=busy||r.kind.value==='file_exists';}c.remove.disabled=busy||cases.length===1;for(const r of c.rules){r.kind.disabled=r.value.disabled=busy;r.remove.disabled=busy||c.rules.length===1;}}
+   for(const c of cases){for(const f of [c.key,c.title,c.input,c.add])f.disabled=busy;c.add.disabled=busy||c.rules.length>=12;c.addArtifact.disabled=busy||c.artifacts.length>=8;for(const r of c.artifacts){r.path.disabled=r.kind.disabled=r.remove.disabled=busy;r.value.disabled=busy||r.kind.value==='file_exists';}c.fixture.disabled=busy;c.addFile.disabled=busy||!c.fixture.checked||c.files.length>=16;c.fixtureNode.hidden=!c.fixture.checked;for(const f of c.files)f.path.disabled=f.content.disabled=f.remove.disabled=busy||!c.fixture.checked;c.remove.disabled=busy||cases.length===1;for(const r of c.rules){r.kind.disabled=r.value.disabled=busy;r.remove.disabled=busy||c.rules.length===1;}}
   }
   function changed(){generation++;selected=null;fixed.replaceChildren();notice.textContent='草稿已变化；保存会生成新的固定任务集。';}
   title.addEventListener('input',changed);
@@ -55,14 +66,20 @@ window.RunDeskKunTaskSets=(()=>{
    r.node=el('div',{class:'kun-rule-row'},el('label',{},'产物相对路径',path),el('label',{},'规则',kind),el('label',{},'验收值',text),r.remove);c.artifacts.push(r);c.artifactNode.append(r.node);
    path.addEventListener('input',changed);text.addEventListener('input',changed);kind.addEventListener('change',()=>{if(kind.value==='file_exists')text.value='';changed();update();});changed();update();
   }
+  function addFile(c,value={path:'',content:''}){
+   if(busy||c.files.length>=16)return;
+   const f={path:el('input',{'aria-label':'固定文件路径',value:value.path}),content:el('textarea',{'aria-label':'固定文件内容',rows:3})};f.content.value=value.content;
+   f.remove=button('移除固定文件',()=>{if(busy)return;c.files.splice(c.files.indexOf(f),1);c.fixtureNode.replaceChildren(...c.files.map(v=>v.node));changed();update();});
+   f.node=el('div',{},el('label',{},'相对路径',f.path),el('label',{},'固定内容',f.content),f.remove);c.files.push(f);c.fixtureNode.append(f.node);f.path.addEventListener('input',changed);f.content.addEventListener('input',changed);changed();update();
+  }
   function addCase(value){
    if(busy||cases.length>=20)return;
    if(!value){while(cases.some(c=>c.key.value==='case-'+nextCase))nextCase++;value={key:'case-'+nextCase,title:'案例 '+nextCase++,input:'',rules:[{kind:'reply_contains',value:''}]};}
-   const c={key:el('input',{'aria-label':'案例标识',value:value.key}),title:el('input',{'aria-label':'案例标题',value:value.title}),input:el('textarea',{'aria-label':'固定输入',rows:4}),rules:[],ruleNode:el('div',{}),artifacts:[],artifactNode:el('div',{})};c.input.value=value.input;
+   const c={key:el('input',{'aria-label':'案例标识',value:value.key}),title:el('input',{'aria-label':'案例标题',value:value.title}),input:el('textarea',{'aria-label':'固定输入',rows:4}),rules:[],ruleNode:el('div',{}),artifacts:[],artifactNode:el('div',{}),fixture:el('input',{type:'checkbox','aria-label':'使用独立评测目录'}),files:[],fixtureNode:el('div',{})};c.input.value=value.input;c.fixture.checked=!!value.workspaceFixture;
    c.remove=button('移除案例',()=>{if(busy||cases.length===1)return;cases.splice(cases.indexOf(c),1);casesNode.replaceChildren(...cases.map(x=>x.node));changed();update();});
-   c.add=button('增加规则',()=>addRule(c));c.addArtifact=button('增加产物规则',()=>addArtifact(c));
-   c.node=el('fieldset',{class:'kun-task-case'},el('legend',{},'案例'),el('label',{},'案例标识',c.key),el('label',{},'案例标题',c.title),el('label',{},'固定输入',c.input),el('p',{class:'help'},'验收规则：固定要求运行成功结束，再检查以下完整最终回复规则。'),c.ruleNode,el('div',{class:'actions'},c.add),el('p',{class:'help'},'可选产物规则：运行结束时检查工作区相对文件；每个文件最多 1 MiB。保存摘要与结果，之后改文件不改历史评分。此检查不证明文件由本次运行创建。'),c.artifactNode,el('div',{class:'actions'},c.addArtifact,c.remove));
-   cases.push(c);casesNode.append(c.node);for(const f of [c.key,c.title,c.input])f.addEventListener('input',changed);for(const r of value.rules)addRule(c,r);for(const r of value.artifactRules||[])addArtifact(c,r);changed();update();
+   c.add=button('增加规则',()=>addRule(c));c.addArtifact=button('增加产物规则',()=>addArtifact(c));c.addFile=button('增加固定输入文件',()=>addFile(c));c.fixture.addEventListener('change',()=>{changed();update();});
+   c.node=el('fieldset',{class:'kun-task-case'},el('legend',{},'案例'),el('label',{},'案例标识',c.key),el('label',{},'案例标题',c.title),el('label',{},'固定输入',c.input),el('label',{},c.fixture,'使用独立评测目录'),el('p',{class:'help'},'每次初始化新目录，只含以下固定文件；不复制项目、不开启 MCP。空列表表示空目录。此模式候选只用于评测，不能直接启用到常规应用。'),c.fixtureNode,c.addFile,el('p',{class:'help'},'验收规则：固定要求运行成功结束，再检查以下完整最终回复规则。'),c.ruleNode,el('div',{class:'actions'},c.add),el('p',{class:'help'},'可选产物规则：运行结束时检查工作区相对文件；每个文件最多 1 MiB。保存摘要与结果，之后改文件不改历史评分。此检查不证明文件由本次运行创建。'),c.artifactNode,el('div',{class:'actions'},c.addArtifact,c.remove));
+   cases.push(c);casesNode.append(c.node);for(const f of [c.key,c.title,c.input])f.addEventListener('input',changed);for(const r of value.rules)addRule(c,r);for(const r of value.artifactRules||[])addArtifact(c,r);for(const f of value.workspaceFixture?.files||[])addFile(c,f);changed();update();
   }
   function draft(value){
    if(busy)return;generation++;selected=null;fixed.replaceChildren();cases.length=0;casesNode.replaceChildren();nextCase=1;title.value=value?value.title:'固定评测任务集';
@@ -72,13 +89,13 @@ window.RunDeskKunTaskSets=(()=>{
    selected=value;
    const copy=button('复制为新草稿',()=>{if(!busy&&selected===value)draft(value);});
    fixed.replaceChildren(el('h3',{},'已保存 · '+value.title),el('p',{},value.caseCount+' 个案例 · '+value.createdAt),el('p',{class:'help'},'任务集已固定；新预览尚未执行，运行与评分请在下方读取。'),el('details',{},el('summary',{},'身份与内容指纹'),el('pre',{},JSON.stringify({id:value.id,hash:value.hash,evaluator:value.evaluator},null,2))),copy,
-    ...value.cases.map(c=>el('details',{},el('summary',{},c.key+' · '+c.title),el('h4',{},'固定输入'),el('pre',{},c.input),el('p',{},'固定要求：运行成功结束'),...c.rules.map(r=>el('div',{},el('strong',{},kinds[r.kind]),el('pre',{},r.value))),...(c.artifactRules||[]).map(r=>el('div',{},el('strong',{},artifactKinds[r.kind]+' · '+r.path),el('pre',{},r.value||''))))));
+    ...value.cases.map(c=>el('details',{},el('summary',{},c.key+' · '+c.title),el('h4',{},'固定输入'),el('pre',{},c.input),el('p',{},c.workspaceFixture?'独立评测目录 · 每次按固定文件初始化':'共享项目工作区'),...(c.workspaceFixture?.files||[]).map(f=>el('div',{},el('strong',{},f.path),el('pre',{},f.content))),el('p',{},'固定要求：运行成功结束'),...c.rules.map(r=>el('div',{},el('strong',{},kinds[r.kind]),el('pre',{},r.value))),...(c.artifactRules||[]).map(r=>el('div',{},el('strong',{},artifactKinds[r.kind]+' · '+r.path),el('pre',{},r.value||''))))));
    if(window.RunDeskKunCaseRuns)fixed.append(window.RunDeskKunCaseRuns.create({taskSet:value,isActive:()=>isActive()&&selected===value}).node);
   }
   function validResponse(value,id){return value&&value.id&&(!id||id===value.id)&&value.hash&&value.schema===1&&value.evaluator==='reply-rules-v1'&&Array.isArray(value.cases)&&value.caseCount===value.cases.length;}
   async function saveSet(){
    if(busy)return;
-   const value={title:title.value,cases:cases.map(c=>({key:c.key.value,title:c.title.value,input:c.input.value,rules:c.rules.map(r=>({kind:r.kind.value,value:r.value.value})),...(c.artifacts.length?{artifactRules:c.artifacts.map(r=>({path:r.path.value,kind:r.kind.value,value:r.value.value}))}:{})}))},error=validate(value);
+   const value={title:title.value,cases:cases.map(c=>({key:c.key.value,title:c.title.value,input:c.input.value,...(c.fixture.checked?{workspaceFixture:{files:c.files.map(f=>({path:f.path.value,content:f.content.value}))}}:{}),rules:c.rules.map(r=>({kind:r.kind.value,value:r.value.value})),...(c.artifacts.length?{artifactRules:c.artifacts.map(r=>({path:r.path.value,kind:r.kind.value,value:r.value.value}))}:{})}))},error=validate(value);
    if(error){notice.textContent=error;return;}
    const g=generation;busy=true;update();notice.textContent='保存固定任务集…';
    try{const result=await api('/kun-task-sets',{method:'POST',body:value});if(!alive(g))return;if(!validResponse(result))throw Error('任务集响应身份不匹配。');render(result);notice.textContent='任务集已保存；可在列表中重新打开。';}

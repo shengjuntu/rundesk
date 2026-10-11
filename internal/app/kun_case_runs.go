@@ -28,30 +28,31 @@ type KunCaseRunInput struct {
 	InstanceID          string `json:"instanceId"`
 }
 type KunCaseRunPreview struct {
-	BenchmarkID     string      `json:"benchmarkId,omitempty"`
-	CandidateID     string      `json:"candidateId,omitempty"`
-	CandidateHash   string      `json:"candidateHash,omitempty"`
-	Schema          int         `json:"schema"`
-	ID              string      `json:"id"`
-	Hash            string      `json:"hash"`
-	CreatedAt       string      `json:"createdAt"`
-	EngineVersion   string      `json:"engineVersion"`
-	ProtocolVersion int         `json:"protocolVersion"`
-	TaskSetID       string      `json:"taskSetId"`
-	TaskSetHash     string      `json:"taskSetHash"`
-	TaskSetTitle    string      `json:"taskSetTitle"`
-	Case            KunTaskCase `json:"case"`
-	SessionID       string      `json:"sessionId"`
-	RunID           string      `json:"runId"`
-	InstanceID      string      `json:"instanceId"`
-	InstanceName    string      `json:"instanceName"`
-	WorkspaceID     string      `json:"workspaceId"`
-	Workspace       string      `json:"workspace"`
-	Config          p.Config    `json:"config"`
-	EffectiveInput  string      `json:"effectiveInput"`
-	InputHash       string      `json:"inputHash"`
-	ApprovalPolicy  string      `json:"approvalPolicy"`
-	MCPServers      []string    `json:"mcpServers"`
+	ExecutionWorkspace string      `json:"executionWorkspace,omitempty"`
+	BenchmarkID        string      `json:"benchmarkId,omitempty"`
+	CandidateID        string      `json:"candidateId,omitempty"`
+	CandidateHash      string      `json:"candidateHash,omitempty"`
+	Schema             int         `json:"schema"`
+	ID                 string      `json:"id"`
+	Hash               string      `json:"hash"`
+	CreatedAt          string      `json:"createdAt"`
+	EngineVersion      string      `json:"engineVersion"`
+	ProtocolVersion    int         `json:"protocolVersion"`
+	TaskSetID          string      `json:"taskSetId"`
+	TaskSetHash        string      `json:"taskSetHash"`
+	TaskSetTitle       string      `json:"taskSetTitle"`
+	Case               KunTaskCase `json:"case"`
+	SessionID          string      `json:"sessionId"`
+	RunID              string      `json:"runId"`
+	InstanceID         string      `json:"instanceId"`
+	InstanceName       string      `json:"instanceName"`
+	WorkspaceID        string      `json:"workspaceId"`
+	Workspace          string      `json:"workspace"`
+	Config             p.Config    `json:"config"`
+	EffectiveInput     string      `json:"effectiveInput"`
+	InputHash          string      `json:"inputHash"`
+	ApprovalPolicy     string      `json:"approvalPolicy"`
+	MCPServers         []string    `json:"mcpServers"`
 }
 type KunCaseRunView struct {
 	Preview KunCaseRunPreview `json:"preview"`
@@ -121,6 +122,10 @@ func (m *Manager) prepareKunCaseRun(in KunCaseRunInput) (kunCaseDraft, error) {
 	if err != nil {
 		return out, err
 	}
+	bindKunWorkspaceFixture(&request, chosen.WorkspaceFixture)
+	if request.WorkspaceFixture != nil && len(request.MCP) > 0 {
+		return out, failure(409, "fixture_mcp_unsupported", "独立评测目录仅支持内置文件工具；请使用未启用 MCP 的 Kun 实例")
+	}
 	request.ArtifactRules = append([]p.ArtifactRule(nil), chosen.ArtifactRules...)
 	if err = request.Config.Validate(); err != nil {
 		return out, failure(400, "case_config_invalid", err.Error())
@@ -130,6 +135,12 @@ func (m *Manager) prepareKunCaseRun(in KunCaseRunInput) (kunCaseDraft, error) {
 		return out, err
 	}
 	preview := KunCaseRunPreview{Schema: 1, ID: id, CreatedAt: store.Now(), EngineVersion: p.EngineVersion, ProtocolVersion: p.Version, TaskSetID: set.ID, TaskSetHash: set.Hash, TaskSetTitle: set.Title, Case: *chosen, SessionID: target.ID, RunID: runID, InstanceID: i.ID, InstanceName: i.Name, WorkspaceID: w.ID, Workspace: w.Path, Config: request.Config, EffectiveInput: request.Input, InputHash: forkDigest(request.Input), ApprovalPolicy: request.ApprovalPolicy, MCPServers: []string{}}
+	if chosen.WorkspaceFixture != nil {
+		preview.ExecutionWorkspace, err = p.FixtureRoot(w.Path, target.ID)
+		if err != nil {
+			return out, err
+		}
+	}
 	for _, server := range request.MCP {
 		preview.MCPServers = append(preview.MCPServers, server.Name)
 	}
@@ -175,6 +186,17 @@ func (m *Manager) kunCaseDraft(id string) (kunCaseDraft, error) {
 		return d, failure(404, "case_plan_not_found", "案例运行预览不存在")
 	}
 	pv := d.Preview
+	expectedRoot := ""
+	if pv.Case.WorkspaceFixture != nil {
+		var err error
+		expectedRoot, err = p.FixtureRoot(pv.Workspace, pv.SessionID)
+		if err != nil {
+			return d, failure(409, "case_fixture_integrity", "评测目录身份不一致")
+		}
+	}
+	if expectedRoot != pv.ExecutionWorkspace || p.ValidateWorkspaceFixture(pv.Case.WorkspaceFixture) != nil {
+		return d, failure(409, "case_fixture_integrity", "评测目录或固定文件不一致")
+	}
 	if pv.ID != id || pv.Schema != 1 || pv.Hash != caseDraftHash(d) || pv.SessionID != d.Target.ID || d.Target.KunCase == nil || *d.Target.KunCase != (KunCaseOrigin{PlanID: id, TaskSetID: pv.TaskSetID, TaskSetHash: pv.TaskSetHash, CaseKey: pv.Case.Key, InputHash: forkDigest(pv.Case.Input), RunID: pv.RunID}) || pv.InputHash != forkDigest(pv.EffectiveInput) {
 		return d, failure(409, "case_plan_integrity", "案例运行预览指纹或绑定不一致")
 	}
@@ -294,6 +316,10 @@ func (m *Manager) kunCaseStartRequest(s Session, w Workspace, in Input) (p.Start
 		return out, err
 	}
 	out.Fast = d.Fast
+	bindKunWorkspaceFixture(&out, d.Preview.Case.WorkspaceFixture)
+	if out.WorkspaceFixture != nil && len(out.MCP) > 0 {
+		return p.Start{}, failure(409, "fixture_mcp_unsupported", "独立评测目录仅支持内置文件工具")
+	}
 	out.ArtifactRules = append([]p.ArtifactRule(nil), d.Preview.Case.ArtifactRules...)
 	if caseRequestHash(out) != d.RequestHash {
 		return p.Start{}, failure(409, "case_request_changed", "有效输入、权限或 MCP 参数已变化，请重新预览")

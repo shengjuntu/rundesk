@@ -1,0 +1,33 @@
+{
+  "version": "0.43.0",
+  "startedAt": "2026-10-09T02:05:24.770916+00:00",
+  "status": "passed",
+  "passed": true,
+  "sourceSHA256": "5d2d7efc4edd5683531604a0b1373b152732b2e50c8af947ba3b6907322cfe83",
+  "selectedChecks": [
+    "build",
+    "http"
+  ],
+  "goVersion": "go version go1.25.12 linux/amd64",
+  "checks": [
+    {
+      "name": "build",
+      "status": "passed",
+      "startedAt": "2026-10-09T02:05:24.795810+00:00",
+      "log": "build.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-09T02:05:29.956470+00:00",
+      "durationSeconds": 5.16
+    },
+    {
+      "name": "http",
+      "status": "passed",
+      "startedAt": "2026-10-09T02:05:29.957305+00:00",
+      "log": "http.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-09T02:05:59.624945+00:00",
+      "durationSeconds": 29.667
+    }
+  ],
+  "finishedAt": "2026-10-09T02:05:59.626852+00:00"
+}

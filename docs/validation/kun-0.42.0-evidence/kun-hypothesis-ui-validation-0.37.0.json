@@ -1,0 +1,18 @@
+{
+  "version": "0.37.0",
+  "passed": true,
+  "scope": "Node DOM stub + shipped view; no browser layout acceptance",
+  "checks": [
+    "explicit bounded record reads",
+    "response identity bound to parent hash",
+    "literal text rendering",
+    "display snippets never copied into replacement",
+    "UTF-8 byte limit and reason",
+    "selection clears replacement",
+    "explicit empty replacement",
+    "fixed child preview only, no automatic start",
+    "duplicate requests guarded",
+    "late/closed responses ignored",
+    "Live and nested edits disabled"
+  ]
+}

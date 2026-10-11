@@ -1,0 +1,2 @@
+$ ["/workspace/scratch/3dce8d85f3e5/toolchain-0381/go/bin/go", "build", "-buildvcs=false", "-trimpath", "-o", "bin/rundesk", "./cmd/rundesk"]
+$ ["/workspace/scratch/3dce8d85f3e5/toolchain-0381/go/bin/go", "build", "-buildvcs=false", "-trimpath", "-o", "bin/kun", "./cmd/kun"]

@@ -10,6 +10,12 @@ Built with Go and plain HTML/JavaScript. Node.js is not required to run RunDesk 
 
 ![RunDesk conversation workspace](docs/screenshots/0.16.0/chat-en.png)
 
+## K4 isolated evaluation directories (0.43.0)
+
+Declare fixed input files and run each case in a fresh directory. Dynamic samples, fast samples and independent validation each receive their own file-tool root. Preview has no file operations; existing directories are never overwritten or reset. Setup evidence is required for a passing score, and fallback retains the same directory and action ledger.
+
+Upgrade **both binaries: Kun 0.15.0 / worker protocol v15 / fork schema 3**. This mode supports built-in file tools only; MCP is rejected. Isolated candidates are evaluation-only and cannot be promoted directly to shared-workspace applications. This is directory separation, not an OS/process/network sandbox. See [fixture guide](docs/KUN-FIXTURES.md), [release notes](docs/RELEASE-0.43.0.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md). The following release sections retain their historical scope.
+
 ## K4 artifact checks (0.42.0)
 
 Freeze optional file rules alongside case inputs: existence, literal text containment/equality, or SHA-256. Kun captures bounded workspace files in its terminal journal event; later file changes and host restarts cannot rewrite historical quality. Reply and artifact checks jointly gate source distillation, independent validation and repeated comparisons. Missing evidence remains unknown.

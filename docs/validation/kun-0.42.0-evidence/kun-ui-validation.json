@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "modelCalls": 3,
+  "checks": [
+    "UI config",
+    "model/tool step boundaries",
+    "steer before next request",
+    "actual request context tree",
+    "snapshot diff",
+    "expanded details survive refresh",
+    "snapshot inspection",
+    "reported usage",
+    "budget settings",
+    "four structured module cards",
+    "current Sources control gating",
+    "MCP state and performance tables",
+    "fixed snapshot across panels and refresh",
+    "live inspection",
+    "conditional after-model breakpoint",
+    "Console read-only query and control proposal",
+    "explicit checkpoint recovery",
+    "reload persistence",
+    "mobile viewport"
+  ],
+  "pageErrors": []
+}

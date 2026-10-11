@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "modelCalls": 4,
+  "toolCalls": 2,
+  "listCalls": 3,
+  "pageErrors": [],
+  "checks": [
+    "Kun config UI",
+    "MCP discovery without tool execution",
+    "prompt holds execution",
+    "approve once",
+    "request/result inspection",
+    "tool definitions snapshot",
+    "always-allow next turn without approval",
+    "reload",
+    "390px viewport"
+  ]
+}

@@ -89,6 +89,9 @@ func ValidateFastProgram(v p.FastProgram) error {
 		return fmt.Errorf("last instruction must finish")
 	}
 	g := v.Guard
+	if g.WorkspaceMode != "" && g.WorkspaceMode != p.FixtureWorkspaceMode {
+		return fmt.Errorf("unsupported workspace mode guard")
+	}
 	if g.HarnessHash == "" || g.EngineVersion == "" || g.ConfigHash == "" || g.SkillsHash == "" || g.MCPHash == "" || g.Workspace == "" || g.CatalogHash == "" || g.ApprovalPolicy == "" {
 		return fmt.Errorf("all runtime guards are required")
 	}
@@ -101,7 +104,7 @@ func FastGuardFor(s p.State) p.FastGuard {
 		return p.FastGuard{}
 	}
 	m := s.Manifest
-	return p.FastGuard{ContextRevision: m.ContextRevision, HarnessHash: fingerprint(s.Harness), EngineVersion: m.EngineVersion, ConfigHash: m.ConfigHash, SkillsHash: m.SkillsHash, MCPHash: m.MCPHash, Workspace: m.Workspace, CatalogHash: catalogFingerprint(s), ApprovalPolicy: s.ApprovalPolicy}
+	return p.FastGuard{WorkspaceMode: m.WorkspaceMode, ContextRevision: m.ContextRevision, HarnessHash: fingerprint(s.Harness), EngineVersion: m.EngineVersion, ConfigHash: m.ConfigHash, SkillsHash: m.SkillsHash, MCPHash: m.MCPHash, Workspace: m.Workspace, CatalogHash: catalogFingerprint(s), ApprovalPolicy: s.ApprovalPolicy}
 }
 func fastPointer(v any, path string) (any, error) {
 	if path == "" {

@@ -20,6 +20,7 @@ type FastInstruction struct {
 	Else    int                  `json:"else,omitempty"`
 }
 type FastGuard struct {
+	WorkspaceMode   string `json:"workspaceMode,omitempty"`
 	ContextRevision string `json:"contextRevision"`
 	HarnessHash     string `json:"harnessHash"`
 	EngineVersion   string `json:"engineVersion"`

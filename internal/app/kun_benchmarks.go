@@ -466,7 +466,7 @@ func (m *Manager) EvaluateKunBenchmark(ctx context.Context, id, expected string)
 	defer cancel()
 	out = KunBenchmarkReport{Schema: 1, ID: store.ID(), CreatedAt: store.Now(), BenchmarkID: b.ID, BenchmarkHash: b.Hash, CandidateID: b.CandidateID, CandidateHash: b.CandidateHash, Status: "complete", Pairs: []KunBenchmarkPair{}, Results: []KunBenchmarkResult{}, Warnings: []string{
 		"描述性重复对照：同一固定保留集、交替先后顺序、独立会话；不构成随机试验、统计显著性或新的盲测。",
-		"真实工具在原工作区重复执行，未隔离或重置文件和外部服务；不得将状态或缓存变化解释为模型优化收益。",
+		"共享模式在原工作区执行；独立评测模式按每个案例预先固定的文件初始化新目录，仅支持内置文件工具；不隔离模型服务、操作系统或外部编辑器。",
 		"质量按预先固定的回复与可选产物规则判定；快速路径回退后成功也计为通过，并单独统计回退；此报告不能用于启用候选。",
 		"缺失计量不按零。均值和范围仅覆盖 count 个已知观测；total 仅在全部已知时给出。配对差值为 fast − dynamic，只纳入两侧都有记录的配对。",
 		"运行毫秒为引擎活动加等待时间，不含宿主排队和进程启动；token 仅覆盖已报告的模型用量，不是货币费用，也不含外部工具账单。",

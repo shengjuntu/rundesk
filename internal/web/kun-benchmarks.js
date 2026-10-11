@@ -70,7 +70,7 @@ window.RunDeskKunBenchmarks = (() => {
           const v = await api('/kun-case-runs/' + encodeURIComponent(p.planId));
           if (alive()) { if (v.preview.hash !== p.planHash || v.preview.benchmarkId !== b.id) throw Error('案例预览绑定不匹配。'); detail.replaceChildren(el('pre', {}, JSON.stringify(v, null, 2))); }
         }), detail,
-        el('label', {}, confirm, '我已核对整个批次，确认 ' + b.plans.length + ' 次运行会在同一工作区重复执行真实工具'),
+        el('label', {}, confirm, '我已核对整个批次，确认 ' + b.plans.length + ' 次运行按固定工作区模式执行真实工具'+(b.taskSet?.cases?.every(c=>c.workspaceFixture)?'，每次初始化独立目录':'')),
         action('开始或继续整个对照批次', async alive => {
           if (batch !== b || !confirm.checked) throw Error('请先核对整个批次并勾选确认。');
           const v = await api('/kun-benchmarks/' + encodeURIComponent(b.id) + '/start', {method:'POST', body:{expectedHash:b.hash, confirmExecute:true}});
@@ -94,7 +94,7 @@ window.RunDeskKunBenchmarks = (() => {
       if (page.hasMore) listing.append(action('更早的对照批次', live => list(page.nextOffset, live)));
     }
     node.append(el('h3', {}, '多次采样对照'),
-      el('p', {class:'help'}, '在该候选的固定验证集上，对比动态执行与快速路径。每例重复 2–5 次，总计最多 100 次。顺序交替，文件和外部服务不会自动重置。'),
+      el('p', {class:'help'}, '在该候选的固定验证集上，对比动态执行与快速路径。每例重复 2–5 次，总计最多 100 次。顺序交替；独立评测模式每次初始化固定文件，共享模式不重置文件。模型服务和外部状态不隔离。'),
       el('label', {}, '标题', title), el('label', {}, '每例重复次数', repetitions),
       action('生成固定对照预览', async alive => {
         const n = Number(repetitions.value); if (!Number.isInteger(n) || n < 2 || n > 5) throw Error('每例重复次数须为 2–5 的整数。');

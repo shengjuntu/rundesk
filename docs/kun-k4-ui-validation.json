@@ -1,5 +1,5 @@
 {
-  "version": "0.42.0",
+  "version": "0.43.0",
   "passed": true,
   "scope": "shipped K4 UI in Node DOM fixture; not browser layout acceptance",
   "checks": [
@@ -12,6 +12,7 @@
     "fixed validation batch binding",
     "unknown report cannot promote",
     "application environment filtering and revision binding",
-    "explicit disable"
+    "explicit disable",
+    "isolated candidate never offers shared-application promotion"
   ]
 }

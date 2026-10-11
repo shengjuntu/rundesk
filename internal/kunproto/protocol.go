@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-const Version = 14
-const EngineVersion = "0.14.0"
+const Version = 15
+const EngineVersion = "0.15.0"
 const MaxMessage = 8 << 20
 
 type Envelope struct {
@@ -118,21 +118,22 @@ type DiagnosticSource struct {
 }
 
 type Start struct {
-	ArtifactRules   []ArtifactRule       `json:"artifactRules,omitempty"`
-	Fast            *FastStart           `json:"fast,omitempty"`
-	Fork            *ForkStart           `json:"fork,omitempty"`
-	Diagnostic      *DiagnosticSource    `json:"diagnostic,omitempty"`
-	Resume          *CheckpointSelection `json:"resume,omitempty"`
-	ContextRevision string               `json:"contextRevision,omitempty"`
-	MCP             []MCPServer          `json:"mcp,omitempty"`
-	ApprovalPolicy  string               `json:"approvalPolicy,omitempty"`
-	SessionID       string               `json:"sessionId"`
-	RunID           string               `json:"runId"`
-	Input           string               `json:"input"`
-	Workspace       string               `json:"workspace"`
-	Config          Config               `json:"config"`
-	APIKey          string               `json:"apiKey,omitempty"`
-	Skills          []Skill              `json:"skills,omitempty"`
+	WorkspaceFixture *WorkspaceFixture    `json:"workspaceFixture,omitempty"`
+	ArtifactRules    []ArtifactRule       `json:"artifactRules,omitempty"`
+	Fast             *FastStart           `json:"fast,omitempty"`
+	Fork             *ForkStart           `json:"fork,omitempty"`
+	Diagnostic       *DiagnosticSource    `json:"diagnostic,omitempty"`
+	Resume           *CheckpointSelection `json:"resume,omitempty"`
+	ContextRevision  string               `json:"contextRevision,omitempty"`
+	MCP              []MCPServer          `json:"mcp,omitempty"`
+	ApprovalPolicy   string               `json:"approvalPolicy,omitempty"`
+	SessionID        string               `json:"sessionId"`
+	RunID            string               `json:"runId"`
+	Input            string               `json:"input"`
+	Workspace        string               `json:"workspace"`
+	Config           Config               `json:"config"`
+	APIKey           string               `json:"apiKey,omitempty"`
+	Skills           []Skill              `json:"skills,omitempty"`
 }
 type Control struct {
 	Harness          *HarnessConfig `json:"harness,omitempty"`
@@ -151,36 +152,37 @@ type Receipt struct {
 	Revision  int64  `json:"revision"`
 }
 type State struct {
-	ArtifactRules   []ArtifactRule         `json:"artifactRules,omitempty"`
-	Fast            *FastState             `json:"fast,omitempty"`
-	RuntimeHarness  *HarnessConfig         `json:"runtimeHarness,omitempty"`
-	Fork            *ForkState             `json:"fork,omitempty"`
-	Diagnostic      *DiagnosticScope       `json:"diagnostic,omitempty"`
-	Debug           DebugState             `json:"debug"`
-	Manifest        *RunManifest           `json:"manifest,omitempty"`
-	ResumedFrom     *CheckpointSelection   `json:"resumedFrom,omitempty"`
-	Harness         Harness                `json:"harness"`
-	Modules         map[string]ModuleState `json:"modules,omitempty"`
-	Budget          BudgetUsage            `json:"budget"`
-	ToolDefinitions []json.RawMessage      `json:"toolDefinitions,omitempty"`
-	MCP             []MCPStatus            `json:"mcp,omitempty"`
-	MCPTools        []MCPTool              `json:"mcpTools,omitempty"`
-	Approval        *ToolApproval          `json:"approval,omitempty"`
-	ApprovalPolicy  string                 `json:"approvalPolicy,omitempty"`
-	Queued          []Control              `json:"queuedControls,omitempty"`
-	Schema          int                    `json:"schemaVersion"`
-	SessionID       string                 `json:"sessionId"`
-	RunID           string                 `json:"runId"`
-	Revision        int64                  `json:"revision"`
-	Status          string                 `json:"status"`
-	Phase           string                 `json:"phase"`
-	Step            int                    `json:"step"`
-	Messages        []Message              `json:"messages"`
-	Pending         []ToolCall             `json:"pending,omitempty"`
-	Actions         map[string]string      `json:"actions,omitempty"`
-	Config          Config                 `json:"config"`
-	Skills          []Skill                `json:"skills,omitempty"`
-	Error           string                 `json:"error,omitempty"`
+	WorkspaceFixture *WorkspaceFixtureState `json:"workspaceFixture,omitempty"`
+	ArtifactRules    []ArtifactRule         `json:"artifactRules,omitempty"`
+	Fast             *FastState             `json:"fast,omitempty"`
+	RuntimeHarness   *HarnessConfig         `json:"runtimeHarness,omitempty"`
+	Fork             *ForkState             `json:"fork,omitempty"`
+	Diagnostic       *DiagnosticScope       `json:"diagnostic,omitempty"`
+	Debug            DebugState             `json:"debug"`
+	Manifest         *RunManifest           `json:"manifest,omitempty"`
+	ResumedFrom      *CheckpointSelection   `json:"resumedFrom,omitempty"`
+	Harness          Harness                `json:"harness"`
+	Modules          map[string]ModuleState `json:"modules,omitempty"`
+	Budget           BudgetUsage            `json:"budget"`
+	ToolDefinitions  []json.RawMessage      `json:"toolDefinitions,omitempty"`
+	MCP              []MCPStatus            `json:"mcp,omitempty"`
+	MCPTools         []MCPTool              `json:"mcpTools,omitempty"`
+	Approval         *ToolApproval          `json:"approval,omitempty"`
+	ApprovalPolicy   string                 `json:"approvalPolicy,omitempty"`
+	Queued           []Control              `json:"queuedControls,omitempty"`
+	Schema           int                    `json:"schemaVersion"`
+	SessionID        string                 `json:"sessionId"`
+	RunID            string                 `json:"runId"`
+	Revision         int64                  `json:"revision"`
+	Status           string                 `json:"status"`
+	Phase            string                 `json:"phase"`
+	Step             int                    `json:"step"`
+	Messages         []Message              `json:"messages"`
+	Pending          []ToolCall             `json:"pending,omitempty"`
+	Actions          map[string]string      `json:"actions,omitempty"`
+	Config           Config                 `json:"config"`
+	Skills           []Skill                `json:"skills,omitempty"`
+	Error            string                 `json:"error,omitempty"`
 }
 type Event struct {
 	Sequence  int64           `json:"sequence"`
