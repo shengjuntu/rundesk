@@ -1,8 +1,8 @@
 {
-  "version": "0.41.0",
+  "version": "0.42.0",
   "passed": true,
   "scope": "local model fixture; not a real-service performance benchmark",
-  "modelCalls": 40,
+  "modelCalls": 48,
   "primary": {
     "dynamic": {
       "failed": 0,
@@ -27,11 +27,11 @@
         },
         "runMillis": {
           "count": 4,
-          "max": 60,
-          "mean": 22.75,
+          "max": 59,
+          "mean": 21.25,
           "min": 8,
           "missing": 0,
-          "total": 91
+          "total": 85
         }
       },
       "passRate": 100,
@@ -62,11 +62,11 @@
         },
         "runMillis": {
           "count": 4,
-          "max": 8,
-          "mean": 5.75,
-          "min": 5,
+          "max": 5,
+          "mean": 4.25,
+          "min": 4,
           "missing": 0,
-          "total": 23
+          "total": 17
         }
       },
       "passRate": 100,
@@ -93,9 +93,9 @@
       },
       "runMillis": {
         "count": 4,
-        "max": -3,
+        "max": -4,
         "mean": -17,
-        "min": -52,
+        "min": -54,
         "missing": 0,
         "total": -68
       }
@@ -125,11 +125,11 @@
         },
         "runMillis": {
           "count": 10,
-          "max": 92,
-          "mean": 20,
-          "min": 8,
+          "max": 9,
+          "mean": 7.8,
+          "min": 7,
           "missing": 0,
-          "total": 200
+          "total": 78
         }
       },
       "passRate": 100,
@@ -160,11 +160,11 @@
         },
         "runMillis": {
           "count": 10,
-          "max": 12,
-          "mean": 8.3,
-          "min": 6,
+          "max": 8,
+          "mean": 6.4,
+          "min": 5,
           "missing": 0,
-          "total": 83
+          "total": 64
         }
       },
       "passRate": 100,
@@ -175,6 +175,7 @@
   },
   "checks": [
     "8 fixed counterbalanced runs; no preview calls; one batch confirmation; stop while active and restart preserve identities; 4 paired reports with exact model/token differences",
-    "20-run batch exceeds process ceiling via completed-worker release; fallback success remains quality pass, counted separately; completed writes not replayed; benchmark reports never become promotion reports"
+    "20-run batch exceeds process ceiling via completed-worker release; fallback success remains quality pass, counted separately; completed writes not replayed; benchmark reports never become promotion reports",
+    "reply success with wrong or missing artifacts fails independent validation, promotion, source admission and repeated comparisons; repairing file later cannot rewrite failed score"
   ]
 }

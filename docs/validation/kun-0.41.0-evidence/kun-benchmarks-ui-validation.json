@@ -1,0 +1,15 @@
+{
+  "version": "0.41.0",
+  "passed": true,
+  "scope": "shipped UI in Node DOM fixture; browser layout not tested",
+  "checks": [
+    "preview makes no execution request",
+    "duplicate clicks suppressed",
+    "whole-batch consent and exact hash",
+    "stop does not claim in-flight cancellation",
+    "unknown metrics show known/missing counts",
+    "reports cannot promote candidates",
+    "response bindings checked",
+    "literal rendering and closed response suppression"
+  ]
+}

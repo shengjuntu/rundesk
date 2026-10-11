@@ -153,6 +153,9 @@ func (e *Engine) resumeLocked(in p.Start, hash string) (p.State, error) {
 	if err != nil {
 		return p.State{}, err
 	}
+	if len(saved.ArtifactRules) > 0 {
+		return p.State{}, fmt.Errorf("fixed artifact cases cannot resume; create a new case")
+	}
 	if !check.Eligible {
 		return p.State{}, fmt.Errorf("checkpoint resume blocked: %s", check.Reason)
 	}

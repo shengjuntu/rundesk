@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-const Version = 13
-const EngineVersion = "0.13.0"
+const Version = 14
+const EngineVersion = "0.14.0"
 const MaxMessage = 8 << 20
 
 type Envelope struct {
@@ -118,6 +118,7 @@ type DiagnosticSource struct {
 }
 
 type Start struct {
+	ArtifactRules   []ArtifactRule       `json:"artifactRules,omitempty"`
 	Fast            *FastStart           `json:"fast,omitempty"`
 	Fork            *ForkStart           `json:"fork,omitempty"`
 	Diagnostic      *DiagnosticSource    `json:"diagnostic,omitempty"`
@@ -150,6 +151,7 @@ type Receipt struct {
 	Revision  int64  `json:"revision"`
 }
 type State struct {
+	ArtifactRules   []ArtifactRule         `json:"artifactRules,omitempty"`
 	Fast            *FastState             `json:"fast,omitempty"`
 	RuntimeHarness  *HarnessConfig         `json:"runtimeHarness,omitempty"`
 	Fork            *ForkState             `json:"fork,omitempty"`

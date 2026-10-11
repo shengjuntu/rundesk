@@ -1,0 +1,15 @@
+{
+  "version": "0.41.0",
+  "passed": true,
+  "javascriptFiles": 83,
+  "nodeInteractionSuites": 12,
+  "openapiPaths": 180,
+  "openapiOperations": 216,
+  "newBenchmarkOperations": 8,
+  "uniqueParameters": true,
+  "localReferencesResolve": true,
+  "benchmarkAdminAndIdempotency": true,
+  "noNewDependencies": true,
+  "sourceFingerprintMatches": true,
+  "receipt": "validation/kun-0.41.0-final2/summary.json"
+}

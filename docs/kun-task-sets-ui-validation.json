@@ -1,8 +1,9 @@
 {
-  "version": "0.41.0",
+  "version": "0.42.0",
   "passed": true,
   "scope": "Node DOM stub + shipped task-set editor; not browser layout acceptance",
   "checks": [
+    "artifact path validation, literal value preservation, immutable copy and busy controls",
     "explicit bounded definition save",
     "unique case keys and rule limits",
     "literal input whitespace and HTML preserved",

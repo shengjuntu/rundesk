@@ -1,5 +1,5 @@
 {
-  "version": "0.41.0",
+  "version": "0.42.0",
   "passed": true,
   "scope": "Node DOM stub + shipped view; no browser layout acceptance",
   "checks": [

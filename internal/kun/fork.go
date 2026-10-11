@@ -258,6 +258,9 @@ func (e *Engine) forkLocked(in p.Start, hash string) (p.State, error) {
 	f := in.Fork
 	b := f.Bundle
 	s := clone(b.State)
+	if len(s.ArtifactRules) > 0 {
+		return p.State{}, fmt.Errorf("fixed artifact cases cannot fork; create a new case")
+	}
 	o := f.Origin
 	live := o.Mode == "live"
 	if e.state.SessionID != "" || in.Resume != nil || in.Diagnostic != nil || (!live && (len(in.MCP) > 0 || len(in.Skills) > 0)) {

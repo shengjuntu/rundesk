@@ -127,6 +127,13 @@ func (e *Engine) Start(in p.Start) (out p.State, startErr error) {
 	if e.closed {
 		return p.State{}, fmt.Errorf("worker closed")
 	}
+	if err := p.ValidateArtifactRules(in.ArtifactRules); err != nil {
+		return p.State{}, err
+	}
+	if len(in.ArtifactRules) > 0 && (in.Fork != nil || in.Resume != nil || in.Diagnostic != nil) {
+		return p.State{}, fmt.Errorf("artifact rules require an ordinary fresh run")
+	}
+	in.ArtifactRules = append([]p.ArtifactRule(nil), in.ArtifactRules...)
 	in.Config = in.Config.Normalized()
 	var frozen p.Config
 	if err := json.Unmarshal(p.JSON(in.Config), &frozen); err != nil {
@@ -267,7 +274,7 @@ func (e *Engine) Start(in p.Start) (out p.State, startErr error) {
 	}
 	harness := e.nextHarness(in.Config)
 	previousState := clone(e.state)
-	e.state = p.State{Schema: 1, SessionID: in.SessionID, RunID: in.RunID, Revision: e.state.Revision + 1, Status: "running", Phase: "before_model", Config: in.Config, Skills: in.Skills, Actions: map[string]string{}, Messages: append([]p.Message{{Role: "system", Content: prompt}}, kept...)}
+	e.state = p.State{ArtifactRules: in.ArtifactRules, Schema: 1, SessionID: in.SessionID, RunID: in.RunID, Revision: e.state.Revision + 1, Status: "running", Phase: "before_model", Config: in.Config, Skills: in.Skills, Actions: map[string]string{}, Messages: append([]p.Message{{Role: "system", Content: prompt}}, kept...)}
 	if in.Diagnostic != nil {
 		scope := in.Diagnostic.DiagnosticScope
 		e.state.Diagnostic = &scope
@@ -527,7 +534,13 @@ func (e *Engine) loop(ctx context.Context) {
 			e.state.Status = "completed"
 		}
 		_ = e.applyQueued("", true)
-		_ = e.record("kun/run.finished", map[string]any{"status": e.state.Status, "error": e.state.Error, "budget": e.state.Budget})
+		data := map[string]any{"status": e.state.Status, "error": e.state.Error, "budget": e.state.Budget}
+		if e.state.Status == "completed" {
+			if evidence := captureArtifacts(e.workspace, e.state.ArtifactRules); evidence != nil {
+				data["artifacts"] = evidence
+			}
+		}
+		_ = e.record("kun/run.finished", data)
 		e.clock = time.Time{}
 		e.secrets = nil
 	}()

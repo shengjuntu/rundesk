@@ -6,16 +6,18 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	p "github.com/shengjuntu/rundesk/internal/kunproto"
 	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 // A task set freezes authored inputs and rules, not runs or benchmark results.
 // Execution must bind a future run to this immutable definition explicitly.
 type KunTaskCase struct {
-	Key   string         `json:"key"`
-	Title string         `json:"title"`
-	Input string         `json:"input"`
-	Rules []KunReplyRule `json:"rules"`
+	Key           string           `json:"key"`
+	Title         string           `json:"title"`
+	Input         string           `json:"input"`
+	Rules         []KunReplyRule   `json:"rules"`
+	ArtifactRules []p.ArtifactRule `json:"artifactRules,omitempty"`
 }
 type KunTaskSetInput struct {
 	Title string        `json:"title"`
@@ -65,6 +67,12 @@ func validateKunTaskSet(in KunTaskSetInput) error {
 		if err := validateReplyRules(c.Rules); err != nil {
 			return err
 		}
+		if err := p.ValidateArtifactRules(c.ArtifactRules); err != nil {
+			return failure(400, "artifact_rules_invalid", err.Error())
+		}
+		for _, r := range c.ArtifactRules {
+			total += len(r.Path) + len(r.Kind) + len(r.Value)
+		}
 		total += len(c.Key) + len(c.Title) + len(c.Input)
 		for _, r := range c.Rules {
 			total += len(r.Kind) + len(r.Value)
@@ -85,6 +93,7 @@ func (m *Manager) CreateKunTaskSet(in KunTaskSetInput) (KunTaskSet, error) {
 	for i, c := range in.Cases {
 		cases[i] = c
 		cases[i].Rules = append([]KunReplyRule(nil), c.Rules...)
+		cases[i].ArtifactRules = append([]p.ArtifactRule(nil), c.ArtifactRules...)
 	}
 	out = KunTaskSet{Schema: 1, Evaluator: kunEvaluator, ID: store.ID(), Title: in.Title, CreatedAt: store.Now(), CaseCount: len(cases), Cases: cases}
 	out.Hash = taskSetHash(out)

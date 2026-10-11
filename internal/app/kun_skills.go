@@ -54,13 +54,14 @@ type KunSkillValidation struct {
 	Plans         []KunCaseRunPreview `json:"plans"`
 }
 type KunCaseScore struct {
-	PlanID        string            `json:"planId"`
-	CaseKey       string            `json:"caseKey"`
-	Summary       KunCompareSide    `json:"summary"`
-	Evaluation    KunEvaluationSide `json:"evaluation"`
-	FastCompleted bool              `json:"fastCompleted"`
-	FastFallback  bool              `json:"fastFallback,omitempty"`
-	EvidenceHash  string            `json:"evidenceHash"`
+	PlanID        string              `json:"planId"`
+	CaseKey       string              `json:"caseKey"`
+	Summary       KunCompareSide      `json:"summary"`
+	Evaluation    KunEvaluationSide   `json:"evaluation"`
+	FastCompleted bool                `json:"fastCompleted"`
+	FastFallback  bool                `json:"fastFallback,omitempty"`
+	EvidenceHash  string              `json:"evidenceHash"`
+	Artifacts     *p.ArtifactEvidence `json:"artifacts,omitempty"`
 }
 type KunSkillReport struct {
 	ID            string         `json:"id"`
@@ -115,6 +116,7 @@ func (m *Manager) KunCaseScore(ctx context.Context, id string) (KunCaseScore, er
 	if err != nil {
 		return out, err
 	}
+	out.Artifacts = scoreKunArtifacts(&out.Evaluation, out.Summary, events, v.Preview.Case.ArtifactRules)
 	out.EvidenceHash = forkDigest(events)
 	for _, raw := range events {
 		var ev p.Event

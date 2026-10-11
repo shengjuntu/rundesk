@@ -10,6 +10,12 @@ Built with Go and plain HTML/JavaScript. Node.js is not required to run RunDesk 
 
 ![RunDesk conversation workspace](docs/screenshots/0.16.0/chat-en.png)
 
+## K4 artifact checks (0.42.0)
+
+Freeze optional file rules alongside case inputs: existence, literal text containment/equality, or SHA-256. Kun captures bounded workspace files in its terminal journal event; later file changes and host restarts cannot rewrite historical quality. Reply and artifact checks jointly gate source distillation, independent validation and repeated comparisons. Missing evidence remains unknown.
+
+Upgrade **both binaries: Kun 0.14.0 / worker protocol v14 / fork schema 3**. Existing definitions/reports remain readable; old pending previews/checkpoints need recreation, and old Skill guards fall back until candidates are rebuilt and revalidated. Checks observe files at completion and do not prove this run created them; shared workspaces are not reset or isolated. See [artifact guide](docs/KUN-ARTIFACTS.md), [release notes](docs/RELEASE-0.42.0.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md). The following release sections retain their historical scope.
+
 ## Repeated K4 comparisons (0.41.0)
 
 Compare dynamic execution and a candidate Skill on fixed, paired cases, repeated 2–5 times. Freeze all identities and alternating order before execution, authorize the batch once, and run samples sequentially through existing capacity and approval gates. Stop prevents later dispatch; host restart never silently reruns interrupted work.

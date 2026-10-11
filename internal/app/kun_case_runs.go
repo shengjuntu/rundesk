@@ -121,6 +121,7 @@ func (m *Manager) prepareKunCaseRun(in KunCaseRunInput) (kunCaseDraft, error) {
 	if err != nil {
 		return out, err
 	}
+	request.ArtifactRules = append([]p.ArtifactRule(nil), chosen.ArtifactRules...)
 	if err = request.Config.Validate(); err != nil {
 		return out, failure(400, "case_config_invalid", err.Error())
 	}
@@ -293,6 +294,7 @@ func (m *Manager) kunCaseStartRequest(s Session, w Workspace, in Input) (p.Start
 		return out, err
 	}
 	out.Fast = d.Fast
+	out.ArtifactRules = append([]p.ArtifactRule(nil), d.Preview.Case.ArtifactRules...)
 	if caseRequestHash(out) != d.RequestHash {
 		return p.Start{}, failure(409, "case_request_changed", "有效输入、权限或 MCP 参数已变化，请重新预览")
 	}
