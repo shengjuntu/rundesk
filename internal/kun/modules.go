@@ -162,10 +162,11 @@ func (e *Engine) moduleState(name, phase string, data any) {
 }
 
 type toolResult struct {
-	Replay  *p.ReplayEvidence
-	Output  string
-	Raw     json.RawMessage
-	IsError bool
+	ReusedFrom string
+	Replay     *p.ReplayEvidence
+	Output     string
+	Raw        json.RawMessage
+	IsError    bool
 }
 
 // This is the single side-effect gateway. Validation, approval, budget reservation,

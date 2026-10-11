@@ -1,0 +1,3 @@
+$ ["/workspace/scratch/3dce8d85f3e5/toolchain-0381/go/bin/go", "test", "-race", "./internal/app", "./internal/kun", "-run", "TestKunEvaluation|TestKunCompar|TestKunHypothesis|TestKunTaskSet|TestKunCase|TestKunSkill|TestFast", "-count=1", "-timeout=180s"]
+ok  	github.com/shengjuntu/rundesk/internal/app	5.669s
+ok  	github.com/shengjuntu/rundesk/internal/kun	2.239s

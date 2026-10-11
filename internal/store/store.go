@@ -168,6 +168,9 @@ func (s *Store) DeleteSession(id string) error {
 	if _, e = tx.Exec(`INSERT INTO objects(kind,id,data) SELECT 'kun_fork_deleted',json_extract(data,'$.kunFork.previewId'),json_object('sessionId',id) FROM objects WHERE kind='session' AND id=? AND json_extract(data,'$.kunFork.previewId') IS NOT NULL ON CONFLICT(kind,id) DO NOTHING`, id); e != nil {
 		return e
 	}
+	if _, e = tx.Exec(`INSERT INTO objects(kind,id,data) SELECT 'kun_case_deleted',json_extract(data,'$.kunCase.planId'),json_object('sessionId',id) FROM objects WHERE kind='session' AND id=? AND json_extract(data,'$.kunCase.planId') IS NOT NULL ON CONFLICT(kind,id) DO NOTHING`, id); e != nil {
+		return e
+	}
 	for _, q := range []string{"DELETE FROM events WHERE session=?", "DELETE FROM objects WHERE kind='message-feedback' AND json_extract(data,'$.sessionId')=?", "DELETE FROM objects WHERE kind='steer' AND json_extract(data,'$.sessionId')=?", "DELETE FROM objects WHERE kind='approval' AND json_extract(data,'$.sessionId')=?", "DELETE FROM objects WHERE kind='recovery-plan' AND json_extract(data,'$.sessionId')=?", "DELETE FROM objects WHERE kind='runtime' AND id=?", "DELETE FROM objects WHERE kind='session' AND id=?"} {
 		if _, e = tx.Exec(q, id); e != nil {
 			return e

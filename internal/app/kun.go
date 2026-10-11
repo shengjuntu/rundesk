@@ -73,6 +73,9 @@ func (m *Manager) SetAgentRuntime(id string, revision int, config p.Config) (Ins
 	return next, nil
 }
 func (m *Manager) kunStartRequest(s Session, w Workspace, in Input) (p.Start, error) {
+	if s.KunCase != nil {
+		return m.kunCaseStartRequest(s, w, in)
+	}
 	i, err := m.Instance(s.InstanceID)
 	if err != nil {
 		return p.Start{}, err
@@ -118,7 +121,7 @@ func (m *Manager) kunStartRequest(s Session, w Workspace, in Input) (p.Start, er
 	if in.KunResume != nil {
 		request.Resume = &in.KunResume.Selection
 	}
-	return request, nil
+	return m.attachKunSkill(s, w, in, request)
 }
 
 // Caller holds handle.op and owns a process reservation when launching.
@@ -331,6 +334,9 @@ func (m *Manager) stopKun(s Session, h *handle) {
 	}
 }
 func (m *Manager) steerKun(s Session, in SteerInput) (SteerReceipt, error) {
+	if s.KunCase != nil {
+		return SteerReceipt{}, failure(409, "case_input_fixed", "案例输入已固定；修改输入请创建新的任务集与预览")
+	}
 	receipt := SteerReceipt{RequestID: in.RequestID, TurnID: in.ExpectedTurnID}
 	if s.TurnID != in.ExpectedTurnID || !active(s.Status) {
 		return receipt, failure(409, "turn_conflict", "目标轮次已结束或变化")
@@ -378,6 +384,10 @@ func (s *Server) kunRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/sessions/{sid}/kun/control", func(w http.ResponseWriter, r *http.Request) {
 		var in p.Control
 		if !decode(w, r, &in) {
+			return
+		}
+		if session, err := s.Manager.Session(r.PathValue("sid")); err == nil && session.KunCase != nil && (in.Operation == "steer" || in.Operation == "set_harness") {
+			respond(w, nil, failure(409, "case_input_fixed", "案例输入和 Harness 已固定；请创建新预览"))
 			return
 		}
 		c, e := s.Manager.kunClient(r.PathValue("sid"))

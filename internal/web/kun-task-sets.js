@@ -1,4 +1,4 @@
-// Immutable authored inputs and reply rules. No execution or scoring endpoints.
+// Immutable authored inputs and rules, with separately confirmed case execution.
 window.RunDeskKunTaskSets=(()=>{
  const kinds={reply_contains:'最终回复包含',reply_not_contains:'最终回复不包含',reply_equals:'最终回复完全等于'};
  const bytes=s=>new TextEncoder().encode(s).length;
@@ -55,8 +55,9 @@ window.RunDeskKunTaskSets=(()=>{
   function render(value){
    selected=value;
    const copy=button('复制为新草稿',()=>{if(!busy&&selected===value)draft(value);});
-   fixed.replaceChildren(el('h3',{},'已保存 · '+value.title),el('p',{},value.caseCount+' 个案例 · '+value.createdAt),el('p',{class:'help'},'任务集已固定，尚未执行，也没有评分结果。'),el('details',{},el('summary',{},'身份与内容指纹'),el('pre',{},JSON.stringify({id:value.id,hash:value.hash,evaluator:value.evaluator},null,2))),copy,
+   fixed.replaceChildren(el('h3',{},'已保存 · '+value.title),el('p',{},value.caseCount+' 个案例 · '+value.createdAt),el('p',{class:'help'},'任务集已固定；新预览尚未执行，运行与评分请在下方读取。'),el('details',{},el('summary',{},'身份与内容指纹'),el('pre',{},JSON.stringify({id:value.id,hash:value.hash,evaluator:value.evaluator},null,2))),copy,
     ...value.cases.map(c=>el('details',{},el('summary',{},c.key+' · '+c.title),el('h4',{},'固定输入'),el('pre',{},c.input),el('p',{},'固定要求：运行成功结束'),...c.rules.map(r=>el('div',{},el('strong',{},kinds[r.kind]),el('pre',{},r.value))))));
+   if(window.RunDeskKunCaseRuns)fixed.append(window.RunDeskKunCaseRuns.create({taskSet:value,isActive:()=>isActive()&&selected===value}).node);
   }
   function validResponse(value,id){return value&&value.id&&(!id||id===value.id)&&value.hash&&value.schema===1&&value.evaluator==='reply-rules-v1'&&Array.isArray(value.cases)&&value.caseCount===value.cases.length;}
   async function saveSet(){
@@ -82,7 +83,7 @@ window.RunDeskKunTaskSets=(()=>{
    }catch(e){if(isActive()&&ticket===listTicket)notice.textContent=e.message;}
    finally{listBusy=false;if(isActive()&&ticket===listTicket)load.disabled=false;}
   }
-  node.append(el('p',{class:'help'},'把多个案例的固定输入与文本验收规则保存为不可变任务集。当前提供定义与复用；批量运行、汇总评分及独立验证集隔离将在后续接入。'),el('div',{class:'actions'},load,fresh),list,notice,fixed,el('details',{open:true},el('summary',{},'任务集草稿'),el('label',{},'任务集标题',title),casesNode,el('div',{class:'actions'},add,save)));
+  node.append(el('p',{class:'help'},'把多个案例的固定输入与文本验收规则保存为不可变任务集。在已保存任务集中创建固定案例执行预览；独立验证批次和评分在 K4 Skill 工作台管理。'),el('div',{class:'actions'},load,fresh),list,notice,fixed,el('details',{open:true},el('summary',{},'任务集草稿'),el('label',{},'任务集标题',title),casesNode,el('div',{class:'actions'},add,save)));
   draft();return {node};
  }
  function open(){let closed=false;const d=el('dialog',{id:'kun-task-sets-workbench',class:'debug-inspector experiment-workbench'});d.append(el('div',{class:'dialog-head'},el('h2',{},'评测任务集'),button('关闭',()=>d.close(),'quiet')),create({isActive:()=>!closed}).node);d.onclose=()=>{closed=true;d.remove();};document.body.append(d);d.showModal();return d;}

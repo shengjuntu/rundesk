@@ -23,6 +23,7 @@ type KunCompareReply struct {
 	Sequence   int64  `json:"sequence"`
 }
 type KunCompareTool struct {
+	Reused       int    `json:"reused"`
 	Hypothetical int    `json:"hypothetical"`
 	Name         string `json:"name"`
 	Dispatched   int    `json:"dispatched"`
@@ -125,6 +126,7 @@ func reduceKunComparison(side KunCompareSide, events []store.Event, baseline p.S
 	last, contiguous, terminal, identity := side.AfterSequence, true, false, origin == nil
 	started, completed := map[int]bool{}, map[int]bool{}
 	tools, dispatched := map[string]*KunCompareTool{}, map[string]string{}
+	completedTools := map[string]string{}
 	tool := func(name string) *KunCompareTool {
 		if tools[name] == nil {
 			tools[name] = &KunCompareTool{Name: name}
@@ -163,6 +165,7 @@ func reduceKunComparison(side KunCompareSide, events []store.Event, baseline p.S
 			Step          int               `json:"step"`
 			Purpose       string            `json:"purpose"`
 			Status        string            `json:"status"`
+			ReusedFrom    string            `json:"reusedFrom"`
 			Usage         json.RawMessage   `json:"usage"`
 			Message       p.Message         `json:"message"`
 			Call          p.ToolCall        `json:"call"`
@@ -216,6 +219,9 @@ func reduceKunComparison(side KunCompareSide, events []store.Event, baseline p.S
 				text := []rune(data.Message.Content)
 				side.LastReply = &KunCompareReply{Text: string(text[:min(len(text), 2048)]), Characters: len(text), Truncated: len(text) > 2048, Hash: forkDigest(data.Message.Content), EventID: host.ID, Sequence: event.Sequence}
 			}
+		case "kun/fast.completed":
+			text := []rune(data.Message.Content)
+			side.LastReply = &KunCompareReply{Text: string(text[:min(len(text), 2048)]), Characters: len(text), Truncated: len(text) > 2048, Hash: forkDigest(data.Message.Content), EventID: host.ID, Sequence: event.Sequence}
 		case "kun/tool.started":
 			side.Status = "in_progress"
 			if data.Call.ID == "" || dispatched[data.Call.ID] != "" {
@@ -241,6 +247,11 @@ func reduceKunComparison(side KunCompareSide, events []store.Event, baseline p.S
 				if data.Replay.RecordedStatus == "failed" {
 					v.Failed++
 				}
+			} else if data.Status == "reused" {
+				if data.ReusedFrom == "" || completedTools[data.ReusedFrom] != data.Call.Function.Name {
+					contiguous = false
+				}
+				v.Reused++
 			} else if data.Status == "declined" || data.Status == "rejected" {
 				v.Declined++
 			} else if data.Status == "succeeded" || data.Status == "failed" {
@@ -248,6 +259,9 @@ func reduceKunComparison(side KunCompareSide, events []store.Event, baseline p.S
 					contiguous = false
 				}
 				delete(dispatched, data.Call.ID)
+				if data.Status == "succeeded" {
+					completedTools[data.Call.ID] = data.Call.Function.Name
+				}
 				if data.Status == "failed" {
 					v.Failed++
 				}

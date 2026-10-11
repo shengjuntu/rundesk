@@ -103,7 +103,7 @@ func (m *Manager) forkSource(sid string, fn func(Session, Workspace, *kc.Client)
 	if err != nil {
 		return err
 	}
-	if s.RuntimeKind != "kun" || s.TraceOrigin != nil || s.KunFork != nil {
+	if s.RuntimeKind != "kun" || s.TraceOrigin != nil || s.KunFork != nil || s.KunCase != nil {
 		return failure(409, "fork_source_unsupported", "仅普通 Kun 会话可作为分叉来源")
 	}
 	if err = m.checkSessionExecution(s); err != nil {

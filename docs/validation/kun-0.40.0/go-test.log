@@ -1,0 +1,75 @@
+$ ["/workspace/scratch/3dce8d85f3e5/toolchain-0381/go/bin/go", "test", "./...", "-count=1", "-timeout=300s"]
+ok  	github.com/shengjuntu/rundesk/cmd/kun	0.012s
+ok  	github.com/shengjuntu/rundesk/cmd/rundesk	0.019s
+?   	github.com/shengjuntu/rundesk/examples/docker	[no test files]
+?   	github.com/shengjuntu/rundesk/internal/adapters/kun	[no test files]
+2026/10/09 00:03:16 api_error request_id="8a191ab5ab3ac52ad8df3dd5" method="GET" path="/api/v1/docker/status" status=503 code="docker_unavailable" message="Docker daemon unavailable"
+2026/10/09 00:03:19 api_error request_id="7f171dc51f9efeec6526e722" method="POST" path="/api/v1/sessions/dbaab1dd09710654e1e173b5/turns" status=503 code="runtime_unavailable" message="后台正在停止或事件记录已失效，任务未提交"
+2026/10/09 00:03:19 journal failure: persist event: constraint failed: fixture journal failure (1811)
+2026/10/09 00:03:19 api_error request_id="c08d5ded6ef0053e07ddb96c" method="POST" path="/api/v1/sessions/33d41acb02aba3b8fd978946/turns" status=503 code="journal_unavailable" message="任务输入无法写入事件记录，未发送给 Codex；请检查数据目录和数据库状态"
+2026/10/09 00:03:19 api_error request_id="19f9c1b0fa1d27557cc3e1ad" method="GET" path="/api/v1/workspaces/f0c5b1d8192afc02a25212e6/models" status=502 code="codex_rpc_error" message="Codex model/list: RPC -32603: HTTP 500 provider fixture"
+2026/10/09 00:03:19 api_error request_id="db9d04c8a08c1d9f81a2adab" method="GET" path="/api/v1/requests/storage-failure-123" status=503 code="storage_unavailable" message="无法检查用户配置；请检查数据目录和数据库状态"
+2026/10/09 00:03:19 api_error request_id="f7e11c808b10830f5395d7e1" method="POST" path="/api/v1/workspaces" status=503 code="receipt_invalid" message="原请求的接收记录不完整，无法安全回放；操作未重新执行，请核对会话与事件，不要更换 Key 重发"
+2026/10/09 00:03:19 api_error request_id="9b630b3980777d1eb06ae582" method="GET" path="/api/v1/test" status=504 code="codex_timeout" message="Codex model/list: context deadline exceeded"
+2026/10/09 00:03:19 api_error request_id="2bc96fbd0a8d46447e83cd09" method="GET" path="/api/test" status=500 code="codex_timeout" message="Codex model/list: context deadline exceeded"
+2026/10/09 00:03:19 api_error request_id="38776ae4e576b61b1bbddefe" method="GET" path="/api/v1/test" status=503 code="codex_unavailable" message="Codex App Server exited: EOF"
+2026/10/09 00:03:19 api_error request_id="e7704131014114fbfe653209" method="GET" path="/api/test" status=500 code="codex_unavailable" message="Codex App Server exited: EOF"
+2026/10/09 00:03:19 api_error request_id="39fc9241627ad03a675882a0" method="GET" path="/api/v1/test" status=502 code="codex_protocol_error" message="Codex App Server invalid JSON: bad JSON"
+2026/10/09 00:03:19 api_error request_id="ac5b6e9b6ddbd10ff336600f" method="GET" path="/api/test" status=500 code="codex_protocol_error" message="Codex App Server invalid JSON: bad JSON"
+2026/10/09 00:03:19 api_error request_id="a6192be64eb418c9b97c86a8" method="GET" path="/api/test" status=500 code="codex_invalid_params" message="RPC -32602: bad argument"
+2026/10/09 00:03:19 api_error request_id="02ef2db98efbeab49bf0c5ae" method="GET" path="/api/v1/test" status=502 code="codex_method_unsupported" message="RPC -32601: missing method"
+2026/10/09 00:03:19 api_error request_id="5d2c11b2ca5f3b38197323de" method="GET" path="/api/test" status=500 code="codex_method_unsupported" message="RPC -32601: missing method"
+2026/10/09 00:03:19 api_error request_id="31d7453ee1dbf3805a483c02" method="GET" path="/api/v1/test" status=500 code="skill_restore_required" message="backup retained"
+2026/10/09 00:03:19 api_error request_id="bdba47c2e44a08c4275928da" method="GET" path="/api/test" status=500 code="skill_restore_required" message="backup retained"
+2026/10/09 00:03:19 api_error request_id="83e4d85aaaea6f2754ee95d4" method="GET" path="/api/v1/test" status=500 code="internal_error" message="internal fixture"
+2026/10/09 00:03:19 api_error request_id="8c05dd2c9662cec623f589a1" method="GET" path="/api/test" status=500 code="internal_error" message="internal fixture"
+2026/10/09 00:03:19 api_panic request_id="45f3fb02fdb8f3894608cde7" method="GET" path="/api/v1/test" detail="private panic payload"
+goroutine 1228 [running]:
+runtime/debug.Stack()
+	/workspace/scratch/3dce8d85f3e5/toolchain-0381/go/src/runtime/debug/stack.go:26 +0x5e
+github.com/shengjuntu/rundesk/internal/app.diagnosticBoundary.func1()
+	/workspace/scratch/3dce8d85f3e5/dev/rundesk-v0.40.0/internal/app/http_diagnostics.go:139 +0x125
+panic({0xbee500?, 0xf2f300?})
+	/workspace/scratch/3dce8d85f3e5/toolchain-0381/go/src/runtime/panic.go:783 +0x132
+github.com/shengjuntu/rundesk/internal/app.TestHTTPDiagnosticsPanicAndStreaming.func1({0x38?, 0xc512a0?}, 0x4b1601?)
+	/workspace/scratch/3dce8d85f3e5/dev/rundesk-v0.40.0/internal/app/http_diagnostics_test.go:46 +0x25
+net/http.HandlerFunc.ServeHTTP(0xc0002e5200?, {0xf355f0?, 0xc00056ec40?}, 0xc0005f2fa5?)
+	/workspace/scratch/3dce8d85f3e5/toolchain-0381/go/src/net/http/server.go:2322 +0x29
+github.com/shengjuntu/rundesk/internal/app.diagnosticBoundary({0xf355c0, 0xc000242200}, 0xc000615180, {0xf31f40, 0xe2a978})
+	/workspace/scratch/3dce8d85f3e5/dev/rundesk-v0.40.0/internal/app/http_diagnostics.go:143 +0x305
+github.com/shengjuntu/rundesk/internal/app.TestHTTPDiagnosticsPanicAndStreaming.(*Server).apiBoundary.func5({0xf355c0, 0xc000242200}, 0xc000615040)
+	/workspace/scratch/3dce8d85f3e5/dev/rundesk-v0.40.0/internal/app/api_v1.go:106 +0x31a
+net/http.HandlerFunc.ServeHTTP(...)
+	/workspace/scratch/3dce8d85f3e5/toolchain-0381/go/src/net/http/server.go:2322
+github.com/shengjuntu/rundesk/internal/app.TestHTTPDiagnosticsPanicAndStreaming(0xc0003a5dc0)
+	/workspace/scratch/3dce8d85f3e5/dev/rundesk-v0.40.0/internal/app/http_diagnostics_test.go:48 +0x12e
+testing.tRunner(0xc0003a5dc0, 0xe2a398)
+	/workspace/scratch/3dce8d85f3e5/toolchain-0381/go/src/testing/testing.go:1934 +0xea
+created by testing.(*T).Run in goroutine 1
+	/workspace/scratch/3dce8d85f3e5/toolchain-0381/go/src/testing/testing.go:1997 +0x465
+2026/10/09 00:03:19 api_error request_id="45f3fb02fdb8f3894608cde7" method="GET" path="/api/v1/test" status=500 code="internal_panic" message="RunDesk 处理请求时发生内部异常；请用请求编号核对服务日志。"
+2026/10/09 00:03:19 api_error request_id="e5d2fc0fd167f2ef30cf11fb" method="POST" path="/api/v1/sessions" status=500 code="internal_error" message="fixture failure"
+--- FAIL: TestKunCasePreviewDriftSecretsAndRestart (0.01s)
+    kun_case_runs_test.go:34: idempotent preview changed
+2026/10/09 00:03:53 api_error request_id="327500f6989b294c813cffbb" method="GET" path="/api/v1/meta" status=503 code="administrator_token_required" message="已有用户账号，必须配置 RUNDESK_TOKEN 后启动"
+FAIL
+FAIL	github.com/shengjuntu/rundesk/internal/app	80.302s
+ok  	github.com/shengjuntu/rundesk/internal/containerruntime	0.543s
+ok  	github.com/shengjuntu/rundesk/internal/debugapi	0.006s
+ok  	github.com/shengjuntu/rundesk/internal/debugmcp	0.121s
+ok  	github.com/shengjuntu/rundesk/internal/experiment	0.005s
+ok  	github.com/shengjuntu/rundesk/internal/kun	4.155s
+ok  	github.com/shengjuntu/rundesk/internal/kunproto	0.020s
+ok  	github.com/shengjuntu/rundesk/internal/mcp	0.125s
+ok  	github.com/shengjuntu/rundesk/internal/mcptest	0.039s
+?   	github.com/shengjuntu/rundesk/internal/redaction	[no test files]
+ok  	github.com/shengjuntu/rundesk/internal/rpc	0.509s
+ok  	github.com/shengjuntu/rundesk/internal/servicelock	0.011s
+ok  	github.com/shengjuntu/rundesk/internal/store	0.695s
+ok  	github.com/shengjuntu/rundesk/internal/tracequery	0.257s
+--- FAIL: TestHTMLScriptAndStyleAssetsAreEmbedded (0.00s)
+    embed_test.go:21: index.html references missing/empty embedded asset kun-skills.js: open kun-skills.js: file does not exist
+    embed_test.go:21: index.html references missing/empty embedded asset kun-case-runs.js: open kun-case-runs.js: file does not exist
+FAIL
+FAIL	github.com/shengjuntu/rundesk/internal/web	0.006s
+FAIL

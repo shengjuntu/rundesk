@@ -155,7 +155,7 @@ func evaluationReply(side KunCompareSide, events []store.Event) (KunEvaluationRe
 	out.Status = "missing"
 	var text string
 	for _, host := range events {
-		if host.Method != "kun/model.started" && host.Method != "kun/model.completed" {
+		if host.Method != "kun/model.started" && host.Method != "kun/model.completed" && host.Method != "kun/fast.completed" {
 			continue
 		}
 		raw, err := debugJSON(host.Data)
@@ -178,7 +178,7 @@ func evaluationReply(side KunCompareSide, events []store.Event) (KunEvaluationRe
 			continue
 		}
 		out, text = KunEvaluationReply{Status: "missing"}, ""
-		if event.Type != "kun/model.completed" || data.Message.Role != "assistant" || data.Status == "rejected" || len(data.Message.ToolCalls) > 0 || data.Message.Content == "" {
+		if (event.Type != "kun/model.completed" && event.Type != "kun/fast.completed") || data.Message.Role != "assistant" || data.Status == "rejected" || len(data.Message.ToolCalls) > 0 || data.Message.Content == "" {
 			continue
 		}
 		text = data.Message.Content

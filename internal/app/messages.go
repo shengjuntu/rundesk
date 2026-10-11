@@ -43,7 +43,7 @@ func (m *Manager) Reply(sid string, eid int64) (Reply, error) {
 	if err != nil {
 		return Reply{}, err
 	}
-	if event.Method == "kun/model.completed" {
+	if event.Method == "kun/model.completed" || event.Method == "kun/fast.completed" {
 		var v struct {
 			RunID    string `json:"runId"`
 			Sequence int64  `json:"sequence"`

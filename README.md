@@ -10,6 +10,12 @@ Built with Go and plain HTML/JavaScript. Node.js is not required to run RunDesk 
 
 ![RunDesk conversation workspace](docs/screenshots/0.16.0/chat-en.png)
 
+## K4 parameterized Skills (0.40.0)
+
+Compile successful cases into a bounded tool workflow, validate it on a fixed independent set, and enable it only for a selected application after every case passes. Runtime guards preserve tool approvals and budgets; fallback retains completed results and prevents identical completed side effects from being dispatched again. Includes fixed case previews, a Skill workbench, immutable reports and explicit disable.
+
+Upgrade both binaries: **Kun 0.13.0 / protocol v13 / fork schema 3**. The optional learned JEV policy is not included. Local fixtures verify the core loop; remote business benchmarks and browser layout acceptance remain outstanding. See [K4 guide](docs/KUN-K4.md), [validation](docs/KUN-VALIDATION.md) and [release notes](docs/RELEASE-0.40.0.md). The sections below describe earlier releases at their release dates.
+
 ## Fixed-input task sets (0.39.0)
 
 Author and save 1–20 ordered cases, each with a fixed input and literal reply rules. The administrator workbench supports immutable save, full inspection, metadata pagination and copying to a new draft. Saving never starts a run. Batch execution, result binding, aggregate scoring and independent holdout isolation remain pending. See [task sets](docs/KUN-TASK-SETS.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md).

@@ -139,7 +139,7 @@ func (m *Manager) Markdown(id string) (string, error) {
 				}
 				continue
 			}
-			if ev.Method == "kun/model.completed" {
+			if ev.Method == "kun/model.completed" || ev.Method == "kun/fast.completed" {
 				var v struct {
 					Data struct {
 						Purpose string `json:"purpose"`

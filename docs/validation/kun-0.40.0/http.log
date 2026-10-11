@@ -1,0 +1,16 @@
+$ ["node", "scripts/kun-evaluation-http-test.cjs"]
+{"version":"0.40.0","passed":true,"scope":"actual RunDesk HTTP + Kun process + local model fixture; browser and remote services not tested","modelCalls":6,"assumedCalls":1,"checks":["immutable fixed-input task set saved/read/listed idempotently with zero model calls","HTTP record review and immutable/idempotent child creation without model calls","real worker recomputes with hypothetical model input, source file absent","same-baseline fixed comparison separates recorded/hypothetical/real results and links applied evidence","embedded editor served; start retry returns same run","immutable rubric and fixed evaluation of real replies; independentValidation=false; idempotent write/read without extra calls"]}
+$ ["node", "scripts/kun-k4-http-test.cjs"]
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert((await (await fetch(base+'/'+js)).text()).includes('RunDeskKun'))
+
+    at /workspace/scratch/3dce8d85f3e5/dev/rundesk-v0.40.0/scripts/kun-k4-http-test.cjs:30:213
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}

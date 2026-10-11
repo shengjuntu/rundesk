@@ -1,30 +1,87 @@
 {
-  "version": "0.39.0",
-  "kunVersion": "0.12.0",
-  "protocolVersion": 12,
-  "forkSchema": 3,
-  "date": "2026-10-08",
+  "version": "0.40.0",
   "passed": true,
-  "status": "passed",
-  "scope": "local Go/CLI/HTTP/Node regression and compilation; not full product acceptance",
-  "goVersion": "go1.25.12",
-  "sourceSHA256": "f654c1654db73becce944547ae22ec98236fafa1f1b67755e5704fc1d6843a48",
-  "receipt": "validation/kun-0.39.0/summary.json",
-  "checks": {
-    "goTestAll": "passed; app 77.596s",
-    "goVet": "passed",
-    "focusedRace": "passed: TestKunEvaluation|TestKunCompar|TestKunHypothesis|TestKunTaskSet in internal/app; 3.604s",
-    "linuxAmd64": "rundesk and kun built and exercised",
-    "windowsAmd64": "rundesk and kun cross-compiled; no Windows runtime test",
-    "node": "77 syntax files and 10 interaction suites passed",
-    "realHTTP": "passed: fixed-input task-set immutable/idempotent save, read and metadata list with zero model calls; existing Hybrid/hypothesis/evaluation fixture remains at 6 calls"
+  "receipt": "validation/kun-0.40.0-final/summary.json",
+  "sourceSHA256": "6ae1eaf0773491430a0f1f12eeac870b1b605c2dc0bcdc9d97811c0185bc2c65",
+  "checks": [
+    {
+      "name": "go-test",
+      "status": "passed",
+      "startedAt": "2026-10-08T16:05:17.585586+00:00",
+      "log": "go-test.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-08T16:06:44.716974+00:00",
+      "durationSeconds": 87.131
+    },
+    {
+      "name": "go-vet",
+      "status": "passed",
+      "startedAt": "2026-10-08T16:06:44.718536+00:00",
+      "log": "go-vet.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-08T16:06:45.854948+00:00",
+      "durationSeconds": 1.136
+    },
+    {
+      "name": "go-race",
+      "status": "passed",
+      "startedAt": "2026-10-08T16:06:45.855670+00:00",
+      "log": "go-race.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-08T16:07:00.342623+00:00",
+      "durationSeconds": 14.486
+    },
+    {
+      "name": "build",
+      "status": "passed",
+      "startedAt": "2026-10-08T16:07:00.343630+00:00",
+      "log": "build.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-08T16:07:04.212941+00:00",
+      "durationSeconds": 3.868
+    },
+    {
+      "name": "windows",
+      "status": "passed",
+      "startedAt": "2026-10-08T16:07:04.213500+00:00",
+      "log": "windows.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-08T16:07:07.783661+00:00",
+      "durationSeconds": 3.57
+    },
+    {
+      "name": "syntax",
+      "status": "passed",
+      "startedAt": "2026-10-08T16:07:07.784252+00:00",
+      "log": "syntax.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-08T16:07:17.020581+00:00",
+      "durationSeconds": 9.235
+    },
+    {
+      "name": "ui",
+      "status": "passed",
+      "startedAt": "2026-10-08T16:07:17.021216+00:00",
+      "log": "ui.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-08T16:07:18.374325+00:00",
+      "durationSeconds": 1.353
+    },
+    {
+      "name": "http",
+      "status": "passed",
+      "startedAt": "2026-10-08T16:07:18.375566+00:00",
+      "log": "http.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-08T16:07:26.835997+00:00",
+      "durationSeconds": 8.46
+    }
+  ],
+  "binaries": {
+    "rundesk": 21720369,
+    "kun": 16136508,
+    "rundesk-windows-amd64.exe": 22010368,
+    "kun-windows-amd64.exe": 16435200
   },
-  "notAccepted": [
-    "real browser layout/focus/mobile behavior",
-    "real Codex/remote model/MCP",
-    "Windows runtime",
-    "production workload",
-    "batch task-set execution and run/result binding",
-    "aggregate scoring and independent holdout isolation"
-  ]
+  "scope": "full local suite, vet, focused race, both Linux builds and Windows cross-compilation; no Windows execution"
 }

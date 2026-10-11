@@ -27,7 +27,7 @@ func checkpointUnsafe(s p.State) bool {
 	return false
 }
 func checkpointSafe(s p.State) bool {
-	if s.Fork != nil || s.Diagnostic != nil || s.Manifest == nil || s.Modules["capability"].Phase != "ready" || checkpointUnsafe(s) {
+	if s.Fast != nil || s.Fork != nil || s.Diagnostic != nil || s.Manifest == nil || s.Modules["capability"].Phase != "ready" || checkpointUnsafe(s) {
 		return false
 	}
 	switch s.Phase {
@@ -67,6 +67,9 @@ func (e *Engine) checkpointLocked() (p.CheckpointCheck, p.State, error) {
 	block := func(reason string) (p.CheckpointCheck, p.State, error) {
 		check.Reason = reason
 		return check, p.State{}, nil
+	}
+	if e.state.Fast != nil {
+		return block("fast_path_single_run_inspect_ledger")
 	}
 	if e.state.Fork != nil {
 		if e.state.Fork.Hybrid() {

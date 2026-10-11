@@ -96,7 +96,7 @@ async function hasPendingSubmission(path,body) {return pendingAPI.has(await subm
 async function api(path, options = {}) {
   const headers = { ...options.headers };
   const method=options.method||"GET", body=options.body;
-  const deduplicate=method==="POST" && (/^\/kun-(?:rubrics|evaluations|task-sets)$/.test(path)||/^\/kun-forks(?:\/[^/]+\/(?:start|hypotheses))?$/.test(path)||/^\/experiments(?:\/[^/]+\/branches)?$/.test(path)||/^\/sessions\/[^/]+\/kun\/resume$/.test(path)||/^\/workspaces\/[^/]+\/mcp-tests(?:\?|$)/.test(path)||/^\/(instances|workspaces|sessions|tasks|schedules)$/.test(path)||/^\/sessions\/[^/]+\/(turns|recover)$/.test(path));
+  const deduplicate=method==="POST" && (/^\/kun-skills(?:\/[^/]+\/(?:validations|promote|disable))?$/.test(path)||/^\/kun-skill-validations\/[^/]+\/(?:start|evaluate)$/.test(path)||/^\/kun-case-runs(?:\/[^/]+\/start)?$/.test(path)||/^\/kun-(?:rubrics|evaluations|task-sets)$/.test(path)||/^\/kun-forks(?:\/[^/]+\/(?:start|hypotheses))?$/.test(path)||/^\/experiments(?:\/[^/]+\/branches)?$/.test(path)||/^\/sessions\/[^/]+\/kun\/resume$/.test(path)||/^\/workspaces\/[^/]+\/mcp-tests(?:\?|$)/.test(path)||/^\/(instances|workspaces|sessions|tasks|schedules)$/.test(path)||/^\/sessions\/[^/]+\/(turns|recover)$/.test(path));
   let signature;
   if(deduplicate) {
     signature=await submissionSignature(path,body);
@@ -415,7 +415,7 @@ function renderMessages() {
         text: ev.data.input.text,
         files: ev.data.input.files,
       });
-    } else if (ev.method === "kun/model.completed" && ev.data.data?.purpose !== "plan" && ev.data.data?.message?.content) {
+    } else if (["kun/model.completed","kun/fast.completed"].includes(ev.method) && ev.data.data?.purpose !== "plan" && ev.data.data?.message?.content) {
       items.push({_key:"kun:"+ev.id,type:"agentMessage",text:ev.data.data.message.content,_eventId:ev.id});
     } else if (ev.method === "kun/tool.completed" && ev.data.data?.call?.function?.name === "trace_propose" && ev.data.data?.status === "succeeded" && !ev.data.data?.isError && RunDeskDebug.validSuggestion(ev.data.data?.result,state.session.traceOrigin)) {
       items.push({_key:"diagnosis:"+ev.id,type:"diagnosticSuggestion",proposal:ev.data.data.result,eventId:ev.id,diagnosticSessionId:state.session.id});

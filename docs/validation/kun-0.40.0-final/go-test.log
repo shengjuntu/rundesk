@@ -1,0 +1,20 @@
+$ ["/workspace/scratch/3dce8d85f3e5/toolchain-0381/go/bin/go", "test", "./...", "-count=1", "-timeout=300s"]
+ok  	github.com/shengjuntu/rundesk/cmd/kun	0.010s
+ok  	github.com/shengjuntu/rundesk/cmd/rundesk	0.009s
+?   	github.com/shengjuntu/rundesk/examples/docker	[no test files]
+?   	github.com/shengjuntu/rundesk/internal/adapters/kun	[no test files]
+ok  	github.com/shengjuntu/rundesk/internal/app	79.484s
+ok  	github.com/shengjuntu/rundesk/internal/containerruntime	0.522s
+ok  	github.com/shengjuntu/rundesk/internal/debugapi	0.006s
+ok  	github.com/shengjuntu/rundesk/internal/debugmcp	0.095s
+ok  	github.com/shengjuntu/rundesk/internal/experiment	0.004s
+ok  	github.com/shengjuntu/rundesk/internal/kun	3.736s
+ok  	github.com/shengjuntu/rundesk/internal/kunproto	0.006s
+ok  	github.com/shengjuntu/rundesk/internal/mcp	0.123s
+ok  	github.com/shengjuntu/rundesk/internal/mcptest	0.030s
+?   	github.com/shengjuntu/rundesk/internal/redaction	[no test files]
+ok  	github.com/shengjuntu/rundesk/internal/rpc	0.481s
+ok  	github.com/shengjuntu/rundesk/internal/servicelock	0.010s
+ok  	github.com/shengjuntu/rundesk/internal/store	0.594s
+ok  	github.com/shengjuntu/rundesk/internal/tracequery	0.174s
+ok  	github.com/shengjuntu/rundesk/internal/web	0.003s

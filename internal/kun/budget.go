@@ -113,8 +113,14 @@ func (e *Engine) finishTool(call p.ToolCall, intent toolIntent, result toolResul
 	}
 	e.moduleState("action", "after_tool", map[string]any{"callId": call.ID, "tool": call.Function.Name, "status": status, "schemaHash": intent.SchemaHash})
 	data := map[string]any{"call": call, "executionMode": forkExecutionMode(e.state), "output": result.Output, "isError": result.IsError, "status": status, "durationMs": elapsed.Milliseconds(), "step": e.state.Step, "mcp": metadata, "result": result.Raw}
+	if result.ReusedFrom != "" {
+		data["reusedFrom"] = result.ReusedFrom
+	}
 	if result.Replay != nil {
 		data["replay"] = result.Replay
+	}
+	if err := e.fastToolFinished(call, result, status); err != nil {
+		return err
 	}
 	err := e.record("kun/tool.completed", data)
 	if e.single {

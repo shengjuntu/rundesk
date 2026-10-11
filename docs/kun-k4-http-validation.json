@@ -1,0 +1,14 @@
+{
+  "version": "0.40.0",
+  "passed": true,
+  "scope": "actual host HTTP + Kun subprocess + local model fixture; remote business benchmarks and browser layout not tested",
+  "modelCalls": 2,
+  "checks": [
+    "HTTP preview zero calls; explicit single run; actual source score",
+    "parameterized candidate; fixed independent batch; unknown cannot promote",
+    "two real tool-only holdouts passed, zero additional model calls",
+    "candidate, independent report and app capability survive host restart",
+    "enabled application executes new input without model and exposes grounded reply",
+    "disable blocks next use; OpenAPI and shipped UI served"
+  ]
+}

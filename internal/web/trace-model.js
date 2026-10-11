@@ -231,6 +231,8 @@ const rdFormat=globalThis.rdFormat||((key,...values)=>key.replace(/\$\{(\d+)\}/g
             let row=this.rows.get(key);if(!row)row=this.add(e,r,{id:key,track:"tools",title:"MCP "+data.server+" / "+data.method,start:done?null:t,end:null,point:false,status:"running"});
             this.ref(row,e);row.detail={...row.detail,...data};if(done){row.end=t;row.status=data.error?"failed":"completed";row.body=data.error||plain(data.result||{});}
           }
+          else if(e.method==="kun/fast.fallback"){this.add(e,r,{title:"快速路径回退",track:"system",body:data.reason||"",detail:data});}
+          else if(e.method==="kun/fast.completed"){this.add(e,r,{title:"Kun 快速路径回复",type:"agentMessage",track:"input",body:data.message?.content||"",detail:data});}
           else if(e.method==="kun/mcp.ready"){this.add(e,r,{track:"context",title:"MCP 工具清单快照",body:data.server?.name||"",detail:data});}
           else if(e.method==="kun/model.started"||e.method==="kun/model.completed"||e.method==="kun/tool.started"||e.method==="kun/tool.completed"){
             const model=e.method.includes("/model."),done=e.method.endsWith(".completed");

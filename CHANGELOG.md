@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.40.0
+
+- Complete the K4 foundation: immutable case previews and single-run bindings, source-backed parameterized Skill candidates, fixed independent holdout batches, durable scoring and application-scoped promotion/disable.
+- Add a bounded five-operation IR (tool/extract/assert/branch/finish), runtime and intermediate guards, and dynamic fallback retaining the action ledger and completed results. Identical completed writes/MCP calls are reused without dispatch. All tools retain existing schema checks, approval and budgets.
+- Add task execution and Skill workbenches, durable local Go/Node/HTTP evidence, and 16 documented API operations. No new runtime dependencies.
+- Kun 0.13.0 / protocol v13 / fork schema 3. Upgrade both binaries; old engine previews/checkpoints remain read-only. Optional learned JEV and remote business/browser/production acceptance remain outside this release.
+
 ## 0.39.0
 
 - Add immutable fixed-input task sets with 1–20 ordered cases, unique case keys, full authored inputs and bounded literal reply rules. Reuse reply-rules-v1 semantics without executing cases.

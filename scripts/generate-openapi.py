@@ -460,7 +460,7 @@ task_summary={k:task_props[k] for k in ['id','hash','title','createdAt','caseCou
 schemas['KunTaskSetSummary']=obj(task_summary,list(task_summary))
 for path,method,response in [('/kun-task-sets','post',ref('KunTaskSet')),('/kun-task-sets','get',obj({'items':arr(ref('KunTaskSetSummary')),'nextOffset':integer,'hasMore':bool_},['items','nextOffset','hasMore'])),('/kun-task-sets/{tid}','get',ref('KunTaskSet'))]:
  op=paths[path][method];op['x-administrator-only']=True;op['summary']='Kun 固定输入任务集'
- op['description']='管理员专用。保存不可变的 1–20 个有序案例，每个案例包含唯一 ASCII 标识、标题、完整固定输入与 1–12 条文本规则；固定要求运行成功结束。标识大小写敏感，禁止重复；输入最多 8192 Unicode 字符/32 KiB UTF-8，每案例规则文本最多 16 KiB，总文本最多 256 KiB。保留原有空白，不执行输入、正则、脚本、模型或工具。创建只接受 title/cases，身份、指纹、时间均由服务端生成；无原位修改、删除、运行或评分接口。查看完整对象校验指纹；列表只投影有界元数据，不返回输入或规则正文。不是自动批量执行、预注册、独立验证集隔离或 K4 成绩。'
+ op['description']='管理员专用。保存不可变的 1–20 个有序案例，每个案例包含唯一 ASCII 标识、标题、完整固定输入与 1–12 条文本规则；固定要求运行成功结束。标识大小写敏感，禁止重复；输入最多 8192 Unicode 字符/32 KiB UTF-8，每案例规则文本最多 16 KiB，总文本最多 256 KiB。保留原有空白，不执行输入、正则、脚本、模型或工具。创建只接受 title/cases，身份、指纹、时间均由服务端生成；无原位修改或删除；执行与评分通过单独的案例运行接口。查看完整对象校验指纹；列表只投影有界元数据，不返回输入或规则正文。定义本身不是 K4 成绩；K4 另行固定验证批次和评分报告。'
  op['parameters']=[v for v in op['parameters'] if v['in']!='query']
  if method=='get' and '{' not in path:
   op['parameters'] += [{'name':'offset','in':'query','schema':{'type':'integer','minimum':0,'maximum':20971520}},{'name':'limit','in':'query','schema':{'type':'integer','minimum':1,'maximum':50,'default':20}}]
@@ -573,6 +573,58 @@ if '/usage' in paths:
 if '/setup/docker-template' in paths:
  paths['/setup/docker-template']['get']['parameters']=[{'name':'version','in':'query','required':True,'schema':st(),'description':'Exact Codex release'}]
  paths['/setup/docker-template']['get']['responses']['200']={'description':'Pinned base image build context','content':{'application/zip':{'schema':st(format='binary')}}}
-spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk 0.39.0：Kun 0.12 / 协议 v12 / fork schema 3；固定同基线文本规则评分、完整回复与证据检查、不可变评分报告；固定单条工具输出假设与可审核 Hybrid 重算、不可变谱系与原录制保留、假设使用证据；来源与分支跨会话固定日志对照；普通运行安全点 Harness 切换与迁移记录；Live 固定预览、明确确认与当前工具真实执行；Plan-Act 显式规划、两套内置模块组合与 Harness 固定快照对照； 安全检查点独立 Hybrid 分支，模型重算、工具严格录制回放、未命中停止；K3-A 离线记录基线、不可变实验分支、保守失效与谱系差异；建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
+# K4 fixed cases, parameterized candidates and independent validation gates.
+schemas['KunCompareTool']['properties']['reused']=integer
+schemas['Input']['properties']['fastSkillId']=st(description='可选：仅已启用指定 Skill 的应用会话；需要 JSON 输入。')
+schemas['KunFastValue']=obj({'ref':st(),'literal':{}},extra=False)
+schemas['KunFastInstruction']=obj({'op':st(enum=['tool','extract','assert','branch','finish']),'store':st(),'tool':st(),'args':{'type':'object','additionalProperties':ref('KunFastValue')},'value':ref('KunFastValue'),'pointer':st(),'schema':{},'equals':{},'then':integer,'else':integer},['op'])
+schemas['KunFastGuard']=obj({k:st() for k in ['engineVersion','configHash','skillsHash','mcpHash','workspace','catalogHash','approvalPolicy','harnessHash','contextRevision']},['engineVersion','configHash','skillsHash','mcpHash','workspace','catalogHash','approvalPolicy','harnessHash','contextRevision'])
+schemas['KunFastProgram']=obj({'schema':{'const':1},'domain':st(maxLength=120),'inputSchema':{},'guard':ref('KunFastGuard'),'steps':{'type':'array','items':ref('KunFastInstruction'),'minItems':1,'maxItems':64}},['schema','domain','inputSchema','guard','steps'])
+schemas['KunState']['properties']['fast']=obj({'candidateId':st(),'candidateHash':st(),'program':ref('KunFastProgram'),'input':{},'status':st(enum=['active','completed','fallback']),'reason':st(),'pc':integer,'values':obj(extra=True),'evidence':obj(extra=True),'pendingStore':st(),'completed':obj(extra=True)},extra=False)
+case_preview={k:st() for k in ['id','hash','createdAt','engineVersion','taskSetId','taskSetHash','taskSetTitle','sessionId','runId','instanceId','instanceName','workspaceId','workspace','effectiveInput','inputHash','approvalPolicy']}
+case_preview.update({'schema':{'const':1},'protocolVersion':integer,'case':ref('KunTaskCase'),'config':ref('KunConfig'),'mcpServers':arr(st()),'candidateId':st(),'candidateHash':st()})
+schemas['KunCaseRunPreview']=obj(case_preview,[k for k in case_preview if k not in ['candidateId','candidateHash']])
+schemas['KunCaseRunView']=obj({'preview':ref('KunCaseRunPreview'),'status':st(),'session':ref('Session')},['preview','status'])
+schemas['KunCaseRunInput']=obj({k:st() for k in ['taskSetId','expectedTaskSetHash','caseKey','workspaceId','instanceId','candidateId']},['taskSetId','expectedTaskSetHash','caseKey','workspaceId'])
+schemas['Session']['properties']['kunCase']=obj({k:st() for k in ['planId','taskSetId','taskSetHash','caseKey','inputHash','runId']},['planId','taskSetId','taskSetHash','caseKey','inputHash','runId'])
+skill_in={'title':st(maxLength=120),'domain':st(maxLength=120),'applicability':st(maxLength=8192),'failureCases':{'type':'array','items':st(maxLength=2048),'minItems':1,'maxItems':20},'sourcePlanIds':{'type':'array','items':st(),'minItems':1,'maxItems':10},'validationTaskSetId':st(),'expectedValidationHash':st(),'inputSchema':{},'steps':arr(ref('KunFastInstruction'))}
+schemas['KunSkillInput']=obj(skill_in,[k for k in skill_in if k!='steps'])
+source=obj({k:st() for k in ['planId','sessionId','runId','inputHash','evidenceHash']}|{'through':integer},['planId','sessionId','runId','inputHash','evidenceHash','through'])
+skill={k:st() for k in ['id','hash','title','createdAt','applicability','instanceId','workspaceId']};skill.update({'schema':{'const':1},'failureCases':arr(st()),'sources':arr(source),'validationSet':ref('KunTaskSet'),'program':ref('KunFastProgram')})
+schemas['KunSkillCandidate']=obj(skill,list(skill))
+validation={k:st() for k in ['id','hash','candidateId','candidateHash','createdAt']}|{'plans':arr(ref('KunCaseRunPreview'))}
+schemas['KunSkillValidation']=obj(validation,list(validation))
+case_score={'planId':st(),'caseKey':st(),'summary':ref('KunCompareSide'),'evaluation':ref('KunEvaluationSide'),'fastCompleted':bool_,'evidenceHash':st()}
+schemas['KunCaseScore']=obj(case_score,list(case_score))
+report={k:st() for k in ['id','hash','candidateId','candidateHash','validationId','createdAt','status']}|{k:integer for k in ['passed','failed','unknown','total']}|{'score':{'type':['number','null']},'cases':arr(ref('KunCaseScore'))}
+schemas['KunSkillReport']=obj(report,list(report))
+cap={k:st() for k in ['appId','candidateId','candidateHash','reportId','reportHash','updatedAt']}|{'enabled':bool_}
+schemas['KunFastCapability']=obj(cap,list(cap))
+expect=obj({'expectedHash':st()},['expectedHash'])
+start=obj({'expectedHash':st(),'confirmExecute':{'const':True}},['expectedHash','confirmExecute'])
+promotion=obj({'expectedHash':st(),'reportId':st(),'reportHash':st(),'appId':st(),'expectedAppRevision':integer},['expectedHash','reportId','reportHash','appId','expectedAppRevision'])
+page=obj({'items':arr(obj(extra=True)),'nextOffset':integer,'hasMore':bool_},['items','nextOffset','hasMore'])
+k4routes=[
+ ('/kun-case-runs','post',ref('KunCaseRunInput'),ref('KunCaseRunView')),
+ ('/kun-case-runs','get',None,page),('/kun-case-runs/{cid}','get',None,ref('KunCaseRunView')),
+ ('/kun-case-runs/{cid}/start','post',start,ref('Session')),('/kun-case-runs/{cid}/score','get',None,ref('KunCaseScore')),
+ ('/kun-skills','post',ref('KunSkillInput'),ref('KunSkillCandidate')),('/kun-skills','get',None,page),
+ ('/kun-skills/{kid}','get',None,ref('KunSkillCandidate')),('/kun-skills/{kid}/validations','post',expect,ref('KunSkillValidation')),
+ ('/kun-skills/{kid}/promote','post',promotion,ref('KunFastCapability')),('/kun-skills/{kid}/disable','post',obj({'appId':st()},['appId']),ref('KunFastCapability')),
+ ('/kun-skill-validations','get',None,page),('/kun-skill-validations/{vid}','get',None,ref('KunSkillValidation')),
+ ('/kun-skill-validations/{vid}/start','post',start,obj({'results':arr(obj({'planId':st(),'session':ref('Session'),'error':st()},['planId','session']))},['results'])),
+ ('/kun-skill-validations/{vid}/evaluate','post',expect,ref('KunSkillReport')),('/kun-skill-reports/{rid}','get',None,ref('KunSkillReport'))]
+for path,method,body,response in k4routes:
+ params=[{'name':n,'in':'path','required':True,'schema':st()} for n in re.findall(r'\{(.*?)\}',path)]
+ if method=='post':params.append({'name':'Idempotency-Key','in':'header','required':True,'schema':st(pattern='^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$')})
+ if method=='get' and path in ['/kun-case-runs','/kun-skills','/kun-skill-validations']:
+  params += [{'name':'offset','in':'query','schema':{'type':'integer','minimum':0,'maximum':20971520}},{'name':'limit','in':'query','schema':{'type':'integer','minimum':1,'maximum':50,'default':20}}]
+  if path=='/kun-case-runs':params.append({'name':'taskSetId','in':'query','required':True,'schema':st()})
+  else:params.append({'name':'candidateId','in':'query','required':path=='/kun-skill-validations','schema':st()})
+ op={'summary':'Kun K4 案例、Skill 候选与独立验证','description':'管理员专用。预览不执行。案例固定输入/环境/运行身份；同预览重复启动返回同一运行。候选从成功案例参数化提炼，或接受受限 IR 草稿；不复制最终答案。验证集至少两个案例，拒绝与来源相同的输入；验证批次固定所有案例。评分读取完整固定宿主记录，缺失不按零。全部案例评分通过且快速路径完成后才可启用到环境匹配的指定应用。启用不修改全局 Skill 文件。运行以现有工具校验、审批、预算和动作账本为准；守卫偏离保留完成结果并回退，不重复派发相同已完成副作用。验证执行可能部分启动：检查每项 error，已绑定运行不会重跑；不同逻辑重试使用新幂等 Key。','x-administrator-only':True,'parameters':params,'responses':{'200':{'description':'成功','content':{'application/json':{'schema':response}}},'400':{'description':'参数、输入、IR 或幂等 Key 无效'},'403':{'description':'仅管理员'},'404':{'description':'对象不存在'},'409':{'description':'指纹、环境、绑定、执行确认或独立验证门槛不满足'},'413':{'description':'有界读取或响应限制'}}}
+ if body is not None:op['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
+ paths.setdefault(path,{})[method]=op
+
+spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk 0.40.0：Kun 0.13 / 协议 v13 / fork schema 3；K4 固定案例、参数化 Skill、独立验证启用门槛、受限快速路径与守卫回退；固定同基线文本规则评分、完整回复与证据检查、不可变评分报告；固定单条工具输出假设与可审核 Hybrid 重算、不可变谱系与原录制保留、假设使用证据；来源与分支跨会话固定日志对照；普通运行安全点 Harness 切换与迁移记录；Live 固定预览、明确确认与当前工具真实执行；Plan-Act 显式规划、两套内置模块组合与 Harness 固定快照对照； 安全检查点独立 Hybrid 分支，模型重算、工具严格录制回放、未命中停止；K3-A 离线记录基线、不可变实验分支、保守失效与谱系差异；建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

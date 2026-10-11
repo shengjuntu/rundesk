@@ -19,6 +19,9 @@ func (m *Manager) KunCheckpoint(sid string) (p.CheckpointCheck, error) {
 	if err != nil {
 		return p.CheckpointCheck{}, err
 	}
+	if s.KunCase != nil {
+		return p.CheckpointCheck{}, failure(409, "case_single_run", "案例运行不续跑；请创建新预览")
+	}
 	if s.RuntimeKind != "kun" {
 		return p.CheckpointCheck{}, failure(400, "not_kun", "该会话不使用 Kun")
 	}

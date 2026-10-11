@@ -12,7 +12,7 @@ import (
 var ErrProjectionLimit = errors.New("trace projection exceeds 20000 lifecycle records, 64 MiB total or 8 MiB per event; choose an earlier through cursor or a smaller source session")
 
 // Deltas are retained in the journal but never mistaken for complete calls.
-const lifecycleSQL = `method IN ('run/input','run/steer','turn/started','turn/completed','run/state','item/started','item/completed','approval/pending','approval/resolved','approval/expired','error','warning','configWarning','thread/compacted','kun/run.started','kun/run.paused','kun/run.finished','kun/model.started','kun/model.completed','kun/tool.started','kun/tool.completed','kun/mcp.request','kun/mcp.response','kun/mcp.failed','kun/mcp.ready','kun/approval.requested','kun/control.applied','kun/context.built','kun/capability.ready')`
+const lifecycleSQL = `method IN ('run/input','run/steer','turn/started','turn/completed','run/state','item/started','item/completed','approval/pending','approval/resolved','approval/expired','error','warning','configWarning','thread/compacted','kun/run.started','kun/run.paused','kun/run.finished','kun/model.started','kun/model.completed','kun/fast.completed','kun/fast.fallback','kun/tool.started','kun/tool.completed','kun/mcp.request','kun/mcp.response','kun/mcp.failed','kun/mcp.ready','kun/approval.requested','kun/control.applied','kun/context.built','kun/capability.ready')`
 
 type projection struct {
 	runs         []Run
@@ -333,6 +333,10 @@ func (p *projection) ingest(id int64, at, method string, d map[string]any) {
 		kind = "approval/expired"
 		title = "Approval expiration recorded; affected IDs unavailable"
 		status = "expired"
+	case "kun/fast.completed":
+		kind, title, status = "fastReply", "Kun fast path reply", "completed"
+	case "kun/fast.fallback":
+		kind, title, status = "fastFallback", "Kun fast path fallback", "recorded"
 	case "kun/model.started", "kun/model.completed":
 		kind = "modelCall"
 		title = "Kun model"
@@ -368,6 +372,9 @@ func (p *projection) ingest(id int64, at, method string, d map[string]any) {
 			}
 			if data["isError"] == true || hasError(data["error"]) {
 				status = "failed"
+			}
+			if status == "reused" && str(data["reusedFrom"]) != "" {
+				phase, kind, title = "point", "toolReuse", "Completed action reused: "+title
 			}
 			if replay := obj(data["replay"]); replay["mode"] == "recorded" && replay["executed"] == false {
 				phase, status, kind, title = "point", "replayed", "toolReplay", "Recorded tool result: "+title

@@ -29,6 +29,7 @@ type Workspace struct {
 	Revision int    `json:"revision"`
 }
 type Session struct {
+	KunCase       *KunCaseOrigin  `json:"kunCase,omitempty"`
 	KunFork       *p.ForkOrigin   `json:"kunFork,omitempty"`
 	RuntimeKind   string          `json:"runtimeKind,omitempty"`
 	ExecutionMode string          `json:"executionMode,omitempty"`
@@ -65,6 +66,8 @@ type Approval struct {
 	ResolvedAt string      `json:"resolvedAt,omitempty"`
 }
 type Input struct {
+	FastSkillID  string          `json:"fastSkillId,omitempty"`
+	KunCase      *kunCaseInput   `json:"-"`
 	KunFork      *kunForkInput   `json:"-"`
 	KunResume    *kunResumeInput `json:"-"`
 	LibraryOwner string          `json:"-"`
@@ -830,6 +833,22 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 	if s.RuntimeKind == "kun" && s.TraceOrigin != nil && (len(in.Files) > 0 || len(in.Skills) > 0 || in.KunResume != nil) {
 		return s, failure(400, "diagnostic_input_only", "诊断会话只接收问题文本；不接收文件、技能或恢复请求")
 	}
+	if in.FastSkillID != "" {
+		if s.RuntimeKind != "kun" || s.KunCase != nil || s.KunFork != nil || s.TraceOrigin != nil {
+			return s, failure(409, "skill_ordinary_application_only", "快速 Skill 只支持普通 Kun 应用运行")
+		}
+		if _, err := m.kunStartRequest(s, w, in); err != nil {
+			return s, err
+		}
+	}
+	if s.KunCase != nil || in.KunCase != nil {
+		if s.KunCase == nil || in.KunCase == nil || s.RunID != "" || recovery != nil || len(queued) > 0 {
+			return s, failure(409, "case_single_run", "案例会话只允许固定预览首次启动；重跑请创建新预览")
+		}
+		if _, err := m.kunCaseStartRequest(s, w, in); err != nil {
+			return s, err
+		}
+	}
 	if s.KunFork != nil || in.KunFork != nil {
 		if s.KunFork == nil || in.KunFork == nil || in.KunFork.PreviewID != s.KunFork.PreviewID || s.RunID != "" || len(in.Files) > 0 || len(in.Skills) > 0 || in.KunResume != nil || recovery != nil {
 			return s, failure(409, "hybrid_single_run", "分叉会话只允许固定预览的首次启动；重试实验请创建新分叉")
@@ -870,6 +889,9 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 		}
 	}
 	runID := store.ID()
+	if in.KunCase != nil {
+		runID = in.KunCase.RunID
+	}
 	if taskID != "" {
 		t, ok := m.tasks[taskID]
 		if !ok || t.SessionID != id || t.Status != "dispatching" || t.CancelRequested {
@@ -941,6 +963,9 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 	s, _ = m.Session(id)
 	instanceAtSubmit, _ := m.Instance(s.InstanceID)
 	record := map[string]any{"taskId": taskID, "instanceRevision": instanceAtSubmit.Revision, "runId": s.RunID, "input": in, "notes": w.Notes, "notesRevision": w.Revision, "cwd": w.Path, "instanceId": s.InstanceID, "model": s.Model}
+	if s.KunCase != nil {
+		record["kunCase"] = s.KunCase
+	}
 	if recovery != nil {
 		record["recovery"] = s.Recovery
 		record["recoveryInput"] = recovery.TaskInput

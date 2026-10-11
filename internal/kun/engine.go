@@ -161,6 +161,17 @@ func (e *Engine) Start(in p.Start) (out p.State, startErr error) {
 	if in.ApprovalPolicy != "on-request" && in.ApprovalPolicy != "never" {
 		return p.State{}, fmt.Errorf("unsupported MCP approval policy")
 	}
+	if in.Fast != nil {
+		if in.Resume != nil || in.Fork != nil || in.Diagnostic != nil || len(in.Fast.Input) > 32<<10 {
+			return p.State{}, fmt.Errorf("fast path requires a fresh ordinary run")
+		}
+		if err := ValidateFastProgram(in.Fast.Program); err != nil {
+			return p.State{}, err
+		}
+		var frozen p.FastStart
+		_ = json.Unmarshal(p.JSON(in.Fast), &frozen)
+		in.Fast = &frozen
+	}
 	if err := validateDiagnostic(in, e.state); err != nil {
 		return p.State{}, err
 	}
@@ -262,6 +273,9 @@ func (e *Engine) Start(in p.Start) (out p.State, startErr error) {
 		e.state.Diagnostic = &scope
 	}
 	e.state.Messages = append(e.state.Messages, p.Message{Role: "user", Content: in.Input})
+	if in.Fast != nil {
+		e.state.Fast = &p.FastState{FastStart: *in.Fast, Status: "active", Values: map[string]json.RawMessage{"input": in.Fast.Input}, Evidence: map[string]bool{}, Completed: map[string]p.FastResult{}}
+	}
 	e.state.Debug = p.DebugState{Revision: 1, Policy: in.Config.Debug, Hits: map[string]int{}}
 	e.state.Harness = harness
 	e.state.Manifest = e.manifest(in)
@@ -450,6 +464,9 @@ func (e *Engine) applyQueued(phase string, terminal bool) error {
 			continue
 		}
 		if !terminal && c.Operation == "steer" {
+			if err := e.fastFallback("user_steer"); err != nil {
+				return err
+			}
 			e.state.Messages = append(e.state.Messages, p.Message{Role: "user", Content: c.Text})
 		}
 		receipt := p.Receipt{RequestID: c.RequestID, Status: "applied", Revision: e.state.Revision + 1}
@@ -522,6 +539,32 @@ func (e *Engine) loop(ctx context.Context) {
 		return
 	}
 	for {
+		e.mu.Lock()
+		fastActive := e.state.Fast != nil && e.state.Fast.Status == "active"
+		e.mu.Unlock()
+		if fastActive {
+			if failure = e.boundary(ctx, "before_model"); failure != nil {
+				return
+			}
+			e.mu.Lock()
+			failure = e.fastAdvance()
+			finished := e.state.Fast != nil && e.state.Fast.Status == "completed"
+			if finished {
+				e.state.Status = "completing"
+			}
+			stillActive := e.state.Fast != nil && e.state.Fast.Status == "active"
+			pending := len(e.state.Pending) > 0
+			e.mu.Unlock()
+			if failure != nil {
+				return
+			}
+			if finished {
+				return
+			}
+			if stillActive && !pending {
+				continue
+			}
+		}
 		e.mu.Lock()
 		next := e.modules.policy.Next(clone(e.state))
 		if next == "complete" {
@@ -650,6 +693,19 @@ func (e *Engine) loop(ctx context.Context) {
 					return
 				}
 				continue
+			}
+			if f := e.state.Fast; f != nil && f.Status == "fallback" && (intent.MCP != nil || intent.Name == "write_file") {
+				if prior, ok := f.Completed[fastSignature(call)]; ok {
+					failure = e.finishTool(call, intent, toolResult{Output: prior.Output, ReusedFrom: prior.CallID}, "reused", 0)
+					e.mu.Unlock()
+					if failure != nil {
+						return
+					}
+					if failure = e.boundary(ctx, "after_tool", call); failure != nil {
+						return
+					}
+					continue
+				}
 			}
 			e.moduleState("action", "validated", map[string]any{"callId": call.ID, "tool": intent.Name, "schemaHash": intent.SchemaHash, "argumentsHash": fingerprint(call.Function.Arguments)})
 			failure = e.record("kun/tool.validated", e.state.Modules["action"])
