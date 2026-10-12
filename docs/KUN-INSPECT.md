@@ -1,6 +1,6 @@
-# Kun 0.6 调用证据、上下文与快照差异
+# Kun 调用证据、上下文与快照差异
 
-RunDesk 0.25.0 在 K2 调试基础上补充可读的 Network/Elements 和只读比较。这里的差异是两份执行状态的比较，不是文件差异、恢复操作或可执行 JSON Patch。
+RunDesk 0.45.0 在 K2 调试基础上补充可读的 Network/Elements 和只读比较。这里的差异是两份执行状态的比较，不是文件差异、恢复操作或可执行 JSON Patch。
 
 ## 界面
 
@@ -41,10 +41,10 @@ RunDesk 0.25.0 在 K2 调试基础上补充可读的 Network/Elements 和只读�
 
 JSON 数值用 json.Number 保留精度，不经过浮点转换。两份状态先按宿主相同的敏感字段规则脱敏，再比较并制作字符串预览，因此密码等敏感字段变化不会出现在差异里。自由文本不被解析为凭据对象，仍可能包含用户自己写入的内容，语义与原有记录保持一致。
 
-本版升级 worker 协议到 v6、引擎到 0.6.0；hello 增加 snapshotDiff/eventEvidence。状态 schema 保持 1，旧快照可读；旧版本安全检查点不跨引擎版本恢复。两个可执行文件必须同步更新。
+当前 Kun 0.16.0 / worker 协议 16 提供 snapshotDiff/eventEvidence。旧快照可读；执行检查点须满足版本守卫，见 [升级](UPGRADING.md)。
 
 ## 验证边界
 
 核心测试覆盖重启后的精确证据、请求与真实 fixture HTTP body 一致、未来回答不混入旧输入、只读不改变状态/事件/调用次数、大整数、脱敏、缺失/null、路径转义、跨运行、上限与 Unicode。宿主测试用真实 Kun 子进程验证 read/归属权限。
 
-`node scripts/kun-inspect-test.cjs` 验证关联键、快照截止、内容作为文本、实际请求来源、比较忙碌状态和过期响应；它不运行浏览器。两个 Playwright 场景已更新，当前环境无 Chromium，未运行。详情见 [验证记录](KUN-VALIDATION.md)。
+`node scripts/kun-inspect-test.cjs` 验证关联键、快照截止、内容作为文本、实际请求来源、比较忙碌状态和过期响应；它不运行浏览器。两个 Playwright 场景已更新，当前环境无 Chromium，未运行。详情见 [验证记录](VALIDATION.md)。

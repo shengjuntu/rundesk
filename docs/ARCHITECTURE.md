@@ -1,79 +1,64 @@
-# Architecture
+# RunDesk 系统架构
+
+RunDesk 向应用提供持久任务与可检查的 Agent 执行过程。Kun 和 Codex 是两个后端；模型 Provider、Kun 内部循环策略和操作系统执行环境分别建模。
+
+## 当前分层
 
 ```mermaid
-flowchart TB
-  Admin[管理与调试 Web UI] --> API[Go HTTP API]
-  VLM[ActiveVLM 服务端] --> API
-  API --> DB[(SQLite 事件与会话)]
-  API --> Manager[会话协调器]
-  Manager --> A[会话 A 的 Codex App Server]
-  Manager --> B[会话 B 的 Codex App Server]
-  Manager --> Config[配置连接]
+flowchart TD
+    A["业务应用与 WebUI"] --> B["HTTP API 与身份授权"]
+    B --> C["平台服务：任务、会话、队列、文件、事件"]
+    C --> D["后端注册与运行入口"]
+    D --> K["Kun 适配器与 JSONL worker"]
+    D --> X["Codex App Server 适配"]
+    K --> L["本机执行"]
+    X --> L
+    X --> E["托管 Docker 环境"]
 ```
 
-管理界面是内嵌静态资源，不需要独立 Node 服务。ActiveVLM 与管理 UI 使用相同 HTTP API。应用后端承担进程/会话协调、配置入口、审批路由、事件留存和文件入口。
+这张图描述当前实现：Kun 尚未接入托管 Docker，远程 worker 也尚未实现。
 
-Codex 自己承担模型调用、agent loop、原生上下文压缩、工具调度、Skills/MCP 执行、原生线程保存与沙箱。项目笔记只是显式应用输入。没有通过“兼容 OpenAI chat/completions”重新实现 Codex。
+| 层 | 主要职责 | 代码入口 |
+| --- | --- | --- |
+| 应用契约 | `/api/v1`、认证/归属、幂等、结构化错误 | `internal/app/api_v1.go`、`application_keys.go`、`http.go` |
+| 平台服务 | 应用/实例、任务队列、会话、审批入口、文件、事件投影 | `internal/app`、`internal/store` |
+| 后端入口 | 注册内置后端、能力描述、运行和停止分派 | `internal/app/backends.go` |
+| Codex 连接 | App Server JSON-RPC、原生线程/轮次、恢复和事件 | `internal/rpc`、`internal/app/manager.go` |
+| Kun 连接 | worker 启动、协议握手、请求关联、事件补取 | `internal/adapters/kun`、`internal/app/kun.go` |
+| Kun 执行内核 | 模型/工具循环、控制、快照、动作账本、回放、Skill 快速路径 | `internal/kun`、`cmd/kun` |
+| 执行环境 | 本机进程、Codex 容器与挂载/租约 | `internal/app/execution.go` 及 environment 文件 |
+| 界面与调试 | 业务操作、轨迹、公共只读查询、Kun DevTools | `internal/web`、`internal/debugapi`、`internal/tracequery` |
 
-## 生命周期
+## 三类身份
 
-1. 创建应用会话，固定保存 instanceId、workspaceId、模型等元数据；不立即执行任务。
-2. 提交输入：验证附件/技能；保存 run ID、输入与当时的笔记版本。
-3. 启动或复用此会话的 App Server 子进程；initialize → initialized。
-4. 新会话 thread/start；旧线程在新进程中 thread/resume；同一个活跃连接直接复用已加载线程。
-5. 请求 MCP 配置重载，再发送 turn/start。保留原生请求/响应与通知。
-6. 原生请求需要人工输入时保存审批，UI 响应只回到所属进程。
-7. turn/completed 更新状态。连接保留供后续轮次使用，空闲连接会回收。
+- **Application** 表达业务接入身份，绑定专用 Instance；应用凭据同时约束实例、项目和 scopes。
+- **Instance** 保存后端、模型默认值、权限、Skills/MCP 和执行环境配置。可同时存在 Kun 与 Codex 实例。
+- **Session** 保存后端归属与对话历史，含多个 Run。一个排队 Task 关联独立 Session；更换实例后端不会迁移历史 Session，也不自动重发历史任务。
 
-限制为 16 个实际加载的会话/配置连接；会话重命名、置顶等元数据操作不占用进程额度。达到上限返回错误，没有隐式排队或丢弃任务。配置调用也有独立连接，按 instanceId + workspaceId 复用。
+任务接收、运行状态与业务评测是三个不同事实。队列接受返回 202；完成看任务/会话终态，质量看明确规则及证据。幂等键绑定调用身份与请求内容，业务 taskId 只是标签。
 
-运行状态有 idle/starting/running/waiting/stopping/completed/interrupted/failed；未知原生最终状态会按原值保留。关闭浏览器只断开事件流。停止任务调用 turn/interrupt；启动中停止可终止此会话进程。后台退出/崩溃不会保证模型任务继续，也不会在恢复后重跑。
+## 后端契约与扩展边界
 
-## 可靠性边界
+`AgentBackend` 当前抽出了运行、停止和静态能力目录。注册表未知类型直接失败，不回退 Codex；`Manager.run` 和停止流程按会话后端选择适配器。共同授权、队列额度、输入持久化及生命周期仍由平台负责。
 
-- JSONL 请求 ID 与并行响应配对；按行读取，单帧最大 32 MiB，支持超过默认 Scanner 大小的工具输出。
-- 原生 JSON envelope 不添加 jsonrpc 字段。对未知 server request 返回方法未实现错误，不猜测批准。
-- SQLite WAL 保存递增事件 ID；SSE 从数据库读取，慢浏览器不会直接阻塞 App Server 读循环。
-- 原生事件落库仍位于读取路径，因此磁盘速度影响读取吞吐；该版本没有吞吐优化或日志配额。落库失败触发管理器停止。
-- 单个 session 只允许一个在途任务；并行任务使用不同 session。
-- 启动时间和 RPC 超时有上限；长时间模型生成不因 turn/start 返回后而被 90 秒计时器取消。
-- 重启恢复时所有未完成任务成为 interrupted，原来的审批成为 expired。原生线程是后续继续会话的依据。
-- 配置写入使用原生 expectedVersion；用户层 MCP 整表写入前保留其他服务。存在配置层覆盖时以 Codex 原生有效配置为准。
+这是内部接口整理的第一层，尚不是可动态加载的插件 SDK。配置类型仍覆盖 Kun/Codex；连接、审批、恢复及 Kun 实验准备仍有专用实现。添加第三个后端需要补配置、生命周期、环境与契约测试，不能仅登记名称。后续继续将这些行为逐步收敛，保持现有 API 和副作用语义。
 
-## 下一步可独立演进
+能力目录描述“实现支持”；`setup/environment` 检查已配置实例的本机前置条件；会话 DebugService 进一步区分 supported 与 available。不能把目录中的 step 能力理解为每个后端、每种运行状态均可调用。
 
-将管理 API 版本化并增加幂等键、将多个工作区映射到独立 OS/容器身份、增加任务队列与容量控制、为日志建立脱敏与保留策略、加入 MCP OAuth/测试工具 UI、完善 Codex 版本协商。业务界面与模型能力保持在 ActiveVLM 等上层应用中。
+## 轨迹和调试
 
-## v0.2 管理功能
+共同事件信封为宿主 `id/sessionId/time/direction/method/data`。`data` 保留后端原生载荷；统一投影呈现运行、步骤、审批、异常与统计，不推测模型隐藏推理。宿主事件 ID 与 Kun worker sequence 分别固定，不能互换。缺失证据保持未知。
 
-会话置顶和归档作为原有 JSON 记录中的可选字段追加，不重建数据库或移动目录。删除会话通过 SQLite 事务清理应用元数据、审批和事件，先关闭其原生连接并等待输出完成。上传和产物保留。
+Codex 提供宿主记录与原生协议暴露的检查；Kun 可进一步固定模型输入输出、工具证据、上下文快照、条件断点和单步控制。回放/分叉、评测、Skill 验证属于显式扩展，不以最低公共能力限制 Kun，也不为 Codex伪造内部状态。
 
-事件过滤在 SQLite 执行，不局限于浏览器已缓存的事件；UI 将实时视图与历史查询区分。暂停只冻结显示。MCP 导入在版本检查和所有服务校验通过后，使用一次原生整表写入；编辑和导入共用配置校验与密钥占位符处理。
+Hybrid 重算只回放录制工具结果；Live 分叉使用当前工具真实执行。K4 受限快速路径复用审批、预算和账本，守卫失败保留已完成结果后回退。结果未知的副作用不会自动重发，取消不等于回滚。详见 [调试](DEBUG.md)。
 
-## v0.3 实例配置身份
+## 进程与持久化
 
-Instance 保存名称、用途、默认模型和固定 CodexHome；Session 绑定 Instance 与 Workspace。一实例可以用于多个工作区，一个工作区也可供多实例使用。Workspace 继续保存项目路径和项目笔记；它不是账号或配置隔离身份。
+Go 主服务嵌入 WebUI，SQLite 保存平台对象与事件。每个加载的 Kun 会话使用独立 worker 和执行数据库，通过序号补取与去重关联宿主投影；两库没有跨进程原子事务。默认全局并发 4，队列、直接会话与恢复共用额度，等待审批也占额度。
 
-默认实例沿用服务启动环境。新实例使用 `data/instances/<id>/codex`；子进程设置 CODEX_HOME、去除外部 CODEX_SQLITE_HOME 覆盖，其他环境变量保留。配置连接键包含两个 ID，避免同一项目里的助手串配置。实例技能文件写入对应 home/skills；项目技能仍在 cwd/.agents/skills；两种文件写入均使用 Go os.Root。
+配置通过 revision 防止覆盖；向导将默认实例和 setup 状态原子保存。重启恢复排队元数据，已开始或结果未确认的执行进入中断/待核对状态，不靠跨后端自动重试修复。
 
-实例创建和元数据修改不启动进程。首次配置调用或任务才创建连接。重载使用非阻塞操作锁，关闭空闲连接并清空已加载 thread 标记，下次任务从原生 threadId 恢复；活跃任务和审批不受影响。这个版本没有删除实例和修改原生目录的 API。
+## 参考项目
 
-配置身份是单用户组织方式，不是多租户边界。全局技能、项目层配置、环境变量和密钥环的作用域仍由 Codex 和操作系统决定。
-
-## v0.4 审批与运行诊断
-
-实例新增 Permissions，在线程启动或恢复时传递；不改写用户的 config.toml。变更不影响正在运行或等待审批的任务。下一轮比较设置，必要时关闭旧连接并用原 threadId 恢复；恢复时使用 excludeTurns，历史仍由应用事件库提供。
-
-审批以 App Server 的 availableDecisions 为准。前后端均支持对象选项，后端对原始选项作结构相等校验，不允许浏览器扩大规则前缀或补充未提供的授权。决定、权限范围与完成时间保存为审计数据；原生 serverRequest/resolved 同步清理等待状态。
-
-每个会话或配置连接保存 RuntimeStatus，区分请求设置与服务端实际返回的设置；后者只收录明确返回的字段。告警按来源和内容合并计数，最多保留 32 条，每条最多 8 KiB。连接关闭后保留历史快照，live 标识仅表达当前是否仍有连接。该快照不代替完整事件记录。
-
-手动连接诊断读取本机 sandbox --help，选择 CLI 支持的命令格式；在相同工作区和实例环境执行固定的 workspace-write、禁网 echo 探针。必须退出成功且输出精确标记才算通过；有超时与输出上限，失败不会自动降级权限或修改系统设置。演示模式跳过实际沙箱检查。
-
-## v0.5 轨迹投影
-
-Store.TraceEvents 在原表按 session/id 和生命周期方法筛选；固定 snapshot 的游标分页保证一轮读取稳定。HTTP 仅返回有界预览，完整事件按会话和事件 ID 单独读取。没有第二份事件数据库，也不启动新的 Codex 连接。
-
-浏览器 trace-model.js 按 run、turn、item 和 request 关联记录；输出六类轨道的步骤索引，保留源事件 ID。trace.js 维护视窗、筛选、选择和增量读取；列表只挂载可见行，时间轴每轨显示最多三层重叠，密集部分显示计数并可缩放展开。全程总览用 Canvas，条目与详情采用 DOM；不增加依赖或构建服务。
-
-页面每 1.8 秒拉取新生命周期事件；完成任务的已有记录不重复合并。视图状态保存在当前浏览器 sessionStorage，以会话 ID 分开。关闭轨迹页不停止任务。生命周期索引仍保存在浏览器内存中，本版不承诺无限事件规模。
+[HarnessRouter](https://github.com/HarnessRouter/harnessrouter) / [UHP](https://unifiedharnessprotocol.org/) 提供应用驱动完整 Agent 运行时、可复用后端配置和契约测试的参考。RunDesk 保持独立 Go 平台与 Kun 内核；当前没有引入其源码，也没有实现或声明 UHP 兼容入口。采用的设计参考与 PiG 来源统一登记在 [UPSTREAM](UPSTREAM.md)。

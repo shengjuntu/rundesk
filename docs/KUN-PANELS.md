@@ -1,8 +1,7 @@
-# RunDesk 0.26.0：Kun 结构化检查面板
+# RunDesk Kun 结构化检查面板
 
-> 本文保留首批版本说明。0.33 新增 Plan-Act、内置组合与 Layers 对照，当前行为见 [KUN-HARNESS.md](KUN-HARNESS.md)。
 
-本版在既有 Network、Elements、Console 和快照差异上补 Sources、Performance、Application、Layers。Kun 执行引擎仍为 0.6.0，worker 协议仍为 v6；没有新执行动作，也没有变更状态格式或恢复校验。
+本版在既有 Network、Elements、Console 和快照差异上补 Sources、Performance、Application、Layers。各面板以当前 worker 能力和固定快照为依据；循环策略切换见 [Harness](KUN-HARNESS.md)。
 
 ## Sources：当前运行控制
 
@@ -52,4 +51,4 @@ Sources 以当前在线状态为目标，即使其他面板固定在历史快照
 
 非调用列表面板使用完整检查宽度。自动刷新按模块、工具和内容身份恢复展开项；滚动位置保留，避免新增记录将展开状态套到另一条。数据表在窄屏容器内横向滚动。
 
-这些面板于 0.26.0 实现，0.28.0 起已执行真实 Chromium 回归，模型与 MCP 使用本地 fixture；真实服务仍待验收。验证记录见 [KUN-VALIDATION.md](KUN-VALIDATION.md)，完整阶段状态见 [KUN-PROGRESS.md](KUN-PROGRESS.md)。
+面板交互与后端数据的本版验证范围见 [验证](VALIDATION.md)，尚待完成的真实服务验收见 [状态](STATUS.md)。

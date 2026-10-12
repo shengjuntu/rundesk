@@ -1,0 +1,18 @@
+{
+  "version": "0.45.0",
+  "passed": true,
+  "scope": "shipped K4 UI in Node DOM fixture; not browser layout acceptance",
+  "checks": [
+    "no automatic runtime requests",
+    "local Kun environment filtering",
+    "fixed identity and explicit execution confirmation",
+    "duplicate clicks suppressed",
+    "closed responses ignored",
+    "literal text rendering",
+    "fixed validation batch binding",
+    "unknown report cannot promote",
+    "application environment filtering and revision binding",
+    "explicit disable",
+    "isolated candidate never offers shared-application promotion"
+  ]
+}

@@ -1,8 +1,8 @@
-# K3-A 离线记录实验（RunDesk 0.31.0）
+# K3-A 离线记录实验
 
 本版可把 Kun 一个轮次的已保留事件冻结成离线基线，假设工具返回了另一段文本，再逐条查看记录、后续失效范围和分支差异。每次编辑或恢复都新建不可变子分支；原始事件和父分支保持不变。
 
-这是一种 **record_edit 记录编辑回放**：回放按钮只移动阅读位置，不运行模型、工具或 Kun worker，不导入检查点，不恢复文件或回滚外部系统。替代值是未经验证的假设，后续原始回答不能当作该假设下重新生成的答案。Kun 引擎仍为 0.7.0 / 协议 v7；worker 的 `fork=false` 正确表示尚无运行时分叉。
+这是一种 **record_edit 记录编辑回放**：回放按钮只移动阅读位置，不运行模型、工具或 Kun worker，不导入检查点，不恢复文件或回滚外部系统。替代值是未经验证的假设，后续原始回答不能当作该假设下重新生成的答案。运行时 Hybrid/Live 分叉在独立入口提供，见 [运行时分叉](KUN-FORKS.md)。
 
 ## 使用
 
@@ -73,4 +73,4 @@
 | 差异页 | 默认及最多 16 条 |
 | 原文分块 | 默认 4,000，最多 16,000 个 Unicode 字符；JSON 响应最多 4 MiB |
 
-离线记录实验首版仅 Kun 来源，不支持 Codex 记录编辑。当前 0.35 另有 [K3-B/C Hybrid 与 Live](KUN-FORKS.md) 和 [K3-C Plan-Act / 内置组合 / Harness 对照](KUN-HARNESS.md)，独立于此处的记录编辑。0.35 已有普通运行安全点组合切换；更多模块迁移仍待实现；K4 候选生成/验证/IR 已在 0.40 接入，见 [KUN-K4.md](KUN-K4.md)。验证见 [KUN-VALIDATION.md](KUN-VALIDATION.md)，完成度见 [KUN-PROGRESS.md](KUN-PROGRESS.md)。
+离线记录实验首版仅 Kun 来源，不支持 Codex 记录编辑。当前另有 [K3-B/C Hybrid 与 Live](KUN-FORKS.md) 和 [K3-C Plan-Act / 内置组合 / Harness 对照](KUN-HARNESS.md)，独立于此处的记录编辑。已有普通运行安全点组合切换；更多模块迁移仍待实现；K4 候选生成/验证/IR 已接入，见 [KUN-K4.md](KUN-K4.md)。验证见 [VALIDATION.md](VALIDATION.md)，完成度见 [STATUS.md](STATUS.md)。

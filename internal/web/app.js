@@ -96,7 +96,7 @@ async function hasPendingSubmission(path,body) {return pendingAPI.has(await subm
 async function api(path, options = {}) {
   const headers = { ...options.headers };
   const method=options.method||"GET", body=options.body;
-  const deduplicate=method==="POST" && (/^\/kun-benchmarks(?:\/[^/]+\/(?:start|stop|evaluate))?$/.test(path)||/^\/kun-skills(?:\/[^/]+\/(?:validations|promote|disable))?$/.test(path)||/^\/kun-skill-validations\/[^/]+\/(?:start|evaluate)$/.test(path)||/^\/kun-case-runs(?:\/[^/]+\/start)?$/.test(path)||/^\/kun-(?:rubrics|evaluations|task-sets)$/.test(path)||/^\/kun-forks(?:\/[^/]+\/(?:start|hypotheses))?$/.test(path)||/^\/experiments(?:\/[^/]+\/branches)?$/.test(path)||/^\/sessions\/[^/]+\/kun\/resume$/.test(path)||/^\/workspaces\/[^/]+\/mcp-tests(?:\?|$)/.test(path)||/^\/(instances|workspaces|sessions|tasks|schedules)$/.test(path)||/^\/sessions\/[^/]+\/(turns|recover)$/.test(path));
+  const deduplicate=method==="POST" && (path==="/setup/codex-install"||/^\/kun-benchmarks(?:\/[^/]+\/(?:start|stop|evaluate))?$/.test(path)||/^\/kun-skills(?:\/[^/]+\/(?:validations|promote|disable))?$/.test(path)||/^\/kun-skill-validations\/[^/]+\/(?:start|evaluate)$/.test(path)||/^\/kun-case-runs(?:\/[^/]+\/start)?$/.test(path)||/^\/kun-(?:rubrics|evaluations|task-sets)$/.test(path)||/^\/kun-forks(?:\/[^/]+\/(?:start|hypotheses))?$/.test(path)||/^\/experiments(?:\/[^/]+\/branches)?$/.test(path)||/^\/sessions\/[^/]+\/kun\/resume$/.test(path)||/^\/workspaces\/[^/]+\/mcp-tests(?:\?|$)/.test(path)||/^\/(instances|workspaces|sessions|tasks|schedules)$/.test(path)||/^\/sessions\/[^/]+\/(turns|recover)$/.test(path));
   let signature;
   if(deduplicate) {
     signature=await submissionSignature(path,body);

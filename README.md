@@ -1,217 +1,43 @@
 # RunDesk
 
-**A lightweight workspace for agent conversations and application agents.**
+[简体中文](README.zh-CN.md) · [Documentation](docs/README.md)
 
-[English](README.md) · [简体中文](README.zh-CN.md)
+RunDesk is an Agent execution platform for applications: one API connects Kun and Codex and manages tasks, sessions, tool approvals, and artifacts. Its independently developed Kun runtime makes execution traces debuggable through step controls, breakpoints, replay, and comparative evaluation. Independently validated successful traces can become reusable Skills, carrying debugging results into real application workflows.
 
-RunDesk gives people a web conversation interface and gives applications an API to run Codex tasks. Review tool activity, manage skills and MCP connections, and keep application runs visible in one place.
+## Current release
 
-Built with Go and plain HTML/JavaScript. Node.js is not required to run RunDesk itself. Your Codex installation or tools may have their own dependencies.
+**RunDesk 0.45.0 · Kun 0.16.0 · worker protocol 16**. This release consolidates setup, API documentation, and host backend dispatch; the Kun execution kernel and wire protocol are unchanged.
 
-![RunDesk conversation workspace](docs/screenshots/0.16.0/chat-en.png)
+- Integrate applications with scoped credentials, durable queues, sessions, streaming events, files, and idempotency receipts.
+- Inspect recorded traces from both backends. Kun additionally exposes internal state, step controls, conditional breakpoints, snapshots, diagnostic sessions, and Hybrid/Live forks.
+- Evaluate fixed cases and artifacts, validate parameterized Skills independently, and compare repeated runs with explicit missing evidence.
+- Check local prerequisites on opening the workbench. Configure Kun without Codex, or optionally install a pinned Codex release into the data directory.
 
-## PiG core coding tools (0.44.0)
+## Quick start
 
-Kun now covers seven core coding actions: read, write, exact edit, list, grep, find and opt-in Bash. Commands run in a fresh non-interactive shell with explicit host permission and durable approval, timeout/cancellation, bounded output and the existing action ledger. Generated code can be saved, edited and executed through an installed interpreter or compiler.
-
-Upgrade both binaries: **Kun 0.16.0 / worker protocol v16 / fork schema 3**. Bash is host execution, not an OS sandbox; Kun-managed containers remain pending. See [core alignment and usage](docs/KUN-PIG-CORE.md), [release notes](docs/RELEASE-0.44.0.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md).
-
-Thanks to [MichaelKinsy/PiG](https://github.com/MichaelKinsy/PiG), its contributors, and Mario Zechner / Pi. Kun selectively incorporates attributed source and independently develops its own runtime; it is not a full PiG fork. Exact source revision, copied files and MIT notices are in [UPSTREAM](docs/UPSTREAM.md).
-
-## K4 isolated evaluation directories (0.43.0)
-
-Declare fixed input files and run each case in a fresh directory. Dynamic samples, fast samples and independent validation each receive their own file-tool root. Preview has no file operations; existing directories are never overwritten or reset. Setup evidence is required for a passing score, and fallback retains the same directory and action ledger.
-
-Upgrade **both binaries: Kun 0.15.0 / worker protocol v15 / fork schema 3**. This mode supports built-in file tools only; MCP is rejected. Isolated candidates are evaluation-only and cannot be promoted directly to shared-workspace applications. This is directory separation, not an OS/process/network sandbox. See [fixture guide](docs/KUN-FIXTURES.md), [release notes](docs/RELEASE-0.43.0.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md). The following release sections retain their historical scope.
-
-## K4 artifact checks (0.42.0)
-
-Freeze optional file rules alongside case inputs: existence, literal text containment/equality, or SHA-256. Kun captures bounded workspace files in its terminal journal event; later file changes and host restarts cannot rewrite historical quality. Reply and artifact checks jointly gate source distillation, independent validation and repeated comparisons. Missing evidence remains unknown.
-
-Upgrade **both binaries: Kun 0.14.0 / worker protocol v14 / fork schema 3**. Existing definitions/reports remain readable; old pending previews/checkpoints need recreation, and old Skill guards fall back until candidates are rebuilt and revalidated. Checks observe files at completion and do not prove this run created them; shared workspaces are not reset or isolated. See [artifact guide](docs/KUN-ARTIFACTS.md), [release notes](docs/RELEASE-0.42.0.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md). The following release sections retain their historical scope.
-
-## Repeated K4 comparisons (0.41.0)
-
-Compare dynamic execution and a candidate Skill on fixed, paired cases, repeated 2–5 times. Freeze all identities and alternating order before execution, authorize the batch once, and run samples sequentially through existing capacity and approval gates. Stop prevents later dispatch; host restart never silently reruns interrupted work.
-
-Immutable reports preserve every sample, quality and fallback counts, reported model usage, engine timing, and matched-pair differences. Missing values stay unknown. This is a descriptive comparison, without workspace reset, statistical significance claims, or automatic Skill promotion. **Kun 0.13.0 / protocol v13 / fork schema 3 stay unchanged**; existing K4 records remain compatible. See [guide](docs/KUN-BENCHMARKS.md), [validation](docs/KUN-VALIDATION.md), [release notes](docs/RELEASE-0.41.0.md) and [progress](docs/KUN-PROGRESS.md).
-
-## K4 parameterized Skills (0.40.0)
-
-Compile successful cases into a bounded tool workflow, validate it on a fixed independent set, and enable it only for a selected application after every case passes. Runtime guards preserve tool approvals and budgets; fallback retains completed results and prevents identical completed side effects from being dispatched again. Includes fixed case previews, a Skill workbench, immutable reports and explicit disable.
-
-Upgrade both binaries: **Kun 0.13.0 / protocol v13 / fork schema 3**. The optional learned JEV policy is not included. Local fixtures verify the core loop; remote business benchmarks and browser layout acceptance remain outstanding. See [K4 guide](docs/KUN-K4.md), [validation](docs/KUN-VALIDATION.md) and [release notes](docs/RELEASE-0.40.0.md). The sections below describe earlier releases at their release dates.
-
-## Fixed-input task sets (0.39.0)
-
-Author and save 1–20 ordered cases, each with a fixed input and literal reply rules. The administrator workbench supports immutable save, full inspection, metadata pagination and copying to a new draft. Saving never starts a run. Batch execution, result binding, aggregate scoring and independent holdout isolation remain pending. See [task sets](docs/KUN-TASK-SETS.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md).
-
-## Repeatable local validation (0.38.1)
-
-Run `python3 scripts/validate-kun.py` to retain per-step logs and an atomic JSON receipt for Go tests, vet, focused race checks, builds, JavaScript syntax, UI interactions and the local HTTP fixture. A run never overwrites earlier evidence or grades a stale binary after a failed build. See [validation](docs/KUN-VALIDATION.md) and [release notes](docs/RELEASE-0.38.1.md).
-
-## Kun fixed-rule evaluation (0.38.0)
-
-Save a rubric for a fixed fork baseline, select a frozen source/fork or fork/fork comparison, and save an immutable evaluation report. Literal contains/excludes/equality rules use the complete final reply, with a separate completion requirement. Missing evidence stays unknown; reports preserve rule results, hashes and event links without starting models or tools.
-
-This is reproducible rule scoring, not an independent benchmark or external fact/artifact verification. Kun remains **0.12.0 / protocol v12 / fork schema 3**, compatible with 0.37. See [evaluation](docs/KUN-EVALUATION.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md).
-
-## Kun hypothetical tool results (0.37.0)
-
-Create a new Hybrid preview with one user-authored tool output, review its complete replacement, then explicitly recompute the model branch. The original private recording is retained; tool identity, arguments, order, success/error status and inherited budgets stay fixed. Hypothetical results have distinct execution evidence and comparison counts, including whether the selected assumption was used.
-
-Requires **Kun 0.12.0 / worker protocol v12 / fork schema 3**. Upgrade both binaries. Older records remain inspectable, but old checkpoints/previews cannot execute or become assumptions across engine versions. See the [hypothesis guide](docs/KUN-HYPOTHESES.md), [release notes](docs/RELEASE-0.37.0.md), [validation](docs/KUN-VALIDATION.md) and [development progress](docs/KUN-PROGRESS.md). Browser/remote-service acceptance and independently scored benchmarks remain pending.
-
-## Kun source and fork comparison (0.36.0)
-
-RunDesk 0.36.0 adds read-only source/fork and same-checkpoint fork/fork comparisons. Both host event cursors are fixed, inherited usage is separate, and new model/planning calls, reported tokens, active/wait time and real/replayed tools are shown alongside bounded reply previews and evidence links. Missing logs or usage suppress affected deltas. Inspection never starts a worker, calls models/tools or reads project files.
-
-This is descriptive inspection; scored cross-session benchmarks and K4 optimization remain pending. The 0.36 release retained the 0.35 engine; the 0.37 compatibility change is described above. See [comparison guide](docs/KUN-COMPARISON.md) and [validation](docs/KUN-VALIDATION.md).
-
-## Kun runtime Harness switching (0.35.0)
-
-RunDesk 0.35.0 lets administrators switch an ordinary Kun run between Tool Loop and Plan-Act at a safe pause before a model request. Layers provides a fixed preview with a reason and exact state revision. Applying keeps the run paused, resets planning state, preserves history, permissions and spent budgets, and records a new Harness revision. Recovery and forks preserve the effective composition; a new ordinary run uses the configured default. See [Harness guide](docs/KUN-HARNESS.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md).
-
-[Hybrid and Live forks](docs/KUN-FORKS.md) and [offline recording experiments](docs/KUN-EXPERIMENTS.md) remain available. Live uses current files and services; Hybrid stops on replay misses. Arbitrary module plugins, broader state migrations, cross-session benchmarks and K4 optimization remain unimplemented. Kun is now **0.12.0 / worker protocol v12**: upgrade both binaries together. Old records remain inspectable, but checkpoints and fork previews cannot execute across versions. Real browser and remote-service acceptance remain outstanding. Codex retains host-side read-only inspection and native analysis; internal stepping, conditional breakpoints and full context snapshots remain unavailable.
-
-## Codex quick start
-
-1. Install Codex and configure its authentication or model provider. See the [official Codex CLI documentation](https://developers.openai.com/codex/cli/).
-2. Extract a RunDesk release. On Linux:
-
-   ```bash
-   chmod +x bin/rundesk
-   ./bin/rundesk --data ./data
-   ```
-
-   On Windows, run `bin\rundesk-windows-amd64.exe --data .\data`.
-3. Open **http://127.0.0.1:3210**. On a fresh installation, setup opens automatically. Review the Codex path, select a working project and default model, save, and run the relevant checks.
-4. Start a conversation. Switch English / Chinese using the language button at the bottom left.
-
-The service must be able to find Codex. You can supply `--codex /absolute/path/to/codex` or save the executable in setup. The saved setup path takes precedence. Existing Codex provider and authentication settings are used by default; the default assistant follows the service's `CODEX_HOME` (otherwise `~/.codex`).
-
-The setup dialog remains available through **Environment check**. Missing Codex does not prevent the configuration page from opening. A successful protocol check is not a successful model inference test. Docker and MCP diagnostics show their own results rather than a blanket “ready” status.
-
-### Try the interface without a model
+Use Go 1.25.12 or a compatible newer toolchain. The WebUI is embedded; no frontend build is required.
 
 ```bash
-./bin/rundesk --demo --data ./demo-data
+make build
+./bin/rundesk --data ./data
 ```
 
-Demo mode uses a protocol simulator and isolated data. It does not verify real authentication, model calls or container execution.
+Open http://127.0.0.1:3210 and choose Kun or Codex in the setup wizard. Kun uses a tool-capable Chat Completions service; Codex uses its native provider and authentication configuration. Different instances can use different backends; existing sessions retain their backend. `--demo` explores the interface without real model calls or software installation.
 
-## How it works
+This is a source distribution. Build both executables and keep them together. See [setup and deployment](docs/SETUP.md) for Windows and optional Codex installation.
 
-| Area | Purpose |
-|---|---|
-| Chat | General assistant running native Codex; a dedicated, resizable conversation list |
-| Applications | Application-initiated registration, task history and administrator configuration |
-| Tasks | Queued work and schedules |
-| Files | Personal uploaded and generated files |
-| Collaboration | Coordinator-led delegation, direct interaction or an optional Gitea blackboard |
-| Environment check | Codex, working directory, protocol, account, MCP and optional Docker checks |
+## Documentation
 
-RunDesk talks to Codex **app-server**. For managed Docker environments it starts app-server through `docker exec -i` and uses stdio, without exposing an app-server network port.
+[Application API v1](docs/API-V1.md) · [Architecture](docs/ARCHITECTURE.md) · [Backend capabilities](docs/BACKENDS.md) · [Trace debugging](docs/DEBUG.md) · [Current status](docs/STATUS.md) · [Validation](docs/VALIDATION.md) · [Upgrading](docs/UPGRADING.md)
 
-## Connect an application
+The machine-readable contract is served at `/api/v1/openapi.json`. [Python client](examples/application_client.py) and [minimal application example](examples/application_quickstart.py) use the same contract.
 
-Connect from the application, supplying the RunDesk URL and administrator credential. Applications such as news2douyin and rundesk-video-app use:
+## Execution boundaries
 
-```text
-POST /api/v1/applications/{appId}/connect
-```
+Kun Bash is opt-in host execution, not an OS sandbox. Managed Docker environments currently support Codex; Kun container hosting remains pending. Codex does not expose Kun's internal step controls or full context snapshots. An accepted task, a completed tool call, and a successful business outcome are distinct; uncertain side effects are not silently replayed.
 
-RunDesk creates or reuses the application's binding. Initial skills and MCP settings are seeded once; reconnecting does not overwrite administrator changes. Applications automatically appear under **Applications**, where tasks and conversations are visible. Use scoped application credentials for supported ongoing task operations; initial registration remains an administrator operation.
+## Acknowledgements
 
-See [application integration](docs/APPLICATION-CONNECT.md) and the [API reference](docs/API-V1.md). RunDesk does not start or install the business application itself.
-
-## Optional Docker runtime
-
-The general assistant uses native Codex. Applications can be configured to use Docker on a Linux host with a local Docker engine.
-
-The fixed template directory is **[`examples/docker/`](examples/docker/README.md)**. To build manually:
-
-```bash
-# Replace X.Y.Z with your verified Codex release.
-bash examples/docker/build.sh X.Y.Z
-```
-
-Or open an application's **Configuration & runtime → Images & builds → Build tasks → Use base template**. Enter the Codex version to create a build draft, inspect it, then start the build. Select the resulting image and update project environments explicitly.
-
-A successful build does not automatically change a running application. Registration still defaults to local Codex; automatic Docker provisioning on registration is not included in this release. Data is mounted from the host. Environments are isolated by application and workspace, not automatically by individual user.
-
-See [Docker environments](docs/DOCKER-ENVIRONMENTS.md), [images](docs/IMAGES.md) and [builds](docs/BUILDS.md).
-
-## Models, credentials and data
-
-- Keep your existing Codex configuration, or set the assistant's default model during setup.
-- Advanced setup can configure a custom **Responses API-compatible** provider. The API key is referenced by a service environment variable; it is not entered into the setup page. Restart the service after changing its environment. Saving the provider changes native Codex configuration for the general assistant.
-- `--data` chooses the persistent database, managed workspaces and application state directory **before startup**. Setup shows this path; it does not move live data.
-- Working directories can be added from setup. Paths are on the server, not the browser's computer.
-- Keep credentials out of image layers and build ZIPs. A container's `localhost` refers to that container, so application MCP URLs must be reachable from inside it.
-
-## Remote access
-
-Local loopback access is the default. Remote listening requires an administrator token of at least 24 characters:
-
-```bash
-export RUNDESK_TOKEN='replace-with-a-long-random-secret'
-./bin/rundesk --listen 0.0.0.0:3210 --data ./data
-```
-
-Use HTTPS for remote deployment. Behind a reverse proxy, set `--public-url https://rundesk.example.com`. Existing authentication protects setup; there is no publicly accessible installation bypass. Configure the initial token through the service environment.
-
-## Build from source
-
-Use a Go toolchain compatible with `go.mod`:
-
-```bash
-go build -o bin/rundesk ./cmd/rundesk
-go test ./...
-```
-
-Frontend assets and the Docker template are embedded in the executable. Rebuild after changing them. No frontend build step or Node.js runtime is needed for deployment. Browser smoke tests use Playwright as a development-only dependency.
-
-## Upgrade and limits
-
-Stop the service and back up the existing data directory and Codex configuration before replacing binaries. Keep the same `--data` location. Existing applications and conversations are preserved.
-
-Version **0.19.4** adds a discovered MCP tool list with per-tool default, allow, prompt and disable choices. It retains queued-task credential re-checks from 0.19.2. It retains application/project ownership checks for files from 0.19.1. Uploads without recorded ownership must be uploaded again through the application/member endpoint; administrators retain access. It includes the native process cleanup, kernel-backed data locks, runtime-process view and systemd example from 0.19.0. It retains the bilingual interface and environment setup introduced in 0.16. Technical logs and user/model content remain in their original language. Some legacy detailed diagnostic messages retain their original wording.
-
-This patch is checked with automated Go tests, focused race tests and MCP approval-editor browser scenarios. The packaged Docker template has not been built against a real Docker engine in the development environment; real model/provider and container deployments require local verification. See [release notes](docs/RELEASE-0.19.4.md).
+Thanks to [MichaelKinsy/PiG](https://github.com/MichaelKinsy/PiG), its contributors, Mario Zechner / Pi, and [HarnessRouter](https://github.com/HarnessRouter/harnessrouter). Kun selectively references PiG while developing independently; HarnessRouter/UHP informs the application/backend boundary. [UPSTREAM](docs/UPSTREAM.md) distinguishes incorporated code from design references and preserves the original [notices](LICENSES). No complete PiG or UHP compatibility is claimed.
 
 [License](LICENSE)
-
-## MCP test workbench (0.17)
-
-Open **Assistant settings → MCP → MCP test workbench** (or the application's MCP settings). Select a configured server, confirm direct-call access, load its tool list, inspect the schema, enter a JSON object, and execute. The result includes duration, protocol/transport errors and `isError` tool failures. **Replay record only reads saved data**; Execute tool makes a new real call.
-
-Local stdio and handshake-era Streamable HTTP (2025-03-26 / 2025-06-18 / 2025-11-25) are supported. Each test gets a new connection with a 30-second timeout and a 2 MiB response limit. This does not claim support for every MCP extension or the 2026 stateless protocol. Docker execution, OAuth login and server-initiated sampling/elicitation are not implemented. No host fallback is made for container applications. Only administrators may use this workbench. A disabled server can be tested explicitly without changing its enabled state; configured tool allow/deny lists still apply.
-
-Direct tests run with RunDesk's service identity, outside Codex's sandbox and approval flow. No credentials are accepted in the test form; existing server configuration is reused. Known configured secrets and common secret fields are masked, but arbitrary sensitive free text cannot be detected reliably. Saved test history can be deleted; idempotency receipts remain to prevent accidental re-execution. A timeout does not prove an external action failed or was cancelled.
-
-## Idempotent API submissions
-
-This capability already existed before 0.17. Send a stable `Idempotency-Key` (8–128 characters) for each logical POST to `/api/v1/tasks`, `/sessions`, `/sessions/{id}/turns`, or `/workspaces/{id}/mcp-tests`. Retry the **same request with the same key**; changed content returns 409. Keys are scoped to the authenticated caller. `Idempotency-Replayed: true` identifies a persisted acknowledgement, not current task status. Inspect `GET /api/v1/requests/{key}` or the task resource after a timeout. An interrupted acknowledgement can return `request_unconfirmed`; reconcile actual effects instead of changing keys and resubmitting. This is duplicate-submission protection, not an exactly-once guarantee for external tools.
-
-[Capability status and next steps](docs/CAPABILITY-STATUS-0.19.2.md)
-
-## Usage by application and project (0.18)
-
-Open **Tasks → Usage**. Pick dates (browser timezone, inclusive end date), application and project. The administrator-only `GET /api/v1/usage` API uses an inclusive `from` and exclusive `to` in RFC3339, with a maximum 366-day window. Export the displayed snapshot as JSON.
-
-Counters are **observed positive increments** of `thread/tokenUsage/updated.tokenUsage.total`, deduplicated per configuration identity and native thread. The first snapshot of a newly started thread is counted; an unknown/resumed baseline is excluded until another snapshot establishes an increment. Lower counters are flagged and ignored, not treated as a new spend period. Cached input and reasoning output are subsets, not additional totals. Missing fields remain `null`/Unknown. These are provider/runtime-reported observations, not prices, billing records, context occupancy or enforced quotas.
-
-Token increments belong to event receipt time. Runs belong to their start time; status is the latest recorded status before the selected end. “Reported” means a run has a usable total snapshot, not that all usage was reported. Details expose missing counters, unknown baselines and regressions. Events arriving late or spanning a reporting boundary can shift attribution between periods.
-
-The report reads retained session events only. Deleting sessions removes their usage; outside-Codex work and MCP direct tests are not measured. It does not infer CPU, storage or monetary cost. Queries are bounded to 10 seconds and 200,000 relevant lifecycle events; an exceeded limit returns an error instead of a partial total. This is an initial single-host observability view, not a scalable billing ledger.
-
-## Service operation and process cleanup (0.19)
-
-**Tasks → Runtime processes** lists managed App Server connections with PID, application/project, start time and cleanup scope. `GET /api/v1/processes` is administrator-only. It does not enumerate every OS descendant, build or MCP-test process. Docker entries identify the host docker-exec client; existing container leases remain responsible for in-container execution.
-
-On Linux/macOS each RPC connection owns a private process group. Closing the connection, malformed protocol or parent exit terminates that group. Buffered output is drained with a one-second bound after parent exit, preventing descendant-held pipes from hanging shutdown. This can end background commands started by that Codex connection. Processes that call setsid/change groups, privileged processes or remote services are outside this guarantee. Abruptly killing RunDesk itself cannot run its cleanup code. Windows currently terminates the direct App Server process only; Job Objects are not implemented.
-
-The standalone server now uses an OS-held data-directory lock (Linux/macOS flock, Windows LockFileEx). It is released when the process exits, including crashes. **The persistent `server.lock` file is normal: never delete it while a server may be running.** Existing v0.18-and-earlier locks are not overwritten: stop the old service; normal shutdown removes its old lock. Only if an old-format stale file remains, confirm the old server has stopped and remove that file once. Downgrading also requires stopping v0.19 before removing its persistent lock. Use local filesystems with working kernel-lock semantics, not an unverified shared/network filesystem.
-
-A [bilingual systemd user-service example](examples/systemd/README.md) configures restart-on-failure and service-cgroup cleanup. Review its data path and environment before installation; nothing is installed automatically. Interrupted tasks are not automatically replayed when the service restarts.

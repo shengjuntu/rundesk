@@ -68,6 +68,6 @@ const {spawn}=require('node:child_process'),fs=require('node:fs'),os=require('no
   await page.locator('#kun-devtools').getByRole('button',{name:'Application · MCP',exact:true}).click();assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   await page.screenshot({path:pictures+'/kun-mcp-mobile.png'});assert.deepEqual(errors,[]);
   const report={passed:true,modelCalls,toolCalls,listCalls,pageErrors:errors,checks:['Kun config UI','MCP discovery without tool execution','prompt holds execution','approve once','request/result inspection','tool definitions snapshot','always-allow next turn without approval','reload','390px viewport']};
-  fs.writeFileSync(path.join(root,'docs/kun-mcp-ui-validation.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
+  fs.writeFileSync(path.join(root,'docs/validation/current/kun-mcp-ui-validation.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
  }finally{await browser?.close();if(server&&server.exitCode===null&&server.signalCode===null){server.kill();await new Promise(r=>server.once('exit',r))}for(const s of [fixture,model]){s.closeAllConnections();s.close()}fs.rmSync(temp,{recursive:true,force:true})}
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -1,0 +1,89 @@
+{
+  "version": "0.45.0",
+  "passed": true,
+  "sourceSHA256": "8ba6e3d65eecf267ab5d810782468e8ce599f4b9f89d6098073a0145cb1b41ff",
+  "finishedAt": "2026-10-11T10:01:20.992142+00:00",
+  "checks": [
+    {
+      "name": "go-test",
+      "status": "passed",
+      "startedAt": "2026-10-11T09:57:44.884754+00:00",
+      "log": "regression/go-test.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T09:59:04.727829+00:00",
+      "durationSeconds": 79.843,
+      "executionSourceSHA256": "b3f51a8a741f975fd348a5cfd23b6661af88382b65d8842b308d23494eef9194"
+    },
+    {
+      "name": "go-vet",
+      "status": "passed",
+      "startedAt": "2026-10-11T09:59:04.728316+00:00",
+      "log": "regression/go-vet.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T09:59:05.349232+00:00",
+      "durationSeconds": 0.621,
+      "executionSourceSHA256": "b3f51a8a741f975fd348a5cfd23b6661af88382b65d8842b308d23494eef9194"
+    },
+    {
+      "name": "go-race",
+      "status": "passed",
+      "startedAt": "2026-10-11T09:59:05.349647+00:00",
+      "log": "regression/go-race.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T09:59:20.560705+00:00",
+      "durationSeconds": 15.211,
+      "executionSourceSHA256": "b3f51a8a741f975fd348a5cfd23b6661af88382b65d8842b308d23494eef9194"
+    },
+    {
+      "name": "build",
+      "status": "passed",
+      "startedAt": "2026-10-11T10:00:32.768580+00:00",
+      "log": "final/build.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T10:00:35.205652+00:00",
+      "durationSeconds": 2.437,
+      "executionSourceSHA256": "8ba6e3d65eecf267ab5d810782468e8ce599f4b9f89d6098073a0145cb1b41ff"
+    },
+    {
+      "name": "windows",
+      "status": "passed",
+      "startedAt": "2026-10-11T10:00:35.206252+00:00",
+      "log": "final/windows.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T10:00:37.601460+00:00",
+      "durationSeconds": 2.395,
+      "executionSourceSHA256": "8ba6e3d65eecf267ab5d810782468e8ce599f4b9f89d6098073a0145cb1b41ff"
+    },
+    {
+      "name": "syntax",
+      "status": "passed",
+      "startedAt": "2026-10-11T10:00:37.602033+00:00",
+      "log": "final/syntax.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T10:00:43.589705+00:00",
+      "durationSeconds": 5.987,
+      "executionSourceSHA256": "8ba6e3d65eecf267ab5d810782468e8ce599f4b9f89d6098073a0145cb1b41ff"
+    },
+    {
+      "name": "ui",
+      "status": "passed",
+      "startedAt": "2026-10-11T10:00:43.590357+00:00",
+      "log": "final/ui.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T10:00:44.629358+00:00",
+      "durationSeconds": 1.038,
+      "executionSourceSHA256": "8ba6e3d65eecf267ab5d810782468e8ce599f4b9f89d6098073a0145cb1b41ff"
+    },
+    {
+      "name": "http",
+      "status": "passed",
+      "startedAt": "2026-10-11T10:00:44.630047+00:00",
+      "log": "final/http.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T10:01:20.991668+00:00",
+      "durationSeconds": 36.361,
+      "executionSourceSHA256": "8ba6e3d65eecf267ab5d810782468e8ce599f4b9f89d6098073a0145cb1b41ff"
+    }
+  ],
+  "provenance": "Two-run release verification: initial full run passed Go tests, vet and focused race. HTTP stopped on a stale 0.44.0 assertion. Only the HTTP test assertion and setup CSS changed afterward; final run rebuilt Linux/Windows and passed syntax, 13 DOM suites and all four HTTP flows. No Go sources changed between runs. Original initial failure and logs are retained."
+}

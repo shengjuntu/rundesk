@@ -1,6 +1,6 @@
-# 应用 Docker 运行环境（0.10.1）
+# 应用 Docker 运行环境
 
-通用助手始终运行本机 Codex。应用可选择 Docker 镜像；一个应用对应专用配置，同一个应用的每个项目有独立环境。同项目会话复用容器，同时使用独立 App Server 连接。UI 不要求用户理解 instance；API 保留 instanceId 以兼容现有客户端。
+通用助手使用本机后端，可选 Kun 或 Codex；本页托管 Docker 路径仅适用于 Codex。应用可选择 Docker 镜像；一个应用对应专用配置，同一个应用的每个项目有独立环境。同项目会话复用容器，同时使用独立 App Server 连接。UI 不要求用户理解 instance；API 保留 instanceId 以兼容现有客户端。
 
 | 层级 | 内容 | 生命周期 |
 | --- | --- | --- |

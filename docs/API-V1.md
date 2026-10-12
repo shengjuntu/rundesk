@@ -1,244 +1,114 @@
-# 0.9.2 补充
+# 应用 API v1
 
-现行契约为 OpenAPI 1.7.0，新增持久化队列、Cron 与应用专用凭据。应用接入应优先阅读 [应用凭据](APPLICATION-CREDENTIALS.md)、[队列](QUEUE.md) 与 [定时任务](SCHEDULES.md)。以下历史基础接口说明中的管理员 Token 仍兼容；应用 Bearer 凭据受项目与操作限制。
+当前契约随 RunDesk 0.45.0 发布。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
 
-# RunDesk 应用接口 v1（RunDesk 0.8.4）
+## 稳定范围
 
-RunDesk 为两类客户端提供同一套运行能力：人通过 WebUI，应用通过 HTTP API。Codex 执行 Agent loop；应用负责自己的交互、业务数据和审核流程。
+应用依赖任务、会话、文件、事件信封、错误与幂等语义。保持既有必需字段与含义，新增可选字段、错误码或原生事件时客户端应容忍未知值。后端原生 `data`、模型配置、Kun 内部调试/实验接口不等于跨后端统一能力；使用前读取对应能力声明。
 
-## 地址、认证与兼容
+OpenAPI 同时包含应用和管理接口。`x-administrator-only=true` 为管理操作；`x-application-scopes` 列出应用所需 scopes，此外仍受应用、实例、项目和资源归属约束。不能将所有列出的路径都视为应用授权。
 
-- 新入口：`http://127.0.0.1:3210/api/v1`。运行中的 OpenAPI：`GET /api/v1/openapi.json`；源码内文件为 `internal/app/openapi.json`。
-- 后台 Token：`Authorization: Bearer $RUNDESK_TOKEN`；同源 WebUI 使用登录 Cookie。来源校验、文件边界与旧接口相同。
-- `/api` 兼容接口保留，已有 news2douyin 0.11 和 Video App 客户端无需立即迁移。WebUI 已使用 v1。
-- v1 保持已有字段含义与响应顶层结构，允许新增可选字段。应用应忽略未知字段。破坏性变化将使用新的 API 主版本。
-- 事件 envelope、会话字段和提交回执由 RunDesk 定义。`config`、`models`、`skills/list`、MCP 状态等原生载荷仍受 Codex App Server 版本影响，OpenAPI 中标为 NativeObject，不能将原生内部字段视为独立稳定协议。
+## 认证和归属
 
-本版仍是单用户后台，不是多租户平台。`source.appId` 是调用方声明的业务标签，不是认证身份；具有后台 Token 的客户端共享访问权限。独立应用凭据和授权范围留待后续版本。
+管理员先登记应用并配置专用实例，再创建独立应用凭据。应用后端使用：
 
-## 资源与状态
+```http
+Authorization: Bearer <application-token>
+Content-Type: application/json
+```
 
-| 资源 | 作用 |
+完整凭据仅在创建时返回一次；服务端保存哈希。凭据不能放到浏览器代码中。`GET /whoami` 返回调用身份；`GET /workspaces` 只返回此凭据允许的项目 `id/name`。
+
+| Scope | 用途 |
 | --- | --- |
-| Instance | 长期配置身份：独立 CodexHome、默认模型、实例 Skill/MCP、权限默认值 |
-| Workspace | 工作目录与项目笔记；一个实例可用于多个工作区 |
-| Session | 固定绑定实例、工作区和创建时确定的模型，保留原生线程 |
-| runId | RunDesk 为一次任务分配的编号，每次新提交改变 |
-| turnId | Codex 为当前原生轮次分配的编号，启动阶段可能尚未产生 |
-| Event | 已持久化的运行事件，使用递增 id 续传 |
-| Request receipt | HTTP 操作的原始接收结果；与任务是否完成分开 |
-| File | 工作区上传文件或会话 outputs 中的产物 |
+| read | 必需；本应用任务、会话、消息、事件、轨迹与幂等回执 |
+| run | 提交/继续/停止/取消任务，管理自己的会话 |
+| files | 授权项目的上传、文件列表与读取 |
+| approvals | 还需 run；回应本应用执行审批 |
+| schedules | 还需 run；管理本应用定时规则 |
 
-会话状态：idle → starting → running / waiting → completed / interrupted / failed。停止期间为 stopping。等待审批不是执行失败。未知原生状态原样保留，客户端不可假定终态集合永远不变。
+应用请求可省略 instanceId/source，由凭据绑定。显式提交其他归属会拒绝；`source.taskId` 仅为业务标签，不负责去重。模型、Skills、MCP、安装、全局并发及凭据管理属于管理员。
 
-## 创建与提交去重
+[注册与集中配置](APPLICATION-CONNECT.md) · [凭据生命周期和范围](APPLICATION-CREDENTIALS.md)
 
-以下 v1 POST 必须提供 `Idempotency-Key`：`/instances`、`/workspaces`、`/sessions`、`/sessions/{sid}/turns`、`/sessions/{sid}/recover`。Key 为 8–128 字符，首字符为字母或数字，其余允许字母、数字、下划线、点、冒号、连字符，建议使用 UUID。
+## 最小任务流程
 
-应用应先把 Key 保存进自己的业务任务记录，再提交。Key 在一个 RunDesk 数据目录内全局唯一，不是按应用名隔离。相同 Key、方法、路径、查询参数和 JSON 内容返回原回执；对象字段顺序不影响比较，数组顺序有意义。不同内容使用同一 Key 返回 `409 idempotency_conflict`。
-
-```http
-POST /api/v1/sessions
-Idempotency-Key: create-case-42-session
-Content-Type: application/json
-
-{"workspaceId":"WORKSPACE_ID","instanceId":"INSTANCE_ID","source":{"kind":"application","appId":"news2douyin","taskId":"case-42"}}
+```bash
+curl --fail-with-body "$RUNDESK_URL/api/v1/tasks" \
+  -H "Authorization: Bearer $RUNDESK_APP_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: business-operation-0001' \
+  -d '{"workspaceId":"WORKSPACE_ID","title":"整理结果","input":{"text":"读取已授权输入文件，整理结果并写入 outputs。"}}'
 ```
 
-```http
-POST /api/v1/sessions/SESSION_ID/turns
-Idempotency-Key: research-case-42-attempt-1
-Content-Type: application/json
+返回 **202** 与 Task 对象，包括 `id`、`sessionId`、`status`、`spec`；只表示接受排队。保存这些 ID，然后查询 `GET /tasks/{id}`，通过 `sessionId` 获取会话、轨迹、回复与文件。不要从 202 或幂等回执 completed 推断任务完成。
 
-{"text":"研究这条新闻的历史背景，保存引用和报告。","files":[],"skills":[]}
-```
-
-返回 202 Session 是“已接收”，不是“已完成”。`Idempotency-Replayed: true` 表示回放原回执；回执中的 starting 等状态不会跟随任务更新，当前状态应再读 `GET /sessions/{sid}`。
-
-超时后，查询：
-
-```http
-GET /api/v1/requests/research-case-42-attempt-1
-```
-
-- `state=completed`：HTTP 处理结果已记录。检查 `httpStatus` 与 `response`；成功回执包含 session id / runId，失败回执也会保留。
-- `state=processing`：原请求仍在当前进程中处理。同 Key 重试返回 `409 request_in_progress`、`Retry-After: 1`、`retryable=true`，不会再次执行。
-- `state=unconfirmed`：进程中断或记录未完成，无法确认操作结果。不会重新执行；先检查会话、来源业务编号与事件。不能盲目换新 Key。
-- `404 request_not_found`：此 Key 尚未找到记录，可以重试原请求和原 Key。请求可能仍在传输，继续复用 Key 才能去重。
-
-接收记录在调用业务逻辑前持久化，结果随后持久化。崩溃窗口标为不确定，本版不承诺跨外部副作用的 exactly-once。记录不自动过期，删除会话也不删除旧回执，避免迟到请求重新创建或执行；长期使用应监控数据目录容量。
-
-旧 `/api` 创建接口可以不带 Key，保持旧行为；主动带 Key 时同样获得去重保护。v1 不会对上传、审批等其他操作自动套用创建 Key，具体操作遵循自己的协议。
-
-## 补充、停止与审批
-
-运行中补充沿用已有 `POST /sessions/{sid}/steer`，携带 `expectedTurnId` 和稳定 `requestId`；它不会退化为新任务提交。
-
-v1 停止必须带目标 runId：
-
-```http
-POST /api/v1/sessions/SESSION_ID/stop
-Content-Type: application/json
-
-{"expectedRunId":"RUN_ID"}
-```
-
-目标已完成或正在停止时，同一 runId 返回成功；如果会话已经开始另一个 run，返回 `409 run_conflict`，不影响新任务。WebUI 同样使用这个前置条件。旧 `/api/.../stop` 保持不带请求体的调用方式。
-
-审批仍读取 pending approvals 并按服务端提供的 decisions 提交；过期审批不能重放。不新增默认批准、不扩大权限。HTTP 200 表示停止/审批请求被处理，最终运行结果以状态和事件为准。
-
-## 失败任务继续（0.8.4）
-
-先 `POST /sessions/{sid}/recovery/check`，body 为 `{"expectedRunId":"失败轮次"}`。核对不会发起模型任务。根据返回的 canContinue / requiresReview / requiresFix 展示原目标、已有步骤、文件和原生状态，并核对应用业务记录。
-
-确认后 `POST /sessions/{sid}/recover`，携带新的逻辑操作 Idempotency-Key，以及 planId / expectedRunId / reviewedEffects / issueResolved / note。后端重新检查状态；成功返回 202，Session 新增可选 recovery 元数据。仍沿用原会话和已存在的原生线程，新轮次记录来源。
-
-同一次恢复请求重试复用相同 Key 和内容；它与失败原任务的 Key 不同。正在运行、已完成或来源不确定时不重复执行；核对 15 分钟有效，每会话最新 plan 替换旧 plan。完整字段、错误与边界见 [RECOVERY.md](RECOVERY.md)。
-
-Session 可选 retry 字段和 run/retry 事件显示 Codex 自身的重试；RunDesk 没有自动重跑任务。重试中的会话仍是 active。客户端不要把原生 error 通知直接等同于最终 failed。
-
-## 错误与关联编号
-
-```json
-{"error":"会话不存在","code":"session_not_found","requestId":"a-generated-id","retryable":false}
-```
-
-0.8.2 的新错误响应还提供可选 `details`：`time`、`origin`、`method`、`path`（不含查询字符串）、`durationMs`、`causes`；识别到 Codex RPC 错误时还有 `rpcCode` 和可用的 `rpcData`。错误文本和结构化数据会遮盖常见密钥字段。历史幂等回执保持原样，因此客户端必须允许 `details` 缺省。API 描述版本为 1.4.0。0.8.3 增加 `origin=codex_transport` 和可选 `transportOperation`，表示本地 App Server 传输故障。
-
-响应包含 `X-Request-ID` 和 `RunDesk-API-Version`。可以传入有效的 `X-Request-ID` 关联业务日志；它不是幂等 Key，不影响去重。幂等回放保留原回执内容，错误回执中的 requestId 属于原请求；当前 HTTP 访问编号以响应头为准。
-
-关键代码：invalid_request、unauthorized、forbidden、session_not_found、instance_not_found、workspace_not_found、revision_required、revision_conflict、session_busy、session_archived、run_conflict、idempotency_key_required、idempotency_conflict、request_in_progress、request_unconfirmed、request_not_found、storage_unavailable。
-
-`retryable=false` 不是“永远不能操作”，表示不能据此自动重发。HTTP 5xx 或网络错误可能发生在操作已接收之后，必须保留 Key。接口找不到路径或方法时返回 JSON 404；过大的 JSON 请求返回 413。
-
-0.8.3 的 v1 错误分类：
-
-| 状态 | 代码 | 含义 |
+| 操作 | 路径 | 语义 |
 | --- | --- | --- |
-| 400 | codex_invalid_params、invalid_input | Codex 拒绝参数，或输入为空/过长 |
-| 502 | codex_rpc_error、codex_method_unsupported、codex_protocol_error | 上游 RPC 错误、原生版本缺少方法、JSONL 协议损坏 |
-| 503 | codex_unavailable、connection_limit、runtime_unavailable | 子进程不可用、连接满、后台停止 |
-| 503 | storage_unavailable、journal_unavailable、receipt_invalid | 接收记录读失败、任务输入无法记录、回执损坏 |
-| 504 | codex_timeout | 等待或写入 Codex 超时 |
-| 500 | internal_panic、skill_restore_required | 真正的内部异常、技能安装与恢复都失败 |
+| 提交排队任务 | POST `/tasks` | TaskSpec，必填 workspaceId/input，需幂等键 |
+| 列出任务 | GET `/tasks` | `{items,nextCursor}`；limit 1–500；可按 status/appId/instanceId 筛选 |
+| 查询任务 | GET `/tasks/{id}` | 返回当前 Task |
+| 取消任务 | POST `/tasks/{id}/cancel` | 排队任务不启动后端；运行中取消与完成可能竞争 |
+| 新建直接会话 | POST `/sessions` | 必填 workspaceId，需幂等键 |
+| 继续会话 | POST `/sessions/{sid}/turns` | Input，需新的逻辑操作键；相同请求重试复用原键 |
+| 查询会话 | GET `/sessions/{sid}` | 当前 runId/turnId/status 与归属 |
+| 停止当前运行 | POST `/sessions/{sid}/stop` | `{expectedRunId}` 防止误停后续运行 |
 
-上述分类不承诺失败任务可安全重发。特别是写入/等待超时可能已触发副作用；`retryable` 仍为 false。原生响应里的“HTTP 500”保留在错误详情中，不等于当前 RunDesk HTTP 状态。
+TaskSpec.input 的稳定入口是 `{text,files?,skills?}`；files 使用服务端返回的项目相对路径，skills 引用管理员已安装的能力。模型和权限由配置决定，应用不能借输入扩大权限。
 
-## 事件、产物与业务关联
+常见任务状态有 queued、dispatching、starting、running、waiting、stopping 及终态 completed、failed、interrupted、canceled、unconfirmed；未知状态不应自动判成功。等待审批仍占并发额度。重启保留排队任务；已开始或结果不明的工作不自动重跑。完整队列约束见 [QUEUE](QUEUE.md)。
 
-`GET /sessions/{sid}/events?stream=1&after=N` 返回 SSE。以持久化事件 id 去重，重连可使用 after 或 Last-Event-ID，取两者中较大的有效游标。关闭 SSE 不停止模型任务。普通 GET 同一路径按 after/limit 分页，最多 1000 条。
+## 事件与回复
 
-应用可用 `GET /sessions?appId=news2douyin&taskId=case-42` 找到自己标记的会话，也可按 instanceId、workspaceId 筛选。`source` 创建后固定，业务 taskId 不要求全局唯一，一个业务课题可以有多次执行会话。
+`GET /sessions/{sid}/events?after=0&limit=1000` 返回事件数组，按宿主 id 升序；将最大 id 保存为下次 after。每页最多 1000 条。
 
-产物通过原有 files / uploads / file 接口读取；结构化业务结果建议由应用自己的 MCP 工具写回，例如 news2douyin 保存来源、证据和报告。RunDesk 不解析这些应用的业务数据库。
-
-## 实例与会话配置
-
-- `GET /instances/{iid}/configuration?workspaceId={wid}`：只读实例、工作区与关联会话数，不启动 Codex。
-- 增加 `probe=1`：主动发现 Skills 和 MCP，可能建立配置连接，不调用模型 turn。每项失败单独返回 errors。
-- `GET /sessions/{sid}/configuration`：增加会话绑定、上次提交选用的 Skills 和模型，以及原生 runtime 记录。也可显式 `probe=1`。
-- 当前能力发现不等于本次会话调用记录，不保证 MCP 执行成功。实例默认模型与已有会话模型分开显示；运行生效值只使用 Codex 实际返回值。
-- v1 `PATCH /instances/{iid}` 必须带当前 revision；只替换提供的字段，省略字段保持原值。旧 `/api` 仍沿用三个元数据字段整体替换的语义。
-- Skills CRUD / MCP 管理继续使用工作区接口并携带 instanceId。实例 Skill 写入 scope=instance；项目 Skill 写入 scope=project。MCP 保存继续使用原生版本冲突检查。
-
-可运行的标准库 Python 客户端见 `examples/application_client.py`。它不自动重试写操作，由应用决定何时查询或继续。
-
-
-## 已完成回复与评价（0.6.1 新增）
-
-这三个接口沿用上述认证、同源检查、关联编号与错误格式。OpenAPI 文档版本增至 1.1.0；接口路径仍为 `/api/v1`。
-
-| 方法与路径（省略 /api/v1） | 行为 |
-| --- | --- |
-| `GET /sessions/{sid}/messages/{eid}` | 从持久化事件读取完成的模型回复，返回 sessionId、eventId、itemId、turnId、text、time。text 保留原始 Markdown。 |
-| `GET /sessions/{sid}/feedback` | 返回此会话的评价数组；没有评价时为 `[]`。 |
-| `PUT /sessions/{sid}/messages/{eid}/feedback` | 设置或取消一条回复的评价。 |
-
-`eid` 是方向为 `in`、方法为 `item/completed`、item.type 为 `agentMessage` 的**持久化事件 id**，不是 itemId 或 turnId。后台验证该事件属于 sid。流式片段、用户消息、命令和不存在的事件不能写评价，客户端无需上传回复原文。
+`GET /sessions/{sid}/events?stream=1&after=<id>` 返回 SSE，支持 `Last-Event-ID`；取它与 after 中较大的游标恢复订阅。服务每约 300ms 检查新事件；客户端按事件 id 去重。SSE 连接结束不证明运行结束，应重新查询任务/会话状态。
 
 ```json
-{"rating":"down","comment":"需要补充事件背景和来源。"}
+{"id":123,"sessionId":"...","time":"...","direction":"internal","method":"run/state","data":{}}
 ```
 
-rating 必须为 `up`、`down` 或 `none`。comment 选填，去掉首尾空白后最多 2000 个 Unicode 字符；rating=none 会同时清空 comment。响应包含 sessionId、eventId、rating、comment、updated。
+信封稳定，method/data 保留运行时差异；不要将 Codex 原生字段假定为 Kun 字段，也不要将 Kun sequence 用作宿主 id。流式 delta 是过程证据，最终回复应采用明确的完成消息/最终阶段记录。`GET /sessions/{sid}/messages/{eid}` 读取可识别的助手消息，`GET /sessions/{sid}/export?format=markdown` 导出对话。
 
-评价保存在 RunDesk 数据库，重启后保留，随会话删除。当前为单用户部署：每条回复只有一份评价，多客户端采用最后写入覆盖，不代表按应用/用户隔离的评分，也不会自动发给模型服务或触发模型训练。WebUI 在打开会话时读取评价，保存后更新本页面；其他已打开页面需重新打开会话或刷新。
+轨迹和只读调试说明见 [DEBUG](DEBUG.md)、[DEBUG-SERVICE](DEBUG-SERVICE.md)。未知、截断、缺失用量保持未知，不推算隐藏状态。Kun 的单步、断点和分叉为管理员扩展能力。
 
-PUT 设置一个确定的状态，可用相同内容重试，不要求 Idempotency-Key；重复 PUT 不增加记录，updated 为最后一次成功写入时间。网络响应丢失时，先 GET 当前评价确认状态。
+## 文件与产物
 
-错误代码：`invalid_event_id`（400）、`message_not_found`（404）、`message_not_completed`（400）、`invalid_rating`（400）、`comment_too_long`（400）。不同会话之间不会通过 eid 返回回复原文。
+- `POST /workspaces/{wid}/uploads` 使用 multipart 字段 `file`，单文件最多 32 MiB；201 返回 `{path,name,size}`。上传不支持任务式幂等，网络结果不明时不要盲目反复上传。
+- 将返回的 `path` 放进任务 input.files。保留文件与调用身份的归属，不构造其他应用上传路径。
+- `GET /sessions/{sid}/files` 列出该会话可见文件。
+- `GET /workspaces/{wid}/file?path=<URL编码路径>` 获取授权文件；允许 uploads/outputs 下的普通文件。`preview=1` 对受支持类型返回受限预览。
+- 工具可生成其他工作区文件，但并非任意路径都自动成为可下载产物；需要交付的内容应写入平台约定的 outputs。
 
-分享由 WebUI 先展示选中回复，再复制、下载 Markdown，或由用户点击系统分享；此版本不建立公开链接。朗读通过浏览器语音接口进行，不调用 RunDesk/Codex 的模型任务。两者没有新增后台发布或音频生成接口。
+文件存在不等于本次创建，更不等于业务内容正确；Kun 固定产物规则用于进一步验收。
 
+## 审批、取消与恢复
 
-## 应用登记（0.7.0）
+`GET /sessions/{sid}/approvals` 读取待审批列表，按返回的请求与允许决定回应 `POST /sessions/{sid}/approvals/{aid}`；不可将所有后端审批假定为同一原生结构。自动化应用仅在已获得 approvals scope 且明确允许的业务范围内作决定。
 
-`GET /applications` 返回应用列表及按所属 instance 汇总的 sessionCount、activeCount 和 lastActivity。`GET /applications/{appId}` 返回单个应用。
+取消、超时和中断不撤销已发生的文件修改或远端操作。Codex 可显式核对并继续原生任务，Kun 有独立安全检查点恢复；两者并非可互换的恢复协议。结果未知时先检查证据与业务状态，不能换后端自动重跑。
 
-`PUT /applications/{appId}` 接收 name、description、instanceId、workspaceId、entryUrl 和可选 revision。name、instanceId 必填；appId 为 1–80 个字母、数字、点、下划线、冒号或连字符，首位为字母或数字。entryUrl 为空或不带登录凭据的 HTTP(S) 地址。workspaceId 用于管理视图默认项目，创建业务会话仍需明确传入 workspaceId。
+[Codex 恢复](RECOVERY.md) · [Kun 检查点](KUN-CHECKPOINTS.md)
 
-一个应用固定绑定一个专用 instance，每个 instance 也只能属于一个应用。`default` 留给通用助手。修改绑定返回 `409 application_binding_conflict`；修改名称等元数据需当前 revision，冲突返回 `409 revision_conflict`。完全相同的 PUT 重试返回已有记录，不增版本，也不创建会话；不要求 Idempotency-Key。登记不创建 Codex 任务。
+## 幂等与错误
 
-旧客户端的首条带 `source.kind=application` 的新会话可自动登记（专用、无冲突的配置）。启动迁移仅使用历史 source 的一对一证据，不凭实例名称猜测。默认配置和有歧义的历史任务保持可用。应用来源仍不是独立权限，本版继续使用后台 Token/Cookie。
+提交 tasks、sessions、turns、recover、schedules 等 OpenAPI 标记的操作时，必须提供 `Idempotency-Key`，8–128 个允许字符；先将 Key 和请求体持久化到业务侧，再发请求。
 
-## 完整技能目录（0.7.0）
+- 同凭据、同 Key、同请求返回保存的 HTTP 回执，响应头 `Idempotency-Replayed: true`；这不是当前运行状态。
+- 同 Key 不同请求为 409。幂等命名空间按 credential.id 隔离，两个同应用凭据也不共用；轮换后应根据 task/session ID 核对，不能用新凭据盲目重发旧业务 Key。
+- `GET /requests/{key}` 查询回执，state 为 processing、completed 或 unconfirmed；completed 只表示 HTTP 处理结束。
+- request_in_progress 需等待；request_unconfirmed 需检查副作用，不允许通过新 Key 掩盖不确定性。服务重启不自动重新执行原请求。
 
-以下路径均支持 `instanceId` 和 `scope=instance|project`；新目录 API 默认 scope=instance。旧 `/skills/{name}` 接口的默认 scope=project 保持不变。
-
-| 方法与路径 | 用途 |
-| --- | --- |
-| POST /workspaces/{wid}/skill-bundles?name={name} | 导入一个完整技能；Content-Type 为 application/zip 或 multipart/form-data |
-| GET /workspaces/{wid}/skill-bundles/{name} | 文件相对路径、字节数、可执行标记与总大小 |
-| GET /workspaces/{wid}/skill-bundles/{name}/file?path={relativePath} | 安全文本预览；二进制只返回说明，长文本显示前 256 KiB |
-| GET /workspaces/{wid}/skill-bundles/{name}/export | 导出完整 ZIP，保留脚本可执行位 |
-| DELETE /workspaces/{wid}/skill-bundles/{name} | 将整个技能目录移动到备份位置，返回 backupPath |
-
-multipart 每个字段名是文件相对路径（如 `research/scripts/run.py`），上传文件名仅作提示。ZIP 与目录都接受根部 `SKILL.md`，或一层包装目录。不得夹带多个技能；总计最多 1000 个文件、32 MiB，SKILL.md 最多 256 KiB。拒绝绝对路径、父目录跳转、符号链接、特殊文件和大小写冲突。普通资源二进制可保留。空目录不单独归档；浏览器上传无法携带原生权限，以 shebang 标记脚本可执行。
-
-同名技能默认返回 `409 skill_exists`。用户选择替换时加 `replace=1`，先完整备份原目录，再安装新目录。备份位于当前根目录下 `.rundesk/skill-backups/`，相对位置包含在响应中。上传、浏览、导出沿用现有认证和同源检查；导入不会执行技能脚本。原有 SKILL.md 编辑不影响兄弟文件；旧的单 MD 删除接口也保留旧语义，新 UI 使用完整目录移除。
-
-OpenAPI 文档版本 1.2.0；48 个路径、57 个操作。应用执行协议仍为 `/api/v1`。
-
-## 0.8.0：独立轨迹分析会话
-
-`POST /api/v1/sessions` 新增一个与普通创建参数互斥的请求形式，继续使用已有 `Idempotency-Key` 与提交回执：
+错误形状：
 
 ```json
-{
-  "traceAnalysis": {
-    "sessionId": "原任务会话 ID",
-    "runId": "所选运行 ID",
-    "eventIds": [123, 124]
-  }
-}
+{"error":"可读原因","code":"机器错误码","requestId":"关联编号","retryable":false,"details":{}}
 ```
 
-服务端校验来源、运行与事件归属，固定原会话当时的最大事件游标。返回新 session，`threadId` 初始为空，`source.kind` 为 `human`，`traceOrigin` 包含 `sessionId`、`runId`、`eventIds`、`through`、`capturedAt` 和来源标题。沿用来源实例、项目和模型；不接受同时设置 workspaceId、instanceId、model、title 或业务来源。最多携带 32 个事件编号。
+检查 HTTP 状态和 code，保留 requestId。典型状态为 400 参数、401 认证、403 范围、404 资源、409 版本/幂等/状态冲突、413 上限、429 容量、502 上游协议、503 不可用、504 超时。retryable 不等于可用新 Key 重新提交；读回执并遵守同一逻辑操作语义。
 
-创建本身不调用模型、不提交原任务；后续将问题提交到**新 session 的** `/turns`。首次运行启动新的原生线程，恢复时仍沿用该分析线程；只读 MCP 的来源快照保持不变。响应关联信息会持久化并出现在会话列表。新会话的事件、停止、审批和反馈走现有接口。
+## 可执行示例与契约维护
 
-内置 stdio MCP 为 `rundesk_trace`，只在分析会话的 thread/start 或 thread/resume 覆盖配置中加入。工具为 `trace_list_runs`、`trace_find_steps`、`trace_get_step`、`trace_read_event`、`trace_statistics`。这些工具不开放为匿名 HTTP 查询端点，不接收 SQL。详情与边界见 [TRACE.md](TRACE.md)。OpenAPI 文档更新为 1.3.0，路径和操作数量保持 48 / 57。
+[Python 客户端](../examples/application_client.py) 和 [最小接入程序](../examples/application_quickstart.py) 只使用 Python 标准库。运行前设置 RUNDESK_URL、RUNDESK_APP_TOKEN、RUNDESK_WORKSPACE_ID 和本次固定的 RUNDESK_OPERATION_KEY；程序提交后查询真实 Task 状态，不自动重试写操作。
 
-## 0.11.0 个人用户与成员入口
-
-增加 `/users` 用户管理和 `/member/catalog` 授权项目目录。个人访问码以 `rd_user_` 开头；与 `rd_app_` 应用凭据分别管理。成员通过 `/member/{grantId}/...` 使用受限的 sessions、workspaces 和 requests 接口，不访问管理员根接口。服务端强制校验当前用户授权、项目和应用来源。只读成员仅允许 GET；可执行成员只在 Docker 应用内提交。详见 [用户与项目授权](USERS.md) 与 OpenAPI 1.10.0。
-
-## 0.12.0 镜像构建
-
-新增管理员专用 `/instances/{iid}/builds` 路由，包含目录 ZIP 上传、状态、显式启动、取消、日志和删除。上传不执行；同任务重复 start 不重复构建。详见 [构建 API 与生命周期](BUILDS.md) 和 OpenAPI 1.11.0。
-
-## 0.13.0 个人文件库
-
-新增个人身份专用 `/library` 接口，支持列表、上传、内容读取、删除和历史引用墓碑。工作区 uploads 可通过 `libraryFileId` 引用本人的文件。应用 API 凭据不能访问个人库。详见 [个人文件库 API](PERSONAL-FILES.md)。
-
-
-### 0.19.2 queued-task authorization / 排队授权复核
-
-Task and Schedule responses may contain `submittingKeyId` (a credential identifier, never its secret). This is server-assigned and is not accepted in request bodies. New application and inbound A2A jobs re-check the submitting credential before admission. Revoked, expired or out-of-scope jobs fail without starting; due schedules are disabled with `lastReason`. Running jobs require explicit cancellation. An application can save a schedule with a replacement credential to authorize future occurrences; existing queued occurrences retain their original credential. Admin edits preserve an existing binding. Legacy records without provenance and trusted internal/admin submissions retain prior behavior.
-
-任务与定时规则响应增加可选 `submittingKeyId`，只保存凭据 ID，不保存秘密，客户端不能指定。执行前授权失败时，任务为 `failed` 并记录 `reason`；定时规则到期停用并记录 `lastReason`。已运行任务需单独取消。新凭据重新保存定时规则只影响后续产生的任务；管理员编辑不会清除原绑定。没有来源记录的旧任务与可信内部／管理员提交保留原行为。
-
-
-## K3-A 离线记录实验（0.31.0）
-
-新增 `/api/v1/experiments` 管理员接口：冻结 Kun 单轮记录，创建不可变子分支，读取谱系、事件分块和同基线差异。两个 POST 复用既有 Idempotency-Key；应用 key 与成员入口默认拒绝。它们不调用 worker 或模型，不提供执行、运行时恢复或删除接口。完整请求字段、分页和留存边界见 [KUN-EXPERIMENTS.md](KUN-EXPERIMENTS.md) 及生成的 OpenAPI。
+路由和契约修改必须同步更新 `scripts/generate-openapi.py`，重新生成 `internal/app/openapi.json`；运行 Go 应用/API/凭据/幂等回归。后端变化需验证既有 API 行为与取消/恢复/副作用边界。当前验证结果见 [VALIDATION](VALIDATION.md)。

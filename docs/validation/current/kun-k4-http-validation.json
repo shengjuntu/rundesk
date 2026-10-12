@@ -1,0 +1,17 @@
+{
+  "version": "0.45.0",
+  "passed": true,
+  "scope": "actual host HTTP + Kun subprocess + local model fixture; remote business benchmarks and browser layout not tested",
+  "modelCalls": 48,
+  "checks": [
+    "HTTP preview zero calls; explicit single run; actual source score",
+    "parameterized candidate; fixed independent batch; unknown cannot promote",
+    "two real tool-only holdouts passed with four artifact rules each; no extra model calls; overwriting output leaves captured score unchanged",
+    "candidate, independent report, artifact score and app capability survive host restart",
+    "enabled application executes new input without model and exposes grounded reply",
+    "8 fixed counterbalanced runs; no preview calls; one batch confirmation; stop while active and restart preserve identities; 4 paired reports with exact model/token differences",
+    "20-run batch exceeds process ceiling via completed-worker release; fallback success remains quality pass, counted separately; completed writes not replayed; benchmark reports never become promotion reports",
+    "reply success with wrong or missing artifacts fails independent validation, promotion, source admission and repeated comparisons; repairing file later cannot rewrite failed score",
+    "disable blocks next use; OpenAPI and shipped UI served"
+  ]
+}

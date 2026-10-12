@@ -38,6 +38,7 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 	mux := http.NewServeMux()
 	s.extraRoutes(mux)
 	s.setupRoutes(mux)
+	s.backendRoutes(mux)
 	s.mcpTestRoutes(mux)
 	s.usageRoutes(mux)
 	s.processRoutes(mux)

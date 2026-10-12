@@ -1,8 +1,8 @@
-> 0.36 已有 [同基线跨会话对照](KUN-COMPARISON.md)；0.37 新增 [单条工具输出假设与 Hybrid 重算](KUN-HYPOTHESES.md)，仍保留原录制并禁止真实工具派发。
+> 可配合 [同基线对照](KUN-COMPARISON.md) 与 [工具结果假设](KUN-HYPOTHESES.md)，假设保留原录制。
 
 # K3-B/C：Hybrid 与 Live 运行时分叉
 
-当前需要 RunDesk 0.40.0、Kun 0.13.0、worker 协议 v13、fork schema 3。管理员可从**最近已停止的普通 Kun 运行**中选择安全边界，生成绑定模式的固定预览，再启动独立执行分支。Hybrid 首批在 0.32 引入，Live 首批在 0.34 引入；这不代表 K3 已完整验收。0.35 已有普通运行安全点组合切换；更多模块迁移和统计基准尚未完成；K4 基础闭环见 [KUN-K4.md](KUN-K4.md)。案例与快速路径运行不作为可恢复/可分叉来源。
+当前需要 RunDesk 0.45.0、Kun 0.16.0、worker 协议 v16、fork schema 3。管理员可从**最近已停止的普通 Kun 运行**中选择安全边界，生成绑定模式的固定预览，再启动独立执行分支。已有普通运行安全点组合切换；更多模块迁移和统计基准尚未完成；K4 基础闭环见 [KUN-K4.md](KUN-K4.md)。案例与快速路径运行不作为可恢复/可分叉来源。
 
 ## 三种实验的区别
 
@@ -73,12 +73,12 @@ Live 公开详情只增加工作区、权限及待处理动作摘要；参数中
 
 上述两个 POST 要求 `Idempotency-Key`。上述操作仅管理员开放，应用 key、成员 runner/viewer 及成员代理入口拒绝；不接受客户端注入 bundle 或新目标。启动仍受宿主并发、进程容量和执行环境检查；HTTP 接收成功不代表执行成功，应查看目标状态。hello 为 `fork=true, forkHybrid=true, forkLive=true, forkHypothesis=true`。
 
-0.37 另有管理员录制摘要 GET 和假设子预览 POST；后者也要求 Idempotency-Key。假设详情显示用户填写的完整 output/reason，列表省略这两项，具体边界与证据见 [KUN-HYPOTHESES.md](KUN-HYPOTHESES.md)。
+另有管理员录制摘要 GET 和假设子预览 POST；后者也要求 Idempotency-Key。假设详情显示用户填写的完整 output/reason，列表省略这两项，具体边界与证据见 [KUN-HYPOTHESES.md](KUN-HYPOTHESES.md)。
 
-0.38 增加 [同基线固定规则评分](KUN-EVALUATION.md)，不新增执行能力。这是 0.38 当时的兼容范围。0.40 升级到 Kun 0.13，旧引擎预览和检查点只读保留，需重新生成。
+同基线分支可使用 [固定规则评分](KUN-EVALUATION.md)。评分不启动模型或工具。
 
 ## 版本和验收
 
-升级时同时更新 RunDesk、Kun 并结束旧 worker。Kun 0.11 及更早的执行记录仍可查看，检查点和分叉预览不能跨到 0.12 执行；先完成本版普通运行，再生成新检查点或预览。
+配套构建 RunDesk 与 Kun，结束旧 worker 后替换。当前内核和 worker 协议与 0.44.0 相同；跨更早内核的执行预览/检查点仍受版本守卫限制，见 [升级](UPGRADING.md)。
 
-本地内核、实际 worker/HTTP fixture、权限/审批、专项 race 和 Node DOM 交互通过。真实浏览器、真实 Codex/远程模型/MCP、Windows 实机和生产压力未验收；不要把本地桩测试等同真实业务效果。详见 [验证记录](KUN-VALIDATION.md) 与 [开发进度](KUN-PROGRESS.md)。
+本地内核、实际 worker/HTTP fixture、权限/审批、专项 race 和 Node DOM 交互通过。真实浏览器、真实 Codex/远程模型/MCP、Windows 实机和生产压力未验收；不要把本地桩测试等同真实业务效果。详见 [验证记录](VALIDATION.md) 与 [开发进度](STATUS.md)。

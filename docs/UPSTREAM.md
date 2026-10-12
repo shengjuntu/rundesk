@@ -47,3 +47,9 @@ The following files at the same fixed commit were inspected to align core action
 | `internal/codingagent/tools/shell_config.go` | `c477325750c4cde443260db025f0088e6ecc039d7cd4a77093384b22a1565db1` |
 
 PiG's published [security documentation](https://pi-in-go.dev/docs/latest/security/) and [container guide](https://pi-in-go.dev/docs/latest/containerization/) were checked on 2026-10-11. They describe current-user execution and external container/VM isolation, not an embedded OS sandbox. Those rolling docs are contextual references; the code audit above remains pinned. See [alignment matrix](KUN-PIG-CORE.md) for Kun's actual limits.
+
+## HarnessRouter design reference
+
+Thanks to [HarnessRouter](https://github.com/HarnessRouter/harnessrouter) and its contributors. Its README and the [Unified Harness Protocol](https://unifiedharnessprotocol.org/) were consulted on 2026-10-11 for the boundary between applications and complete agent runtimes, configured-backend discovery, and capability/conformance documentation. The protocol site identified version 2026-10-04 as a draft standard at review time.
+
+RunDesk 0.45.0 introduces its own Go host lifecycle interface and capability catalog. No HarnessRouter source, schemas, assets, or conformance code were incorporated. This is a design reference, not an implementation dependency, fork, endorsement, or UHP compatibility claim. Any future source incorporation must separately record the exact commit, files, license, notices, and modifications.

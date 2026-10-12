@@ -1,6 +1,6 @@
-# Kun 调试控制与 Console（0.7 更新）
+# Kun 调试控制与 Console
 
-RunDesk 0.26.0 继续推进 K2。本版检查视图与快照差异见 [KUN-INSPECT.md](KUN-INSPECT.md)。在既有单步、控制回执及检查点恢复上，增加四个安全边界的条件断点和无需模型的 Console。它没有 Go 源码行断点。0.29.0 的 Console 新增“独立诊断”入口，转入固定宿主证据检查后另建模型诊断会话，见 [诊断说明](KUN-DIAGNOSIS.md)。
+Kun 提供暂停/单步、控制回执、安全检查点、四个安全边界的条件断点和结构化 Console。没有 Go 源码行断点。[调用与快照](KUN-INSPECT.md) 提供检查视图，Console 的独立诊断入口将固定证据交给另建的模型会话，见 [诊断](KUN-DIAGNOSIS.md)。
 
 ## 设置断点
 
@@ -71,10 +71,10 @@ Console 与其余面板共用“固定快照 / 跟随现场”的选择。查询
 }
 ```
 
-Worker 协议 v6 曾扩展 `query` 的 evidence/diff 与 fromSequence；保留 v5 的 set_breakpoints。hello 声明 conditionalBreakpoints/debugQueries/snapshotDiff/eventEvidence。RunDesk 和 Kun 必须同步升级。状态 schema 仍为 1，新增字段可选；旧快照可查，但旧引擎版本的检查点不跨版本恢复。
+Worker 协议 v16 曾扩展 `query` 的 evidence/diff 与 fromSequence；保留 v5 的 set_breakpoints。hello 声明 conditionalBreakpoints/debugQueries/snapshotDiff/eventEvidence。RunDesk 和 Kun 必须同步升级。状态 schema 仍为 1，新增字段可选；旧快照可查，但旧引擎版本的检查点不跨版本恢复。
 
 ## 仍待完成
 
-K2 已有基础条件断点、结构化 Console、单步/steer、控制幂等、安全检查点恢复、统一只读 DebugService/MCP 和独立诊断；历史版本已有本地浏览器验证；0.35 未完成真实浏览器验收。提案应用整合、同参数连续失败信号、上下文容量/费用/模块条件、高级上下文来源图和真实服务/生产验收尚未完成。0.35.0 使用 worker 协议 v11、Kun 0.11.0；旧引擎检查点不跨版本续跑。K3-B/C 首批 Hybrid / Live 分叉见 [KUN-FORKS.md](KUN-FORKS.md)；Plan-Act 与两套内置组合见 [KUN-HARNESS.md](KUN-HARNESS.md)；已有普通运行安全点组合切换；更多模块迁移仍未实现；K4 基础闭环已在 0.40 接入，见 [KUN-K4.md](KUN-K4.md)。
+基础调试、独立诊断与 steer 建议审核已接通。更多条件信号、高级上下文来源图、跨后端控制和真实服务/生产验收仍待完成。当前功能与限制见 [状态](STATUS.md)，本版验证见 [验证](VALIDATION.md)。
 
 Sources 的结构化状态、按钮可用性和其余面板见 [KUN-PANELS.md](KUN-PANELS.md)。

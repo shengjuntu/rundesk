@@ -1,0 +1,63 @@
+{
+  "version": "0.45.0",
+  "startedAt": "2026-10-11T10:00:32.761599+00:00",
+  "status": "passed",
+  "passed": true,
+  "sourceSHA256": "8ba6e3d65eecf267ab5d810782468e8ce599f4b9f89d6098073a0145cb1b41ff",
+  "selectedChecks": [
+    "build",
+    "windows",
+    "syntax",
+    "ui",
+    "http"
+  ],
+  "goVersion": "go version go1.25.12 linux/amd64",
+  "checks": [
+    {
+      "name": "build",
+      "status": "passed",
+      "startedAt": "2026-10-11T10:00:32.768580+00:00",
+      "log": "build.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T10:00:35.205652+00:00",
+      "durationSeconds": 2.437
+    },
+    {
+      "name": "windows",
+      "status": "passed",
+      "startedAt": "2026-10-11T10:00:35.206252+00:00",
+      "log": "windows.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T10:00:37.601460+00:00",
+      "durationSeconds": 2.395
+    },
+    {
+      "name": "syntax",
+      "status": "passed",
+      "startedAt": "2026-10-11T10:00:37.602033+00:00",
+      "log": "syntax.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T10:00:43.589705+00:00",
+      "durationSeconds": 5.987
+    },
+    {
+      "name": "ui",
+      "status": "passed",
+      "startedAt": "2026-10-11T10:00:43.590357+00:00",
+      "log": "ui.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T10:00:44.629358+00:00",
+      "durationSeconds": 1.038
+    },
+    {
+      "name": "http",
+      "status": "passed",
+      "startedAt": "2026-10-11T10:00:44.630047+00:00",
+      "log": "http.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T10:01:20.991668+00:00",
+      "durationSeconds": 36.361
+    }
+  ],
+  "finishedAt": "2026-10-11T10:01:20.992142+00:00"
+}

@@ -1,0 +1,18 @@
+{
+  "version": "0.45.0",
+  "passed": true,
+  "scope": "Node DOM stub + shipped task-set editor; not browser layout acceptance",
+  "checks": [
+    "fixture opt-in, path validation, literal seed content and immutable copy",
+    "artifact path validation, literal value preservation, immutable copy and busy controls",
+    "explicit bounded definition save",
+    "unique case keys and rule limits",
+    "literal input whitespace and HTML preserved",
+    "duplicate request guards",
+    "immutable copy to new draft",
+    "metadata pagination and explicit full read",
+    "response identity checked",
+    "closed detail/save responses ignored",
+    "no execution or grading requests"
+  ]
+}

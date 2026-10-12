@@ -1,8 +1,7 @@
-# Kun 0.3：K1 核心补强
+# Kun K1 核心补强
 
-> 本文保留首批版本说明。0.33 新增 Plan-Act、内置组合与 Layers 对照，当前行为见 [KUN-HARNESS.md](KUN-HARNESS.md)。
 
-对应 RunDesk 0.22.0。本轮完成固定四模块、统一工具派发、参数校验和执行预算；K1 完整验收仍有剩余项，不代表 K2 已完成。
+当前内核提供固定模块、统一工具派发、参数校验和执行预算；完整功能及缺口见 [当前状态](STATUS.md)。
 
 ## 四模块和执行边界
 
@@ -69,7 +68,7 @@ token 阈值是**依据已报告用量的后续动作门槛**，不是请求前�
 
 新增 Layers 基础检查，可查看四模块版本、状态和预算。选中 Network/Elements 中的事件后固定快照；Elements、Layers、Application 共享该选择，切换或刷新保留选择；“跟随现场”恢复当前状态。Performance 显示所选轮次的调用记录及所选快照的预算。
 
-Sources 明确控制当前运行；历史快照只读，不会让控制命令针对旧轮次。Layers 暂时没有健康评分、规则诊断或替换模块操作，Console 尚未实现。当前仍以结构化 JSON 为主，非完整七面板产品验收。
+Sources 控制当前运行，历史快照只读。当前已有 Console、条件断点和 Layers 内置组合切换；分别见 [调试控制](KUN-DEBUG.md) 与 [循环策略](KUN-HARNESS.md)。
 
 ## 下一步验收
 
@@ -78,4 +77,4 @@ Sources 明确控制当前运行；历史快照只读，不会让控制命令针
 3. K2：检查点恢复、worker 所有权代际、Console、条件断点、上下文补丁，以及运行中权限撤销机制。
 4. K3/K4：模块替换、第二种 LoopPolicy、分叉/混合回放，然后再做优化实验。
 
-本版 `resumeCheckpoint=false`、`fork=false`；重启后保留中断记录供检查，不自动继续执行。
+当前已支持安全检查点显式恢复和 Hybrid/Live 分叉；重启不自动继续执行。详见 [检查点](KUN-CHECKPOINTS.md) 与 [分叉](KUN-FORKS.md)。

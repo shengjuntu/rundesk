@@ -1,4 +1,4 @@
-# Codex / Kun 统一只读调试（RunDesk 0.29.0）
+# Codex / Kun 统一只读调试
 
 DebugService 提供统一只读入口，按后端声明能力。它不让 Codex 获得 Kun 的内部执行控制，也不推测未暴露的模型上下文。
 
@@ -16,7 +16,7 @@ DebugService 提供统一只读入口，按后端声明能力。它不让 Codex 
 | breakpoints / actions | 不支持内部查询 | 断点状态、动作账本，只读 |
 | snapshot / evidence / diff | 不支持内部查询 | 固定快照、精确 worker 事件、双快照差异 |
 
-Codex 原有事件/轨迹、停止、steer 和审批入口继续可用；内部单步、条件断点、完整上下文快照及快照差异尚未实现。宿主保留事件中的工具调用不代表掌握整个模型内部状态。0.29.0 已增加独立模型诊断会话，见 [诊断说明](KUN-DIAGNOSIS.md)；只读查询本身仍不调用模型。0.31.0 另提供管理员专用的 [Kun 离线记录分支](KUN-EXPERIMENTS.md)，不加入只读工具目录；当前 0.36 已另行实现管理员 Hybrid/Live 分叉及同基线对照，见 KUN-FORKS.md 和 KUN-COMPARISON.md；它们不加入只读 MCP 工具目录。
+Codex 原有事件/轨迹、停止、steer 和审批入口继续可用；内部单步、条件断点、完整上下文快照及快照差异尚未实现。宿主保留事件中的工具调用不代表掌握整个模型内部状态。提供独立模型诊断会话，见 [诊断说明](KUN-DIAGNOSIS.md)；只读查询本身仍不调用模型。另提供管理员专用的 [Kun 离线记录分支](KUN-EXPERIMENTS.md)，不加入只读工具目录；当前已实现管理员 Hybrid/Live 分叉及同基线对照，见 KUN-FORKS.md 和 KUN-COMPARISON.md；它们不加入只读 MCP 工具目录。
 
 Kun 内部查询需要在线 worker。能力清单中的 `supported` 表示后端实现了该能力，`available` 表示检查时能否使用；离线时支持但不可用。纯检查不会创建 handle、启动进程、重开检查点、调用模型/工具、消费预算、审批或修改对话。工作进程随后退出仍可能使请求失败。
 
@@ -53,7 +53,7 @@ GET /api/v1/sessions/{sid}/debug/query?kind=diff&fromSequence=40&sequence=42
 
 宿主元数据与 worker 状态来自不同记录，多个 GET 不组成跨数据源原子快照；需要历史一致性时分别固定 through 与 sequence，并在结论中标明来源。只读 facade 不保证未留存事件或远程内部状态可以补回。
 
-## 轮次、步骤、异常与统计（0.28.0）
+## 轮次、步骤、异常与统计
 
 ```text
 GET /api/v1/sessions/{sid}/debug/query?kind=runs&limit=50
@@ -63,7 +63,7 @@ GET /api/v1/sessions/{sid}/debug/query?kind=issues&through=500&runId=RUN_ID
 GET /api/v1/sessions/{sid}/debug/query?kind=statistics&through=500&runId=RUN_ID
 ```
 
-这五种查询通过同一个 `internal/tracequery` 固定快照重建器读取宿主日志；旧独立分析会话的 trace MCP 也复用它。已有 `trace_find_issues`，旧接口事件分块也先按共享字段规则脱敏。0.29.0 的独立分析工具集新增 `trace_propose`，仅生成有来源引用的建议，不修改目标；公共 `debug-mcp` 仍为 19 个只读查询工具。
+这五种查询通过同一个 `internal/tracequery` 固定快照重建器读取宿主日志；旧独立分析会话的 trace MCP 也复用它。已有 `trace_find_issues`，旧接口事件分块也先按共享字段规则脱敏。当前的独立分析工具集新增 `trace_propose`，仅生成有来源引用的建议，不修改目标；公共 `debug-mcp` 仍为 19 个只读查询工具。
 
 - 返回 `source=host_projection` 与顶层 `through`；它不是 worker sequence。首次可省略 through，后续查询与读取证据应原样保留，包括 0。不自动推进到最新记录。
 - runs/steps/issues 用 offset/limit 分页，默认且最多 50。steps/issues/statistics 可按 runId/type/status 精确筛选，query 为脱敏预览的字面子串搜索，不接受 SQL/正则。单个字符串限制 256 字符，query 1000 字符；step 需 stepId，传 runId 时须匹配。
@@ -107,4 +107,4 @@ MCP 客户端启动配置示意：
 
 协议依据：[stdio transport](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)、[lifecycle](https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle)、[tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)。这里只实现所需的只读子集，没有引入新依赖。
 
-验证范围与未完成事项见 [KUN-VALIDATION.md](KUN-VALIDATION.md) 和 [KUN-PROGRESS.md](KUN-PROGRESS.md)。
+验证范围与未完成事项见 [VALIDATION.md](VALIDATION.md) 和 [STATUS.md](STATUS.md)。

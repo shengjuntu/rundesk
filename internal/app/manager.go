@@ -120,6 +120,7 @@ type Manager struct {
 	queue               QueueSettings
 	tasks               map[string]Task
 	registrationMu      sync.Mutex
+	installMu           sync.Mutex
 	applicationMu       sync.Mutex
 	skillMu             sync.Mutex
 	Store               *store.Store
@@ -994,10 +995,14 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 }
 func (m *Manager) run(s Session, w Workspace, h *handle, in Input, recovery *RecoveryPlan) {
 	defer m.unreserveProcess(s.ID)
-	if s.RuntimeKind == "kun" {
-		m.runKun(s, w, h, in)
+	backend, err := agentBackend(s.RuntimeKind)
+	if err != nil {
+		m.finish(s.ID, "failed", err.Error())
 		return
 	}
+	backend.Run(m, s, w, h, in, recovery)
+}
+func (m *Manager) runCodex(s Session, w Workspace, h *handle, in Input, recovery *RecoveryPlan) {
 	fail := func(e error) {
 		h.mu.Lock()
 		c := h.client
@@ -1200,6 +1205,10 @@ func (m *Manager) StopRun(id, expectedRunID string) error {
 	if s.Status == "stopping" {
 		return nil
 	}
+	backend, err := agentBackend(s.RuntimeKind)
+	if err != nil {
+		return err
+	}
 	if e = m.update(id, func(s *Session) { s.Status = "stopping" }); e != nil {
 		return e
 	}
@@ -1209,11 +1218,7 @@ func (m *Manager) StopRun(id, expectedRunID string) error {
 		h.client.Close()
 	}
 	h.mu.Unlock()
-	if s.RuntimeKind == "kun" {
-		go m.stopKun(s, h)
-		return nil
-	}
-	go m.interrupt(id, h, s.RunID)
+	go backend.Stop(m, s, h)
 	return nil
 }
 func (m *Manager) interrupt(id string, h *handle, expectedRunIDs ...string) {
@@ -1309,7 +1314,7 @@ func (m *Manager) ConfigCall(wid, method string, params any, ids ...string) (jso
 		return nil, e
 	}
 	if i.AgentRuntime.Kind == "kun" {
-		return nil, failure(400, "kun_config_endpoint", "Kun 请使用 Agent 引擎配置；首版不支持 Codex 专用配置或 MCP")
+		return nil, failure(400, "kun_config_endpoint", "Kun 使用 Agent 引擎配置和独立 MCP 配置接口")
 	}
 	id := "config-" + i.ID + "-" + wid
 	h, e := m.getHandle(id)

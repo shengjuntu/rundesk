@@ -4,7 +4,7 @@ const {spawn}=require('node:child_process'),http=require('node:http'),fs=require
 (async()=>{
  const root=path.resolve(__dirname,'..'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'rd-compare-')),port=process.env.RUNDESK_COMPARE_PORT||38936,base='http://127.0.0.1:'+port,pause=ms=>new Promise(r=>setTimeout(r,ms)),checks=[],errors=[];
  let host,browser,model,modelCalls=0;
- const reportPath=root+'/docs/kun-compare-browser-validation.json';
+ const reportPath=root+'/docs/validation/current/kun-compare-browser-validation.json';
  const report=extra=>fs.writeFileSync(reportPath,JSON.stringify({version:'0.36.0',scope:'real RunDesk/Kun, local HTTP model fixture and Chromium; no remote service acceptance',modelCalls,checks,pageErrors:errors,...extra},null,2)+'\n');
  const api=async(p,body,method)=>{const r=await fetch(base+'/api/v1'+p,{method:method||(body?'POST':'GET'),headers:{'Content-Type':'application/json','Idempotency-Key':crypto.randomUUID()},body:body?JSON.stringify(body):undefined});assert(r.ok,await r.clone().text());return r.json()};
  const stopped=async id=>{for(let n=0;n<150;n++){const s=await api('/sessions/'+id);if(s.status==='completed')return s;if(['failed','interrupted'].includes(s.status))throw Error(JSON.stringify(s));await pause(100)}throw Error('run not completed')};

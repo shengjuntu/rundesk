@@ -1,0 +1,16 @@
+$ ["node", "scripts/kun-coding-http-test.cjs"]
+{"version":"0.45.0","passed":true,"scope":"Linux real host and Kun worker, local model fixture and installed Python3; no OS sandbox, remote provider or Windows runtime claim","modelCalls":7,"checks":["seven real coding tools: write/edit/find/grep/list/bash/read; Python execution yields 6; no execution before approval","rejected Bash leaves no file","timeout has durable structured result and null exit code","cancellation cleans an ordinary child process before delayed file write","fixture evaluation rejects host Bash","completed tool and approval evidence survives host restart without reexecution"]}
+$ ["node", "scripts/kun-evaluation-http-test.cjs"]
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+'0.45.0' !== '0.44.0'
+
+    at /workspace/scratch/3dce8d85f3e5/dev/rundesk-v0.45.0/scripts/kun-evaluation-http-test.cjs:27:48
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: '0.45.0',
+  expected: '0.44.0',
+  operator: 'strictEqual',
+  diff: 'simple'
+}

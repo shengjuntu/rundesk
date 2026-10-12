@@ -1,4 +1,4 @@
-# 错误诊断 · RunDesk 0.8.2
+# 错误诊断
 
 ## 如何查看 HTTP 500
 
@@ -41,4 +41,4 @@ API panic 在尚未发送响应时转换为 JSON 500，浏览器获得 requestId
 
 ## 0.8.3 连接与运行故障修复
 
-v1 现在区分上游 RPC 502、连接/记录不可用 503 与超时 504，保留原始错误。`details.origin=codex_transport` 表示本地 App Server 连接故障；`transportOperation` 给出发生阶段。内部异常和技能自动恢复失败仍为 500。已有幂等回执保留原状态，未加入自动重发。详见 [代码排查清单](HTTP-FAILURE-AUDIT-0.8.3.md)。
+v1 现在区分上游 RPC 502、连接/记录不可用 503 与超时 504，保留原始错误。`details.origin=codex_transport` 表示本地 App Server 连接故障；`transportOperation` 给出发生阶段。内部异常和技能自动恢复失败仍为 500。已有幂等回执保留原状态，未加入自动重发。详见 [代码排查清单](STATUS.md)。

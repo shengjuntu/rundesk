@@ -70,8 +70,9 @@ schemas['Session']['properties'].update({'environmentId':st(),'executionMode':st
 paths={}
 requests={
  ('POST','/workspaces/{wid}/mcp-tests'):obj({'server':st(),'tool':st(),'arguments':obj({},extra=True),'cursor':st(),'confirm':bool_},['server','confirm']),
- ('PUT','/setup'):obj({'codex':st(),'workspaceId':st(),'model':st(),'completed':bool_,'revision':integer},['codex','workspaceId','revision']),
- ('POST','/setup/check'):obj({'kind':st(enum=['codex','workspace','models','account','mcp','docker']),'workspaceId':st(),'instanceId':st()},['kind']),
+ ('PUT','/setup'):obj({'codex':st(),'workspaceId':st(),'model':st(),'completed':bool_,'revision':integer,'instanceRevision':integer,'agentRuntime':ref('KunConfig')},['workspaceId','revision']),
+ ('POST','/setup/codex-install'):obj({'version':st(pattern=r'^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$',maxLength=64),'confirm':{'const':True}},['version','confirm']),
+ ('POST','/setup/check'):obj({'kind':st(enum=['kun','bash','codex','workspace','models','account','mcp','docker']),'workspaceId':st(),'instanceId':st()},['kind']),
  ('POST','/setup/provider'):obj({'workspaceId':st(),'baseUrl':st(),'envKey':st(),'model':st()},['workspaceId','baseUrl','model']),
  ('POST','/instances/{iid}/images'):obj({'reference':st()},['reference']),
  ('POST','/instances/{iid}/images/{vid}/select'):obj({'revision':integer},['revision']),
@@ -100,7 +101,7 @@ requests={
  ('PUT','/workspaces/{wid}/mcp/{name}'):obj({'version':st(),'config':obj(extra=True),'remove':bool_},['version']),
  ('POST','/workspaces/{wid}/mcp/import'):obj({'version':st(),'bundle':obj(extra=True),'overwrite':bool_},['version','bundle']),
 }
-idempotent={('POST',p) for p in ['/kun-task-sets','/kun-rubrics','/kun-evaluations','/kun-forks','/kun-forks/{fid}/start','/kun-forks/{fid}/hypotheses','/experiments','/experiments/{eid}/branches','/instances','/workspaces','/sessions','/sessions/{sid}/turns','/sessions/{sid}/recover','/sessions/{sid}/kun/resume','/tasks','/schedules','/workspaces/{wid}/mcp-tests']}
+idempotent={('POST',p) for p in ['/setup/codex-install','/kun-task-sets','/kun-rubrics','/kun-evaluations','/kun-forks','/kun-forks/{fid}/start','/kun-forks/{fid}/hypotheses','/experiments','/experiments/{eid}/branches','/instances','/workspaces','/sessions','/sessions/{sid}/turns','/sessions/{sid}/recover','/sessions/{sid}/kun/resume','/tasks','/schedules','/workspaces/{wid}/mcp-tests']}
 summaries={
  '/instances/{iid}/images':'管理员：GET 读取持久化镜像目录及环境差异；POST 检查并登记本机镜像，不构建、不拉取、不启动容器',
  '/instances/{iid}/images/{vid}/check':'管理员：按固定 Image ID 核对可用性；失败仍返回记录，检查 availability 和 error',
@@ -679,6 +680,20 @@ for path,method,body,response in [
  paths.setdefault(path,{})[method]=op
 
 schemas['KunFastGuard']['properties']['workspaceMode']=st(enum=['isolated-fixture-v1'])
-spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk 0.44.0：独立评测目录、固定输入文件、模式守卫和初始化证据；固定产物规则与结束时证据，回复/文件联合评分和启用门槛；固定多次采样对照、顺序执行与可追溯报告；Kun 0.16 / 协议 v15 / fork schema 3；K4 固定案例、参数化 Skill、独立验证启用门槛、受限快速路径与守卫回退；固定同基线文本规则评分、完整回复与证据检查、不可变评分报告；固定单条工具输出假设与可审核 Hybrid 重算、不可变谱系与原录制保留、假设使用证据；来源与分支跨会话固定日志对照；普通运行安全点 Harness 切换与迁移记录；Live 固定预览、明确确认与当前工具真实执行；Plan-Act 显式规划、两套内置模块组合与 Harness 固定快照对照； 安全检查点独立 Hybrid 分支，模型重算、工具严格录制回放、未命中停止；K3-A 离线记录基线、不可变实验分支、保守失效与谱系差异；建议审核、当前状态控制预览与可追溯发送；Kun 0.7 / 协议 v7 独立诊断会话；固定来源只读工具与有证据的建议（不自动执行）；Codex/Kun 宿主轨迹重建与统一只读检查界面，轮次/步骤/异常/统计查询；统一只读 DebugService 与固定会话 stdio MCP，Codex 提供宿主概况/保留事件，Kun 提供内部检查；结构化控制、用量、MCP 与模块视图；调用证据、有序请求上下文与快照差异；Kun 条件断点与结构化 Console；Kun 显式安全检查点恢复；Kun 四模块、执行预算、MCP 参数校验；Kun 独立进程、文本模型/文件工具循环、MCP 连接与逐工具审批、上下文快照和调试控制；管理员运行进程观测、内核目录锁与原生进程组清理；管理员按应用项目查询保留事件中的用量；管理员 MCP 独立测试、持久化结果与幂等回执；支持的协议及边界见 README。应用主动注册、初始配置仅安装一次、管理员选用已有能力；通用助手默认协调。新增管理员协作工作台、A2A 0.3 JSON-RPC 和 Gitea Issue 黑板。新增个人文件库，上传和会话产物自动保存，跨会话引用及删除。管理员可上传 ZIP 并显式执行持久化镜像构建，支持日志、取消和结果登记。新增个人访问码、应用项目授权和成员入口。新增镜像版本目录和固定目标，镜像管理仅限管理员。Docker 环境按应用与项目隔离，管理接口仅限管理员。应用与专用 instance 一对一绑定，default 保留给通用助手。支持完整技能目录和关联的轨迹分析会话。/api/v1 是稳定的应用入口，旧 /api 保留。NativeObject 透传原生 Codex 结果，其内部字段受原生版本影响。管理员 Token/Cookie 保留；应用使用独立 Bearer 凭据、允许项目和操作 scopes。应用凭据由服务端绑定 Source。API 权限不是操作系统沙箱或完整多用户隔离。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
+
+# Startup and backend discovery describe prerequisites, never inference readiness.
+schemas['BackendInfo']=obj({'kind':st(),'executionModes':arr(st()),'capabilities':arr(st())},['kind','executionModes','capabilities'])
+schemas['EnvironmentCheck']=obj({'id':st(),'required':bool_,'status':st(enum=['ready','unavailable','unsupported','unconfigured','unchecked','skipped']),'detail':st()},['id','required','status','detail'])
+schemas['SetupEnvironment']=obj({'instanceId':st(),'backend':st(),'ready':bool_,'inferenceTested':{'const':False},'demo':bool_,'checks':arr(ref('EnvironmentCheck'))},['instanceId','backend','ready','inferenceTested','demo','checks'])
+schemas['CodexInstallResult']=obj({'ok':bool_,'version':st(),'codex':st(),'log':st(),'error':st()},['ok','version','codex','log','error'])
+for path,schema in [('/backends',obj({'backends':arr(ref('BackendInfo')),'availability':st()},['backends','availability'])),('/setup/environment',ref('SetupEnvironment')),('/setup/codex-install',ref('CodexInstallResult'))]:
+ method='post' if path.endswith('codex-install') else 'get'
+ paths[path][method]['responses']['200']['content']['application/json']['schema']=schema
+ paths[path][method]['x-administrator-only']=True
+paths['/setup/environment']['get']['parameters'] += [{'name':name,'in':'query','schema':st()} for name in ['instanceId','workspaceId']]
+paths['/setup/codex-install']['post']['description']='Explicit administrator confirmation; pinned release; managed local prefix; requires Node/npm. Up to 5 minutes. Does not activate the binary or log in. Result ok=false records a failed installation; HTTP acceptance alone is not success. Unknown outcome must be reconciled with the original idempotency receipt.'
+paths['/setup']['put']['description']='Atomic setup and default-instance update. agentRuntime requires instanceRevision. Kun completion requires the worker and any configured credential variable, not Codex. Existing sessions keep backend identity.'
+
+spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk 应用与管理 API。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。Kun 0.16.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。当前应用接入、错误、幂等及示例见 docs/API-V1.md。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')
