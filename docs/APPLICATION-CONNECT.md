@@ -29,3 +29,11 @@ POST /api/v1/applications/{appId}/connect 接收 name、description、installati
 
 使用有界协作执行器。普通对话不会自动转换为协作任务；从“协作”入口发起。当前新闻研究工具需要已有 run_id，视频工具需要 projectId；能力说明会明确这些前提。自动登记不是自动创建任意业务对象，也不是自动跨容器传送文件。
 
+
+## 应用主动准备运行环境
+
+0.47.0 新增 `application-runtime` 能力。普通应用通过 `GET /api/v1/applications/{appId}/runtime` 读取缓存摘要，通过 `POST /api/v1/applications/{appId}/runtime/prepare` 启动或复用管理员已经配置的 Codex Docker 环境。请求必须带预期的 instanceId/workspaceId，probe=true 可检查认证元数据及 MCP 工具发现，不运行模型。
+
+GET 需要 read，POST 需要 read/run，且 appId、实例与工作区必须匹配凭据和当前应用绑定。接口不选择镜像、不构建、不更改工具、不删除容器；待部署配置返回冲突。完整契约见 [API v1](API-V1.md)。
+
+配套 news2douyin 0.13.0 在开始研究前使用此接口。首次 Docker 接入先登记应用，再选定镜像并准备环境，最后将业务 MCP 与 Skill 装到该环境；模型认证由管理员完成。部署入口见 [news2douyin 配置](../examples/news2douyin/README.md)。

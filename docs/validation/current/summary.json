@@ -1,71 +1,51 @@
 {
-  "version": "0.46.0",
-  "date": "2026-10-12T04:19:38.598497+00:00",
-  "status": "local_checks_passed_deployment_pending",
-  "checks": {
-    "profileContracts": {
-      "passed": true,
-      "tests": 10,
-      "contextCombinations": 9,
-      "log": "profiles.log"
-    },
-    "skills": {
-      "passed": true,
-      "count": 3,
-      "scope": "structure and frontmatter, no model behavior test",
-      "log": "skills.log"
-    },
-    "goCompatibility": {
-      "passed": true,
-      "log": "go-compatibility.log"
-    },
-    "linuxBuild": {
-      "passed": true,
-      "programs": [
-        "rundesk",
-        "kun"
-      ]
-    },
-    "mediaSmoke": {
-      "passed": true,
-      "environment": "host, not Docker",
-      "report": "video-smoke-render.json",
-      "probe": "video-smoke-probe.json"
-    },
-    "pythonAndShellSyntax": {
-      "passed": true
-    },
-    "documentation": {
-      "passed": true,
-      "version": "0.46.0",
-      "documents": 57,
-      "paths": 183,
-      "checks": [
-        "local links",
-        "version",
-        "startup admin scope",
-        "install idempotency",
-        "no historical release duplicates"
-      ]
-    }
+  "version": "0.47.0",
+  "kunVersion": "0.16.0",
+  "workerProtocol": 16,
+  "goCompatibility": "passed",
+  "applicationRuntimeRace": "passed",
+  "builds": [
+    "rundesk",
+    "kun"
+  ],
+  "openAPI": {
+    "paths": 185,
+    "operations": 221
   },
-  "notTested": [
-    "Docker image build and container execution (Docker unavailable)",
-    "Live Wigolo/Exa MCP handshake and search quality",
-    "Agent-Reach installation and platform accounts",
-    "Codex model authentication and actual task execution",
-    "Native Windows and GUI profile selection"
+  "date": "2026-10-12",
+  "source": {
+    "sha256": "bafb10307baf8a5ed30361f9ff401bc49daf94819828070992b3bd3b54cb9d48",
+    "fileCount": 421,
+    "roots": [
+      "Makefile",
+      "go.mod",
+      "go.sum",
+      "cmd",
+      "internal",
+      "scripts",
+      "examples"
+    ],
+    "algorithm": "sorted relative UTF-8 path, NUL, bytes, NUL; exclude Python caches and egg-info"
+  },
+  "http": {
+    "passed": true,
+    "checks": [
+      "real_http_registration_and_container_configuration",
+      "real_business_mcp_initialize_and_tools_list",
+      "one_click_bound_docker_session_and_duplicate_start",
+      "real_mcp_ticket_evidence_and_report_persistence",
+      "run_trace_and_guarded_stop",
+      "one_environment_reused_across_setup_check_and_research"
+    ],
+    "scope": "Actual RunDesk/news2douyin HTTP and business MCP; fixture Docker CLI, Codex and search; no real container/model/search quality",
+    "dockerCreates": 1,
+    "dockerStarts": 1
+  },
+  "limitations": [
+    "No real Docker Engine, Codex or online search",
+    "No real model-quality acceptance",
+    "No browser layout acceptance",
+    "No Windows acceptance"
   ],
-  "baseline": "Kun core and host behavior unchanged from 0.45.0; host version and OpenAPI version updated. This is scoped verification, not a repeat of the full Kun release suite.",
-  "sourceSHA256": "1551576e00ec1d96a3ed1bb790affe3f1561de0ded391900c298e183e3ec499d",
-  "sourceFingerprintScope": [
-    "Makefile",
-    "go.mod",
-    "go.sum",
-    "cmd",
-    "internal",
-    "scripts",
-    "examples"
-  ],
-  "sourceFingerprintFileCount": 419
+  "documentationChecks": "passed"
 }

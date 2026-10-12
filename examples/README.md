@@ -1,6 +1,6 @@
 # 典型运行配置
 
-`examples` 是 RunDesk 的典型运行配置目录，同时保留通用 Docker 模板、systemd 部署和应用客户端示例。配置描述的是 **Codex 的工具环境和工作方法**，不包含 news2douyin 等应用本体、业务数据或账号。Kun 内核和服务端 API 不因这些配置而改变。
+`examples` 是 RunDesk 的典型运行配置目录，同时保留通用 Docker 模板、systemd 部署和应用客户端示例。配置描述的是 **Codex 的工具环境和工作方法**，不包含 news2douyin 等应用本体、业务数据或账号。Kun 内核不因这些配置而改变；news2douyin 0.13.0 可使用 RunDesk 0.47.0 的应用运行环境接口进行一键研究。
 
 | 配置 | 内置工具 | 搜索后端 | 适用任务 |
 | --- | --- | --- | --- |
@@ -61,7 +61,7 @@ python3 examples/profiles.py doctor video-build --image rundesk-video:local
 
 ## 面向未来 WebUI 的契约
 
-每个 `profile.json` 遵循 [profile.schema.json](profile.schema.json)。`schemaVersion: 1` 描述标识、版本、运行后端、工具、搜索选项、技能、产物和资源建议。新 UI 可先读取 `list/inspect`，让用户选择版本与组件，再提交 `pack` 的构建 ZIP；本轮没有新增配置市场页面或服务端执行接口。
+每个 `profile.json` 遵循 [profile.schema.json](profile.schema.json)。`schemaVersion: 1` 描述标识、版本、运行后端、工具、搜索选项、技能、产物和资源建议。新 UI 可先读取 `list/inspect`，让用户选择版本与组件，再提交 `pack` 的构建 ZIP；配置目录尚无独立选择页面；应用启动现有环境使用 API v1 的 application-runtime 接口，不通过配置目录执行任意脚本。
 
 生成目录包含 `profile.lock.json`（选择及固定版本）、`SHA256SUMS`（逐文件摘要）和第三方说明。`lock` 不包含网络锁定后的传递依赖，不能据此宣称完全可重现或离线构建。CLI 从白名单文件生成上下文，不打包整个工作区，也不会捎带本地凭据。
 

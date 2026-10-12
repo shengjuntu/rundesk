@@ -694,6 +694,16 @@ paths['/setup/environment']['get']['parameters'] += [{'name':name,'in':'query','
 paths['/setup/codex-install']['post']['description']='Explicit administrator confirmation; pinned release; managed local prefix; requires Node/npm. Up to 5 minutes. Does not activate the binary or log in. Result ok=false records a failed installation; HTTP acceptance alone is not success. Unknown outcome must be reconciled with the original idempotency receipt.'
 paths['/setup']['put']['description']='Atomic setup and default-instance update. agentRuntime requires instanceRevision. Kun completion requires the worker and any configured credential variable, not Codex. Existing sessions keep backend identity.'
 
+# Application-owned, repeatable Docker startup; no image/configuration writes.
+schemas['ApplicationRuntimeInput']=obj({'instanceId':st(),'workspaceId':st(),'probe':bool_},['instanceId','workspaceId'])
+schemas['ApplicationRuntime']=obj({'appId':st(),'instanceId':st(),'workspaceId':st(),'executionMode':st(enum=['local','docker']),'instanceRevision':integer,'image':st(),'probed':bool_,'modelTested':{'const':False},'accountReady':bool_,'servers':{'type':'object','additionalProperties':arr(st())},'errors':{'type':'object','additionalProperties':st()},'environment':obj({'id':st(),'state':st(),'imageId':st(),'revision':integer,'observedAt':st(),'pendingUpdate':bool_},['id','state','revision','pendingUpdate'])},['appId','instanceId','workspaceId','executionMode','probed','modelTested'])
+for path,method in [('/applications/{appId}/runtime','get'),('/applications/{appId}/runtime/prepare','post')]:
+ op=paths[path][method];op['x-administrator-only']=False;op['x-application-scopes']=['read'] if method=='get' else ['read','run']
+ op['summary']='读取应用运行环境快照' if method=='get' else '启动或复用管理员选定的 Docker 环境'
+ op['description']='仅应用绑定的实例和工作区。GET 不启动容器，状态为最近观察值。POST 需显式传入匹配的 instanceId/workspaceId，可安全重试；不选择镜像、不部署待更新版本、不关闭已有会话、不调用模型。probe=true 检查认证状态与 MCP 工具发现，返回名称而不返回密钥、URL 或宿主路径；探测成功不代表模型或业务质量通过。镜像构建、选择、认证与配置仍需管理员。'
+ op['responses']['200']['content']['application/json']['schema']=ref('ApplicationRuntime')
+ if method=='post':op['requestBody']={'required':True,'content':{'application/json':{'schema':ref('ApplicationRuntimeInput')}}}
+
 spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk 应用与管理 API。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。Kun 0.16.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。当前应用接入、错误、幂等及示例见 docs/API-V1.md。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

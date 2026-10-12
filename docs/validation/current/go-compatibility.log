@@ -1,3 +1,2 @@
-$ go test ./internal/containerruntime ./internal/app -run 'Test(Seed|Docker|Image|Build|Environment|V1|Setup)' -count=1 -timeout=180s
-ok github.com/shengjuntu/rundesk/internal/containerruntime 0.004s
-ok github.com/shengjuntu/rundesk/internal/app 20.357s
+ok  	github.com/shengjuntu/rundesk/internal/app	18.752s
+ok  	github.com/shengjuntu/rundesk/internal/containerruntime	0.003s

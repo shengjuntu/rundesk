@@ -1,3 +1,1 @@
-Command: go build -buildvcs=false -trimpath -o bin/rundesk ./cmd/rundesk
-Exit: 0
-Version: 0.46.0
+Build exit 0; RunDesk 0.47.0

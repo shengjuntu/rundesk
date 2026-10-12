@@ -15,3 +15,11 @@
 依赖版本见 [dependencies.json](../_shared/dependencies.json)。公开检索依赖搜索服务和目标网站；平台访问状态与服务限额会变化。
 
 `agent-reach doctor` 检查的是它自己的上游工具配置（如 mcporter），并不等同于 Codex 的 MCP 状态。本配置直接连接 Exa/Wigolo，没有自动安装 mcporter 或其他社交渠道；部署时以 Codex 工具列表和实际读取结果为准。
+
+## 配套 news2douyin 0.13.0 一键研究
+
+RunDesk 0.47.0 已提供应用运行环境准备接口。先用本目录的 `pack`/`build` 构建固定 Codex 版本的镜像；在新闻应用 `/research/settings` 选择 Docker、填写已构建镜像、选择匹配的 Exa/Wigolo，点击“连接并配置环境”。该操作登记应用，并在实际 Docker 配置中安装缺失的业务 MCP 与研究 Skill。首次模型认证仍在 RunDesk 该应用环境中完成。
+
+新闻服务必须可被容器访问。同机 localhost 默认换成 host.docker.internal，服务仍需监听可达接口；跨主机在“Docker 回调地址”显式填写可达基础地址。之后新闻研究页“启动环境并深度研究”会启动/复用容器、检查认证和工具并开始任务，重复点击复用活动运行。镜像构建、账号登录和镜像更新属于首次部署或管理操作，不在每次研究时自动执行。
+
+业务研究使用 news-research Skill 和受运行编号约束的 MCP 保存结果；本目录的 collect-news-evidence 仍可单独执行文件型收集。业务模式先保存检索票据，再调用 Exa/Wigolo 并记录结果，随后由新闻服务读取原文、核对引用。搜索摘要不是证据；Wigolo 浏览器正文不会自动导入业务证据库。完整步骤随新闻源码的 `docs/DOCKER-RESEARCH.md` 交付。

@@ -1,6 +1,6 @@
 # 应用 API v1
 
-当前契约随 RunDesk 0.45.0 发布。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
+当前契约随 RunDesk 0.47.0 发布。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
 
 ## 稳定范围
 
@@ -30,6 +30,25 @@ Content-Type: application/json
 应用请求可省略 instanceId/source，由凭据绑定。显式提交其他归属会拒绝；`source.taskId` 仅为业务标签，不负责去重。模型、Skills、MCP、安装、全局并发及凭据管理属于管理员。
 
 [注册与集中配置](APPLICATION-CONNECT.md) · [凭据生命周期和范围](APPLICATION-CREDENTIALS.md)
+
+## 应用 Docker 环境
+
+读取 `/meta` 的 `application-runtime` 能力后，可使用：
+
+| 操作 | 路径 | 权限与行为 |
+| --- | --- | --- |
+| 读取状态 | GET `/applications/{appId}/runtime` | read；缓存观察值，不启动或探测 Docker |
+| 准备环境 | POST `/applications/{appId}/runtime/prepare` | read + run；仅本应用当前绑定的 Codex Docker 环境 |
+
+准备请求：
+
+```json
+{"instanceId":"BOUND_INSTANCE_ID","workspaceId":"BOUND_WORKSPACE_ID","probe":true}
+```
+
+返回 appId、instanceId、workspaceId、executionMode、instanceRevision、image，以及可选 environment（id/state/imageId/revision/observedAt/pendingUpdate）。probe=true 另返回 probed、accountReady、servers（MCP 名到工具名数组）和 errors。modelTested 始终为 false；认证元数据不证明实际模型可用。响应不暴露认证内容、宿主路径或 MCP 原始配置。
+
+prepare 按实例/工作区串行保证容器复用，可重复调用，不使用任务幂等回执，也不提交模型任务。保持现有活动会话及租约；不会改变镜像、构建、更新配置或删除环境。绑定变化返回 `application_binding_changed`，非 Codex Docker 配置返回 `docker_configuration_required`，已选择配置但环境未更新返回 `environment_update_required`（均为 409）；按错误提示在管理界面处理。
 
 ## 最小任务流程
 

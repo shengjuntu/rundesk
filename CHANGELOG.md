@@ -1,5 +1,14 @@
 # Changelog
 
+## RunDesk 0.47.0
+
+- Add scoped application runtime status and prepare APIs, with expected-binding and environment-update guards.
+- Reuse/start the configured Codex Docker environment without disconnecting active sessions or changing images.
+- Expose sanitized account readiness and MCP tool discovery; do not run a model during preparation.
+- Integrate with news2douyin 0.13.0 one-click deep research, container business MCP setup, search evidence records and guarded session binding.
+- Add race, permission and concurrent reuse tests; validate the two live HTTP services with Docker/Codex/search fixtures.
+- Keep Kun 0.16.0 and worker protocol 16 unchanged. Real container/model/search deployment still needs acceptance.
+
 ## RunDesk 0.46.0
 
 - Add three example runtime profiles: news2douyin, people-search, video-build.

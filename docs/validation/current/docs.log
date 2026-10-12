@@ -1,3 +1,1 @@
-docs/VALIDATION.md: missing validation/current/summary.json
-docs/VALIDATION.md: missing validation/current/regression/summary.json
-docs/VALIDATION.md: missing validation/current/final/summary.json
+{"passed": true, "version": "0.47.0", "documents": 57, "paths": 185, "checks": ["local links", "version", "startup admin scope", "install idempotency", "no historical release duplicates"]}

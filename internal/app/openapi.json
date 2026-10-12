@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Application API",
-    "version": "0.46.0",
+    "version": "0.47.0",
     "description": "RunDesk 应用与管理 API。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。Kun 0.16.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。当前应用接入、错误、幂等及示例见 docs/API-V1.md。"
   },
   "servers": [
@@ -956,6 +956,169 @@
           }
         },
         "x-administrator-only": true
+      }
+    },
+    "/applications/{appId}/runtime": {
+      "get": {
+        "operationId": "get_applications_appId_runtime",
+        "summary": "读取应用运行环境快照",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationRuntime"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "仅应用绑定的实例和工作区。GET 不启动容器，状态为最近观察值。POST 需显式传入匹配的 instanceId/workspaceId，可安全重试；不选择镜像、不部署待更新版本、不关闭已有会话、不调用模型。probe=true 检查认证状态与 MCP 工具发现，返回名称而不返回密钥、URL 或宿主路径；探测成功不代表模型或业务质量通过。镜像构建、选择、认证与配置仍需管理员。"
+      }
+    },
+    "/applications/{appId}/runtime/prepare": {
+      "post": {
+        "operationId": "post_applications_appId_runtime_prepare",
+        "summary": "启动或复用管理员选定的 Docker 环境",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationRuntime"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run"
+        ],
+        "description": "仅应用绑定的实例和工作区。GET 不启动容器，状态为最近观察值。POST 需显式传入匹配的 instanceId/workspaceId，可安全重试；不选择镜像、不部署待更新版本、不关闭已有会话、不调用模型。probe=true 检查认证状态与 MCP 工具发现，返回名称而不返回密钥、URL 或宿主路径；探测成功不代表模型或业务质量通过。镜像构建、选择、认证与配置仍需管理员。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationRuntimeInput"
+              }
+            }
+          }
+        }
       }
     },
     "/applications": {
@@ -26561,6 +26724,115 @@
           "codex",
           "log",
           "error"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationRuntimeInput": {
+        "type": "object",
+        "properties": {
+          "instanceId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "probe": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "instanceId",
+          "workspaceId"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationRuntime": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "executionMode": {
+            "type": "string",
+            "enum": [
+              "local",
+              "docker"
+            ]
+          },
+          "instanceRevision": {
+            "type": "integer"
+          },
+          "image": {
+            "type": "string"
+          },
+          "probed": {
+            "type": "boolean"
+          },
+          "modelTested": {
+            "const": false
+          },
+          "accountReady": {
+            "type": "boolean"
+          },
+          "servers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "environment": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "imageId": {
+                "type": "string"
+              },
+              "revision": {
+                "type": "integer"
+              },
+              "observedAt": {
+                "type": "string"
+              },
+              "pendingUpdate": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "state",
+              "revision",
+              "pendingUpdate"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "appId",
+          "instanceId",
+          "workspaceId",
+          "executionMode",
+          "probed",
+          "modelTested"
         ],
         "additionalProperties": false
       }

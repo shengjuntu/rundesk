@@ -121,6 +121,13 @@ func (s *Server) checkApplication(r *http.Request, k *ApplicationKey) error {
 		return forbidden()
 	}
 	switch p[0] {
+	case "applications":
+		if ((len(p) == 3 && p[2] == "runtime" && method == "GET" && k.scope("read")) || (len(p) == 4 && p[2] == "runtime" && p[3] == "prepare" && method == "POST" && k.scope("run"))) && p[1] == k.AppID {
+			a, _, e := m.applicationRuntimeBinding(p[1])
+			if e == nil && a.InstanceID == k.InstanceID && k.workspace(a.WorkspaceID) {
+				return nil
+			}
+		}
 	case "a2a":
 		if len(p) == 2 && method == "POST" && k.scope("run") || len(p) == 3 && p[2] == "agent-card.json" && method == "GET" {
 			a, e := s.registeredAgent(p[1])
