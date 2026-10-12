@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "version": "1.0.0",
+  "runtime": "codex-docker",
+  "id": "video-build",
+  "title": "本地视频合成与验收",
+  "description": "使用 FFmpeg、Pillow 和中文字体组织图像、音频、字幕并生成视频，保存渲染命令及媒体验收报告；不内置 TTS 或生成视频模型。",
+  "searchBackends": [
+    "none"
+  ],
+  "defaultSearchBackend": "none",
+  "aptPackages": [
+    "ffmpeg",
+    "fonts-noto-cjk",
+    "fontconfig"
+  ],
+  "pythonPackages": [
+    "Pillow"
+  ],
+  "skill": "build-video-artifacts",
+  "tools": [
+    "Python 3",
+    "Node.js",
+    "Git",
+    "curl",
+    "ripgrep",
+    "FFmpeg",
+    "ffprobe",
+    "Pillow",
+    "Noto CJK"
+  ],
+  "outputs": [
+    "video.mp4",
+    "render.json",
+    "probe.json"
+  ],
+  "resources": {
+    "cpus": 4,
+    "memoryMB": 4096,
+    "network": "bridge"
+  },
+  "optionalComponents": []
+}

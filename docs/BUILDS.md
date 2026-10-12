@@ -5,7 +5,7 @@
 ## 操作
 
 1. 在应用运行环境中启用 Docker。主机需要 Linux、本机 Docker Engine、Docker CLI 和 Buildx/BuildKit；服务用户需要访问所配置的 Unix socket。
-2. 准备 Dockerfile、工具、Skills 等目录。ZIP 根目录就是构建上下文；如果 ZIP 顶层包含文件夹，Dockerfile 路径要包含该文件夹，COPY 的路径也仍相对于 ZIP 根目录。
+2. 推荐用 [典型配置 CLI](../examples/README.md) 的 `pack` 生成已填写 Codex 版本的 ZIP，根目录即 Dockerfile，无需 build args。也可自行准备 Dockerfile、工具、Skills 等目录。ZIP 根目录就是构建上下文；如果 ZIP 顶层包含文件夹，Dockerfile 路径要包含该文件夹，COPY 的路径也仍相对于 ZIP 根目录。
    使用 `examples/docker/Dockerfile` 时，先把 `ARG CODEX_VERSION` 改成你已验证版本的默认值（`ARG CODEX_VERSION=...`），其他版本标签也可填写默认值；本版页面不传入 build args。将 `examples/docker` 内的 Dockerfile 与 seed 目录一起打包。
 3. 进入「应用 → 镜像与构建 → 构建任务 → 新建构建」。上传 ZIP，填写名称、Dockerfile 相对路径、超时分钟数，可选择不使用缓存。
 4. 上传后状态为「待启动」。检查后点击「开始构建」。所有应用共用一个串行构建队列。
@@ -52,7 +52,7 @@ RunDesk 为每次任务生成独立的 `rundesk-build/<instanceId>:<buildId>` �
 | GET /{bid}/log?after=0 | 按字节偏移读取，最多 64 KiB，返回 text、next、status、truncated |
 | DELETE /{bid} | 删除非运行任务的记录和文件，不删除 Docker 镜像或缓存 |
 
-路径表中的根路径实际不带末尾斜线。OpenAPI 版本 1.11.0。
+路径表中的根路径实际不带末尾斜线。契约版本与当前服务 `/api/v1/openapi.json` 一致。
 
 首版不提供 Git 拉取、仓库推送、跨平台构建、用户自定义 build args/secrets、远程 builder 或自动重试。更大的上下文可在命令行或 CI 构建后登记镜像。
 

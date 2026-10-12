@@ -1,0 +1,4 @@
+interface:
+  display_name: "本地视频合成与验收"
+  short_description: "Create grounded, reviewable outputs with this runtime profile"
+  default_prompt: "Use $build-video-artifacts to complete the task and save its evidence and artifacts."

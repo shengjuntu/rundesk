@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "profileId": "news2douyin",
+  "checks": [
+    {
+      "name": "docker",
+      "ok": false,
+      "error": "Docker CLI is unavailable; prepare/pack work without Docker"
+    }
+  ],
+  "modelTested": false,
+  "networkTested": false,
+  "ready": false,
+  "scope": "host Docker availability"
+}

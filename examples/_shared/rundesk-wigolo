@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+# RunDesk supplies a writable HOME. Do not use /data or a build-time root home.
+: "${HOME:?RunDesk must provide a writable HOME}"
+export WIGOLO_DATA_DIR="${HOME}/.wigolo"
+export WIGOLO_CONFIG_PATH="${WIGOLO_DATA_DIR}/config.json"
+export WIGOLO_PLUGINS_DIR="${WIGOLO_DATA_DIR}/plugins"
+export PLAYWRIGHT_BROWSERS_PATH=/opt/wigolo-browsers
+# News defaults: a short cache, plus force_refresh for a new breaking-news task.
+export CACHE_TTL_SEARCH=300
+export CACHE_TTL_CONTENT=900
+export WIGOLO_LOCAL_LLM=off
+export WIGOLO_SEARCH=core
+# This profile gathers evidence; Codex supplies synthesis. Do not implicitly
+# forward model keys to an independent inner agent or probe a local LLM.
+unset WIGOLO_LLM_PROVIDER WIGOLO_LLM_API_KEY OPENAI_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY GROQ_API_KEY
+mkdir -p "$WIGOLO_DATA_DIR"
+exec node /opt/wigolo/node_modules/wigolo/dist/index.js "$@"

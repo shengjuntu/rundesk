@@ -6,7 +6,7 @@ RunDesk 是面向应用的 Agent 执行平台，通过一套 API 接入 Kun 与 
 
 ## 当前版本
 
-**RunDesk 0.45.0 · Kun 0.16.0 · worker 协议 16**。本版整理启动配置、应用契约与架构；Kun 执行内核及协议未升级。
+**RunDesk 0.46.0 · Kun 0.16.0 · worker 协议 16**。本版新增典型 Docker 配置目录与统一 CLI；Kun 执行内核及协议未升级。
 
 - 应用接入：独立凭据、项目与操作范围、持久任务队列、会话、事件订阅、文件与幂等回执。
 - 轨迹调试：两个后端均可检查已记录的执行过程；Kun 另有单步、条件断点、上下文快照、独立诊断、Hybrid/Live 分叉及对照评测。
@@ -25,6 +25,10 @@ make build
 打开 http://127.0.0.1:3210，按向导选择 Kun 或 Codex。Kun 连接支持工具调用的 Chat Completions 服务；Codex 使用其原生模型与认证配置。两个后端可分别配置在不同实例，旧会话保持原后端。只体验界面可用 `--demo`，不调用真实模型、不安装软件。
 
 Windows、模型配置与安装说明见 [启动与部署](docs/SETUP.md)。本包是源码包；按上述命令构建，两个可执行文件放在同一目录。
+
+## 典型运行配置
+
+[examples](examples/README.md) 提供 news2douyin、people-search、video-build 三套配置和统一 CLI，可生成现有构建页可用的 ZIP；检索配置支持 Exa 或可选 Wigolo，Agent-Reach 可按固定提交安装。
 
 ## 应用接入与架构
 

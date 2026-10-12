@@ -53,3 +53,9 @@ PiG's published [security documentation](https://pi-in-go.dev/docs/latest/securi
 Thanks to [HarnessRouter](https://github.com/HarnessRouter/harnessrouter) and its contributors. Its README and the [Unified Harness Protocol](https://unifiedharnessprotocol.org/) were consulted on 2026-10-11 for the boundary between applications and complete agent runtimes, configured-backend discovery, and capability/conformance documentation. The protocol site identified version 2026-10-04 as a draft standard at review time.
 
 RunDesk 0.45.0 introduces its own Go host lifecycle interface and capability catalog. No HarnessRouter source, schemas, assets, or conformance code were incorporated. This is a design reference, not an implementation dependency, fork, endorsement, or UHP compatibility claim. Any future source incorporation must separately record the exact commit, files, license, notices, and modifications.
+
+## Runtime profiles in 0.46.0
+
+Thanks to Agent-Reach and Wigolo contributors. On 2026-10-12, the user-selected Agent-Reach fork at `https://github.com/silently0801/agent-reach`, commit `cf70302e928155703829439115a18132928f8913` (package 1.1.0, MIT), was inspected for installation and skill-path behavior. The recipe can install that exact source archive, but does not run its automatic installer or copy its Skill.
+
+Wigolo's official Dockerfile, configuration, package 0.2.1 metadata and licensing guide were consulted for an independently written stdio MCP launcher and optional image recipe. Wigolo is AGPL-3.0-only with alternative commercial terms offered by upstream; no Wigolo code is copied into RunDesk. The package is downloaded only when the selected image is built. See [assessment and source links](../examples/news2douyin/WIGOLO.md) and [dependency notices](../examples/_shared/THIRD_PARTY.md).

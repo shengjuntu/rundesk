@@ -1,0 +1,3 @@
+Command: go build -buildvcs=false -trimpath -o bin/kun ./cmd/kun
+Exit: 0
+Version: 0.16.0

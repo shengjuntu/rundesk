@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-10-12",
+  "python": {"feedparser": "6.0.14", "yt-dlp": "2026.8.19", "Pillow": "12.3.0"},
+  "wigolo": {"version": "0.2.1", "repository": "https://github.com/KnockOutEZ/wigolo", "license": "AGPL-3.0-only"},
+  "agentReach": {"repository": "https://github.com/silently0801/agent-reach", "commit": "cf70302e928155703829439115a18132928f8913", "version": "1.1.0", "license": "MIT"},
+  "note": "Direct Python versions and optional component versions are pinned. Base image, apt and transitive npm/Python dependencies are not fully locked; these are not offline or bit-reproducible images."
+}

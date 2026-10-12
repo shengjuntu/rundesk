@@ -6,7 +6,7 @@ RunDesk is an Agent execution platform for applications: one API connects Kun an
 
 ## Current release
 
-**RunDesk 0.45.0 · Kun 0.16.0 · worker protocol 16**. This release consolidates setup, API documentation, and host backend dispatch; the Kun execution kernel and wire protocol are unchanged.
+**RunDesk 0.46.0 · Kun 0.16.0 · worker protocol 16**. This release adds a runtime profile catalog and shared CLI; the Kun execution kernel and wire protocol are unchanged.
 
 - Integrate applications with scoped credentials, durable queues, sessions, streaming events, files, and idempotency receipts.
 - Inspect recorded traces from both backends. Kun additionally exposes internal state, step controls, conditional breakpoints, snapshots, diagnostic sessions, and Hybrid/Live forks.
@@ -41,3 +41,7 @@ Kun Bash is opt-in host execution, not an OS sandbox. Managed Docker environment
 Thanks to [MichaelKinsy/PiG](https://github.com/MichaelKinsy/PiG), its contributors, Mario Zechner / Pi, and [HarnessRouter](https://github.com/HarnessRouter/harnessrouter). Kun selectively references PiG while developing independently; HarnessRouter/UHP informs the application/backend boundary. [UPSTREAM](docs/UPSTREAM.md) distinguishes incorporated code from design references and preserves the original [notices](LICENSES). No complete PiG or UHP compatibility is claimed.
 
 [License](LICENSE)
+
+## Runtime profiles
+
+See [examples](examples/README.md) for news2douyin, people-search and video-build. The shared CLI inspects, validates, prepares, packages and builds standalone Docker contexts. Research profiles support Exa or optional Wigolo, with Agent-Reach available at a pinned fork commit.

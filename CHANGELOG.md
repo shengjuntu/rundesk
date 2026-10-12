@@ -1,10 +1,10 @@
-# Current release
+# Changelog
 
-## RunDesk 0.45.0
+## RunDesk 0.46.0
 
-- Backend-aware startup wizard with local prerequisite checks, independent Kun initialization, explicit optional Codex installation into a managed directory, and atomic revision-guarded settings.
-- Host backend catalog and a common run/stop dispatch boundary. Backend-specific configuration, approval, recovery and execution environments remain explicit; no dynamic plugin or UHP compatibility claim.
-- Rewritten English/Chinese README emphasizing execution-trace debugging; current application API, architecture, backend matrix, setup, status and upgrade documentation. Removed historical release/validation copies from this source distribution.
-- Retained Kun 0.16.0, worker protocol 16, fork schema 3 and all existing K4 guards. No new runtime dependencies.
-
-Current validation and limitations: [VALIDATION](docs/VALIDATION.md). Upgrade instructions: [UPGRADING](docs/UPGRADING.md). Earlier history remains in previously delivered source packages.
+- Add three example runtime profiles: news2douyin, people-search, video-build.
+- Add a stdlib Python CLI and uniform per-directory entry points for inspect, validate, prepare, pack, build and doctor.
+- Generate standalone contexts with fixed Codex versions, profile manifests and SHA256SUMS; compatible with the existing ZIP build UI.
+- Add optional Wigolo 0.2.1 stdio MCP integration and Agent-Reach at a pinned user-selected fork commit.
+- Include task Skills, source-evidence capture and a real FFmpeg media smoke script.
+- Keep server behavior, Kun 0.16.0 and worker protocol 16 unchanged; Docker deployment and live search require environment acceptance.

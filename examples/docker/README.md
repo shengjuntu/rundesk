@@ -1,5 +1,7 @@
 # RunDesk 基础 Codex 镜像
 
+如需新闻采集、人物研究或视频处理，请先使用 [典型配置目录](../README.md) 和统一 CLI。以下模板继续作为基础配置保留。
+
 固定目录：`examples/docker/`。这是 RunDesk 自有运行模板，不是 OpenAI 发布的服务镜像。
 它复用 Node Debian 基础镜像，安装指定版本的官方 `@openai/codex`，并提供 Python 3、venv、Git、curl、ripgrep。
 Codex 安装参考：https://developers.openai.com/codex/cli/

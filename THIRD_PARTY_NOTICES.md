@@ -13,3 +13,7 @@ PiG browser assets, Node extensions and full runtime are not included. Thanks to
 ## HarnessRouter design reference
 
 HarnessRouter/UHP informed the application-to-backend abstraction and capability documentation. No source, schemas or assets from that project are distributed here. See [UPSTREAM](docs/UPSTREAM.md) for the scope of the reference and acknowledgements.
+
+## Optional runtime profile dependencies
+
+The example Docker recipes can install Agent-Reach from the user-selected MIT fork at a fixed commit, or Wigolo 0.2.1 under AGPL-3.0-only. These are optional external tools, not incorporated RunDesk source. Built images must retain each component's notices and applicable corresponding-source provisions. Exa/Jina are hosted services. See the [profile dependency notices](examples/_shared/THIRD_PARTY.md) and [Wigolo assessment](examples/news2douyin/WIGOLO.md).

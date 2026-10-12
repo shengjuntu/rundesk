@@ -1,0 +1,4 @@
+interface:
+  display_name: "公开职业资料研究"
+  short_description: "Create grounded, reviewable outputs with this runtime profile"
+  default_prompt: "Use $research-public-people to complete the task and save its evidence and artifacts."

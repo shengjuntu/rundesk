@@ -1,0 +1,326 @@
+#!/usr/bin/env python3
+"""RunDesk profile catalog and build-context compiler. Python 3.10+, stdlib only."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import uuid
+import zipfile
+
+ROOT = Path(__file__).resolve().parent
+VERSION = "1.0.0"
+PROFILE_IDS = tuple(sorted(p.parent.name for p in ROOT.glob("*/profile.json") if re.fullmatch(r"[a-z0-9-]+", p.parent.name)))
+EXACT = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?\Z")
+IMAGE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/:@-]{0,240}\Z")
+
+
+class ProfileError(Exception):
+    pass
+
+
+def read_json(path):
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def dump(value):
+    print(json.dumps(value, ensure_ascii=False, indent=2))
+
+
+def load_profile(name):
+    if name not in PROFILE_IDS:
+        raise ProfileError("Unknown profile: " + name)
+    value = read_json(ROOT / name / "profile.json")
+    if value.get("schemaVersion") != 1 or value.get("id") != name:
+        raise ProfileError("Invalid profile identity or schema")
+    if value.get("runtime") != "codex-docker":
+        raise ProfileError("Unsupported runtime")
+    if set(value) != {"schemaVersion", "id", "version", "title", "description", "runtime", "searchBackends", "defaultSearchBackend", "aptPackages", "pythonPackages", "skill", "tools", "outputs", "resources", "optionalComponents"}:
+        raise ProfileError("Unknown or missing profile fields")
+    for key in ("version", "title", "description", "skill", "defaultSearchBackend"):
+        if not isinstance(value[key], str) or not value[key]:
+            raise ProfileError("Expected nonempty string: " + key)
+    for key in ("searchBackends", "aptPackages", "pythonPackages", "tools", "outputs", "optionalComponents"):
+        if not isinstance(value[key], list) or not all(isinstance(x, str) and x for x in value[key]) or len(set(value[key])) != len(value[key]):
+            raise ProfileError("Expected unique string list: " + key)
+    if not set(value["optionalComponents"]) <= {"agent-reach"}:
+        raise ProfileError("Unknown optional component")
+    resource = value["resources"]
+    if not isinstance(resource, dict) or not {"cpus", "memoryMB", "network"} <= set(resource) or not set(resource) <= {"cpus", "memoryMB", "wigoloMemoryMB", "network"}:
+        raise ProfileError("Invalid resource fields")
+    for key in ("cpus", "memoryMB", "wigoloMemoryMB"):
+        if key in resource and (type(resource[key]) is not int or resource[key] < (1 if key == "cpus" else 256)):
+            raise ProfileError("Invalid resource limit: " + key)
+    if resource["network"] not in ("bridge", "none"):
+        raise ProfileError("Invalid network mode")
+    if not EXACT.fullmatch(value["version"]):
+        raise ProfileError("Profile version must be exact")
+    if not re.fullmatch(r"[a-z0-9-]{1,64}", value["skill"]):
+        raise ProfileError("Invalid skill name")
+    if not set(value["searchBackends"]) <= {"exa", "wigolo", "none"} or value["defaultSearchBackend"] not in value["searchBackends"]:
+        raise ProfileError("Invalid search backends")
+    for package in value["aptPackages"]:
+        if not re.fullmatch(r"[a-z0-9][a-z0-9+.-]*", package):
+            raise ProfileError("Invalid apt package")
+    pins = read_json(ROOT / "_shared" / "dependencies.json")
+    for package in value["pythonPackages"]:
+        if package not in pins["python"]:
+            raise ProfileError("Missing pinned Python package: " + package)
+    for package, pin in pins["python"].items():
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+", package) or not re.fullmatch(r"[0-9]+(?:\.[0-9]+)+(?:[a-z0-9.-]+)?", pin):
+            raise ProfileError("Invalid Python dependency pin")
+    if not EXACT.fullmatch(pins["wigolo"]["version"]):
+        raise ProfileError("Invalid Wigolo version")
+    if not re.fullmatch(r"[0-9a-f]{40}", pins["agentReach"]["commit"]):
+        raise ProfileError("Agent-Reach needs an exact commit")
+    if pins["agentReach"]["repository"] != "https://github.com/silently0801/agent-reach":
+        raise ProfileError("Review a new Agent-Reach source before changing repository")
+    # Copy only declared skill files; never sweep credentials or a working tree.
+    skill = ROOT / name / "skills" / value["skill"]
+    for rel in ("SKILL.md", "agents/openai.yaml"):
+        path = skill / rel
+        if not path.is_file() or path.is_symlink() or any(p.is_symlink() for p in [skill, skill.parent, path.parent]):
+            raise ProfileError("Missing file or symlink in skill: " + str(path))
+    front = (skill / "SKILL.md").read_text(encoding="utf-8")
+    if not front.startswith("---\nname: " + value["skill"] + "\n") or "\ndescription: " not in front:
+        raise ProfileError("Invalid skill frontmatter")
+    return value
+
+
+def resolve(profile, backend=None, agent_reach=False):
+    backend = backend or profile["defaultSearchBackend"]
+    if backend not in profile["searchBackends"]:
+        raise ProfileError("Search backend is not supported by this profile")
+    if agent_reach and "agent-reach" not in profile["optionalComponents"]:
+        raise ProfileError("Agent-Reach is not offered by this profile")
+    return {"searchBackend": backend, "agentReach": bool(agent_reach)}
+
+
+def write(path, text, executable=False):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8", newline="\n")
+    path.chmod(0o755 if executable else 0o644)
+
+
+def seed_config(selection):
+    lines = ['cli_auth_credentials_store = "file"', 'check_for_update_on_startup = false', '']
+    if selection["searchBackend"] != "none":
+        lines += ['[mcp_servers.exa]', 'url = "https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa,web_search_advanced_exa"',
+                  'enabled = ' + str(selection["searchBackend"] == "exa").lower(),
+                  'startup_timeout_sec = 30', 'tool_timeout_sec = 90',
+                  'enabled_tools = ["web_search_exa", "web_fetch_exa", "web_search_advanced_exa"]', '']
+    if selection["searchBackend"] == "wigolo":
+        lines += ['[mcp_servers.wigolo]', 'command = "/usr/local/bin/rundesk-wigolo"', 'args = ["mcp"]',
+                  'startup_timeout_sec = 120', 'tool_timeout_sec = 180',
+                  'enabled_tools = ["search", "fetch", "extract", "crawl", "cache", "find_similar"]', '']
+    return "\n".join(lines)
+
+
+def render(profile, selection, codex_version, base_image, destination):
+    if not codex_version or not EXACT.fullmatch(codex_version):
+        raise ProfileError("Pass --codex-version X.Y.Z using an exact, deployed Codex release")
+    if not IMAGE.fullmatch(base_image):
+        raise ProfileError("Invalid base image reference")
+    pins = read_json(ROOT / "_shared" / "dependencies.json")
+    pkgs = sorted(set(["ca-certificates", "git", "curl", "ripgrep", "python3", "python3-venv"] + profile["aptPackages"]))
+    if selection["searchBackend"] == "wigolo":
+        pkgs += ["g++", "make"]  # native Node dependencies may need compilation
+    requirements = [p + "==" + pins["python"][p] for p in profile["pythonPackages"]]
+    if selection["agentReach"]:
+        a = pins["agentReach"]
+        requirements += ["agent-reach @ " + a["repository"] + "/archive/" + a["commit"] + ".zip"]
+    write(destination / "requirements.txt", "\n".join(requirements) + "\n")
+    write(destination / "seed/config.toml", seed_config(selection))
+    skill = profile["skill"]
+    for rel in ("SKILL.md", "agents/openai.yaml"):
+        write(destination / "skills" / skill / rel, (ROOT / profile["id"] / "skills" / skill / rel).read_text(encoding="utf-8"))
+    for filename in ("profile_doctor.py", "read_web.py", "video_smoke.py", "rundesk-wigolo"):
+        source = ROOT / "_shared" / filename
+        write(destination / "tools" / filename, source.read_text(encoding="utf-8"), executable=True)
+    resolved = {"schemaVersion": 1, "generatorVersion": VERSION, "profile": profile,
+                "selection": selection, "codexVersion": codex_version, "baseImage": base_image,
+                "dependencies": pins, "validation": {"imageBuilt": False, "modelTested": False, "networkTested": False}}
+    write(destination / "profile.lock.json", json.dumps(resolved, ensure_ascii=False, indent=2) + "\n")
+    labels = {"org.opencontainers.image.title": "RunDesk " + profile["id"],
+              "org.opencontainers.image.version": profile["version"],
+              "io.rundesk.profile": profile["id"], "io.rundesk.profile.schema": "1",
+              "io.rundesk.codex.version": codex_version,
+              "io.rundesk.capabilities.tools": ", ".join(profile["tools"] + (["agent-reach"] if selection["agentReach"] else [])),
+              "io.rundesk.capabilities.skills": skill,
+              "io.rundesk.capabilities.mcp": selection["searchBackend"]}
+    lines = ["# Generated by examples/profiles.py; inspect profile.lock.json before building.",
+             "FROM " + base_image, "ARG CODEX_VERSION=" + codex_version]
+    lines += ["LABEL " + k + "=" + json.dumps(v, ensure_ascii=False) for k, v in labels.items()]
+    lines += ["RUN apt-get update && apt-get install -y --no-install-recommends " + " ".join(pkgs) + " && rm -rf /var/lib/apt/lists/*",
+              'RUN npm install --global "@openai/codex@${CODEX_VERSION}" && npm cache clean --force && codex --version && codex app-server --help >/dev/null',
+              "RUN python3 -m venv /opt/rundesk-python",
+              "ENV PATH=\"/opt/rundesk-python/bin:${PATH}\" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1",
+              "COPY requirements.txt /opt/rundesk-profile/requirements.txt"]
+    if requirements:
+        lines += ["RUN python3 -m pip install --no-cache-dir -r /opt/rundesk-profile/requirements.txt"]
+    if selection["searchBackend"] == "wigolo":
+        lines += ["RUN npm install --prefix /opt/wigolo --omit=dev --save-exact wigolo@" + pins["wigolo"]["version"] + " && npm cache clean --force",
+                  "ENV PLAYWRIGHT_BROWSERS_PATH=/opt/wigolo-browsers",
+                  "RUN node /opt/wigolo/node_modules/playwright/cli.js install --with-deps chromium && chmod -R a+rX /opt/wigolo-browsers && rm -rf /var/lib/apt/lists/*",
+                  "COPY tools/rundesk-wigolo /usr/local/bin/rundesk-wigolo",
+                  "RUN chmod 755 /usr/local/bin/rundesk-wigolo"]
+    # The admin skill path survives RunDesk's runtime HOME mount; no duplicate skills.
+    lines += ["COPY skills/ /etc/codex/skills/", "COPY seed/ /opt/rundesk-seed/", "COPY tools/ /opt/rundesk-profile/tools/",
+              "COPY profile.lock.json /opt/rundesk-profile/profile.lock.json",
+              "COPY THIRD_PARTY.md /opt/rundesk-profile/THIRD_PARTY.md",
+              "RUN mkdir -p /opt/rundesk/bin && chmod -R a+rX /opt/rundesk-profile /etc/codex/skills /opt/rundesk-seed",
+              "USER node", "WORKDIR /home/node", 'CMD ["codex", "app-server"]', ""]
+    write(destination / "Dockerfile", "\n".join(lines))
+    write(destination / ".dockerignore", "**\n!Dockerfile\n!requirements.txt\n!profile.lock.json\n!THIRD_PARTY.md\n!seed/\n!seed/**\n!skills/\n!skills/**\n!tools/\n!tools/**\n")
+    write(destination / "THIRD_PARTY.md", (ROOT / "_shared/THIRD_PARTY.md").read_text(encoding="utf-8"))
+    write(destination / "README.md", "# " + profile["title"] + "\n\n" + profile["description"] + "\n\n"
+          "This is a generated Docker build context, not a built image. Dependencies are downloaded during build.\n"
+          "The Codex version is fixed in Dockerfile; no build arguments are needed for RunDesk WebUI.\n"
+          "Upload this ZIP with Dockerfile at its root, build, then explicitly select the image for the application.\n"
+          "Skills live in /etc/codex/skills; seed/config.toml initializes missing config only. Existing config is not merged.\n"
+          "Use a new environment or apply the selected MCP configuration explicitly. Configure Codex authentication at runtime.\n"
+          "Run python3 /opt/rundesk-profile/tools/profile_doctor.py --json inside the deployed container.\n"
+          "Wigolo, when selected, uses writable HOME/.wigolo; no anonymous VOLUME or Docker socket is required.\n")
+    files = sorted(p for p in destination.rglob("*") if p.is_file())
+    write(destination / "SHA256SUMS", "".join(hashlib.sha256(p.read_bytes()).hexdigest() + "  " + p.relative_to(destination).as_posix() + "\n" for p in files))
+    return resolved
+
+
+def docker_prefix():
+    exe = shutil.which("docker")
+    if not exe:
+        raise ProfileError("Docker CLI is unavailable; prepare/pack work without Docker")
+    host = os.environ.get("RUNDESK_DOCKER_HOST")
+    return [exe] + (["--host", host] if host else [])
+
+
+def command(argv, timeout=30):
+    # No shell expansion. stdout is reserved for the CLI's JSON result.
+    try:
+        p = subprocess.run(argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=timeout)
+        return {"ok": p.returncode == 0, "exitCode": p.returncode, "output": p.stdout[-16000:]}
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return {"ok": False, "error": str(e)}
+
+
+def doctor(profile, image=None):
+    result = {"schemaVersion": 1, "profileId": profile["id"], "checks": [], "modelTested": False, "networkTested": False}
+    try:
+        prefix = docker_prefix()
+        probe = command(prefix + ["info", "--format", "{{json .ServerVersion}}"], 15)
+    except ProfileError as e:
+        probe = {"ok": False, "error": str(e)}
+    result["checks"].append({"name": "docker", **probe})
+    if probe["ok"] and image:
+        if not IMAGE.fullmatch(image):
+            raise ProfileError("Invalid image reference")
+        identity = command(prefix + ["image", "inspect", "--format", '{{index .Config.Labels "io.rundesk.profile"}}', image], 15)
+        identity["ok"] = identity["ok"] and identity.get("output", "").strip() == profile["id"]
+        result["checks"].append({"name": "profile-identity", **identity})
+        if not identity["ok"]:
+            result.update(ready=False, scope="image identity mismatch; runtime not executed")
+            return result
+        name = "rundesk-profile-check-" + uuid.uuid4().hex
+        try:
+            result["checks"].append({"name": "image-runtime", **command(prefix + ["run", "--name", name, "--rm", "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true", "--user", "1000:1000", "--tmpfs", "/tmp:rw,nosuid,nodev,size=512m,mode=1777", "--env", "HOME=/tmp", "--env", "CODEX_HOME=/tmp/codex", "--entrypoint", "python3", image, "/opt/rundesk-profile/tools/profile_doctor.py", "--json"], 120)})
+        finally:
+            # Only this invocation's uniquely named probe; also clean up after
+            # a client timeout, which alone does not stop a daemon-side container.
+            command(prefix + ["rm", "--force", name], 15)
+    result["ready"] = all(c["ok"] for c in result["checks"])
+    result["scope"] = "host Docker availability" if not image else "offline image runtime; no model, MCP handshake or live search"
+    return result
+
+
+def parser():
+    p = argparse.ArgumentParser(description=__doc__)
+    sub = p.add_subparsers(dest="command", required=True)
+    l = sub.add_parser("list"); l.add_argument("--json", action="store_true")
+    for verb in ("inspect", "validate", "prepare", "pack", "build", "doctor"):
+        s = sub.add_parser(verb); s.add_argument("profile", choices=PROFILE_IDS); s.add_argument("--json", action="store_true")
+        s.add_argument("--search-backend", choices=["exa", "wigolo", "none"])
+        s.add_argument("--with-agent-reach", action="store_true")
+        if verb in ("prepare", "pack", "build"):
+            s.add_argument("--codex-version", required=True)
+            s.add_argument("--base-image", default="node:22-bookworm-slim")
+        if verb in ("prepare", "pack"):
+            s.add_argument("--output", required=True)
+        if verb in ("build", "doctor"):
+            s.add_argument("--image")
+        if verb == "build":
+            s.add_argument("--timeout", type=int, default=1800)
+    return p
+
+
+def main(argv=None, default_profile=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if default_profile and argv and argv[0] not in ("list", "-h", "--help"):
+        argv.insert(1, default_profile)
+    args = parser().parse_args(argv)
+    try:
+        if args.command == "list":
+            dump({"schemaVersion": 1, "generatorVersion": VERSION, "items": [load_profile(x) for x in PROFILE_IDS]}); return 0
+        profile = load_profile(args.profile)
+        selection = resolve(profile, args.search_backend, args.with_agent_reach)
+        if args.command == "inspect":
+            dump({"schemaVersion": 1, "profile": profile, "selection": selection, "dependencies": read_json(ROOT / "_shared/dependencies.json")}); return 0
+        if args.command == "validate":
+            dump({"schemaVersion": 1, "valid": True, "profileId": profile["id"], "selection": selection, "scope": "catalog and skill files; no Docker or network"}); return 0
+        if args.command == "doctor":
+            result = doctor(profile, args.image); dump(result); return 0 if result["ready"] else 1
+        output = Path(args.output).expanduser().absolute() if hasattr(args, "output") else None
+        if output and (output.exists() or output.is_symlink()):
+            raise ProfileError("Output exists; choose a new path: " + str(output))
+        if output:
+            output.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix="rundesk-profile-", dir=str(output.parent) if output else None) as tmp:
+            context = Path(tmp) / "context"; context.mkdir()
+            render(profile, selection, args.codex_version, args.base_image, context)
+            if args.command == "prepare":
+                context.rename(output)
+                dump({"schemaVersion": 1, "profileId": profile["id"], "output": str(output), "built": False}); return 0
+            if args.command == "pack":
+                packed = Path(tmp) / "context.zip"
+                with zipfile.ZipFile(packed, "w", zipfile.ZIP_DEFLATED) as z:
+                    for f in sorted(p for p in context.rglob("*") if p.is_file()):
+                        entry = zipfile.ZipInfo(f.relative_to(context).as_posix(), (2020, 1, 1, 0, 0, 0))
+                        entry.compress_type = zipfile.ZIP_DEFLATED
+                        entry.create_system = 3
+                        entry.external_attr = (0o100755 if f.stat().st_mode & 0o111 else 0o100644) << 16
+                        z.writestr(entry, f.read_bytes())
+                # Exclusive create: never replace an archive created concurrently.
+                with output.open("xb") as dest, packed.open("rb") as source:
+                    shutil.copyfileobj(source, dest)
+                dump({"schemaVersion": 1, "profileId": profile["id"], "output": str(output), "sha256": hashlib.sha256(output.read_bytes()).hexdigest(), "bytes": output.stat().st_size, "built": False}); return 0
+            image = args.image or "rundesk-" + profile["id"] + ":" + profile["version"] + "-codex-" + args.codex_version
+            if not IMAGE.fullmatch(image) or not 1 <= args.timeout <= 7200:
+                raise ProfileError("Invalid image or build timeout (1..7200 seconds)")
+            prefix = docker_prefix()
+            if not command(prefix + ["info"], 15)["ok"]:
+                raise ProfileError("Docker Engine is unavailable")
+            # Stream build output to stderr and track the immutable image ID.
+            iidfile = Path(tmp) / "image.id"
+            try:
+                p = subprocess.run(prefix + ["build", "--iidfile", str(iidfile), "-t", image, str(context)], stdout=sys.stderr, stderr=sys.stderr, timeout=args.timeout)
+            except subprocess.TimeoutExpired:
+                raise ProfileError("Build timed out; Docker daemon may retain work/cache. Inspect before retrying.")
+            if p.returncode or not iidfile.exists():
+                raise ProfileError("Docker build failed; no image was activated")
+            iid = iidfile.read_text().strip()
+            if not re.fullmatch(r"sha256:[0-9a-f]{64}", iid):
+                raise ProfileError("Docker returned an invalid image ID")
+            checks = doctor(profile, iid)
+            dump({"schemaVersion": 1, "profileId": profile["id"], "image": image, "imageId": iid, "built": True, "activated": False, "doctor": checks})
+            return 0 if checks["ready"] else 1
+    except (ProfileError, OSError, ValueError, KeyError, TypeError) as e:
+        print(json.dumps({"schemaVersion": 1, "error": str(e)}, ensure_ascii=False), file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

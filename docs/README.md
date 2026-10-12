@@ -21,3 +21,5 @@
 - 工作台：[对话](CONVERSATION.md)、[文件库](PERSONAL-FILES.md)、[协作](COLLABORATION.md)。
 
 机器契约 `/api/v1/openapi.json` 同时包含应用与管理 API；请依据权限标记和应用 API 文档选择接口。
+
+典型运行配置与统一 CLI：[examples](../examples/README.md)。Wigolo 评估：[配置适配说明](../examples/news2douyin/WIGOLO.md)。
