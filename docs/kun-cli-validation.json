@@ -1,12 +1,15 @@
 {
-  "version": "0.43.0",
-  "rundesk": "RunDesk 0.43.0",
-  "kun": "Kun 0.15.0",
+  "version": "0.44.0",
+  "passed": true,
+  "rundesk": "RunDesk 0.44.0",
+  "kun": "Kun 0.16.0",
   "hello": {
     "capabilities": {
       "argumentValidation": true,
       "artifactRules": true,
+      "bash": true,
       "budgets": true,
+      "codingTools": true,
       "conditionalBreakpoints": true,
       "debugQueries": true,
       "diagnosticSession": true,
@@ -34,10 +37,9 @@
       "workspaceFixtures": true
     },
     "engine": "kun",
-    "engineVersion": "0.15.0",
-    "protocolVersion": 15
+    "engineVersion": "0.16.0",
+    "protocolVersion": 16
   },
   "oldProtocolRejected": true,
-  "passed": true,
-  "scope": "Linux CLI, hello/EOF, protocol 14 rejection; Windows cross-compilation only"
+  "scope": "Linux CLI, hello/EOF, protocol 15 rejection; Windows cross-compilation only"
 }

@@ -27,6 +27,7 @@ func (m *Manager) kunDiagnosticRequest(s Session, w Workspace, in Input, cfg p.C
 		return p.Start{}, err
 	}
 	cfg.AllowWrite = false
+	cfg.AllowBash = false
 	cfg.PauseBeforeModel = false
 	cfg.Debug = p.DebugPolicy{}
 	cfg.SystemPrompt = "" // No task-specific instructions or project notes in diagnostics.

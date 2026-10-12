@@ -1,0 +1,14 @@
+{
+  "version": "0.44.0",
+  "passed": true,
+  "scope": "Linux real host and Kun worker, local model fixture and installed Python3; no OS sandbox, remote provider or Windows runtime claim",
+  "modelCalls": 7,
+  "checks": [
+    "seven real coding tools: write/edit/find/grep/list/bash/read; Python execution yields 6; no execution before approval",
+    "rejected Bash leaves no file",
+    "timeout has durable structured result and null exit code",
+    "cancellation cleans an ordinary child process before delayed file write",
+    "fixture evaluation rejects host Bash",
+    "completed tool and approval evidence survives host restart without reexecution"
+  ]
+}

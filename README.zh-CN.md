@@ -10,6 +10,14 @@
 
 ![RunDesk 对话界面](docs/screenshots/0.16.0/chat-zh.png)
 
+## PiG 核心编程工具对齐（0.44.0）
+
+Kun 补齐七类核心编程动作：读、写、精确编辑、列目录、grep、find 和可选 Bash。支持写出生成代码，经已安装的解释器或编译器执行并读取结果；命令经过宿主权限授权、持久审批、超时/取消、有界输出和动作账本，K4 回退复用已完成的相同副作用。
+
+两个程序一起升级：**Kun 0.16.0 / worker v16 / fork schema 3**。Bash 使用宿主账户权限，不提供 OS 沙盒；Kun 容器托管仍待实现。详见 [功能对照与使用](docs/KUN-PIG-CORE.md)、[发布记录](docs/RELEASE-0.44.0.md)、[验收](docs/KUN-VALIDATION.md) 和 [完成度](docs/KUN-PROGRESS.md)。
+
+感谢 [MichaelKinsy/PiG](https://github.com/MichaelKinsy/PiG) 及其贡献者、Mario Zechner / Pi。Kun 按既定方向选择性引用源码并独立发展，不是完整 PiG 分叉。固定来源、已复制文件与 MIT 许可见 [UPSTREAM](docs/UPSTREAM.md)。
+
 ## K4 独立评测目录（0.43.0）
 
 案例可声明固定输入文件，每次动态、快速和独立验证都在新目录初始化，避免前一次产物影响后一次评分。预览不读写文件，已有目录不会覆盖或重置；初始化证据纳入必需评分，回退继续沿用原目录与动作账本。

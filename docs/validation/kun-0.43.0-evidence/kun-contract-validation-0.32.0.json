@@ -1,0 +1,10 @@
+{
+  "version": "0.32.0",
+  "passed": true,
+  "javascriptFiles": 63,
+  "openapiPaths": 150,
+  "openapiOperations": 180,
+  "hybridAdminOperations": 5,
+  "parametersUnique": true,
+  "dependenciesUnchanged": true
+}

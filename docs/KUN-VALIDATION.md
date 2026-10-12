@@ -1,53 +1,46 @@
-# Kun 0.15 / RunDesk 0.43.0 验证记录
+# Kun 0.16 / RunDesk 0.44.0 验证记录
 
-验证日期：2026-10-09（北京时间，原始日志使用 UTC）。Go 1.25.12；Kun 0.15.0 / worker v15 / fork schema 3。最终八组发布回归全部退出 0，交付代码与回归源码指纹一致。
+验证日期：2026-10-11（北京时间，日志为 UTC）。Go 1.25.12；Kun 0.16.0 / worker v16 / fork schema 3。八组本地发布回归全部退出 0；交付源码与回归指纹一致。没有调用付费远程模型。
 
-| 项目 | 已确认结果 |
+| 检查 | 结果 |
 | --- | --- |
-| 全量 Go | 所有包通过，86.028s |
-| 静态与竞态 | go vet 全包通过；app/kun/store 专项 race 通过，15.988s，包含固定文件、产物与评分 |
-| 构建 | Linux 两程序构建；CLI、hello/EOF、workspaceFixtures 能力和协议 14 拒绝通过；Windows 两程序交叉编译通过 |
-| 界面 | 84 个 JS/CJS 语法检查、12 组 Node DOM 交互通过 |
-| 既有 HTTP | 真实宿主与 worker、本地模型夹具，Hybrid/假设/回复评分通过，6 次模型调用 |
-| K4 HTTP | 原来源/验证/应用流程及产物拒绝回归通过，共 48 次模型调用 |
-| 独立目录 HTTP | 来源、两例快速验证、正常和回退各 8 次对照、停止/重启、空目录与拒绝覆盖；共 24 次模型调用 |
-| 接口 | 180 paths / 216 operations；无新路由；引用解析、参数唯一性、管理员边界、幂等头及可选字段检查通过 |
-| 兼容 | 旧任务案例、预览、守卫和评分的可选空字段保留序列化；既有报告指纹测试通过；go.mod/go.sum 不变 |
+| 全量 Go | 所有包通过，77.56 秒；包含新增 Bash、编辑/搜索、Host 权限和原 K4 测试 |
+| 静态与竞态 | vet 全包通过；专项 race 通过，40.972 秒，包含 Bash/搜索/编辑及快速回退 |
+| 构建与协议 | Linux 两程序；Windows 两程序交叉编译；CLI/hello/EOF/旧协议 15 拒绝，bash/codingTools 能力位通过 |
+| 界面 | 85 个 JS/CJS 语法、12 组 Node DOM 交互通过；Bash 开关、审批和超时配置往返通过 |
+| 新编程 HTTP | 7 次本地模型调用，真实宿主/worker、七工具链与生成 Python 实执行通过 |
+| 既有 HTTP | 评测 6 次、K4 48 次、固定文件目录 24 次本地模型调用；原有通过/拒绝/停止/重启路径通过 |
+| 契约 | 180 paths / 216 operations；本地引用、参数唯一、配置管理员权限、控制的 run/approvals scope、幂等头与可选 Bash 字段通过 |
+| 兼容与依赖 | 引擎/worker 升级拒绝旧执行；既有序列化/指纹回归通过；go.mod/go.sum 未修改 |
 
-## 独立评测目录验收
+## 新增能力的实执行证据
 
-| 场景 | 结果 |
+| 场景 | 观察 |
 | --- | --- |
-| 预览与初始化 | 预览无文件操作/模型调用；来源首读为固定输入，实际目录与开始事件/案例预览一致 |
-| 原项目边界 | 原有 state.txt 和 project-only.txt 保持原样；后者不会复制到新目录；根外路径读取拒绝 |
-| 每例新输入 | 正常配对 8 个运行使用不同目录，每次首读均为该案例固定内容，两组各 4/4 通过 |
-| 快速模式守卫 | 两例独立验证无新增模型调用；混合目录模式拒绝；通过的隔离候选不能晋升共享应用 |
-| 停止与重启 | 停止后第二例不创建目录；第一例完成后改其输出，重启读取评分不变；显式继续跳过已完成身份且不重置文件 |
-| 动态回退 | 4 个快速样本均触发断言回退并通过；回退留在同一目录与产物范围，动态组同样 4/4 通过 |
-| 项目旧文件不能冒充产物 | 空目录案例回复声称 ORIGINAL，但不能读取项目旧文件；缺少预期产物导致 75 分且状态 fail |
-| 已有目录 | 固定目录已存在时运行失败，既有文件不删除、不覆盖；不增加模型调用 |
-| worker 幂等与重开 | 同一 run 重试不重置后改文件；第二个 run 拒绝；重开 journal 后保留原目录/状态；MCP 请求在创建目录前拒绝 |
-| 校验与证据 | 路径越界、大小写重复、文件/目录冲突、数量/字节超限及 NUL 拒绝；预览深拷贝，错误运行或摘要证据保持未知 |
-| 工作台 | 固定文件增删/复制、字面内容、路径校验和勾选开关通过；隔离候选隐藏共享应用启用入口 |
+| 生成代码运行 | write_file 生成 Python → edit_file 改求和输入 → find/grep/list → Bash 运行 → read_file 返回 `6\n`；七工具均成功 |
+| 权限与审批 | workspace-write/read-only 不能启用宿主 Bash；权限收紧后启动拒绝；默认询问且文件在批准前不存在；拒绝/never 不执行；resume 不能代替 approve |
+| Shell 行为 | 管道、重定向、带空格路径、UTF-8、stdout/stderr 分离、非零退出码 7；cwd/export 不跨调用保留，BASH_ENV 不注入 |
+| 有界输出 | stdout/stderr 各产生 100003 字节，持续排空并仅保留各 65536 字节尾部，截断标记和末尾文本正确 |
+| 取消与超时 | 直接工具及实际 HTTP 路径均验证；Linux 普通子进程的延迟文件写入被清理阻止；不保证主动脱组/强杀 worker 情况 |
+| 编辑与文件边界 | 对原文多处匹配；模糊/缺失/重叠失败不改原文件；越界/符号链接、只读写入拒绝；FIFO 不阻塞读/写/编辑 |
+| 搜索 | UTF-8、字面/大小写/简单 glob/行号，匹配限额和截断；跳过二进制/.git；非法路径、正则和取消拒绝 |
+| Hybrid 与 K4 | Bash Hybrid 录制回放不创建文件；快速路径追加后强制断言回退，模型再次发出相同命令时复用账本，文件仅追加一次 |
+| 固定目录与重启 | 启用 Bash 时不能启动独立文件目录评测；完成的工具/审批证据重启后不变，不重执行 |
 
-目录对照的本地模型夹具中，正常动态组共 8 次模型调用、快速组 0 次；强制回退的动态组 8 次、快速组 4 次。这只验证调度、计量和回退机制，不代表真实模型节省或业务质量结论。
+以上是确定性本地模型驱动的真实进程测试，证明执行链路及约束，不代表远程模型会稳定规划这些步骤或业务收益。Windows 仅交叉编译；Node DOM 不代替浏览器布局、焦点与移动端验收。OS 沙盒、Kun Docker 托管、长文件分页、交互/持久 Shell 与实时输出流尚未实现。
 
-以上使用真实本机宿主和 worker 子进程，以及本地确定性模型夹具。Windows 仅交叉编译；界面测试使用 Node DOM，未完成真实浏览器布局、焦点或移动端验收。
+## 复验与原始记录
 
-## 原始记录与复验
+```bash
+python3 scripts/validate-kun.py --go /path/to/go --output validation/kun-0.44.0-recheck
+```
 
-最终汇总：[validation/kun-0.43.0-final/summary.json](validation/kun-0.43.0-final/summary.json)。同目录保留 go-test、go-vet、go-race、build、windows、syntax、ui、http 八份日志。
+需要 Go 1.25.12、Node、Python3、Bash；race 需要 C 编译器。`kun-coding-http-test.cjs` 使用本机 Python3，所需解释器由执行环境提供。
 
-- [独立目录 HTTP](kun-fixtures-http-validation.json)、[K4 HTTP](kun-k4-http-validation.json)、[产物 HTTP](kun-artifacts-http-validation.json)、[对照计量](kun-benchmarks-http-validation.json)
-- [任务集界面](kun-task-sets-ui-validation.json)、[K4 界面](kun-k4-ui-validation.json)、[CLI/协议](kun-cli-validation.json)、[接口契约](kun-contract-validation.json)、[构建汇总](kun-build-validation.json)
-- 集成检查保留于 `validation/kun-0.43.0-integration/`；0.42 顶层 JSON 证据副本保留于 `validation/kun-0.42.0-evidence/`，历史原始日志继续保留。
+- [最终八组汇总](validation/kun-0.44.0-final/summary.json)，同目录保存每组原始日志。
+- [编程 HTTP](kun-coding-http-validation.json)、[评测 HTTP](kun-evaluation-http-validation.json)、[K4 HTTP](kun-k4-http-validation.json)、[独立目录 HTTP](kun-fixtures-http-validation.json)。
+- [CLI](kun-cli-validation.json)、[契约](kun-contract-validation.json)、[构建](kun-build-validation.json)、[配置界面](kun-harness-ui-validation.json)。
+- 补充核对脚本 [verify-0.44.0.py](validation/verify-0.44.0.py)，在本版最终回归结束后核对协议/契约及源码指纹。
+- 0.43 顶层证据保留于 `validation/kun-0.43.0-evidence/`，旧验证说明为 [KUN-VALIDATION-0.43.0](KUN-VALIDATION-0.43.0.md)，此前各版日志继续保留。
 
-复验：`python3 scripts/validate-kun.py --output validation/kun-local-1`；Go 不在 PATH 时指定 `--go /absolute/path/to/go`。需要 Python 3、Node、go.mod 指定 Go 和 race 所需 C 编译器。每次用新目录；HTTP 必须使用同次成功构建。源码指纹覆盖 cmd/internal/scripts、go.mod/go.sum/Makefile，不含文档和生成记录。
-
-最终源码 SHA256：`dfd38504ffb2d78f578b7f7e718f4027bc754c69a6aace578277e8f9a28cef9f`。
-
-## 尚未验收与未实现
-
-独立目录仅支持内置文件工具，是目录分离而非 OS、进程或网络沙箱；不复制或重置项目，不提供远程副作用隔离。固定输入中已有的文件仍可通过产物规则，不能证明本次新建。
-
-真实 Codex/远程模型/MCP、代表性业务任务集、Windows 执行和生产负载仍需对应环境。项目快照、外部状态隔离、自动留存清理、结构化文件/事实/外部系统裁判、统计推断和可选学习型 JEV 未实现。本地夹具不替代这些范围。
+本版源码指纹：`0f9fa998222ea6b13a85e326de3313839c29b6d6742ed9a141a841ec8296da87`。该指纹覆盖 go.mod/go.sum/Makefile 和 cmd/internal/scripts，不包括验证日志自身。

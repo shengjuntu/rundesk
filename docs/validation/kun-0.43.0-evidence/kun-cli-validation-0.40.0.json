@@ -1,0 +1,41 @@
+{
+  "version": "0.40.0",
+  "rundesk": "RunDesk 0.40.0",
+  "kun": "Kun 0.13.0",
+  "hello": {
+    "capabilities": {
+      "argumentValidation": true,
+      "budgets": true,
+      "conditionalBreakpoints": true,
+      "debugQueries": true,
+      "diagnosticSession": true,
+      "eventEvidence": true,
+      "fastFallback": true,
+      "fastGuards": true,
+      "fastPath": true,
+      "fork": true,
+      "forkHybrid": true,
+      "forkHypothesis": true,
+      "forkLive": true,
+      "harnessComposition": true,
+      "inspect": true,
+      "mcp": true,
+      "mcpApproval": true,
+      "modules": true,
+      "pause": true,
+      "planAct": true,
+      "replayEvents": true,
+      "resumeCheckpoint": true,
+      "runtimeHarness": true,
+      "snapshotDiff": true,
+      "steer": true,
+      "step": true
+    },
+    "engine": "kun",
+    "engineVersion": "0.13.0",
+    "protocolVersion": 13
+  },
+  "oldProtocolRejected": true,
+  "passed": true,
+  "scope": "Linux CLI, hello/EOF, protocol 12 rejection and K4 capabilities; Windows was cross-compiled only"
+}

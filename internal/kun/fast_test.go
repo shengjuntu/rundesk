@@ -15,7 +15,7 @@ import (
 func fastFixture(e *Engine, in p.Start) p.FastProgram {
 	in.Config = in.Config.Normalized()
 	s := p.State{Config: in.Config, Manifest: e.manifest(in), Harness: e.nextHarness(in.Config), ApprovalPolicy: "on-request"}
-	for _, d := range toolDefinitions(in.Config.AllowWrite) {
+	for _, d := range toolDefinitions(in.Config.AllowWrite, in.Config.AllowBash) {
 		s.ToolDefinitions = append(s.ToolDefinitions, p.JSON(d))
 	}
 	return p.FastProgram{Schema: 1, Domain: "file-copy", InputSchema: p.JSON(map[string]any{"type": "object", "required": []string{"domain", "path", "content"}, "properties": map[string]any{"domain": map[string]string{"type": "string"}, "path": map[string]string{"type": "string"}, "content": map[string]string{"type": "string"}}, "additionalProperties": false}), Guard: FastGuardFor(s), Steps: []p.FastInstruction{

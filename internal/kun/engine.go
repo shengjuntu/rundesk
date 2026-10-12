@@ -138,7 +138,7 @@ func (e *Engine) Start(in p.Start) (out p.State, startErr error) {
 		return p.State{}, err
 	}
 	if in.WorkspaceFixture != nil {
-		if in.Resume != nil || in.Fork != nil || in.Diagnostic != nil || len(in.MCP) > 0 || len(in.Skills) > 0 {
+		if in.Resume != nil || in.Fork != nil || in.Diagnostic != nil || len(in.MCP) > 0 || len(in.Skills) > 0 || in.Config.AllowBash {
 			return p.State{}, fmt.Errorf("isolated fixtures require a fresh built-in-file-only run")
 		}
 		var frozen p.WorkspaceFixture
@@ -280,6 +280,9 @@ func (e *Engine) Start(in p.Start) (out p.State, startErr error) {
 		}
 	}
 	prompt := "You are Kun, the RunDesk agent. Use the provided tools when needed. Paths are workspace-relative. Report tool failures honestly.\n" + in.Config.SystemPrompt
+	if in.Config.AllowBash {
+		prompt += "\nThe bash tool runs on the host with the worker account permissions. Each command starts in the project directory with a fresh shell; cd and exports do not persist. Inspect stdout, stderr and exitCode; an error or timeout may have partial effects. File-tool write restrictions do not sandbox Bash."
+	}
 	if in.WorkspaceFixture != nil {
 		prompt += "\nThis is an isolated evaluation directory containing only declared input fixtures. Paths are relative to this directory. Other project files and previous outputs are unavailable."
 	}
@@ -308,7 +311,7 @@ func (e *Engine) Start(in p.Start) (out p.State, startErr error) {
 		e.state.Modules[name] = p.ModuleState{Implementation: version, Phase: "pending", Data: p.JSON(map[string]any{})}
 	}
 	e.state.ApprovalPolicy = in.ApprovalPolicy
-	definitions := toolDefinitions(in.Config.AllowWrite)
+	definitions := toolDefinitions(in.Config.AllowWrite, in.Config.AllowBash)
 	if in.Diagnostic != nil {
 		definitions = diagnosticDefinitions()
 	}
@@ -443,7 +446,7 @@ func (e *Engine) Control(c p.Control) (p.Receipt, error) {
 		receipt.Status = "queued"
 	case "resume", "step":
 		if e.state.Approval != nil {
-			return receipt, fmt.Errorf("MCP tool approval is required; resume/step cannot authorize it")
+			return receipt, fmt.Errorf("Tool approval is required; resume/step cannot authorize it")
 		}
 		if e.state.Status != "paused" {
 			return receipt, fmt.Errorf("run is not paused")
@@ -455,7 +458,7 @@ func (e *Engine) Control(c p.Control) (p.Receipt, error) {
 	case "approve", "reject":
 		a := e.state.Approval
 		if a == nil || a.CallID != c.CallID || a.Decision != "" {
-			return receipt, fmt.Errorf("MCP approval conflict")
+			return receipt, fmt.Errorf("Tool approval conflict")
 		}
 		a.Decision = c.Operation
 		e.state.Status = "running"
@@ -737,7 +740,7 @@ func (e *Engine) loop(ctx context.Context) {
 				}
 				continue
 			}
-			if f := e.state.Fast; f != nil && f.Status == "fallback" && (intent.MCP != nil || intent.Name == "write_file") {
+			if f := e.state.Fast; f != nil && f.Status == "fallback" && (intent.MCP != nil || builtinSideEffect(intent.Name)) {
 				if prior, ok := f.Completed[fastSignature(call)]; ok {
 					failure = e.finishTool(call, intent, toolResult{Output: prior.Output, ReusedFrom: prior.CallID}, "reused", 0)
 					e.mu.Unlock()
@@ -772,15 +775,19 @@ func (e *Engine) loop(ctx context.Context) {
 				}
 				continue
 			}
-			if intent.MCP != nil {
+			if intent.MCP != nil || intent.Name == "bash" {
 				var allowed bool
-				allowed, failure = e.approveMCP(ctx, *intent.MCP, call)
+				approvalTool := p.MCPTool{Server: "builtin", Name: "bash", ApprovalMode: e.state.Config.BashApproval}
+				if intent.MCP != nil {
+					approvalTool = *intent.MCP
+				}
+				allowed, failure = e.approveMCP(ctx, approvalTool, call, intent.MCP==nil)
 				if failure != nil {
 					return
 				}
 				if !allowed {
 					e.mu.Lock()
-					failure = e.finishTool(call, intent, toolResult{Output: "MCP tool was denied by the user or approval policy. No external call was made.", IsError: true}, "declined", 0)
+					failure = e.finishTool(call, intent, toolResult{Output: "Tool was denied by the user or approval policy. No action was executed.", IsError: true}, "declined", 0)
 					e.mu.Unlock()
 					if failure != nil {
 						return

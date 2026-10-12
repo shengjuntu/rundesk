@@ -54,6 +54,7 @@ type KunLiveToolPreview struct {
 }
 type KunLivePreview struct {
 	Workspace      string               `json:"workspace"`
+	AllowBash      bool                 `json:"allowBash,omitempty"`
 	AllowWrite     bool                 `json:"allowWrite"`
 	ApprovalPolicy string               `json:"approvalPolicy"`
 	MCPTools       int                  `json:"mcpTools"`
@@ -194,6 +195,9 @@ func (m *Manager) CreateKunFork(in KunForkInput) (KunForkPreview, error) {
 		if i.Permissions.normalized().Sandbox == "read-only" {
 			cfg.AllowWrite = false
 		}
+		if cfg.AllowBash && i.Permissions.normalized().Sandbox != "danger-full-access" {
+			return failure(409, "kun_bash_permission_changed", "Bash 需要实例完整访问权限")
+		}
 		sk := []Skill{}
 		for _, v := range b.State.Skills {
 			sk = append(sk, Skill{Name: v.Name, Path: v.Path})
@@ -241,7 +245,7 @@ func (m *Manager) CreateKunFork(in KunForkInput) (KunForkPreview, error) {
 		}
 		out = KunForkPreview{ID: id, Title: in.Title, CreatedAt: store.Now(), Origin: origin, TargetSessionID: target.ID, Instruction: in.Instruction, Phase: b.State.Phase, Step: b.State.Step, Pending: len(b.State.Pending), Budget: b.State.Budget, Limits: b.State.Config.Budget, MaxSteps: b.State.Config.MaxSteps, RecordCount: len(b.Records)}
 		if in.Mode == "live" {
-			out.Live = &KunLivePreview{Workspace: workspace, AllowWrite: cfg.AllowWrite, ApprovalPolicy: b.State.ApprovalPolicy, MCPTools: len(b.State.MCPTools), PendingTools: []KunLiveToolPreview{}}
+			out.Live = &KunLivePreview{Workspace: workspace, AllowWrite: cfg.AllowWrite, AllowBash: cfg.AllowBash, ApprovalPolicy: b.State.ApprovalPolicy, MCPTools: len(b.State.MCPTools), PendingTools: []KunLiveToolPreview{}}
 			for _, call := range b.State.Pending {
 				var args any
 				decoder := json.NewDecoder(bytes.NewBufferString(call.Function.Arguments))

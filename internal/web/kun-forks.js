@@ -68,7 +68,7 @@ window.RunDeskKunForks=(()=>{
    if(window.RunDeskKunHypothesis)detail.append(window.RunDeskKunHypothesis.create({preview:p,isActive:()=>alive(previewTicket)&&current?.id===p.id,onCreated:async child=>{if(!alive(previewTicket)||current?.id!==p.id)return;ticket++;current=child;renderPreview(child);notice.textContent='假设预览已固定，核对替换全文后可启动。';await loadList();}}).node);
    if(window.RunDeskKunCompare)detail.append(window.RunDeskKunCompare.create({preview:p,isActive:()=>alive(previewTicket)&&current?.id===p.id}).node);
    if(live){
-    detail.append(el('h4',{},'真实执行范围'),kunFacts([['当前项目工作区',p.live.workspace],['内置文件写入',p.live.allowWrite?'允许':'禁止'],['当前 MCP 工具数',p.live.mcpTools],['审批策略',p.live.approvalPolicy]]),el('p',{class:'help'},'MCP 权限独立于内置文件写入。重新读取当前配置及凭据，重连并核对工具目录；需逐次审批的工具重新询问。参数仅作有界预览，常见密钥字段脱敏，截断内容应在来源快照核对。'));
+    detail.append(el('h4',{},'真实执行范围'),kunFacts([['当前项目工作区',p.live.workspace],['内置文件写入',p.live.allowWrite?'允许':'禁止'],['Bash 宿主命令',p.live.allowBash?'允许（非沙盒）':'禁止'],['当前 MCP 工具数',p.live.mcpTools],['审批策略',p.live.approvalPolicy]]),el('p',{class:'help'},'Bash 和 MCP 权限独立于内置文件写入。重新读取当前配置及凭据，重连并核对工具目录；需逐次审批的工具重新询问。参数仅作有界预览，常见密钥字段脱敏，截断内容应在来源快照核对。'));
     for(const call of p.live.pendingTools||[])detail.append(el('details',{},el('summary',{},call.name+' · '+call.callId),el('pre',{},call.argumentsPreview+(call.truncated?'\n…已截断，请核对来源快照':''))));
     detail.append(el('label',{class:'kun-check'},confirm,'我确认以上工作区、权限和待处理动作，允许真实工具执行及可能重复的副作用'));
    }

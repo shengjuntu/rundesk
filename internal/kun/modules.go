@@ -185,7 +185,13 @@ func (e *Engine) executeAction(ctx context.Context, intent toolIntent, call p.To
 		out, raw, bad, err := e.callMCP(ctx, *intent.MCP, call)
 		return toolResult{Output: out, Raw: raw, IsError: bad}, err
 	}
-	out, err := executeTool(e.workspace, e.state.Config.AllowWrite, call)
+	if call.Function.Name == "bash" {
+		if !e.state.Config.AllowBash || e.state.WorkspaceFixture != nil {
+			return toolResult{Output: "bash is disabled in this run", IsError: true}, nil
+		}
+		return executeBash(ctx, e.workspace, e.state.Config, call)
+	}
+	out, err := executeTool(e.workspace, e.state.Config.AllowWrite, call, ctx)
 	if err != nil {
 		return toolResult{Output: err.Error(), IsError: true}, nil
 	}

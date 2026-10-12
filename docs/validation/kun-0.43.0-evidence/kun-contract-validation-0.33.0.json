@@ -1,0 +1,12 @@
+{
+  "version": "0.33.0",
+  "passed": true,
+  "javascriptFiles": 64,
+  "nodeInteractionSuites": 4,
+  "openapiPaths": 150,
+  "openapiOperations": 180,
+  "uniqueParameters": true,
+  "harnessConfigSchema": true,
+  "dependenciesUnchangedFrom": "0.32.0",
+  "browserAcceptance": "not_run"
+}

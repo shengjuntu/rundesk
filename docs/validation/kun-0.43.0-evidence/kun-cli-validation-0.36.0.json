@@ -1,0 +1,37 @@
+{
+  "version": "0.36.0",
+  "rundesk": "RunDesk 0.36.0",
+  "kun": "Kun 0.11.0",
+  "hello": {
+    "capabilities": {
+      "argumentValidation": true,
+      "budgets": true,
+      "conditionalBreakpoints": true,
+      "debugQueries": true,
+      "diagnosticSession": true,
+      "eventEvidence": true,
+      "fork": true,
+      "forkHybrid": true,
+      "forkLive": true,
+      "harnessComposition": true,
+      "inspect": true,
+      "mcp": true,
+      "mcpApproval": true,
+      "modules": true,
+      "pause": true,
+      "planAct": true,
+      "replayEvents": true,
+      "resumeCheckpoint": true,
+      "runtimeHarness": true,
+      "snapshotDiff": true,
+      "steer": true,
+      "step": true
+    },
+    "engine": "kun",
+    "engineVersion": "0.11.0",
+    "pid": 6,
+    "protocolVersion": 11
+  },
+  "passed": true,
+  "scope": "CLI versions and worker hello/EOF; Debug MCP covered by Go tests"
+}

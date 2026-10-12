@@ -1,11 +1,11 @@
 {
-  "version": "0.43.0",
+  "version": "0.44.0",
   "passed": true,
   "scope": "local host and subprocess fixtures, not business quality evidence",
   "modelCalls": 48,
   "successfulHoldout": {
-    "candidateHash": "3955fe12d5dd8b901d6121f911d071b5a9e08822f9a8b990d29c3fa5df0dcf8a",
-    "candidateId": "f97fd630730d6268541cf402",
+    "candidateHash": "3a86aedab92c1778ced74d0678429d22c179e4b072234628f243ff89066ed52a",
+    "candidateId": "2b468be5884641d82b628216",
     "cases": [
       {
         "artifacts": {
@@ -55,49 +55,49 @@
           "passed": 6,
           "reply": {
             "bytes": 5,
-            "eventId": 33,
+            "eventId": 35,
             "hash": "a46569a5723019a5c28399318e42189bac9da2bcd8d44f4960315c52bc23a99a",
             "sequence": 11,
             "status": "available"
           },
           "results": [
             {
-              "eventId": 34,
+              "eventId": 36,
               "index": 0,
               "kind": "run_completed",
               "reason": "completed",
               "status": "pass"
             },
             {
-              "eventId": 33,
+              "eventId": 35,
               "index": 1,
               "kind": "reply_contains",
               "reason": "matched",
               "status": "pass"
             },
             {
-              "eventId": 34,
+              "eventId": 36,
               "index": 2,
               "kind": "file_exists",
               "reason": "matched",
               "status": "pass"
             },
             {
-              "eventId": 34,
+              "eventId": 36,
               "index": 3,
               "kind": "file_contains",
               "reason": "matched",
               "status": "pass"
             },
             {
-              "eventId": 34,
+              "eventId": 36,
               "index": 4,
               "kind": "file_equals",
               "reason": "matched",
               "status": "pass"
             },
             {
-              "eventId": 34,
+              "eventId": 36,
               "index": 5,
               "kind": "file_sha256",
               "reason": "matched",
@@ -109,11 +109,11 @@
           "total": 6,
           "unknown": 0
         },
-        "evidenceHash": "2fd1f7727bc697f6ce92abd4c23d49f8db604e566b6cb33bc3ca4f986725e51e",
+        "evidenceHash": "6640a0000704d13c8fd25ad79e27b747d5435f5ce8ca58f45b189a3e47ab340f",
         "fastCompleted": true,
-        "planId": "94f91a4a53a6df81c05c7bc4",
+        "planId": "0fd15645f4c3edbeacb63d31",
         "summary": {
-          "activeMillis": 8,
+          "activeMillis": 7,
           "afterSequence": 0,
           "complete": true,
           "eventCount": 12,
@@ -124,10 +124,10 @@
             "revision": 0,
             "version": ""
           },
-          "lastEventId": 34,
+          "lastEventId": 36,
           "lastReply": {
             "characters": 5,
-            "eventId": 33,
+            "eventId": 35,
             "hash": "a46569a5723019a5c28399318e42189bac9da2bcd8d44f4960315c52bc23a99a",
             "sequence": 11,
             "text": "ALPHA",
@@ -139,10 +139,10 @@
           "modelCompletions": 0,
           "planningCalls": 0,
           "reportedTokens": 0,
-          "runId": "2effbec98cdb80a6ea500686",
-          "sessionId": "fdc45b7030384d1be6eaa1e6",
+          "runId": "575885bac3536bb3542384fa",
+          "sessionId": "851987be3c1c16e01c6dd138",
           "status": "completed",
-          "through": 38,
+          "through": 37,
           "tokenUsageComplete": true,
           "tools": [
             {
@@ -273,15 +273,15 @@
           "total": 6,
           "unknown": 0
         },
-        "evidenceHash": "f6cd6aec2561e41420e0e2ab8424b03fbee0b1bf4948b4aa37917c9495303502",
+        "evidenceHash": "00a494ea6d64be89f3d74355bb5b23b44f442f7f2c02f7f9ca4ed47dfea7821e",
         "fastCompleted": true,
-        "planId": "cd835890fb87c663b696d71a",
+        "planId": "1e1d5d1cf83a0c8844fadec8",
         "summary": {
           "activeMillis": 5,
           "afterSequence": 0,
           "complete": true,
           "eventCount": 12,
-          "firstEventId": 24,
+          "firstEventId": 25,
           "harness": {
             "id": "",
             "modules": null,
@@ -303,8 +303,8 @@
           "modelCompletions": 0,
           "planningCalls": 0,
           "reportedTokens": 0,
-          "runId": "9b2b33ce6af8ff79687b3d9f",
-          "sessionId": "febcd9e98ad947267b08a410",
+          "runId": "4f7f743e67b36c4208d489c2",
+          "sessionId": "12e358c58483921a78017e30",
           "status": "completed",
           "through": 45,
           "tokenUsageComplete": true,
@@ -336,20 +336,20 @@
         }
       }
     ],
-    "createdAt": "2026-10-09T02:10:03.132814874Z",
+    "createdAt": "2026-10-11T09:26:12.663714448Z",
     "failed": 0,
-    "hash": "4655c3498bfc8b06799e7a342ec3e01d54e71e5d209602f2b56e63cf89aa5a1a",
-    "id": "173a717cd8d9a529df2e4807",
+    "hash": "56325fba6675769e6cf1c9fe1a59885eecf703bbe3d5075e1703eadcd4f5d035",
+    "id": "3b2227f5e309c24b681b5776",
     "passed": 2,
     "score": 100,
     "status": "pass",
     "total": 2,
     "unknown": 0,
-    "validationId": "0a72d875bf20a3defec5c1da"
+    "validationId": "5d062cc85016c29549dcb0b3"
   },
   "rejectedHoldout": {
-    "candidateHash": "dda09805d0716c31b2f17251fb74978902f5c82491d0e7029428d06dd80c39c3",
-    "candidateId": "a41f0ca6d3d933b25d617cd4",
+    "candidateHash": "03389bd9ac9017c2dbf1cfdf81a0e6eadf5573068e2dfc28da8c1fb0bb8008dd",
+    "candidateId": "e68a1ff4983393694bc7ab18",
     "cases": [
       {
         "artifacts": {
@@ -405,9 +405,9 @@
           "total": 3,
           "unknown": 0
         },
-        "evidenceHash": "7a2ebbdd21a41daae4fc966132e0c67f40e704ba797c9f40a2487c4109a949a8",
+        "evidenceHash": "709b892e05b19e4bd8479871b26b5ecc227c6ea2958fcfdc53a395aeb4719846",
         "fastCompleted": true,
-        "planId": "0c7befb75995e9cb5e248eda",
+        "planId": "377475fd66476f55843e02c6",
         "summary": {
           "activeMillis": 4,
           "afterSequence": 0,
@@ -435,8 +435,8 @@
           "modelCompletions": 0,
           "planningCalls": 0,
           "reportedTokens": 0,
-          "runId": "2f0b7cf7a20e3ed226227d6f",
-          "sessionId": "2b7fd51fa5efa81e8b3c9c65",
+          "runId": "3f7066a8dbc01570ebfd6319",
+          "sessionId": "9bcef04aabe5dd7e5d13e91a",
           "status": "completed",
           "through": 497,
           "tokenUsageComplete": true,
@@ -519,11 +519,11 @@
           "total": 3,
           "unknown": 0
         },
-        "evidenceHash": "89394d44257b053f9a29248d50f70085659085addc7da65ce3a5be09c6bd76b4",
+        "evidenceHash": "b12eda9325881aa283d98516bd02c895aaea7bb5c81d9c352d3ec130bee735bf",
         "fastCompleted": true,
-        "planId": "9b36e9820720aede50bad248",
+        "planId": "83f97039b9416197cf5f84d0",
         "summary": {
-          "activeMillis": 4,
+          "activeMillis": 3,
           "afterSequence": 0,
           "complete": true,
           "eventCount": 12,
@@ -549,8 +549,8 @@
           "modelCompletions": 0,
           "planningCalls": 0,
           "reportedTokens": 0,
-          "runId": "2d3a81daeb05c2af10336987",
-          "sessionId": "dec49b5a118b04c11dbcac71",
+          "runId": "af913d4cfd4b8396270a986d",
+          "sessionId": "7e1a117f0c6dfc5fbdac648b",
           "status": "completed",
           "through": 511,
           "tokenUsageComplete": true,
@@ -582,16 +582,16 @@
         }
       }
     ],
-    "createdAt": "2026-10-09T02:10:12.823040083Z",
+    "createdAt": "2026-10-11T09:26:22.207720693Z",
     "failed": 2,
-    "hash": "51080d4317a48d8bfd99c6bf390c7ed40b3dea2067ed161b941a14d9fd16ec3d",
-    "id": "d6d598087f2922c94d8af38d",
+    "hash": "786ce5230a9698d7690c9c183f3e1bbf42ee8ab5970d9e5ec60d8a0248b10a78",
+    "id": "9e1c63fbf3ab5d92f2cbc5c9",
     "passed": 0,
     "score": 0,
     "status": "fail",
     "total": 2,
     "unknown": 0,
-    "validationId": "62369b4c8b1a5d2564f24a15"
+    "validationId": "84ad7ec93896d53c35af4885"
   },
   "rejectedComparison": {
     "dynamic": {
@@ -617,11 +617,11 @@
         },
         "runMillis": {
           "count": 4,
-          "max": 10,
-          "mean": 9.5,
-          "min": 9,
+          "max": 7,
+          "mean": 6.75,
+          "min": 6,
           "missing": 0,
-          "total": 38
+          "total": 27
         }
       },
       "passRate": 0,
@@ -652,11 +652,11 @@
         },
         "runMillis": {
           "count": 4,
-          "max": 7,
-          "mean": 5.5,
+          "max": 6,
+          "mean": 4.5,
           "min": 4,
           "missing": 0,
-          "total": 22
+          "total": 18
         }
       },
       "passRate": 0,
@@ -667,29 +667,29 @@
     "pairs": [
       {
         "caseKey": "reject-a",
-        "dynamicPlanId": "19ee802e3b1151524849ee8f",
-        "fastPlanId": "39aeab48ef1bb306fc30ff17",
+        "dynamicPlanId": "9f56e23967813d7566039295",
+        "fastPlanId": "c9998b30cd448598a3322677",
         "outcome": "both_fail",
         "sample": 1
       },
       {
         "caseKey": "reject-b",
-        "dynamicPlanId": "b47186ff99a64564d6ce1e79",
-        "fastPlanId": "575a97d8663c0d0b9e5775f5",
+        "dynamicPlanId": "47a5ab5e1d37ff1361d410d3",
+        "fastPlanId": "f6926fd5e44ac6e1feaf034b",
         "outcome": "both_fail",
         "sample": 1
       },
       {
         "caseKey": "reject-a",
-        "dynamicPlanId": "e881484e75537eeecb7bf9c2",
-        "fastPlanId": "ed2ab304c96eacd2e5caa8ea",
+        "dynamicPlanId": "d682ce0a375a73631143e997",
+        "fastPlanId": "cdb71ccf7480a43952f3cec3",
         "outcome": "both_fail",
         "sample": 2
       },
       {
         "caseKey": "reject-b",
-        "dynamicPlanId": "9bb8be382cc7e80a57a71678",
-        "fastPlanId": "6506e4f31e0459ab4cdb92c8",
+        "dynamicPlanId": "fbc303179f8509581edd4632",
+        "fastPlanId": "4ee09425607ae2a528b7aae6",
         "outcome": "both_fail",
         "sample": 2
       }

@@ -182,7 +182,7 @@ func (e *Engine) resumeLocked(in p.Start, hash string) (p.State, error) {
 	saved.Queued = nil
 	saved.Debug.Pause = nil
 	saved.ToolDefinitions = nil
-	for _, definition := range toolDefinitions(in.Config.AllowWrite) {
+	for _, definition := range toolDefinitions(in.Config.AllowWrite, in.Config.AllowBash) {
 		saved.ToolDefinitions = append(saved.ToolDefinitions, p.JSON(definition))
 	}
 	saved.MCPTools = nil

@@ -1,0 +1,93 @@
+{
+  "version": "0.44.0",
+  "startedAt": "2026-10-11T09:23:07.975561+00:00",
+  "status": "passed",
+  "passed": true,
+  "sourceSHA256": "0f9fa998222ea6b13a85e326de3313839c29b6d6742ed9a141a841ec8296da87",
+  "selectedChecks": [
+    "go-test",
+    "go-vet",
+    "go-race",
+    "build",
+    "windows",
+    "syntax",
+    "ui",
+    "http"
+  ],
+  "goVersion": "go version go1.25.12 linux/amd64",
+  "checks": [
+    {
+      "name": "go-test",
+      "status": "passed",
+      "startedAt": "2026-10-11T09:23:07.981628+00:00",
+      "log": "go-test.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T09:24:25.541965+00:00",
+      "durationSeconds": 77.56
+    },
+    {
+      "name": "go-vet",
+      "status": "passed",
+      "startedAt": "2026-10-11T09:24:25.542669+00:00",
+      "log": "go-vet.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T09:24:30.372466+00:00",
+      "durationSeconds": 4.83
+    },
+    {
+      "name": "go-race",
+      "status": "passed",
+      "startedAt": "2026-10-11T09:24:30.372933+00:00",
+      "log": "go-race.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T09:25:11.344757+00:00",
+      "durationSeconds": 40.972
+    },
+    {
+      "name": "build",
+      "status": "passed",
+      "startedAt": "2026-10-11T09:25:11.345176+00:00",
+      "log": "build.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T09:25:28.994635+00:00",
+      "durationSeconds": 17.649
+    },
+    {
+      "name": "windows",
+      "status": "passed",
+      "startedAt": "2026-10-11T09:25:28.995204+00:00",
+      "log": "windows.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T09:25:54.022789+00:00",
+      "durationSeconds": 25.027
+    },
+    {
+      "name": "syntax",
+      "status": "passed",
+      "startedAt": "2026-10-11T09:25:54.023244+00:00",
+      "log": "syntax.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T09:25:59.586787+00:00",
+      "durationSeconds": 5.563
+    },
+    {
+      "name": "ui",
+      "status": "passed",
+      "startedAt": "2026-10-11T09:25:59.587683+00:00",
+      "log": "ui.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T09:26:00.407192+00:00",
+      "durationSeconds": 0.819
+    },
+    {
+      "name": "http",
+      "status": "passed",
+      "startedAt": "2026-10-11T09:26:00.407807+00:00",
+      "log": "http.log",
+      "exitCode": 0,
+      "finishedAt": "2026-10-11T09:26:36.720762+00:00",
+      "durationSeconds": 36.313
+    }
+  ],
+  "finishedAt": "2026-10-11T09:26:36.721342+00:00"
+}

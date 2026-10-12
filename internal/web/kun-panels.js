@@ -52,7 +52,7 @@ function kunRenderSources(s,selected,events,navigate){
  node.append(kunFacts([["状态",kunStateLabel(s.status)],["阶段",s.phase],["模型步骤",s.step],["待派发工具",s.pending?.length??0],["断点规则版本",s.debug?.revision],["预算停止原因",s.budget?.stopReason||"无已记录原因"]]));
  if(s.error)node.append(el("p",{class:"kun-signal"},"运行错误："+s.error));
  if(pause)node.append(el("h4",{},"调试暂停"),kunFacts([["原因",pause.reason],["边界",pause.phase],["命中规则",pause.ruleIds?.join(", ")||"无条件规则 ID"],["工具调用",pause.callId||"无"],["暂停期限",pause.deadline||"无限等待"]]));
- node.append(el("h4",{},"当前 MCP 审批"),kunApprovalView(s.approval));
+ node.append(el("h4",{},"当前工具审批"),kunApprovalView(s.approval));
  if(s.resumedFrom)node.append(el("h4",{},"续跑来源"),kunFacts([["原运行",s.resumedFrom.sourceRunId],["安全检查点",s.resumedFrom.sequence]]));
  const rules=s.debug?.policy?.breakpoints||[];
  node.append(el("h4",{},"当前断点"),kunFacts([["模型前固定暂停",s.config?.pauseBeforeModel?"开启":"关闭"],["调试暂停超时",s.debug?.policy?.pauseTimeoutSeconds? s.debug.policy.pauseTimeoutSeconds+" s":"无限等待"]]),

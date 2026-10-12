@@ -123,8 +123,8 @@ func (m *Manager) prepareKunCaseRun(in KunCaseRunInput) (kunCaseDraft, error) {
 		return out, err
 	}
 	bindKunWorkspaceFixture(&request, chosen.WorkspaceFixture)
-	if request.WorkspaceFixture != nil && len(request.MCP) > 0 {
-		return out, failure(409, "fixture_mcp_unsupported", "独立评测目录仅支持内置文件工具；请使用未启用 MCP 的 Kun 实例")
+	if request.WorkspaceFixture != nil && (len(request.MCP) > 0 || request.Config.AllowBash) {
+		return out, failure(409, "fixture_mcp_unsupported", "独立评测目录仅支持内置文件工具（不含 Bash）；请使用未启用 Bash 和 MCP 的 Kun 实例")
 	}
 	request.ArtifactRules = append([]p.ArtifactRule(nil), chosen.ArtifactRules...)
 	if err = request.Config.Validate(); err != nil {
@@ -317,8 +317,8 @@ func (m *Manager) kunCaseStartRequest(s Session, w Workspace, in Input) (p.Start
 	}
 	out.Fast = d.Fast
 	bindKunWorkspaceFixture(&out, d.Preview.Case.WorkspaceFixture)
-	if out.WorkspaceFixture != nil && len(out.MCP) > 0 {
-		return p.Start{}, failure(409, "fixture_mcp_unsupported", "独立评测目录仅支持内置文件工具")
+	if out.WorkspaceFixture != nil && (len(out.MCP) > 0 || out.Config.AllowBash) {
+		return p.Start{}, failure(409, "fixture_mcp_unsupported", "独立评测目录仅支持内置文件工具（不含 Bash）")
 	}
 	out.ArtifactRules = append([]p.ArtifactRule(nil), d.Preview.Case.ArtifactRules...)
 	if caseRequestHash(out) != d.RequestHash {

@@ -1,5 +1,5 @@
 {
-  "version": "0.43.0",
+  "version": "0.44.0",
   "passed": true,
   "scope": "Node DOM stub + shipped view code; browser layout not tested",
   "checks": [
@@ -8,7 +8,7 @@
     "late response invalidated",
     "missing budget stays unknown",
     "plan literal text and evidence link",
-    "settings roundtrip sends compatible preset",
+    "settings roundtrip sends compatible preset and explicit Bash grant/approval/timeout",
     "timeline does not classify a plan as a reply"
   ]
 }

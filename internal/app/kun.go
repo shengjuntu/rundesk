@@ -63,6 +63,9 @@ func (m *Manager) SetAgentRuntime(id string, revision int, config p.Config) (Ins
 	if config.AllowWrite && v.Permissions.normalized().Sandbox == "read-only" {
 		return Instance{}, failure(400, "kun_read_only", "实例为只读，不能启用写文件")
 	}
+	if config.AllowBash && v.Permissions.normalized().Sandbox != "danger-full-access" {
+		return Instance{}, failure(400, "kun_bash_host_permission", "Bash 使用宿主权限；请先将实例权限设为完整访问，再明确启用 Bash")
+	}
 	next := *v
 	next.AgentRuntime = config
 	next.Revision++
@@ -86,6 +89,9 @@ func (m *Manager) kunStartRequest(s Session, w Workspace, in Input) (p.Start, er
 	}
 	if i.Permissions.normalized().Sandbox == "read-only" {
 		cfg.AllowWrite = false
+	}
+	if cfg.AllowBash && i.Permissions.normalized().Sandbox != "danger-full-access" {
+		return p.Start{}, failure(409, "kun_bash_permission_changed", "Bash 需要实例完整访问权限，请重新核对配置")
 	}
 	key := ""
 	if cfg.APIKeyEnv != "" {
@@ -166,7 +172,7 @@ func (m *Manager) runKun(s Session, w Workspace, h *handle, in Input) {
 		m.finish(s.ID, "failed", "启动 Kun："+err.Error())
 		return
 	}
-	_ = m.Store.Put("runtime", s.ID, RuntimeStatus{ID: s.ID, InstanceID: s.InstanceID, WorkspaceID: s.WorkspaceID, ConnectionID: fmt.Sprint(client.PID()), ExecutionMode: "local", Live: true, ConnectedAt: store.Now(), Notices: []RuntimeNotice{}, UserAgent: "Kun/" + p.EngineVersion, Effective: map[string]any{"runtimeKind": "kun", "model": cfg.Model, "endpoint": cfg.Endpoint, "allowWrite": cfg.AllowWrite}})
+	_ = m.Store.Put("runtime", s.ID, RuntimeStatus{ID: s.ID, InstanceID: s.InstanceID, WorkspaceID: s.WorkspaceID, ConnectionID: fmt.Sprint(client.PID()), ExecutionMode: "local", Live: true, ConnectedAt: store.Now(), Notices: []RuntimeNotice{}, UserAgent: "Kun/" + p.EngineVersion, Effective: map[string]any{"runtimeKind": "kun", "model": cfg.Model, "endpoint": cfg.Endpoint, "allowWrite": cfg.AllowWrite, "allowBash": cfg.AllowBash, "bashApproval": cfg.BashApproval}})
 	h.mu.Lock()
 	canceled := h.canceled
 	h.mu.Unlock()

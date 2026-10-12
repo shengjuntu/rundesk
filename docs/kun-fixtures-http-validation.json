@@ -1,5 +1,5 @@
 {
-  "version": "0.43.0",
+  "version": "0.44.0",
   "passed": true,
   "scope": "actual host and subprocess with local model fixtures; directory separation is not an OS/process/network sandbox",
   "modelCalls": 24,
@@ -11,8 +11,8 @@
     "empty fixture cannot pass using preexisting project output; preexisting evaluation directory rejected without deleting or overwriting it"
   ],
   "validation": {
-    "candidateHash": "a5170e00370d23c41730587f7975432e43e5b515136ee3f9ca0dde41f51a1c72",
-    "candidateId": "c0543e036375f6160d1518fb",
+    "candidateHash": "0f5e4c80d85aac55ccbf0048aa2b9bb1bc9a4cf6262a388acc7b36f33149ce7a",
+    "candidateId": "2df279c657198c255be40cdb",
     "cases": [
       {
         "artifacts": {
@@ -75,11 +75,11 @@
           "total": 4,
           "unknown": 0
         },
-        "evidenceHash": "9cfeb533ed8f6409283e660ac95e60a9bf96fa5903b22955177af1449c90b80b",
+        "evidenceHash": "c3d0bfdbae911ac2092c149aaf5f6811bfed6ef3d3524f24faa68dafe63c6419",
         "fastCompleted": true,
-        "planId": "acfe7092df4152c880e674cf",
+        "planId": "849d8778f826f1447bddab0f",
         "summary": {
-          "activeMillis": 8,
+          "activeMillis": 7,
           "afterSequence": 0,
           "complete": true,
           "eventCount": 20,
@@ -105,8 +105,8 @@
           "modelCompletions": 0,
           "planningCalls": 0,
           "reportedTokens": 0,
-          "runId": "6b647c7716122824ba141646",
-          "sessionId": "f292c48b1844c85b02a57c08",
+          "runId": "fa5cf18cceba6dae29f4b9ba",
+          "sessionId": "29d164f1610c3d6656505c39",
           "status": "completed",
           "through": 45,
           "tokenUsageComplete": true,
@@ -151,7 +151,7 @@
           "fileCount": 1,
           "hash": "3251b2611dc28842a6c9cd404317bbe3aedde6693a48ddd010ff544ebc64f205",
           "mode": "isolated-fixture-v1",
-          "root": "/tmp/rd-fixtures-trXl1M/data/workspaces/0c01ef2f5b1a4836fe0dcd6b/outputs/f292c48b1844c85b02a57c08/evaluation"
+          "root": "/tmp/rd-fixtures-mlBk57/data/workspaces/0374dfdae97503cb97bd3e96/outputs/29d164f1610c3d6656505c39/evaluation"
         }
       },
       {
@@ -215,11 +215,11 @@
           "total": 4,
           "unknown": 0
         },
-        "evidenceHash": "cc20ab394ffa385978c278dd1f891003537a15d945da2926ce657bd513979578",
+        "evidenceHash": "b51fbad909965c9fc4b40f5c6236cb3147c7dbe8a50e454efbd3429c099d068b",
         "fastCompleted": true,
-        "planId": "b883a78fcc75ea05f80d160a",
+        "planId": "178e47bd4b6808f65c1a9c39",
         "summary": {
-          "activeMillis": 9,
+          "activeMillis": 7,
           "afterSequence": 0,
           "complete": true,
           "eventCount": 20,
@@ -245,8 +245,8 @@
           "modelCompletions": 0,
           "planningCalls": 0,
           "reportedTokens": 0,
-          "runId": "8119df11fbe494a04018c317",
-          "sessionId": "73411f11316280daf6538217",
+          "runId": "12886cab9351be873d15e094",
+          "sessionId": "a840d12239d4c7b1014d0944",
           "status": "completed",
           "through": 67,
           "tokenUsageComplete": true,
@@ -291,20 +291,20 @@
           "fileCount": 1,
           "hash": "8b097aff6456d0c2e2845d4bd0f9b5e93465638639a98d2e93a2e291534e2e7d",
           "mode": "isolated-fixture-v1",
-          "root": "/tmp/rd-fixtures-trXl1M/data/workspaces/0c01ef2f5b1a4836fe0dcd6b/outputs/73411f11316280daf6538217/evaluation"
+          "root": "/tmp/rd-fixtures-mlBk57/data/workspaces/0374dfdae97503cb97bd3e96/outputs/a840d12239d4c7b1014d0944/evaluation"
         }
       }
     ],
-    "createdAt": "2026-10-09T02:10:19.435238042Z",
+    "createdAt": "2026-10-11T09:26:28.473940736Z",
     "failed": 0,
-    "hash": "4eb118723ab4cf39798b65783f2766b10598a3fac01ffc3174d214536fb359ef",
-    "id": "913e6121b7211abf403a897e",
+    "hash": "e346daa38f7e89fcdc95c0b48625a7e7c82353f78534fd77ffb4483ccf5233ea",
+    "id": "ae41c303e9f45cd6ee2f5402",
     "passed": 2,
     "score": 100,
     "status": "pass",
     "total": 2,
     "unknown": 0,
-    "validationId": "832562e178d334ef0043d2a0"
+    "validationId": "57eef007d7aeae54aadefaa5"
   },
   "comparison": {
     "dynamic": {
@@ -330,11 +330,11 @@
         },
         "runMillis": {
           "count": 4,
-          "max": 60,
-          "mean": 23.25,
-          "min": 10,
+          "max": 55,
+          "mean": 21.5,
+          "min": 9,
           "missing": 0,
-          "total": 93
+          "total": 86
         }
       },
       "passRate": 100,
@@ -365,11 +365,11 @@
         },
         "runMillis": {
           "count": 4,
-          "max": 11,
-          "mean": 8.5,
-          "min": 7,
+          "max": 8,
+          "mean": 7,
+          "min": 6,
           "missing": 0,
-          "total": 34
+          "total": 28
         }
       },
       "passRate": 100,
@@ -402,11 +402,11 @@
         },
         "runMillis": {
           "count": 4,
-          "max": 11,
-          "mean": 10,
-          "min": 9,
+          "max": 9,
+          "mean": 8.5,
+          "min": 7,
           "missing": 0,
-          "total": 40
+          "total": 34
         }
       },
       "passRate": 100,
@@ -437,11 +437,11 @@
         },
         "runMillis": {
           "count": 4,
-          "max": 14,
-          "mean": 11,
-          "min": 9,
+          "max": 9,
+          "mean": 8.5,
+          "min": 8,
           "missing": 0,
-          "total": 44
+          "total": 34
         }
       },
       "passRate": 100,
@@ -509,11 +509,11 @@
       "total": 4,
       "unknown": 0
     },
-    "evidenceHash": "1340f75bc85a34532f429112a1b9a357dfb16c7a2a23c9061d4736f6d39c25f9",
+    "evidenceHash": "126423843b32cc7c151b0f600f999f61fccde70613b26db22687d197ce0e353d",
     "fastCompleted": false,
-    "planId": "fd3a25b2f428eb125e6f63fc",
+    "planId": "9c57224d3c48563f61ea4d9f",
     "summary": {
-      "activeMillis": 7,
+      "activeMillis": 5,
       "afterSequence": 0,
       "complete": true,
       "eventCount": 12,
@@ -539,8 +539,8 @@
       "modelCompletions": 2,
       "planningCalls": 0,
       "reportedTokens": 24,
-      "runId": "bc3b2a8104484060aafa6a6b",
-      "sessionId": "cdc8809e9a4f846aa6dd1fab",
+      "runId": "d4618a4472ad82975c3b6996",
+      "sessionId": "64a955d259246942a11d8f54",
       "status": "completed",
       "through": 437,
       "tokenUsageComplete": true,
@@ -565,7 +565,7 @@
       "fileCount": 0,
       "hash": "602e35a92eec4bc0a2ec6ae113f07bfc6933322fb69fe8dee416e5a67217e2a2",
       "mode": "isolated-fixture-v1",
-      "root": "/tmp/rd-fixtures-trXl1M/data/workspaces/0c01ef2f5b1a4836fe0dcd6b/outputs/cdc8809e9a4f846aa6dd1fab/evaluation"
+      "root": "/tmp/rd-fixtures-mlBk57/data/workspaces/0374dfdae97503cb97bd3e96/outputs/64a955d259246942a11d8f54/evaluation"
     }
   }
 }

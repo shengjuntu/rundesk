@@ -25,7 +25,7 @@ func validateDiagnostic(in p.Start, previous p.State) error {
 	if d.SessionID == "" || d.SessionID == in.SessionID || d.RunID == "" || d.Through <= 0 || !filepath.IsAbs(d.SnapshotPath) {
 		return fmt.Errorf("invalid diagnostic source")
 	}
-	if in.Resume != nil || len(in.MCP) > 0 || len(in.Skills) > 0 || in.Config.AllowWrite {
+	if in.Resume != nil || len(in.MCP) > 0 || len(in.Skills) > 0 || (in.Config.AllowWrite || in.Config.AllowBash) {
 		return fmt.Errorf("diagnostic sessions prohibit resume, external MCP, Skills and file writes")
 	}
 	return nil

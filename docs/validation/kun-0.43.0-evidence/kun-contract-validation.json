@@ -1,0 +1,16 @@
+{
+  "version": "0.43.0",
+  "passed": true,
+  "javascriptFiles": 84,
+  "nodeInteractionSuites": 12,
+  "openapiPaths": 180,
+  "openapiOperations": 216,
+  "uniqueParameters": true,
+  "localReferencesResolve": true,
+  "administratorAndIdempotency": true,
+  "fixtureFieldsOptional": true,
+  "noNewDependencies": true,
+  "sourceFingerprintMatches": true,
+  "sourceSHA256": "dfd38504ffb2d78f578b7f7e718f4027bc754c69a6aace578277e8f9a28cef9f",
+  "receipt": "validation/kun-0.43.0-final/summary.json"
+}

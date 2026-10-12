@@ -1,0 +1,705 @@
+{
+  "version": "0.43.0",
+  "passed": true,
+  "scope": "local host and subprocess fixtures, not business quality evidence",
+  "modelCalls": 48,
+  "successfulHoldout": {
+    "candidateHash": "3955fe12d5dd8b901d6121f911d071b5a9e08822f9a8b990d29c3fa5df0dcf8a",
+    "candidateId": "f97fd630730d6268541cf402",
+    "cases": [
+      {
+        "artifacts": {
+          "results": [
+            {
+              "bytes": 5,
+              "index": 0,
+              "kind": "file_exists",
+              "path": "alpha.txt",
+              "reason": "matched",
+              "sha256": "73ab66a033c267e00b7429bb256f6deb2734ebc4cd4ff5b564a8c9f9b2c8a719",
+              "status": "pass"
+            },
+            {
+              "bytes": 5,
+              "index": 1,
+              "kind": "file_contains",
+              "path": "alpha.txt",
+              "reason": "matched",
+              "sha256": "73ab66a033c267e00b7429bb256f6deb2734ebc4cd4ff5b564a8c9f9b2c8a719",
+              "status": "pass"
+            },
+            {
+              "bytes": 5,
+              "index": 2,
+              "kind": "file_equals",
+              "path": "alpha.txt",
+              "reason": "matched",
+              "sha256": "73ab66a033c267e00b7429bb256f6deb2734ebc4cd4ff5b564a8c9f9b2c8a719",
+              "status": "pass"
+            },
+            {
+              "bytes": 5,
+              "index": 3,
+              "kind": "file_sha256",
+              "path": "alpha.txt",
+              "reason": "matched",
+              "sha256": "73ab66a033c267e00b7429bb256f6deb2734ebc4cd4ff5b564a8c9f9b2c8a719",
+              "status": "pass"
+            }
+          ],
+          "rulesHash": "6c0504288db9758ac3007f666ac56de91b8c1b8e04a0939c164987222b403ab0"
+        },
+        "caseKey": "alpha",
+        "evaluation": {
+          "failed": 0,
+          "passed": 6,
+          "reply": {
+            "bytes": 5,
+            "eventId": 33,
+            "hash": "a46569a5723019a5c28399318e42189bac9da2bcd8d44f4960315c52bc23a99a",
+            "sequence": 11,
+            "status": "available"
+          },
+          "results": [
+            {
+              "eventId": 34,
+              "index": 0,
+              "kind": "run_completed",
+              "reason": "completed",
+              "status": "pass"
+            },
+            {
+              "eventId": 33,
+              "index": 1,
+              "kind": "reply_contains",
+              "reason": "matched",
+              "status": "pass"
+            },
+            {
+              "eventId": 34,
+              "index": 2,
+              "kind": "file_exists",
+              "reason": "matched",
+              "status": "pass"
+            },
+            {
+              "eventId": 34,
+              "index": 3,
+              "kind": "file_contains",
+              "reason": "matched",
+              "status": "pass"
+            },
+            {
+              "eventId": 34,
+              "index": 4,
+              "kind": "file_equals",
+              "reason": "matched",
+              "status": "pass"
+            },
+            {
+              "eventId": 34,
+              "index": 5,
+              "kind": "file_sha256",
+              "reason": "matched",
+              "status": "pass"
+            }
+          ],
+          "score": 100,
+          "status": "pass",
+          "total": 6,
+          "unknown": 0
+        },
+        "evidenceHash": "2fd1f7727bc697f6ce92abd4c23d49f8db604e566b6cb33bc3ca4f986725e51e",
+        "fastCompleted": true,
+        "planId": "94f91a4a53a6df81c05c7bc4",
+        "summary": {
+          "activeMillis": 8,
+          "afterSequence": 0,
+          "complete": true,
+          "eventCount": 12,
+          "firstEventId": 20,
+          "harness": {
+            "id": "",
+            "modules": null,
+            "revision": 0,
+            "version": ""
+          },
+          "lastEventId": 34,
+          "lastReply": {
+            "characters": 5,
+            "eventId": 33,
+            "hash": "a46569a5723019a5c28399318e42189bac9da2bcd8d44f4960315c52bc23a99a",
+            "sequence": 11,
+            "text": "ALPHA",
+            "truncated": false
+          },
+          "lastSequence": 12,
+          "mode": "case",
+          "modelCalls": 0,
+          "modelCompletions": 0,
+          "planningCalls": 0,
+          "reportedTokens": 0,
+          "runId": "2effbec98cdb80a6ea500686",
+          "sessionId": "fdc45b7030384d1be6eaa1e6",
+          "status": "completed",
+          "through": 38,
+          "tokenUsageComplete": true,
+          "tools": [
+            {
+              "declined": 0,
+              "dispatched": 1,
+              "failed": 0,
+              "hypothetical": 0,
+              "name": "read_file",
+              "replayed": 0,
+              "reused": 0,
+              "unsettled": 0
+            },
+            {
+              "declined": 0,
+              "dispatched": 1,
+              "failed": 0,
+              "hypothetical": 0,
+              "name": "write_file",
+              "replayed": 0,
+              "reused": 0,
+              "unsettled": 0
+            }
+          ],
+          "usageMissing": 0,
+          "waitMillis": 0,
+          "warnings": []
+        }
+      },
+      {
+        "artifacts": {
+          "results": [
+            {
+              "bytes": 4,
+              "index": 0,
+              "kind": "file_exists",
+              "path": "beta.txt",
+              "reason": "matched",
+              "sha256": "639181fd63cbad6e274ecd205b79f5c3e7c11971cac617ee8bddcac6e79b20e7",
+              "status": "pass"
+            },
+            {
+              "bytes": 4,
+              "index": 1,
+              "kind": "file_contains",
+              "path": "beta.txt",
+              "reason": "matched",
+              "sha256": "639181fd63cbad6e274ecd205b79f5c3e7c11971cac617ee8bddcac6e79b20e7",
+              "status": "pass"
+            },
+            {
+              "bytes": 4,
+              "index": 2,
+              "kind": "file_equals",
+              "path": "beta.txt",
+              "reason": "matched",
+              "sha256": "639181fd63cbad6e274ecd205b79f5c3e7c11971cac617ee8bddcac6e79b20e7",
+              "status": "pass"
+            },
+            {
+              "bytes": 4,
+              "index": 3,
+              "kind": "file_sha256",
+              "path": "beta.txt",
+              "reason": "matched",
+              "sha256": "639181fd63cbad6e274ecd205b79f5c3e7c11971cac617ee8bddcac6e79b20e7",
+              "status": "pass"
+            }
+          ],
+          "rulesHash": "ea44c58cf3fda14d61b8ba0821a81cfd5313315df67c475f7ae433fca3e614a7"
+        },
+        "caseKey": "beta",
+        "evaluation": {
+          "failed": 0,
+          "passed": 6,
+          "reply": {
+            "bytes": 4,
+            "eventId": 43,
+            "hash": "bfb34b831697075cfce4ef85505dd2df5e71858f40564e321b8a7f1c0e885393",
+            "sequence": 11,
+            "status": "available"
+          },
+          "results": [
+            {
+              "eventId": 44,
+              "index": 0,
+              "kind": "run_completed",
+              "reason": "completed",
+              "status": "pass"
+            },
+            {
+              "eventId": 43,
+              "index": 1,
+              "kind": "reply_contains",
+              "reason": "matched",
+              "status": "pass"
+            },
+            {
+              "eventId": 44,
+              "index": 2,
+              "kind": "file_exists",
+              "reason": "matched",
+              "status": "pass"
+            },
+            {
+              "eventId": 44,
+              "index": 3,
+              "kind": "file_contains",
+              "reason": "matched",
+              "status": "pass"
+            },
+            {
+              "eventId": 44,
+              "index": 4,
+              "kind": "file_equals",
+              "reason": "matched",
+              "status": "pass"
+            },
+            {
+              "eventId": 44,
+              "index": 5,
+              "kind": "file_sha256",
+              "reason": "matched",
+              "status": "pass"
+            }
+          ],
+          "score": 100,
+          "status": "pass",
+          "total": 6,
+          "unknown": 0
+        },
+        "evidenceHash": "f6cd6aec2561e41420e0e2ab8424b03fbee0b1bf4948b4aa37917c9495303502",
+        "fastCompleted": true,
+        "planId": "cd835890fb87c663b696d71a",
+        "summary": {
+          "activeMillis": 5,
+          "afterSequence": 0,
+          "complete": true,
+          "eventCount": 12,
+          "firstEventId": 24,
+          "harness": {
+            "id": "",
+            "modules": null,
+            "revision": 0,
+            "version": ""
+          },
+          "lastEventId": 44,
+          "lastReply": {
+            "characters": 4,
+            "eventId": 43,
+            "hash": "bfb34b831697075cfce4ef85505dd2df5e71858f40564e321b8a7f1c0e885393",
+            "sequence": 11,
+            "text": "BETA",
+            "truncated": false
+          },
+          "lastSequence": 12,
+          "mode": "case",
+          "modelCalls": 0,
+          "modelCompletions": 0,
+          "planningCalls": 0,
+          "reportedTokens": 0,
+          "runId": "9b2b33ce6af8ff79687b3d9f",
+          "sessionId": "febcd9e98ad947267b08a410",
+          "status": "completed",
+          "through": 45,
+          "tokenUsageComplete": true,
+          "tools": [
+            {
+              "declined": 0,
+              "dispatched": 1,
+              "failed": 0,
+              "hypothetical": 0,
+              "name": "read_file",
+              "replayed": 0,
+              "reused": 0,
+              "unsettled": 0
+            },
+            {
+              "declined": 0,
+              "dispatched": 1,
+              "failed": 0,
+              "hypothetical": 0,
+              "name": "write_file",
+              "replayed": 0,
+              "reused": 0,
+              "unsettled": 0
+            }
+          ],
+          "usageMissing": 0,
+          "waitMillis": 0,
+          "warnings": []
+        }
+      }
+    ],
+    "createdAt": "2026-10-09T02:10:03.132814874Z",
+    "failed": 0,
+    "hash": "4655c3498bfc8b06799e7a342ec3e01d54e71e5d209602f2b56e63cf89aa5a1a",
+    "id": "173a717cd8d9a529df2e4807",
+    "passed": 2,
+    "score": 100,
+    "status": "pass",
+    "total": 2,
+    "unknown": 0,
+    "validationId": "0a72d875bf20a3defec5c1da"
+  },
+  "rejectedHoldout": {
+    "candidateHash": "dda09805d0716c31b2f17251fb74978902f5c82491d0e7029428d06dd80c39c3",
+    "candidateId": "a41f0ca6d3d933b25d617cd4",
+    "cases": [
+      {
+        "artifacts": {
+          "results": [
+            {
+              "bytes": 1,
+              "index": 0,
+              "kind": "file_equals",
+              "path": "reject-a.txt",
+              "reason": "not_matched",
+              "sha256": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+              "status": "fail"
+            }
+          ],
+          "rulesHash": "8f8b976c0b4c5c37fce5644b9989a7ecab4f520ccf3c584dec8d0bda1b49b58b"
+        },
+        "caseKey": "reject-a",
+        "evaluation": {
+          "failed": 1,
+          "passed": 2,
+          "reply": {
+            "bytes": 1,
+            "eventId": 495,
+            "hash": "798640599597df7a8daa32b1132f07850a68b5e71bd295650399a38074f52804",
+            "sequence": 11,
+            "status": "available"
+          },
+          "results": [
+            {
+              "eventId": 496,
+              "index": 0,
+              "kind": "run_completed",
+              "reason": "completed",
+              "status": "pass"
+            },
+            {
+              "eventId": 495,
+              "index": 1,
+              "kind": "reply_contains",
+              "reason": "matched",
+              "status": "pass"
+            },
+            {
+              "eventId": 496,
+              "index": 2,
+              "kind": "file_equals",
+              "reason": "not_matched",
+              "status": "fail"
+            }
+          ],
+          "score": 66.66666666666667,
+          "status": "fail",
+          "total": 3,
+          "unknown": 0
+        },
+        "evidenceHash": "7a2ebbdd21a41daae4fc966132e0c67f40e704ba797c9f40a2487c4109a949a8",
+        "fastCompleted": true,
+        "planId": "0c7befb75995e9cb5e248eda",
+        "summary": {
+          "activeMillis": 4,
+          "afterSequence": 0,
+          "complete": true,
+          "eventCount": 12,
+          "firstEventId": 485,
+          "harness": {
+            "id": "",
+            "modules": null,
+            "revision": 0,
+            "version": ""
+          },
+          "lastEventId": 496,
+          "lastReply": {
+            "characters": 1,
+            "eventId": 495,
+            "hash": "798640599597df7a8daa32b1132f07850a68b5e71bd295650399a38074f52804",
+            "sequence": 11,
+            "text": "A",
+            "truncated": false
+          },
+          "lastSequence": 12,
+          "mode": "case",
+          "modelCalls": 0,
+          "modelCompletions": 0,
+          "planningCalls": 0,
+          "reportedTokens": 0,
+          "runId": "2f0b7cf7a20e3ed226227d6f",
+          "sessionId": "2b7fd51fa5efa81e8b3c9c65",
+          "status": "completed",
+          "through": 497,
+          "tokenUsageComplete": true,
+          "tools": [
+            {
+              "declined": 0,
+              "dispatched": 1,
+              "failed": 0,
+              "hypothetical": 0,
+              "name": "read_file",
+              "replayed": 0,
+              "reused": 0,
+              "unsettled": 0
+            },
+            {
+              "declined": 0,
+              "dispatched": 1,
+              "failed": 0,
+              "hypothetical": 0,
+              "name": "write_file",
+              "replayed": 0,
+              "reused": 0,
+              "unsettled": 0
+            }
+          ],
+          "usageMissing": 0,
+          "waitMillis": 0,
+          "warnings": []
+        }
+      },
+      {
+        "artifacts": {
+          "results": [
+            {
+              "index": 0,
+              "kind": "file_exists",
+              "path": "never-created.txt",
+              "reason": "missing",
+              "status": "fail"
+            }
+          ],
+          "rulesHash": "6d43bf0a1e0d0544cd0ac5876d4b979e619ddd6fba63decd3b8a27f64f02b251"
+        },
+        "caseKey": "reject-b",
+        "evaluation": {
+          "failed": 1,
+          "passed": 2,
+          "reply": {
+            "bytes": 1,
+            "eventId": 509,
+            "hash": "955cca1ceba45052d85984d3a2565f4ce25b7488602c60a165598bf80b26e472",
+            "sequence": 11,
+            "status": "available"
+          },
+          "results": [
+            {
+              "eventId": 510,
+              "index": 0,
+              "kind": "run_completed",
+              "reason": "completed",
+              "status": "pass"
+            },
+            {
+              "eventId": 509,
+              "index": 1,
+              "kind": "reply_contains",
+              "reason": "matched",
+              "status": "pass"
+            },
+            {
+              "eventId": 510,
+              "index": 2,
+              "kind": "file_exists",
+              "reason": "missing",
+              "status": "fail"
+            }
+          ],
+          "score": 66.66666666666667,
+          "status": "fail",
+          "total": 3,
+          "unknown": 0
+        },
+        "evidenceHash": "89394d44257b053f9a29248d50f70085659085addc7da65ce3a5be09c6bd76b4",
+        "fastCompleted": true,
+        "planId": "9b36e9820720aede50bad248",
+        "summary": {
+          "activeMillis": 4,
+          "afterSequence": 0,
+          "complete": true,
+          "eventCount": 12,
+          "firstEventId": 499,
+          "harness": {
+            "id": "",
+            "modules": null,
+            "revision": 0,
+            "version": ""
+          },
+          "lastEventId": 510,
+          "lastReply": {
+            "characters": 1,
+            "eventId": 509,
+            "hash": "955cca1ceba45052d85984d3a2565f4ce25b7488602c60a165598bf80b26e472",
+            "sequence": 11,
+            "text": "B",
+            "truncated": false
+          },
+          "lastSequence": 12,
+          "mode": "case",
+          "modelCalls": 0,
+          "modelCompletions": 0,
+          "planningCalls": 0,
+          "reportedTokens": 0,
+          "runId": "2d3a81daeb05c2af10336987",
+          "sessionId": "dec49b5a118b04c11dbcac71",
+          "status": "completed",
+          "through": 511,
+          "tokenUsageComplete": true,
+          "tools": [
+            {
+              "declined": 0,
+              "dispatched": 1,
+              "failed": 0,
+              "hypothetical": 0,
+              "name": "read_file",
+              "replayed": 0,
+              "reused": 0,
+              "unsettled": 0
+            },
+            {
+              "declined": 0,
+              "dispatched": 1,
+              "failed": 0,
+              "hypothetical": 0,
+              "name": "write_file",
+              "replayed": 0,
+              "reused": 0,
+              "unsettled": 0
+            }
+          ],
+          "usageMissing": 0,
+          "waitMillis": 0,
+          "warnings": []
+        }
+      }
+    ],
+    "createdAt": "2026-10-09T02:10:12.823040083Z",
+    "failed": 2,
+    "hash": "51080d4317a48d8bfd99c6bf390c7ed40b3dea2067ed161b941a14d9fd16ec3d",
+    "id": "d6d598087f2922c94d8af38d",
+    "passed": 0,
+    "score": 0,
+    "status": "fail",
+    "total": 2,
+    "unknown": 0,
+    "validationId": "62369b4c8b1a5d2564f24a15"
+  },
+  "rejectedComparison": {
+    "dynamic": {
+      "failed": 4,
+      "fallbacks": 0,
+      "fastCompleted": 0,
+      "metrics": {
+        "modelCalls": {
+          "count": 4,
+          "max": 2,
+          "mean": 2,
+          "min": 2,
+          "missing": 0,
+          "total": 8
+        },
+        "reportedTokens": {
+          "count": 4,
+          "max": 24,
+          "mean": 24,
+          "min": 24,
+          "missing": 0,
+          "total": 96
+        },
+        "runMillis": {
+          "count": 4,
+          "max": 10,
+          "mean": 9.5,
+          "min": 9,
+          "missing": 0,
+          "total": 38
+        }
+      },
+      "passRate": 0,
+      "passed": 0,
+      "total": 4,
+      "unknown": 0
+    },
+    "fast": {
+      "failed": 4,
+      "fallbacks": 0,
+      "fastCompleted": 4,
+      "metrics": {
+        "modelCalls": {
+          "count": 4,
+          "max": 0,
+          "mean": 0,
+          "min": 0,
+          "missing": 0,
+          "total": 0
+        },
+        "reportedTokens": {
+          "count": 4,
+          "max": 0,
+          "mean": 0,
+          "min": 0,
+          "missing": 0,
+          "total": 0
+        },
+        "runMillis": {
+          "count": 4,
+          "max": 7,
+          "mean": 5.5,
+          "min": 4,
+          "missing": 0,
+          "total": 22
+        }
+      },
+      "passRate": 0,
+      "passed": 0,
+      "total": 4,
+      "unknown": 0
+    },
+    "pairs": [
+      {
+        "caseKey": "reject-a",
+        "dynamicPlanId": "19ee802e3b1151524849ee8f",
+        "fastPlanId": "39aeab48ef1bb306fc30ff17",
+        "outcome": "both_fail",
+        "sample": 1
+      },
+      {
+        "caseKey": "reject-b",
+        "dynamicPlanId": "b47186ff99a64564d6ce1e79",
+        "fastPlanId": "575a97d8663c0d0b9e5775f5",
+        "outcome": "both_fail",
+        "sample": 1
+      },
+      {
+        "caseKey": "reject-a",
+        "dynamicPlanId": "e881484e75537eeecb7bf9c2",
+        "fastPlanId": "ed2ab304c96eacd2e5caa8ea",
+        "outcome": "both_fail",
+        "sample": 2
+      },
+      {
+        "caseKey": "reject-b",
+        "dynamicPlanId": "9bb8be382cc7e80a57a71678",
+        "fastPlanId": "6506e4f31e0459ab4cdb92c8",
+        "outcome": "both_fail",
+        "sample": 2
+      }
+    ]
+  },
+  "checks": [
+    "four frozen file checks in dynamic and fast cases",
+    "historical pass and fail remain unchanged after file edits",
+    "historical evidence survives host restart",
+    "failed artifact blocks source distillation and promotion",
+    "both benchmark arms fail wrong or missing artifact"
+  ]
+}

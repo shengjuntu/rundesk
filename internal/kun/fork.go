@@ -327,7 +327,7 @@ func (e *Engine) forkLocked(in p.Start, hash string) (p.State, error) {
 	if live {
 		s.Phase = "restoring"
 		s.ToolDefinitions = nil
-		for _, definition := range toolDefinitions(in.Config.AllowWrite) {
+		for _, definition := range toolDefinitions(in.Config.AllowWrite, in.Config.AllowBash) {
 			s.ToolDefinitions = append(s.ToolDefinitions, p.JSON(definition))
 		}
 		s.MCPTools = nil

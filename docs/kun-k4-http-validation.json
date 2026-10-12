@@ -1,5 +1,5 @@
 {
-  "version": "0.43.0",
+  "version": "0.44.0",
   "passed": true,
   "scope": "actual host HTTP + Kun subprocess + local model fixture; remote business benchmarks and browser layout not tested",
   "modelCalls": 48,

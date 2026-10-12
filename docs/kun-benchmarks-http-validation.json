@@ -1,5 +1,5 @@
 {
-  "version": "0.43.0",
+  "version": "0.44.0",
   "passed": true,
   "scope": "local model fixture; not a real-service performance benchmark",
   "modelCalls": 48,
@@ -27,11 +27,11 @@
         },
         "runMillis": {
           "count": 4,
-          "max": 110,
-          "mean": 35.75,
-          "min": 10,
+          "max": 56,
+          "mean": 20,
+          "min": 8,
           "missing": 0,
-          "total": 143
+          "total": 80
         }
       },
       "passRate": 100,
@@ -62,11 +62,11 @@
         },
         "runMillis": {
           "count": 4,
-          "max": 8,
-          "mean": 5.5,
+          "max": 6,
+          "mean": 4.5,
           "min": 4,
           "missing": 0,
-          "total": 22
+          "total": 18
         }
       },
       "passRate": 100,
@@ -94,10 +94,10 @@
       "runMillis": {
         "count": 4,
         "max": -2,
-        "mean": -30.25,
-        "min": -105,
+        "mean": -15.5,
+        "min": -52,
         "missing": 0,
-        "total": -121
+        "total": -62
       }
     }
   },
@@ -125,11 +125,11 @@
         },
         "runMillis": {
           "count": 10,
-          "max": 17,
-          "mean": 11.7,
-          "min": 9,
+          "max": 14,
+          "mean": 9.4,
+          "min": 7,
           "missing": 0,
-          "total": 117
+          "total": 94
         }
       },
       "passRate": 100,
@@ -160,11 +160,11 @@
         },
         "runMillis": {
           "count": 10,
-          "max": 15,
-          "mean": 9.4,
-          "min": 7,
+          "max": 7,
+          "mean": 5.9,
+          "min": 5,
           "missing": 0,
-          "total": 94
+          "total": 59
         }
       },
       "passRate": 100,

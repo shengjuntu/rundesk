@@ -1,5 +1,5 @@
 {
-  "version": "0.43.0",
+  "version": "0.44.0",
   "passed": true,
   "scope": "shipped UI in Node DOM fixture; browser layout not tested",
   "checks": [

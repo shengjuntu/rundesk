@@ -23,7 +23,7 @@ type completion struct {
 func requestBody(s p.State) map[string]any {
 	var definitions any = s.ToolDefinitions
 	if len(s.ToolDefinitions) == 0 {
-		definitions = toolDefinitions(s.Config.AllowWrite)
+		definitions = toolDefinitions(s.Config.AllowWrite, s.Config.AllowBash)
 	}
 	body := map[string]any{"model": s.Config.Model, "messages": s.Messages, "tools": definitions, "stream": true}
 	if s.Harness.ID == "plan-act-v1" {

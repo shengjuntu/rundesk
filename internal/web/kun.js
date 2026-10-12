@@ -1,6 +1,6 @@
 async function renderKunSettings(target){
  const i=await api("/instances").then(xs=>xs.find(x=>x.id===instance().id));
- const cfg={kind:"codex",endpoint:"http://127.0.0.1:8000/v1",model:"",apiKeyEnv:"",systemPrompt:"",maxSteps:20,timeoutSeconds:120,allowWrite:false,pauseBeforeModel:false,...i.agentRuntime};
+ const cfg={kind:"codex",endpoint:"http://127.0.0.1:8000/v1",model:"",apiKeyEnv:"",systemPrompt:"",maxSteps:20,timeoutSeconds:120,allowWrite:false,allowBash:false,bashPath:"",bashApproval:"prompt",bashTimeoutSeconds:120,pauseBeforeModel:false,...i.agentRuntime};
  if(!cfg.kind)cfg.kind="codex";
  cfg.budget={maxToolCalls:64,maxTotalTokens:0,maxActiveSeconds:900,maxConsecutiveFailures:3,...cfg.budget};
  // Persisted Codex/legacy configs can contain numeric zero defaults. Match Config.Normalized.
@@ -21,18 +21,24 @@ async function renderKunSettings(target){
  for(const [f,min,max] of [[steps,1,100],[timeout,1,600],[toolBudget,1,3200],[tokenBudget,0,1000000000],[activeBudget,1,86400],[failureBudget,1,100]]){f.input.min=min;f.input.max=max;f.input.step=1;f.input.required=true;}
  const system=el("textarea",{rows:"5"},cfg.systemPrompt||"");
  const write=el("input",{type:"checkbox"});write.checked=!!cfg.allowWrite;
+ const bash=el("input",{type:"checkbox",'aria-label':"允许 Bash 宿主命令"});bash.checked=!!cfg.allowBash;
+ const bashPath=field("Bash 可执行文件绝对路径（留空自动寻找）",cfg.bashPath);bashPath.input.ariaLabel="Bash 路径";
+ const bashTimeout=field("Bash 单次超时上限（秒）",cfg.bashTimeoutSeconds||120,"number");bashTimeout.input.min=1;bashTimeout.input.max=600;bashTimeout.input.step=1;bashTimeout.input.required=true;
+ const bashApproval=el("select",{'aria-label':"Bash 审批方式"},el("option",{value:"prompt"},"每次询问"),el("option",{value:"approve"},"始终允许"));bashApproval.value=cfg.bashApproval||"prompt";
  const pause=el("input",{type:"checkbox"});pause.checked=!!cfg.pauseBeforeModel;
  const debuggerConfig=kunPolicyEditor(cfg.debug);
  const status=el("p",{role:"status",class:"help"});
  const form=el("form",{class:"kun-config"},el("h3",{},"Agent 引擎"),el("p",{class:"help"},"选择后端后，新会话使用新引擎。已有会话保留后端归属。Kun 提供文本模型、项目文件工具、显式 Skills、MCP 和调试控制。"),
  el("label",{},"运行后端",kind),el("label",{},"Kun 模块组合",harness),el("p",{class:"help"},"Plan-Act 每个新轮次先生成一份显式计划，规划禁用工具，额外调用计入模型次数、token 和活动时间预算。保存后下一次新轮次生效；当前运行可在 Layers 通过明确预览切换，检查点续跑保留已记录的有效组合。其余三个模块使用完整历史、参数校验和固定目录。"),endpoint.node,model.node,key.node,steps.node,timeout.node,toolBudget.node,tokenBudget.node,activeBudget.node,failureBudget.node,el("p",{class:"help"},"token 阈值按服务报告的用量，在下一动作前检查；不能保证当前请求不超额。启用后如服务未报告用量，将停止后续执行。费用暂不估算。"),el("label",{},"系统提示词",system),
- el("label",{class:"kun-check"},write,"允许 Kun 写入项目内文件（仅限制内置文件工具）"),
+ el("label",{class:"kun-check"},write,"允许 Kun 写入或精确编辑项目文件（不限制 Bash / MCP）"),
+ el("label",{class:"kun-check"},bash,"允许 Bash 宿主命令"),bashPath.node,bashTimeout.node,el("label",{},"Bash 审批方式",bashApproval),
+ el("p",{class:"help"},"Bash 可运行 Python、构建、测试和 Git 命令，使用宿主账户权限，能访问项目之外及网络；必须先把实例权限设为完整访问。每次命令从项目目录启动，不保留 cd/export；无交互终端。独立文件评测目录和诊断禁用 Bash。"),
  el("label",{class:"kun-check"},pause,"每次模型请求前暂停，供调试检查"),
- el("p",{class:"help"},"MCP 在工具 MCP 页面配置；其权限独立于内置文件工具。支持 Hybrid 录制回放与需明确确认的 Live 真实分叉。当前不支持 Shell、图像模型、文件回滚或轨迹编译。"),
+ el("p",{class:"help"},"MCP 在工具 MCP 页面配置；其权限独立于内置文件工具。支持 Hybrid 录制回放与需明确确认的 Live 真实分叉。内置工具包括读写、精确编辑、列目录、grep、find 和可选 Bash。当前不支持图像模型、文件回滚、Kun 容器托管或 PiG 扩展生态。"),
  debuggerConfig.node,el("button",{type:"submit",class:"primary"},"保存引擎配置"),status);
  form.onsubmit=async event=>{
   event.preventDefault();status.textContent="保存中…";
-  try{const updated=await api("/instances/"+i.id+"/agent-runtime",{method:"PUT",body:{revision:i.revision,config:{harness:{loopPolicy:harness.value},kind:kind.value,endpoint:endpoint.input.value.trim(),model:model.input.value.trim(),apiKeyEnv:key.input.value.trim(),systemPrompt:system.value,maxSteps:Number(steps.input.value),timeoutSeconds:Number(timeout.input.value),allowWrite:write.checked,pauseBeforeModel:pause.checked,debug:debuggerConfig.get(),budget:{maxToolCalls:Number(toolBudget.input.value),maxTotalTokens:Number(tokenBudget.input.value),maxActiveSeconds:Number(activeBudget.input.value),maxConsecutiveFailures:Number(failureBudget.input.value)}}}});
+  try{const updated=await api("/instances/"+i.id+"/agent-runtime",{method:"PUT",body:{revision:i.revision,config:{harness:{loopPolicy:harness.value},kind:kind.value,endpoint:endpoint.input.value.trim(),model:model.input.value.trim(),apiKeyEnv:key.input.value.trim(),systemPrompt:system.value,maxSteps:Number(steps.input.value),timeoutSeconds:Number(timeout.input.value),allowWrite:write.checked,allowBash:bash.checked,bashPath:bashPath.input.value.trim(),bashApproval:bashApproval.value,bashTimeoutSeconds:Number(bashTimeout.input.value),pauseBeforeModel:pause.checked,debug:debuggerConfig.get(),budget:{maxToolCalls:Number(toolBudget.input.value),maxTotalTokens:Number(tokenBudget.input.value),maxActiveSeconds:Number(activeBudget.input.value),maxConsecutiveFailures:Number(failureBudget.input.value)}}}});
    state.instances=state.instances.map(v=>v.id===updated.id?updated:v);if(!state.session&&kind.value==="kun")$("#model").value=updated.agentRuntime.model;status.textContent="已保存，请新建会话使用。";i.revision=updated.revision;
   }catch(e){status.textContent=e.message;}
  };
@@ -141,7 +147,7 @@ window.RunDeskKun={
    }
    if(policyBase&&current&&(policyBase.runId!==current.runId||policyBase.revision!==current.revision))policyHint.textContent="读取后状态已变化，应用前请重新读取；草稿仍保留。";else policyHint.textContent="规则仅作用于当前运行及其检查点续跑。";
    recoverButton.disabled=controlBusy||!recoveryCheck?.eligible||!current||recoveryCheck.selection.sourceRunId!==current.runId||recoveryCheck.selection.expectedStateRevision!==current.revision;
-   controlHint.textContent=controlBusy?"正在提交当前运行控制…":!current?"worker 离线。控制不可用；历史记录仍可检查。":current.approval?(current.approval.decision?"审批决定已提交，等待引擎处理。":"MCP 审批须明确允许或拒绝；继续/单步不可代替审批。"):!["running","paused","pausing"].includes(current.status)?"运行已结束。可检查历史或展开恢复检查。":"操作会校验当前运行和状态版本，过期时需刷新。";
+   controlHint.textContent=controlBusy?"正在提交当前运行控制…":!current?"worker 离线。控制不可用；历史记录仍可检查。":current.approval?(current.approval.decision?"审批决定已提交，等待引擎处理。":"工具审批须明确允许或拒绝；继续/单步不可代替审批。"):!["running","paused","pausing"].includes(current.status)?"运行已结束。可检查历史或展开恢复检查。":"操作会校验当前运行和状态版本，过期时需刷新。";
   };
   const sendControl=async(operation,text)=>{
    const reason=controlBusy?"控制提交中…":kunControlReason(current,operation);if(reason){feedback.textContent=reason;return;}
@@ -227,5 +233,5 @@ async function refreshKunApproval(sid){
  const decide=async operation=>{
   try{await api("/sessions/"+sid+"/kun/control",{method:"POST",body:{requestId:crypto.randomUUID(),runId:current.runId,expectedStateRevision:current.revision,operation,callId:approval.callId}});await refreshKunApproval(sid);}catch(e){status.textContent=e.message;state.approvalSignature=null;}
  };
- target.replaceChildren(el("section",{class:"card kun-approval"},el("h3",{},"Kun 请求调用 MCP 工具"),el("p",{},approval.server+" / "+approval.tool),el("pre",{},approval.arguments),el("p",{class:"help"},"本次工具尚未执行。要允许后续自动调用，可在工具 MCP 页面将该工具设为“始终允许”，下一轮生效。"),el("div",{class:"actions"},button("允许本次",()=>decide("approve"),"primary"),button("拒绝本次",()=>decide("reject"))),status));
+ target.replaceChildren(el("section",{class:"card kun-approval"},el("h3",{},approval.kind==="builtin"?"Kun 请求执行 Bash 命令":"Kun 请求调用 MCP 工具"),el("p",{},approval.server+" / "+approval.tool),el("pre",{},approval.arguments),el("p",{class:"help"},approval.kind==="builtin"?"本次命令尚未执行。批准后使用宿主权限；可在 Agent 引擎配置中设置 Bash 的审批方式，下一轮生效。":"本次工具尚未执行。要允许后续自动调用，可在工具 MCP 页面将该工具设为“始终允许”，下一轮生效。"),el("div",{class:"actions"},button("允许本次",()=>decide("approve"),"primary"),button("拒绝本次",()=>decide("reject"))),status));
 }

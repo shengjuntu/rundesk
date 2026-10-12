@@ -1,6 +1,7 @@
 package kun
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	p "github.com/shengjuntu/rundesk/internal/kunproto"
@@ -9,10 +10,11 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"unicode/utf8"
 )
 
-func toolDefinitions(write bool) []any {
+func toolDefinitions(write bool, bash ...bool) []any {
 	tool := func(name, desc string, props map[string]any, required []string) any {
 		return map[string]any{"type": "function", "function": map[string]any{"name": name, "description": desc, "parameters": map[string]any{"type": "object", "properties": props, "required": required, "additionalProperties": false}}}
 	}
@@ -24,9 +26,31 @@ func toolDefinitions(write bool) []any {
 	if write {
 		out = append(out, tool("write_file", "Write UTF-8 content to a workspace-relative file. Existing content is replaced. Maximum 128 KiB.", map[string]any{"path": str, "content": str}, []string{"path", "content"}))
 	}
+	out = append(out,
+		tool("grep", "Search UTF-8 project files using a Go regular expression. Relative paths only; skips symlinks/binary/large files; returns bounded matches and truncation/skipped counts.", map[string]any{"pattern": str, "path": str, "glob": str, "ignoreCase": map[string]any{"type": "boolean"}, "literal": map[string]any{"type": "boolean"}, "limit": map[string]any{"type": "integer", "minimum": 1, "maximum": 500}}, []string{"pattern"}),
+		tool("find", "Find project files by glob (for example *.go). Matches basenames or relative paths; ** is not supported. Symlinks are skipped; default path is dot.", map[string]any{"pattern": str, "path": str, "limit": map[string]any{"type": "integer", "minimum": 1, "maximum": 500}}, []string{"pattern"}))
+	if write {
+		out = append(out, tool("edit_file", "Apply exact, unique, non-overlapping replacements against the original UTF-8 file. Validate every edit before an atomic replacement; maximum 128 KiB.", map[string]any{"path": str, "edits": map[string]any{"type": "array", "minItems": 1, "maxItems": 32, "items": map[string]any{"type": "object", "properties": map[string]any{"oldText": str, "newText": str}, "required": []string{"oldText", "newText"}, "additionalProperties": false}}}, []string{"path", "edits"}))
+	}
+	if len(bash) > 0 && bash[0] {
+		out = append(out, tool("bash", "Execute a non-interactive Bash command on the host, starting in the project directory. Pipes, redirects, scripts, git and build commands are supported. cwd/env do not persist. Host permissions apply, not file-tool restrictions. Returns stdout/stderr tails, exitCode and timeout/cancel flags. Each stream is limited to 64 KiB; no detached jobs.", map[string]any{"command": map[string]any{"type": "string", "minLength": 1, "maxLength": 32768}, "timeout": map[string]any{"type": "integer", "minimum": 1, "maximum": 600}}, []string{"command"}))
+	}
 	return out
 }
-func executeTool(workspace string, allowWrite bool, call p.ToolCall) (string, error) {
+func executeTool(workspace string, allowWrite bool, call p.ToolCall, contexts ...context.Context) (string, error) {
+	ctx := context.Background()
+	if len(contexts) > 0 {
+		ctx = contexts[0]
+	}
+	if call.Function.Name == "grep" || call.Function.Name == "find" {
+		return executeSearch(ctx, workspace, call)
+	}
+	if call.Function.Name == "edit_file" {
+		if !allowWrite {
+			return "", fmt.Errorf("edit_file is disabled")
+		}
+		return executeEdit(workspace, call)
+	}
 	var args map[string]json.RawMessage
 	if e := json.Unmarshal([]byte(call.Function.Arguments), &args); e != nil || args == nil {
 		return "", fmt.Errorf("arguments must be an object")
@@ -54,7 +78,7 @@ func executeTool(workspace string, allowWrite bool, call p.ToolCall) (string, er
 	defer root.Close()
 	switch call.Function.Name {
 	case "list_files":
-		f, e := root.Open(clean)
+		f, e := root.OpenFile(clean, os.O_RDONLY|syscall.O_NONBLOCK, 0)
 		if e != nil {
 			return "", e
 		}
@@ -78,7 +102,7 @@ func executeTool(workspace string, allowWrite bool, call p.ToolCall) (string, er
 		}
 		return strings.Join(lines, "\n"), nil
 	case "read_file":
-		f, e := root.Open(clean)
+		f, e := root.OpenFile(clean, os.O_RDONLY|syscall.O_NONBLOCK, 0)
 		if e != nil {
 			return "", e
 		}
@@ -117,11 +141,19 @@ func executeTool(workspace string, allowWrite bool, call p.ToolCall) (string, er
 		} else if e != nil && !os.IsNotExist(e) {
 			return "", e
 		}
-		f, e := root.OpenFile(clean, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+		f, e := root.OpenFile(clean, os.O_WRONLY|os.O_CREATE|syscall.O_NONBLOCK, 0600)
 		if e != nil {
 			return "", e
 		}
-		_, e = f.WriteString(content)
+		info, e := f.Stat()
+		if e != nil || !info.Mode().IsRegular() {
+			f.Close()
+			return "", fmt.Errorf("target must remain a regular file")
+		}
+		e = f.Truncate(0)
+		if e == nil {
+			_, e = f.WriteString(content)
+		}
 		if e == nil {
 			e = f.Sync()
 		}

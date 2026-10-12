@@ -1,4 +1,4 @@
-# Kun 0.13 / RunDesk 0.41.0
+# Kun 0.16 / RunDesk 0.44.0
 
 在 0.2 的 MCP 基础上增加 K1 核心模块与执行约束。采用已确认的结构：**分进程、同仓库、选择性复制 PiG 源码并自主发展**。本版包含模型／工具循环、MCP 配置与审批、四模块与两套内置组合、调用前参数校验、预算、运行记录、上下文检查和基础调试控制；不代表 KUN-DESIGN-v0.2 的所有阶段已经实现。
 
@@ -11,6 +11,8 @@
 0.38 新增 [固定规则评分与不可变报告](KUN-EVALUATION.md)，评分只读宿主保留日志，不启动模型/工具。引擎和 worker 协议不变，0.37 检查点/预览保持原兼容性。
 
 0.40 完成 [K4 参数化 Skill、独立验证门槛和守卫回退](KUN-K4.md)，使用 Kun 0.13.0 / worker v13。0.41 新增 [固定多次采样对照](KUN-BENCHMARKS.md)，保持同一 worker 协议与既有数据兼容。上方版本段落记录各版本当时范围。
+
+0.44 新增 [PiG 核心工具对齐](KUN-PIG-CORE.md)：七类编程工具、可选 Bash 宿主执行、精确编辑及搜索；Kun 0.16.0 / worker v16。K1 的最小闭环与 PiG 全能力覆盖分开验收。
 
 ## 构建和启动
 
@@ -64,7 +66,7 @@ Kun 独占 `<data>/kun/sessions/<sessionId>/state.db`，RunDesk 的业务数据�
 | 能力 | 实现范围 |
 | --- | --- |
 | 模型 | OpenAI 兼容 Chat Completions；SSE 工具参数增量拼接，也接收完整 JSON 响应 |
-| 工具 | `read_file`、`list_files`、可显式启用的 `write_file`；相对项目路径 |
+| 工具 | `read_file`、`list_files`、`grep`、`find`；写权限启用 `write_file` / `edit_file`；完整宿主权限另行启用 `bash` |
 | Skills | 扫描项目 `.agents/skills/*/SKILL.md` 和实例 Skills 目录；显式选取后注入，保存内容和 SHA-256 |
 | MCP | stdio、Streamable HTTP JSON/SSE；每轮固定服务、权限和工具定义 |
 | 会话 | 多轮文本历史；系统提示词按当前配置重新构建 |
@@ -82,7 +84,7 @@ Kun 独占 `<data>/kun/sessions/<sessionId>/state.db`，RunDesk 的业务数据�
 | 多次采样对照 | 固定配对与交替顺序、后台顺序执行、不可变描述性报告；无环境重置或统计推断 |
 | 记录 | 状态、事件、快照、命令回执、工具执行台账；API Key 字段不进入记录 |
 
-不支持：Shell、PiG 插件/Node 扩展、图像输入、自动 Skills 激活、压缩/记忆管理、高级模块/费用断点、运行时替换工具结果、任意历史回滚、嵌套分叉、任意代码生成/JIT、学习型 JEV、Docker worker。已有 Kun 独立自然语言诊断和宿主离线记录分支；已有普通运行安全点组合切换；四模块健康度、任意模块替换和迁移尚未实现；已有 Plan-Act 第二种 LoopPolicy 与两套内置组合，Layers 提供模块状态与固定快照对照，Application 调试面板目前覆盖 MCP；K4 候选与启用记录在 Skill 工作台管理。Codex 仍沿用现有后端，Kun 控制接口不会控制 Codex 的循环。
+不支持：交互终端/持久 Shell、PiG 插件/Node 扩展、图像输入、自动 Skills 激活、压缩/记忆管理、高级模块/费用断点、运行时替换工具结果、任意历史回滚、嵌套分叉、K4 任意代码 IR/JIT、学习型 JEV、Docker worker。已有 Kun 独立自然语言诊断和宿主离线记录分支；已有普通运行安全点组合切换；四模块健康度、任意模块替换和迁移尚未实现；已有 Plan-Act 第二种 LoopPolicy 与两套内置组合，Layers 提供模块状态与固定快照对照，Application 调试面板目前覆盖 MCP；K4 候选与启用记录在 Skill 工作台管理。Codex 仍沿用现有后端，Kun 控制接口不会控制 Codex 的循环。
 
 模型文本在请求结束后显示，目前没有逐 token UI。模型服务调用仍会发送任务上下文到配置的服务地址；“本地记录”不代表模型离线运行。
 
@@ -170,15 +172,15 @@ Network 记录 initialize、tools/list、tools/call 的业务请求/响应和耗
 
 ## 工具边界与限制
 
-`os.OpenRoot` 将工具路径解析限制在工作区，拒绝绝对路径、上级穿越和逃逸符号链接；这不是隔离不可信本机进程的操作系统沙箱。工具只处理普通 UTF-8 文本，每文件最多 128 KiB；列目录最多 500 项。写入会覆盖目标内容，部分写入失败不会自动恢复原文件。
+`os.OpenRoot` 将工具路径解析限制在工作区，拒绝绝对路径、上级穿越和逃逸符号链接；这不是隔离不可信本机进程的操作系统沙箱。文件工具处理普通 UTF-8 文本；读写与编辑每文件最多 128 KiB，grep 每文件最多 1 MiB；列目录最多 500 项。写入会覆盖目标内容，部分写入失败不会自动恢复原文件。
 
-允许写文件是实例级明确授权，不逐个弹出审批。实例为 read-only 时强制禁用写入。Kun 不执行 Shell，也不将 Codex 的审批与网络配置宣传为自己的沙箱能力。
+允许写文件是实例级明确授权，不逐个弹出审批。实例为 read-only 时强制禁用写入。Bash 独立开关要求实例完整访问，默认逐次审批；文件工具的写权限不约束 Bash 或 MCP。Bash 使用宿主权限，不能借用 Codex 的沙盒声明。细节见 [核心工具说明](KUN-PIG-CORE.md)。
 
 有效模型请求上限 2 MiB，模型完成结果上限 1 MiB，单请求流读取上限 8 MiB；达到限制时明确报错，当前没有自动截断或压缩。快照采用完整复制，尚无内容寻址去重和保留期管理，长会话可能占用较多磁盘。
 
 ## 协议与 API
 
-worker 协议版本 7，每行一个 JSON 对象；stdout 仅输出协议，stderr 输出诊断。方法包括 `hello`、`start`、`state`、`events`、`snapshot`、`control`、`checkpoint`、`query`；`start.resume` 用于显式恢复。`hello` 宣告 `snapshotDiff=true`、`eventEvidence=true`、`resumeCheckpoint=true`、`fork=false`、`mcp=true`、`mcpApproval=true`、`diagnosticSession=true`。宿主离线记录分支不使用 worker fork，不改变该能力标志。最大消息为 8 MiB。升级时同时更新 RunDesk 与 Kun；旧版 worker 的握手会被拒绝。状态记录 schema 保持 1，新增字段为可选，旧记录可读取，但不匹配当前引擎版本或缺少恢复清单的记录不允许恢复。
+worker 协议版本 16，每行一个 JSON 对象；stdout 仅输出协议，stderr 输出诊断。方法包括 `hello`、`start`、`state`、`events`、`snapshot`、`control`、`checkpoint`、`query`；`start.resume` 用于显式恢复。`hello` 宣告 `snapshotDiff=true`、`eventEvidence=true`、`resumeCheckpoint=true`、`fork=true`、`forkHybrid=true`、`forkLive=true`、`bash=true`、`codingTools=true`、`mcp=true`、`mcpApproval=true`、`diagnosticSession=true`。宿主离线记录实验与 worker Hybrid/Live 是不同路径；能力位表示代码支持，Bash 仍需要实例单独启用。最大消息为 8 MiB。升级时同时更新 RunDesk 与 Kun；旧版 worker 的握手会被拒绝。状态记录 schema 保持 1，新增字段为可选，旧记录可读取，但不匹配当前引擎版本或缺少恢复清单的记录不允许恢复。
 
 HTTP 同时支持 `/api` 和 `/api/v1`：
 - `PUT /instances/{iid}/agent-runtime`：管理员提交 `{revision, config}`。

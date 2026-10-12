@@ -1,0 +1,38 @@
+{
+  "version": "0.38.0",
+  "rundesk": "RunDesk 0.38.0",
+  "kun": "Kun 0.12.0",
+  "hello": {
+    "capabilities": {
+      "argumentValidation": true,
+      "budgets": true,
+      "conditionalBreakpoints": true,
+      "debugQueries": true,
+      "diagnosticSession": true,
+      "eventEvidence": true,
+      "fork": true,
+      "forkHybrid": true,
+      "forkHypothesis": true,
+      "forkLive": true,
+      "harnessComposition": true,
+      "inspect": true,
+      "mcp": true,
+      "mcpApproval": true,
+      "modules": true,
+      "pause": true,
+      "planAct": true,
+      "replayEvents": true,
+      "resumeCheckpoint": true,
+      "runtimeHarness": true,
+      "snapshotDiff": true,
+      "steer": true,
+      "step": true
+    },
+    "engine": "kun",
+    "engineVersion": "0.12.0",
+    "protocolVersion": 12
+  },
+  "oldProtocolRejected": true,
+  "passed": true,
+  "scope": "Linux CLI versions, worker hello/EOF and old protocol rejection; no Windows runtime test"
+}

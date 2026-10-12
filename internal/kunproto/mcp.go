@@ -102,6 +102,7 @@ type MCPTool struct {
 	ApprovalMode string          `json:"approvalMode"`
 }
 type ToolApproval struct {
+	Kind      string `json:"kind,omitempty"`
 	CallID    string `json:"callId"`
 	Server    string `json:"server"`
 	Tool      string `json:"tool"`

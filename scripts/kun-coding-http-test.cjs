@@ -1,0 +1,40 @@
+// Local model -> real host -> subprocess Kun -> generated Python program.
+const {spawn}=require('node:child_process'),http=require('node:http'),fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+(async()=>{
+ const root=path.resolve(__dirname,'..'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'rd-coding-')),port=process.env.RUNDESK_CODING_PORT||38944,base='http://127.0.0.1:'+port,pause=ms=>new Promise(r=>setTimeout(r,ms)),checks=[];
+ let host,model,modelCalls=0;
+ const api=async(p,body,method,status)=>{const r=await fetch(base+'/api/v1'+p,{method:method||(body?'POST':'GET'),headers:{'Content-Type':'application/json','Idempotency-Key':crypto.randomUUID()},body:body?JSON.stringify(body):undefined});if(status){assert.equal(r.status,status,await r.clone().text());return r.json()}assert(r.ok,await r.clone().text());return r.json()};
+ const startHost=async()=>{host=spawn(root+'/bin/rundesk',['--data',tmp+'/data','--listen','127.0.0.1:'+port],{env:{...process.env,RUNDESK_TOKEN:'',CODEX_BASE_TOKEN:'',CODEX_HOME:tmp+'/home'},stdio:['ignore','ignore','pipe']});host.stderr.resume();for(let n=0;n<100;n++){try{await api('/meta');return}catch{}await pause(100)}throw Error('host unavailable')};
+ const stopHost=async()=>{if(host&&host.exitCode===null){const done=new Promise(r=>host.once('exit',r));host.kill();await Promise.race([done,pause(3000)]);if(host.exitCode===null){host.kill('SIGKILL');await done}}};
+ const wait=async(test)=>{for(let n=0;n<180;n++){try{const v=await test();if(v)return v}catch(e){if(!e.message.includes('"code":"kun_offline"'))throw e}await pause(50)}throw Error('condition timeout')};
+ const completed=async sid=>wait(async()=>{const s=await api('/sessions/'+sid);if(s.status==='completed')return s;if(['failed','interrupted'].includes(s.status))throw Error(JSON.stringify(s))});
+ const call=(id,name,args)=>({id,type:'function',function:{name,arguments:JSON.stringify(args)}});
+ try{
+  model=http.createServer(async(req,res)=>{let raw='';for await(const b of req)raw+=b;const q=JSON.parse(raw);modelCalls++;const task=q.messages.find(m=>m.role==='user').content.split('\n')[0],done=q.messages.some(m=>m.role==='tool');
+   let calls;
+   if(task==='generated-code')calls=[call('write','write_file',{path:'generated app.py',content:'print(sum([1, 2]))\n'}),call('edit','edit_file',{path:'generated app.py',edits:[{oldText:'1, 2',newText:'1, 2, 3'}]}),call('find','find',{pattern:'*.py'}),call('grep','grep',{pattern:'sum',glob:'*.py'}),call('list','list_files',{path:'.'}),call('bash','bash',{command:"python3 'generated app.py' > result.txt; cat result.txt"}),call('read','read_file',{path:'result.txt'})];
+   else if(task==='denied')calls=[call('bash','bash',{command:'printf forbidden > forbidden.txt'})];
+   else if(task==='timeout')calls=[call('bash','bash',{command:'sleep 30',timeout:1})];
+   else if(task==='cancel')calls=[call('bash','bash',{command:'printf started > started.txt; (sleep 2; printf leaked > child.txt) & wait'})];
+   else throw Error('unknown task '+task);
+   const message=done?{role:'assistant',content:'Finished '+task}:{role:'assistant',tool_calls:calls};res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({choices:[{message,finish_reason:done?'stop':'tool_calls'}],usage:{total_tokens:12}}));
+  });await new Promise(r=>model.listen(0,'127.0.0.1',r));await startHost();
+  let i=await api('/instances',{name:'Bash coding integration'});const w=(await api('/workspaces'))[0];
+  const config={kind:'kun',endpoint:'http://127.0.0.1:'+model.address().port+'/v1',model:'coding-fixture',maxSteps:6,timeoutSeconds:10,allowWrite:true,allowBash:true,bashApproval:'prompt',bashTimeoutSeconds:10};
+  await api('/instances/'+i.id+'/agent-runtime',{revision:i.revision,config},'PUT',400);
+  i=await api('/instances/'+i.id,{revision:i.revision,name:i.name,permissions:{sandbox:'danger-full-access',approvalPolicy:'on-request',reviewer:'user'}},'PATCH');
+  i=await api('/instances/'+i.id+'/agent-runtime',{revision:i.revision,config},'PUT');
+  const run=async text=>{const s=await api('/sessions',{workspaceId:w.id,instanceId:i.id,title:text});await api('/sessions/'+s.id+'/turns',{text});return s};
+  const decision=async(s,operation)=>{const v=await wait(async()=>{const v=await api('/sessions/'+s.id+'/kun/state');return v.approval?v:null});assert.equal(v.approval.kind,'builtin');assert.equal(v.approval.tool,'bash');await api('/sessions/'+s.id+'/kun/control',{requestId:crypto.randomUUID(),runId:v.runId,expectedStateRevision:v.revision,operation,callId:v.approval.callId});return v};
+  const generated=await run('generated-code');
+  await wait(async()=>{const s=await api('/sessions/'+generated.id+'/kun/state');return s.approval});assert(!fs.existsSync(w.path+'/result.txt'));
+  await decision(generated,'approve');await completed(generated.id);assert.equal(fs.readFileSync(w.path+'/result.txt','utf8'),'6\n');assert.equal(fs.readFileSync(w.path+'/generated app.py','utf8'),'print(sum([1, 2, 3]))\n');
+  const events=await api('/sessions/'+generated.id+'/events');const outputs=events.filter(e=>e.method==='kun/tool.completed').map(e=>e.data.data);assert.equal(outputs.length,7);assert(outputs.every(x=>!x.isError));assert.equal(JSON.parse(outputs.find(x=>x.call.function.name==='bash').output).exitCode,0);assert.equal(outputs.find(x=>x.call.function.name==='read_file').output,'6\n');assert.equal(modelCalls,2);checks.push('seven real coding tools: write/edit/find/grep/list/bash/read; Python execution yields 6; no execution before approval');
+  const denied=await run('denied');await decision(denied,'reject');await completed(denied.id);assert(!fs.existsSync(w.path+'/forbidden.txt'));checks.push('rejected Bash leaves no file');
+  const timeout=await run('timeout');await decision(timeout,'approve');await completed(timeout.id);const timeoutEvents=await api('/sessions/'+timeout.id+'/events');const timeoutOutput=JSON.parse(timeoutEvents.find(e=>e.method==='kun/tool.completed').data.data.output);assert(timeoutOutput.timedOut);assert.equal(timeoutOutput.exitCode,null);checks.push('timeout has durable structured result and null exit code');
+  const cancel=await run('cancel');await decision(cancel,'approve');await wait(async()=>fs.existsSync(w.path+'/started.txt'));const current=await api('/sessions/'+cancel.id+'/kun/state');await api('/sessions/'+cancel.id+'/kun/control',{requestId:crypto.randomUUID(),runId:current.runId,expectedStateRevision:current.revision,operation:'cancel'});await wait(async()=>{const s=await api('/sessions/'+cancel.id+'/kun/state');return !['running','paused','pausing'].includes(s.status)});await pause(2200);assert(!fs.existsSync(w.path+'/child.txt'));checks.push('cancellation cleans an ordinary child process before delayed file write');
+  const fixture=await api('/kun-task-sets',{title:'Bash forbidden in fixture directory',cases:[{key:'one',title:'one',input:'generated-code',rules:[{kind:'reply_contains',value:'Finished'}],workspaceFixture:{files:[]}}]});await api('/kun-case-runs',{taskSetId:fixture.id,expectedTaskSetHash:fixture.hash,caseKey:'one',workspaceId:w.id,instanceId:i.id},'POST',409);checks.push('fixture evaluation rejects host Bash');
+  await stopHost();await startHost();assert.deepEqual(await api('/sessions/'+generated.id+'/events'),events);assert.equal(fs.readFileSync(w.path+'/result.txt','utf8'),'6\n');checks.push('completed tool and approval evidence survives host restart without reexecution');
+  const proof={version:'0.44.0',passed:true,scope:'Linux real host and Kun worker, local model fixture and installed Python3; no OS sandbox, remote provider or Windows runtime claim',modelCalls,checks};fs.writeFileSync(root+'/docs/kun-coding-http-validation.json',JSON.stringify(proof,null,2)+'\n');console.log(JSON.stringify(proof));
+ }finally{await stopHost();if(model)await new Promise(r=>model.close(r));fs.rmSync(tmp,{recursive:true,force:true})}
+})().catch(e=>{console.error(e);process.exitCode=1});

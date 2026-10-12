@@ -7,7 +7,7 @@ import (
 )
 
 // No external action is dispatched before the approval decision is durable.
-func (e *Engine) approveMCP(ctx context.Context, tool p.MCPTool, call p.ToolCall) (bool, error) {
+func (e *Engine) approveMCP(ctx context.Context, tool p.MCPTool, call p.ToolCall, builtin ...bool) (bool, error) {
 	e.mu.Lock()
 	if tool.ApprovalMode == "approve" {
 		e.mu.Unlock()
@@ -19,6 +19,9 @@ func (e *Engine) approveMCP(ctx context.Context, tool p.MCPTool, call p.ToolCall
 	}
 	e.setWaiting(true)
 	e.state.Approval = &p.ToolApproval{CallID: call.ID, Server: tool.Server, Tool: tool.Name, Arguments: call.Function.Arguments}
+	if len(builtin) > 0 && builtin[0] {
+		e.state.Approval.Kind = "builtin"
+	}
 	e.state.Status = "paused"
 	e.state.Phase = "approval"
 	err := e.record("kun/approval.requested", e.state.Approval)
@@ -34,7 +37,7 @@ func (e *Engine) approveMCP(ctx context.Context, tool p.MCPTool, call p.ToolCall
 		a := e.state.Approval
 		if a == nil {
 			e.mu.Unlock()
-			return false, fmt.Errorf("MCP approval state lost")
+			return false, fmt.Errorf("tool approval state lost")
 		}
 		if a.Decision != "" {
 			e.setWaiting(false)

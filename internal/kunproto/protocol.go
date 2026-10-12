@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
 
-const Version = 15
-const EngineVersion = "0.15.0"
+const Version = 16
+const EngineVersion = "0.16.0"
 const MaxMessage = 8 << 20
 
 type Envelope struct {
@@ -23,18 +24,22 @@ type Envelope struct {
 	Event   *Event          `json:"event,omitempty"`
 }
 type Config struct {
-	Harness          HarnessConfig `json:"harness"`
-	Debug            DebugPolicy   `json:"debug"`
-	Budget           BudgetLimits  `json:"budget"`
-	Kind             string        `json:"kind"`
-	Endpoint         string        `json:"endpoint"`
-	Model            string        `json:"model"`
-	APIKeyEnv        string        `json:"apiKeyEnv,omitempty"`
-	SystemPrompt     string        `json:"systemPrompt,omitempty"`
-	MaxSteps         int           `json:"maxSteps"`
-	TimeoutSeconds   int           `json:"timeoutSeconds"`
-	AllowWrite       bool          `json:"allowWrite"`
-	PauseBeforeModel bool          `json:"pauseBeforeModel"`
+	Harness            HarnessConfig `json:"harness"`
+	Debug              DebugPolicy   `json:"debug"`
+	Budget             BudgetLimits  `json:"budget"`
+	Kind               string        `json:"kind"`
+	Endpoint           string        `json:"endpoint"`
+	Model              string        `json:"model"`
+	APIKeyEnv          string        `json:"apiKeyEnv,omitempty"`
+	SystemPrompt       string        `json:"systemPrompt,omitempty"`
+	MaxSteps           int           `json:"maxSteps"`
+	TimeoutSeconds     int           `json:"timeoutSeconds"`
+	AllowBash          bool          `json:"allowBash,omitempty"`
+	BashPath           string        `json:"bashPath,omitempty"`
+	BashApproval       string        `json:"bashApproval,omitempty"`
+	BashTimeoutSeconds int           `json:"bashTimeoutSeconds,omitempty"`
+	AllowWrite         bool          `json:"allowWrite"`
+	PauseBeforeModel   bool          `json:"pauseBeforeModel"`
 }
 
 func (c Config) Normalized() Config {
@@ -80,6 +85,15 @@ func (c Config) Validate() error {
 	}
 	if c.MaxSteps < 1 || c.MaxSteps > 100 || c.TimeoutSeconds < 1 || c.TimeoutSeconds > 600 || len(c.SystemPrompt) > 65536 {
 		return fmt.Errorf("invalid Kun budget or system prompt")
+	}
+	if c.BashApproval != "" && c.BashApproval != "prompt" && c.BashApproval != "approve" {
+		return fmt.Errorf("bash approval must be prompt or approve")
+	}
+	if c.BashTimeoutSeconds < 0 || c.BashTimeoutSeconds > 600 {
+		return fmt.Errorf("bash timeout must be 1–600 seconds (0 uses 120)")
+	}
+	if c.BashPath != "" && (!filepath.IsAbs(c.BashPath) || len(c.BashPath) > 1024 || strings.ContainsRune(c.BashPath, 0)) {
+		return fmt.Errorf("bash path must be an absolute executable path")
 	}
 	return nil
 }

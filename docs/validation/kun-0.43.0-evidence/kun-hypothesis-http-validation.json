@@ -1,0 +1,13 @@
+{
+  "version": "0.37.0",
+  "passed": true,
+  "scope": "actual RunDesk HTTP + Kun process + local model fixture; browser and remote services not tested",
+  "modelCalls": 6,
+  "assumedCalls": 1,
+  "checks": [
+    "HTTP record review and immutable/idempotent child creation without model calls",
+    "real worker recomputes with hypothetical model input, source file absent",
+    "same-baseline fixed comparison separates recorded/hypothetical/real results and links applied evidence",
+    "embedded editor served; start retry returns same run"
+  ]
+}

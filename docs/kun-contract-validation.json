@@ -1,16 +1,15 @@
 {
-  "version": "0.43.0",
+  "version": "0.44.0",
   "passed": true,
-  "javascriptFiles": 84,
+  "javascriptFiles": 85,
   "nodeInteractionSuites": 12,
   "openapiPaths": 180,
   "openapiOperations": 216,
   "uniqueParameters": true,
   "localReferencesResolve": true,
   "administratorAndIdempotency": true,
-  "fixtureFieldsOptional": true,
-  "noNewDependencies": true,
+  "bashFieldsOptional": true,
   "sourceFingerprintMatches": true,
-  "sourceSHA256": "dfd38504ffb2d78f578b7f7e718f4027bc754c69a6aace578277e8f9a28cef9f",
-  "receipt": "validation/kun-0.43.0-final/summary.json"
+  "sourceSHA256": "0f9fa998222ea6b13a85e326de3313839c29b6d6742ed9a141a841ec8296da87",
+  "receipt": "validation/kun-0.44.0-final/summary.json"
 }

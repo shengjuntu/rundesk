@@ -31,3 +31,19 @@ PiG's TUI, extension/Node runtime, providers/model catalogue, tools, full MCP cl
 ## Verification
 
 SSE newline / EOF parity tests run in `go test ./internal/kun`; MCP chunking, bounds, callback stop and transport tests run in `go test ./internal/mcp`. Kun's own tests separately cover tool-call fragment assembly, incomplete streams, write boundaries, snapshots, request deduplication, pause/step/steer, cancellation and interrupted-action recovery. RunDesk integration tests build and launch the actual worker against a local model fixture.
+
+## Core tool behavior references in 0.44.0
+
+The following files at the same fixed commit were inspected to align core actions and explicit differences. Their implementation was **not copied** into Kun. Kun's Bash, exact-edit and search implementation and tests are original local work integrated with Kun's approval, journal, budget and replay contracts. Tool names and schemas intentionally follow Kun's own protocol; this is functional coverage, not wire-format or feature-complete parity.
+
+| Referenced upstream path | Original SHA-256 |
+| --- | --- |
+| `internal/codingagent/tools/bash.go` | `98f3dc6b829b7387493fa733a06e2ed1b36f0ba8f327e848b8bfe0d0fe4413bc` |
+| `internal/codingagent/tools/bash_executor.go` | `e16d90dfb0e62092d8ba821cdc60a833085d7377614abaab623bbc1933dc209c` |
+| `internal/codingagent/tools/edit.go` | `415ef37ca48bd842b9f95c424a6fc0e3b07ce89a44bff4c3a91e5b7340038aab` |
+| `internal/codingagent/tools/find.go` | `4c911f5a2fecb30fdd898f1c7a37d2d7e66b268af1a16a5c566a36421e251ee0` |
+| `internal/codingagent/tools/grep.go` | `9fc09eb56c36907a26f2cad10a1a670dd1ce12f3df40ba27a0dce9e669b78ddb` |
+| `internal/codingagent/tools/read.go` | `ca39ad608a1fcc7f49322c1ad0720673ac738e8a431d58235853f51af9ea2f2a` |
+| `internal/codingagent/tools/shell_config.go` | `c477325750c4cde443260db025f0088e6ecc039d7cd4a77093384b22a1565db1` |
+
+PiG's published [security documentation](https://pi-in-go.dev/docs/latest/security/) and [container guide](https://pi-in-go.dev/docs/latest/containerization/) were checked on 2026-10-11. They describe current-user execution and external container/VM isolation, not an embedded OS sandbox. Those rolling docs are contextual references; the code audit above remains pinned. See [alignment matrix](KUN-PIG-CORE.md) for Kun's actual limits.

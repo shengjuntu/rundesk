@@ -1,5 +1,5 @@
 {
-  "version": "0.43.0",
+  "version": "0.44.0",
   "passed": true,
   "scope": "shipped K4 UI in Node DOM fixture; not browser layout acceptance",
   "checks": [

@@ -10,6 +10,14 @@ Built with Go and plain HTML/JavaScript. Node.js is not required to run RunDesk 
 
 ![RunDesk conversation workspace](docs/screenshots/0.16.0/chat-en.png)
 
+## PiG core coding tools (0.44.0)
+
+Kun now covers seven core coding actions: read, write, exact edit, list, grep, find and opt-in Bash. Commands run in a fresh non-interactive shell with explicit host permission and durable approval, timeout/cancellation, bounded output and the existing action ledger. Generated code can be saved, edited and executed through an installed interpreter or compiler.
+
+Upgrade both binaries: **Kun 0.16.0 / worker protocol v16 / fork schema 3**. Bash is host execution, not an OS sandbox; Kun-managed containers remain pending. See [core alignment and usage](docs/KUN-PIG-CORE.md), [release notes](docs/RELEASE-0.44.0.md), [validation](docs/KUN-VALIDATION.md) and [progress](docs/KUN-PROGRESS.md).
+
+Thanks to [MichaelKinsy/PiG](https://github.com/MichaelKinsy/PiG), its contributors, and Mario Zechner / Pi. Kun selectively incorporates attributed source and independently develops its own runtime; it is not a full PiG fork. Exact source revision, copied files and MIT notices are in [UPSTREAM](docs/UPSTREAM.md).
+
 ## K4 isolated evaluation directories (0.43.0)
 
 Declare fixed input files and run each case in a fresh directory. Dynamic samples, fast samples and independent validation each receive their own file-tool root. Preview has no file operations; existing directories are never overwritten or reset. Setup evidence is required for a passing score, and fallback retains the same directory and action ledger.

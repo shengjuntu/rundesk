@@ -1,0 +1,30 @@
+{
+  "version": "0.39.0",
+  "kunVersion": "0.12.0",
+  "protocolVersion": 12,
+  "forkSchema": 3,
+  "date": "2026-10-08",
+  "passed": true,
+  "status": "passed",
+  "scope": "local Go/CLI/HTTP/Node regression and compilation; not full product acceptance",
+  "goVersion": "go1.25.12",
+  "sourceSHA256": "f654c1654db73becce944547ae22ec98236fafa1f1b67755e5704fc1d6843a48",
+  "receipt": "validation/kun-0.39.0/summary.json",
+  "checks": {
+    "goTestAll": "passed; app 77.596s",
+    "goVet": "passed",
+    "focusedRace": "passed: TestKunEvaluation|TestKunCompar|TestKunHypothesis|TestKunTaskSet in internal/app; 3.604s",
+    "linuxAmd64": "rundesk and kun built and exercised",
+    "windowsAmd64": "rundesk and kun cross-compiled; no Windows runtime test",
+    "node": "77 syntax files and 10 interaction suites passed",
+    "realHTTP": "passed: fixed-input task-set immutable/idempotent save, read and metadata list with zero model calls; existing Hybrid/hypothesis/evaluation fixture remains at 6 calls"
+  },
+  "notAccepted": [
+    "real browser layout/focus/mobile behavior",
+    "real Codex/remote model/MCP",
+    "Windows runtime",
+    "production workload",
+    "batch task-set execution and run/result binding",
+    "aggregate scoring and independent holdout isolation"
+  ]
+}
