@@ -30,6 +30,11 @@ const buildContextLimit = 128 << 20
 const buildLogLimit = 4 << 20
 
 type ImageBuild struct {
+	Scope          string `json:"scope,omitempty"`
+	Source         string `json:"source,omitempty"`
+	ProfileID      string `json:"profileId,omitempty"`
+	CodexVersion   string `json:"codexVersion,omitempty"`
+	OfflineReady   bool   `json:"offlineReady"`
 	ID             string `json:"id"`
 	InstanceID     string `json:"instanceId"`
 	Name           string `json:"name"`
@@ -188,6 +193,9 @@ func extractBuildContext(zipPath, dir, dockerfile string) (int, int64, error) {
 	return count, total, nil
 }
 func (m *Manager) CreateBuild(iid, name, dockerfile string, timeout int, noCache bool, src io.Reader) (ImageBuild, error) {
+	return m.createBuild(iid, name, dockerfile, timeout, noCache, src, nil)
+}
+func (m *Manager) createBuild(iid, name, dockerfile string, timeout int, noCache bool, src io.Reader, setup *RuntimeImageInput) (ImageBuild, error) {
 	m.buildMu.Lock()
 	defer m.buildMu.Unlock()
 	var v ImageBuild
@@ -198,7 +206,7 @@ func (m *Manager) CreateBuild(iid, name, dockerfile string, timeout int, noCache
 	if e != nil {
 		return v, e
 	}
-	if i.ID == DefaultInstance {
+	if i.ID == DefaultInstance && setup == nil {
 		return v, failure(409, "not_docker_application", "请在专用应用中构建镜像")
 	}
 	name = strings.TrimSpace(name)
@@ -270,6 +278,18 @@ func (m *Manager) CreateBuild(iid, name, dockerfile string, timeout int, noCache
 		name = "构建 " + id[:8]
 	}
 	v = ImageBuild{ID: id, InstanceID: iid, Name: name, Dockerfile: dockerfile, Reference: "rundesk-build/" + iid + ":" + id, Status: "draft", Created: store.Now(), Updated: store.Now(), ContextSHA256: hex.EncodeToString(hash.Sum(nil)), ContextBytes: size, Files: files, TimeoutMinutes: timeout, NoCache: noCache}
+	if setup != nil {
+		v.Scope, v.Source, v.ProfileID, v.CodexVersion = "setup", setup.Source, setup.ProfileID, setup.CodexVersion
+		v.Reference, v.Status = setup.Reference, "queued"
+		for _, old := range rows {
+			if old.Scope == "setup" && buildActive(old.Status) && old.Reference == v.Reference {
+				if old.ContextSHA256 == v.ContextSHA256 && old.Source == v.Source {
+					return old, nil
+				}
+				return ImageBuild{}, failure(409, "runtime_image_busy", "此镜像已有准备任务，请先等待或取消")
+			}
+		}
+	}
 	if e = os.Rename(tmp, m.buildDir(id)); e != nil {
 		return v, e
 	}
@@ -292,7 +312,7 @@ func (m *Manager) StartBuild(iid, id string) (ImageBuild, error) {
 	if e != nil {
 		return v, e
 	}
-	if i.ID == DefaultInstance {
+	if i.ID == DefaultInstance && v.Scope != "setup" {
 		return v, failure(409, "not_docker_application", "请在专用应用中构建镜像")
 	}
 	v.Status = "queued"
@@ -441,6 +461,10 @@ func (m *Manager) runNextBuild() {
 		v.Status = "failed"
 		v.Error = diagnosticText(runErr.Error())
 	default:
+		if v.Scope == "setup" {
+			v.Status, v.OfflineReady = "succeeded", true
+			break
+		}
 		// Register by immutable image ID, never by a tag another process can move.
 		version, err := m.RegisterImage(v.InstanceID, imageID)
 		if err != nil {
@@ -466,7 +490,7 @@ func (m *Manager) executeBuild(ctx context.Context, v ImageBuild) (string, bool,
 	if e != nil {
 		return "", false, e
 	}
-	if i.Execution.normalized().Mode != "docker" {
+	if v.Scope != "setup" && i.Execution.normalized().Mode != "docker" {
 		return "", false, fmt.Errorf("应用已切换为本机执行，构建未启动")
 	}
 	dir := m.buildDir(v.ID)
@@ -476,6 +500,17 @@ func (m *Manager) executeBuild(ctx context.Context, v ImageBuild) (string, bool,
 	}
 	defer f.Close()
 	out := &buildLogWriter{f: f}
+	if v.Scope == "setup" && v.Source == "build" {
+		if id := m.cachedRuntimeImage(v); id != "" {
+			fmt.Fprintln(out, "相同配方的镜像已存在，跳过构建并重新检查工具。")
+			err := m.verifyRuntimeImage(ctx, v, id, out)
+			return id, out.truncated, err
+		}
+	}
+	if v.Scope == "setup" && v.Source != "build" {
+		id, err := m.acquireRuntimeImage(ctx, v, out)
+		return id, out.truncated, err
+	}
 	iidfile := filepath.Join(dir, "image-id")
 	_ = os.Remove(iidfile)
 	args := []string{"build", "--builder", "default", "--load", "--progress=plain", "--platform", "linux/" + runtime.GOARCH, "--iidfile", iidfile, "--tag", v.Reference, "--file", filepath.Join(dir, "context", filepath.FromSlash(v.Dockerfile))}
@@ -522,7 +557,10 @@ func (m *Manager) executeBuild(ctx context.Context, v ImageBuild) (string, bool,
 	if _, e = hex.DecodeString(id[7:]); e != nil {
 		return "", out.truncated, e
 	}
-	return id, out.truncated, nil
+	if v.Scope == "setup" {
+		e = m.verifyRuntimeImage(ctx, v, id, out)
+	}
+	return id, out.truncated, e
 }
 func (m *Manager) BuildLog(iid, id string, after int64) (any, error) {
 	m.buildMu.Lock()

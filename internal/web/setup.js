@@ -13,7 +13,7 @@ window.RunDeskSetup=(()=>{
   let revision=v.settings.revision,instanceRevision=i.revision,busy=false;
   const path=el('input',{value:v.codex,id:'setup-codex'}),model=el('input',{value:i.defaultModel||cfg.model||'',id:'setup-model'});
   const endpoint=el('input',{id:'setup-endpoint',value:cfg.endpoint||'http://127.0.0.1:8000/v1'}),key=el('input',{id:'setup-key-env',value:cfg.apiKeyEnv||'',placeholder:'OPENAI_API_KEY'});
-  const kind=el('select',{id:'setup-runtime'},el('option',{value:'kun'},'Kun'),el('option',{value:'codex'},'Codex'));kind.value=cfg.kind||'codex';kind.disabled=!!app;
+  const kind=el('select',{id:'setup-runtime'},el('option',{value:'kun'},'Kun'),el('option',{value:'codex'},'Codex'),...(!app?[el('option',{value:'applications'},tr('仅使用 Docker 应用','Docker applications only'))]:[]));kind.value=(!app&&v.settings.applicationsOnly)?'applications':(cfg.kind||'codex');kind.disabled=!!app;
   const project=el('select',{id:'setup-workspace'},...state.workspaces.map(w=>el('option',{value:w.id},w.name)));
   project.value=app?.workspaceId||v.settings.workspaceId||ws()?.id||state.workspaces[0]?.id;
   const close=()=>{if(busy){error.textContent=tr('请等待安装或保存完成。','Wait for installation or saving to finish.');return;}sessionStorage.setItem('rundesk-setup-dismissed','1');d.close();};
@@ -41,7 +41,7 @@ window.RunDeskSetup=(()=>{
   const checks=el('div',{class:'setup-checks'});d.append(checks);
   function renderChecks(){
    checks.replaceChildren();
-   const rows=kind.value==='kun'?[['kun',tr('Kun 版本','Kun version')],['workspace',rdText('工作目录')],['mcp',rdText('MCP 工具')]]:[['codex',rdText('本机 Codex')],['workspace',rdText('工作目录')],['models',rdText('模型与协议')],['account',rdText('账户认证')],['mcp',rdText('MCP 工具')]];
+   const rows=kind.value==='applications'?[['docker','Docker'],['workspace',rdText('工作目录')]]:kind.value==='kun'?[['kun',tr('Kun 版本','Kun version')],['workspace',rdText('工作目录')],['mcp',rdText('MCP 工具')]]:[['codex',rdText('本机 Codex')],['workspace',rdText('工作目录')],['models',rdText('模型与协议')],['account',rdText('账户认证')],['mcp',rdText('MCP 工具')]];
    if(cfg.allowBash&&kind.value==='kun')rows.push(['bash','Bash']);
    if(i.execution?.mode==='docker')rows.push(['docker','Docker']);
    for(const [check,label] of rows){
@@ -61,18 +61,19 @@ window.RunDeskSetup=(()=>{
     el('label',{},tr('Codex 版本','Codex version'),version),el('label',{},consent,tr('下载并安装所选 Codex 版本','Download and install the selected Codex version')),installButton,output,
     el('p',{},tr('也可以手工安装，再填写可执行文件路径：','Or install manually, then enter the executable path:')),el('code',{},'npm install -g @openai/codex@X.Y.Z'));
    d.append(install,el('p',{class:'help'},tr('Kun 使用 Chat Completions API；Codex 沿用自己的提供方配置。密钥只填写环境变量名称。保存后，新会话使用所选后端；旧会话保留原后端。','Kun uses Chat Completions; Codex keeps its provider configuration. Enter credential variable names, not secrets. New sessions use the saved backend; existing sessions retain their backend.')));
+   if(window.RunDeskRuntimeSetup)d.append(window.RunDeskRuntimeSetup.panel(d));
    const save=async completed=>{
     if(busy)return;busy=true;error.textContent='';
-    try{const runtime={...cfg,kind:kind.value};if(kind.value==='kun')Object.assign(runtime,{endpoint:endpoint.value.trim(),model:model.value.trim(),apiKeyEnv:key.value.trim()});
-     const r=await api('/setup',{method:'PUT',body:{codex:path.value,model:model.value,workspaceId:project.value,revision,instanceRevision,agentRuntime:runtime,completed}});
-     revision=r.settings.revision;state.instances=await api('/instances');instanceRevision=state.instances.find(x=>x.id===i.id).revision;Object.assign(cfg,runtime);
+    try{const applicationsOnly=kind.value==='applications';const runtime=applicationsOnly?null:{...cfg,kind:kind.value};if(kind.value==='kun')Object.assign(runtime,{endpoint:endpoint.value.trim(),model:model.value.trim(),apiKeyEnv:key.value.trim()});
+     const r=await api('/setup',{method:'PUT',body:{codex:path.value,model:model.value,workspaceId:project.value,revision,instanceRevision,agentRuntime:runtime,applicationsOnly,completed}});
+     revision=r.settings.revision;state.instances=await api('/instances');instanceRevision=state.instances.find(x=>x.id===i.id).revision;if(runtime)Object.assign(cfg,runtime);
      localStorage.setItem('rundesk-assistant-workspace',project.value);$('#workspace').value=project.value;updateWorkspaceLabel();await refreshEnvironment();
      if(r.reloadWarning){error.textContent=r.reloadWarning;return;}toast(rdText('配置已保存'));if(completed)d.close();
     }catch(e){error.textContent=e.message;}finally{busy=false;}
    };
    d.append(error,el('div',{class:'setup-actions'},button(rdText('保存配置'),()=>save(false),'quiet'),button(rdText('完成设置'),()=>save(true),'primary')));
   }else d.append(error);
-  const selectBackend=()=>{kunFields.hidden=kind.value!=='kun';codexFields.hidden=kind.value!=='codex';install.hidden=kind.value!=='codex';renderChecks();};
+  const selectBackend=()=>{model.disabled=kind.value==='applications';kunFields.hidden=kind.value!=='kun';codexFields.hidden=kind.value!=='codex';install.hidden=kind.value!=='codex';renderChecks();};
   kind.addEventListener('change',selectBackend);project.addEventListener('change',()=>refreshEnvironment().catch(e=>error.textContent=e.message));selectBackend();
   document.body.append(d);d.addEventListener('close',()=>d.remove(),{once:true});d.showModal();await refreshEnvironment();
  }

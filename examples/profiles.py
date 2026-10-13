@@ -14,7 +14,7 @@ import uuid
 import zipfile
 
 ROOT = Path(__file__).resolve().parent
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 PROFILE_IDS = tuple(sorted(p.parent.name for p in ROOT.glob("*/profile.json") if re.fullmatch(r"[a-z0-9-]+", p.parent.name)))
 EXACT = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?\Z")
 IMAGE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/:@-]{0,240}\Z")
@@ -51,9 +51,9 @@ def load_profile(name):
     if not set(value["optionalComponents"]) <= {"agent-reach"}:
         raise ProfileError("Unknown optional component")
     resource = value["resources"]
-    if not isinstance(resource, dict) or not {"cpus", "memoryMB", "network"} <= set(resource) or not set(resource) <= {"cpus", "memoryMB", "wigoloMemoryMB", "network"}:
+    if not isinstance(resource, dict) or set(resource) != {"cpus", "memoryMB", "network"}:
         raise ProfileError("Invalid resource fields")
-    for key in ("cpus", "memoryMB", "wigoloMemoryMB"):
+    for key in ("cpus", "memoryMB"):
         if key in resource and (type(resource[key]) is not int or resource[key] < (1 if key == "cpus" else 256)):
             raise ProfileError("Invalid resource limit: " + key)
     if resource["network"] not in ("bridge", "none"):
@@ -62,7 +62,7 @@ def load_profile(name):
         raise ProfileError("Profile version must be exact")
     if not re.fullmatch(r"[a-z0-9-]{1,64}", value["skill"]):
         raise ProfileError("Invalid skill name")
-    if not set(value["searchBackends"]) <= {"exa", "wigolo", "none"} or value["defaultSearchBackend"] not in value["searchBackends"]:
+    if not set(value["searchBackends"]) <= {"exa", "none"} or value["defaultSearchBackend"] not in value["searchBackends"]:
         raise ProfileError("Invalid search backends")
     for package in value["aptPackages"]:
         if not re.fullmatch(r"[a-z0-9][a-z0-9+.-]*", package):
@@ -74,8 +74,8 @@ def load_profile(name):
     for package, pin in pins["python"].items():
         if not re.fullmatch(r"[A-Za-z0-9_.-]+", package) or not re.fullmatch(r"[0-9]+(?:\.[0-9]+)+(?:[a-z0-9.-]+)?", pin):
             raise ProfileError("Invalid Python dependency pin")
-    if not EXACT.fullmatch(pins["wigolo"]["version"]):
-        raise ProfileError("Invalid Wigolo version")
+    if not all(EXACT.fullmatch(v) for v in pins["npm"].values()):
+        raise ProfileError("Invalid npm tool version")
     if not re.fullmatch(r"[0-9a-f]{40}", pins["agentReach"]["commit"]):
         raise ProfileError("Agent-Reach needs an exact commit")
     if pins["agentReach"]["repository"] != "https://github.com/silently0801/agent-reach":
@@ -92,10 +92,12 @@ def load_profile(name):
     return value
 
 
-def resolve(profile, backend=None, agent_reach=False):
+def resolve(profile, backend=None, agent_reach=None):
     backend = backend or profile["defaultSearchBackend"]
     if backend not in profile["searchBackends"]:
         raise ProfileError("Search backend is not supported by this profile")
+    if agent_reach is None:
+        agent_reach = "agent-reach" in profile["optionalComponents"]
     if agent_reach and "agent-reach" not in profile["optionalComponents"]:
         raise ProfileError("Agent-Reach is not offered by this profile")
     return {"searchBackend": backend, "agentReach": bool(agent_reach)}
@@ -114,10 +116,6 @@ def seed_config(selection):
                   'enabled = ' + str(selection["searchBackend"] == "exa").lower(),
                   'startup_timeout_sec = 30', 'tool_timeout_sec = 90',
                   'enabled_tools = ["web_search_exa", "web_fetch_exa", "web_search_advanced_exa"]', '']
-    if selection["searchBackend"] == "wigolo":
-        lines += ['[mcp_servers.wigolo]', 'command = "/usr/local/bin/rundesk-wigolo"', 'args = ["mcp"]',
-                  'startup_timeout_sec = 120', 'tool_timeout_sec = 180',
-                  'enabled_tools = ["search", "fetch", "extract", "crawl", "cache", "find_similar"]', '']
     return "\n".join(lines)
 
 
@@ -128,8 +126,8 @@ def render(profile, selection, codex_version, base_image, destination):
         raise ProfileError("Invalid base image reference")
     pins = read_json(ROOT / "_shared" / "dependencies.json")
     pkgs = sorted(set(["ca-certificates", "git", "curl", "ripgrep", "python3", "python3-venv"] + profile["aptPackages"]))
-    if selection["searchBackend"] == "wigolo":
-        pkgs += ["g++", "make"]  # native Node dependencies may need compilation
+    if selection["agentReach"]:
+        pkgs += ["gh"]
     requirements = [p + "==" + pins["python"][p] for p in profile["pythonPackages"]]
     if selection["agentReach"]:
         a = pins["agentReach"]
@@ -139,44 +137,53 @@ def render(profile, selection, codex_version, base_image, destination):
     skill = profile["skill"]
     for rel in ("SKILL.md", "agents/openai.yaml"):
         write(destination / "skills" / skill / rel, (ROOT / profile["id"] / "skills" / skill / rel).read_text(encoding="utf-8"))
-    for filename in ("profile_doctor.py", "read_web.py", "video_smoke.py", "rundesk-wigolo"):
+    for filename in ("profile_doctor.py", "read_web.py", "video_smoke.py", "mcporter", "agent_reach_config.py"):
         source = ROOT / "_shared" / filename
         write(destination / "tools" / filename, source.read_text(encoding="utf-8"), executable=True)
     resolved = {"schemaVersion": 1, "generatorVersion": VERSION, "profile": profile,
                 "selection": selection, "codexVersion": codex_version, "baseImage": base_image,
                 "dependencies": pins, "validation": {"imageBuilt": False, "modelTested": False, "networkTested": False}}
     write(destination / "profile.lock.json", json.dumps(resolved, ensure_ascii=False, indent=2) + "\n")
+    if selection["agentReach"]:
+        for filename in ("package.json", "package-lock.json"):
+            write(destination / "agent-tools" / filename, (ROOT / "_shared/agent-tools" / filename).read_text())
     labels = {"org.opencontainers.image.title": "RunDesk " + profile["id"],
               "org.opencontainers.image.version": profile["version"],
               "io.rundesk.profile": profile["id"], "io.rundesk.profile.schema": "1",
               "io.rundesk.codex.version": codex_version,
+              "io.rundesk.agent-reach": str(selection["agentReach"]).lower(),
               "io.rundesk.capabilities.tools": ", ".join(profile["tools"] + (["agent-reach"] if selection["agentReach"] else [])),
               "io.rundesk.capabilities.skills": skill,
               "io.rundesk.capabilities.mcp": selection["searchBackend"]}
+    # Keep Codex and changing metadata after the expensive shared dependency layers.
     lines = ["# Generated by examples/profiles.py; inspect profile.lock.json before building.",
-             "FROM " + base_image, "ARG CODEX_VERSION=" + codex_version]
-    lines += ["LABEL " + k + "=" + json.dumps(v, ensure_ascii=False) for k, v in labels.items()]
-    lines += ["RUN apt-get update && apt-get install -y --no-install-recommends " + " ".join(pkgs) + " && rm -rf /var/lib/apt/lists/*",
-              'RUN npm install --global "@openai/codex@${CODEX_VERSION}" && npm cache clean --force && codex --version && codex app-server --help >/dev/null',
+             "FROM " + base_image,
+              "RUN apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=60 update && apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=60 install -y --no-install-recommends " + " ".join(pkgs) + " && rm -rf /var/lib/apt/lists/*",
+              "ENV npm_config_fetch_retries=3 npm_config_fetch_timeout=120000",
               "RUN python3 -m venv /opt/rundesk-python",
               "ENV PATH=\"/opt/rundesk-python/bin:${PATH}\" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1",
               "COPY requirements.txt /opt/rundesk-profile/requirements.txt"]
     if requirements:
-        lines += ["RUN python3 -m pip install --no-cache-dir -r /opt/rundesk-profile/requirements.txt"]
-    if selection["searchBackend"] == "wigolo":
-        lines += ["RUN npm install --prefix /opt/wigolo --omit=dev --save-exact wigolo@" + pins["wigolo"]["version"] + " && npm cache clean --force",
-                  "ENV PLAYWRIGHT_BROWSERS_PATH=/opt/wigolo-browsers",
-                  "RUN node /opt/wigolo/node_modules/playwright/cli.js install --with-deps chromium && chmod -R a+rX /opt/wigolo-browsers && rm -rf /var/lib/apt/lists/*",
-                  "COPY tools/rundesk-wigolo /usr/local/bin/rundesk-wigolo",
-                  "RUN chmod 755 /usr/local/bin/rundesk-wigolo"]
+        lines += ["RUN python3 -m pip install --retries 3 --timeout 60 --no-cache-dir -r /opt/rundesk-profile/requirements.txt"]
+    if selection["agentReach"]:
+        lines += ["COPY agent-tools/ /opt/agent-tools/",
+                  "RUN npm ci --prefix /opt/agent-tools --omit=dev --no-audit --no-fund && npm cache clean --force",
+                  'ENV PATH="/opt/agent-tools/node_modules/.bin:${PATH}" NODE_PATH=/opt/agent-tools/node_modules',
+                  "RUN mkdir -p /etc/codex/skills/agent-reach && python3 -c \"from importlib.resources import files; from pathlib import Path; Path('/etc/codex/skills/agent-reach/SKILL.md').write_text(files('agent_reach').joinpath('skill/SKILL.md').read_text())\"",
+                  "RUN agent-reach --version && gh --version && bird --version && mcporter --version"]
+    lines += ["ARG CODEX_VERSION=" + codex_version,
+              'RUN npm install --global "@openai/codex@${CODEX_VERSION}" && npm cache clean --force && codex --version && codex app-server --help >/dev/null']
+    lines += ["LABEL " + k + "=" + json.dumps(v, ensure_ascii=False) for k, v in labels.items()]
     # The admin skill path survives RunDesk's runtime HOME mount; no duplicate skills.
     lines += ["COPY skills/ /etc/codex/skills/", "COPY seed/ /opt/rundesk-seed/", "COPY tools/ /opt/rundesk-profile/tools/",
               "COPY profile.lock.json /opt/rundesk-profile/profile.lock.json",
               "COPY THIRD_PARTY.md /opt/rundesk-profile/THIRD_PARTY.md",
               "RUN mkdir -p /opt/rundesk/bin && chmod -R a+rX /opt/rundesk-profile /etc/codex/skills /opt/rundesk-seed",
+              # Resolve mcporter's config from the runtime HOME, never /root or a workspace.
+              *( ["COPY tools/mcporter /usr/local/bin/mcporter", "ENV PATH=\"/usr/local/bin:${PATH}\""] if selection["agentReach"] else [] ),
               "USER node", "WORKDIR /home/node", 'CMD ["codex", "app-server"]', ""]
     write(destination / "Dockerfile", "\n".join(lines))
-    write(destination / ".dockerignore", "**\n!Dockerfile\n!requirements.txt\n!profile.lock.json\n!THIRD_PARTY.md\n!seed/\n!seed/**\n!skills/\n!skills/**\n!tools/\n!tools/**\n")
+    write(destination / ".dockerignore", "**\n!Dockerfile\n!requirements.txt\n!profile.lock.json\n!THIRD_PARTY.md\n!seed/\n!seed/**\n!skills/\n!skills/**\n!tools/\n!tools/**\n!agent-tools/\n!agent-tools/**\n")
     write(destination / "THIRD_PARTY.md", (ROOT / "_shared/THIRD_PARTY.md").read_text(encoding="utf-8"))
     write(destination / "README.md", "# " + profile["title"] + "\n\n" + profile["description"] + "\n\n"
           "This is a generated Docker build context, not a built image. Dependencies are downloaded during build.\n"
@@ -185,7 +192,9 @@ def render(profile, selection, codex_version, base_image, destination):
           "Skills live in /etc/codex/skills; seed/config.toml initializes missing config only. Existing config is not merged.\n"
           "Use a new environment or apply the selected MCP configuration explicitly. Configure Codex authentication at runtime.\n"
           "Run python3 /opt/rundesk-profile/tools/profile_doctor.py --json inside the deployed container.\n"
-          "Wigolo, when selected, uses writable HOME/.wigolo; no anonymous VOLUME or Docker socket is required.\n")
+          "Agent-Reach includes gh, mcporter, bird, undici and its Codex skill; mcporter seeds Exa into the runtime HOME on first use.\n"
+          "Cookies, proxies and optional external platform MCP services are configured at runtime; no browser or Docker socket is bundled.\n"
+          "Run agent-reach doctor after startup to check live channels; it is not a model or research acceptance test.\n")
     files = sorted(p for p in destination.rglob("*") if p.is_file())
     write(destination / "SHA256SUMS", "".join(hashlib.sha256(p.read_bytes()).hexdigest() + "  " + p.relative_to(destination).as_posix() + "\n" for p in files))
     return resolved
@@ -243,8 +252,10 @@ def parser():
     l = sub.add_parser("list"); l.add_argument("--json", action="store_true")
     for verb in ("inspect", "validate", "prepare", "pack", "build", "doctor"):
         s = sub.add_parser(verb); s.add_argument("profile", choices=PROFILE_IDS); s.add_argument("--json", action="store_true")
-        s.add_argument("--search-backend", choices=["exa", "wigolo", "none"])
-        s.add_argument("--with-agent-reach", action="store_true")
+        s.add_argument("--search-backend", choices=["exa", "none"])
+        component = s.add_mutually_exclusive_group()
+        component.add_argument("--with-agent-reach", action="store_true", dest="agent_reach", default=None)
+        component.add_argument("--without-agent-reach", action="store_false", dest="agent_reach")
         if verb in ("prepare", "pack", "build"):
             s.add_argument("--codex-version", required=True)
             s.add_argument("--base-image", default="node:22-bookworm-slim")
@@ -266,7 +277,7 @@ def main(argv=None, default_profile=None):
         if args.command == "list":
             dump({"schemaVersion": 1, "generatorVersion": VERSION, "items": [load_profile(x) for x in PROFILE_IDS]}); return 0
         profile = load_profile(args.profile)
-        selection = resolve(profile, args.search_backend, args.with_agent_reach)
+        selection = resolve(profile, args.search_backend, args.agent_reach)
         if args.command == "inspect":
             dump({"schemaVersion": 1, "profile": profile, "selection": selection, "dependencies": read_json(ROOT / "_shared/dependencies.json")}); return 0
         if args.command == "validate":

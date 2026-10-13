@@ -17,7 +17,7 @@ import (
 	"github.com/shengjuntu/rundesk/internal/store"
 )
 
-const Version = "0.47.1"
+const Version = "0.48.0"
 
 type apiError struct {
 	Status        int
@@ -144,7 +144,7 @@ func supportsIdempotency(r *http.Request) bool {
 		return false
 	}
 	p := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	return (len(p) == 3 && p[1] == "setup" && p[2] == "codex-install") || (len(p) == 2 && p[1] == "kun-benchmarks") || (len(p) == 4 && p[1] == "kun-benchmarks" && (p[3] == "start" || p[3] == "stop" || p[3] == "evaluate")) || (len(p) == 2 && p[1] == "kun-skills") || (len(p) == 4 && (p[1] == "kun-skills" && (p[3] == "validations" || p[3] == "promote" || p[3] == "disable") || p[1] == "kun-skill-validations" && (p[3] == "start" || p[3] == "evaluate"))) || len(p) == 2 && (p[1] == "kun-rubrics" || p[1] == "kun-evaluations" || p[1] == "kun-task-sets" || p[1] == "kun-case-runs") || len(p) == 4 && p[1] == "kun-case-runs" && p[3] == "start" || len(p) == 4 && p[1] == "kun-forks" && p[3] == "hypotheses" || len(p) == 2 && p[1] == "kun-forks" || len(p) == 4 && p[1] == "kun-forks" && p[3] == "start" || len(p) == 2 && p[1] == "experiments" || len(p) == 4 && p[1] == "experiments" && p[3] == "branches" || len(p) == 5 && p[1] == "sessions" && p[3] == "kun" && p[4] == "resume" || len(p) == 4 && p[1] == "workspaces" && p[3] == "mcp-tests" || len(p) == 2 && (p[1] == "instances" || p[1] == "workspaces" || p[1] == "sessions" || p[1] == "tasks" || p[1] == "schedules" || p[1] == "collaborations") || len(p) == 4 && p[1] == "sessions" && (p[3] == "turns" || p[3] == "recover")
+	return (len(p) == 3 && p[1] == "setup" && (p[2] == "codex-install" || p[2] == "runtime-images")) || (len(p) == 2 && p[1] == "kun-benchmarks") || (len(p) == 4 && p[1] == "kun-benchmarks" && (p[3] == "start" || p[3] == "stop" || p[3] == "evaluate")) || (len(p) == 2 && p[1] == "kun-skills") || (len(p) == 4 && (p[1] == "kun-skills" && (p[3] == "validations" || p[3] == "promote" || p[3] == "disable") || p[1] == "kun-skill-validations" && (p[3] == "start" || p[3] == "evaluate"))) || len(p) == 2 && (p[1] == "kun-rubrics" || p[1] == "kun-evaluations" || p[1] == "kun-task-sets" || p[1] == "kun-case-runs") || len(p) == 4 && p[1] == "kun-case-runs" && p[3] == "start" || len(p) == 4 && p[1] == "kun-forks" && p[3] == "hypotheses" || len(p) == 2 && p[1] == "kun-forks" || len(p) == 4 && p[1] == "kun-forks" && p[3] == "start" || len(p) == 2 && p[1] == "experiments" || len(p) == 4 && p[1] == "experiments" && p[3] == "branches" || len(p) == 5 && p[1] == "sessions" && p[3] == "kun" && p[4] == "resume" || len(p) == 4 && p[1] == "workspaces" && p[3] == "mcp-tests" || len(p) == 2 && (p[1] == "instances" || p[1] == "workspaces" || p[1] == "sessions" || p[1] == "tasks" || p[1] == "schedules" || p[1] == "collaborations") || len(p) == 4 && p[1] == "sessions" && (p[3] == "turns" || p[3] == "recover")
 }
 
 type recordedResponse struct {

@@ -51,13 +51,16 @@ def main():
         checks.append({"name": "writable-home", "ok": True})
     except (OSError, KeyError) as e:
         checks.append({"name": "writable-home", "ok": False, "error": str(e)})
-    if selection["searchBackend"] == "wigolo":
-        checks.append({"name": "wigolo-launcher", "ok": shutil.which("rundesk-wigolo") is not None})
-        checks.append({"name": "wigolo-startup", **run(["rundesk-wigolo", "--version"])})
-        package = Path("/opt/wigolo/node_modules/wigolo/package.json")
-        version = json.loads(package.read_text())["version"] if package.is_file() else None
-        checks.append({"name": "wigolo-package", "ok": version == config["dependencies"]["wigolo"]["version"], "version": version})
-        checks.append({"name": "browser-launch", **run(["node", "--input-type=module", "-e", "import {chromium} from '/opt/wigolo/node_modules/playwright/index.mjs'; const b=await chromium.launch({headless:true}); const p=await b.newPage(); await p.setContent('<title>RunDesk probe</title>'); if(await p.title()!=='RunDesk probe')process.exitCode=1; await b.close();"])})
+    if selection["agentReach"]:
+        for argv in (["agent-reach", "--version"], ["gh", "--version"], ["bird", "--version"], ["mcporter", "--version"]):
+            checks.append({"name": " ".join(argv), **run(argv)})
+        for package, expected in config["dependencies"]["npm"].items():
+            path = Path('/opt/agent-tools/node_modules') / package / 'package.json'
+            installed = json.loads(path.read_text()).get('version') if path.is_file() else None
+            checks.append({"name": package + " package", "ok": installed == expected, "version": installed, "expected": expected})
+        checks.append({"name": "agent-reach-skill", "ok": Path('/etc/codex/skills/agent-reach/SKILL.md').is_file()})
+        # This only reads configuration; 'mcporter list' would contact servers.
+        checks.append({"name": "exa-cli-configuration", **run(["mcporter", "config", "get", "exa", "--json"])})
     result = {"schemaVersion": 1, "profileId": profile["id"], "ready": all(c["ok"] for c in checks), "checks": checks,
               "scope": "offline executable, dependencies, skill path and writable-home checks", "modelTested": False, "networkTested": False,
               "notes": ["Does not prove Codex skill discovery, MCP handshake, model downloads, auth or live search quality."]}

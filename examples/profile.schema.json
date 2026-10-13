@@ -51,7 +51,6 @@
       "items": {
         "enum": [
           "exa",
-          "wigolo",
           "none"
         ]
       }
@@ -59,7 +58,6 @@
     "defaultSearchBackend": {
       "enum": [
         "exa",
-        "wigolo",
         "none"
       ]
     },
@@ -111,10 +109,6 @@
           "minimum": 1
         },
         "memoryMB": {
-          "type": "integer",
-          "minimum": 256
-        },
-        "wigoloMemoryMB": {
           "type": "integer",
           "minimum": 256
         },

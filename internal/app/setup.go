@@ -24,11 +24,12 @@ import (
 )
 
 type SetupState struct {
-	Completed   bool   `json:"completed"`
-	Codex       string `json:"codex"`
-	WorkspaceID string `json:"workspaceId"`
-	Revision    int    `json:"revision"`
-	RuntimeKind string `json:"runtimeKind"`
+	ApplicationsOnly bool   `json:"applicationsOnly"`
+	Completed        bool   `json:"completed"`
+	Codex            string `json:"codex"`
+	WorkspaceID      string `json:"workspaceId"`
+	Revision         int    `json:"revision"`
+	RuntimeKind      string `json:"runtimeKind"`
 }
 
 func (m *Manager) setupState() (SetupState, error) {
@@ -63,6 +64,7 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	m := s.Manager
 	s.setupEnvironmentRoutes(mux)
 	s.codexInstallRoutes(mux)
+	s.setupImageRoutes(mux)
 	mux.HandleFunc("GET /api/setup", func(w http.ResponseWriter, r *http.Request) {
 		v, e := m.setupState()
 		if e != nil {
@@ -259,6 +261,7 @@ func errorText(e error) string {
 // SetupInput keeps old Codex-only clients compatible. The wizard supplies both
 // revisions so a stale form cannot overwrite a separately edited instance.
 type SetupInput struct {
+	ApplicationsOnly bool      `json:"applicationsOnly"`
 	Codex            string    `json:"codex"`
 	WorkspaceID      string    `json:"workspaceId"`
 	Model            string    `json:"model"`
@@ -336,7 +339,7 @@ func (m *Manager) saveSetup(in SetupInput) (SetupState, error) {
 	if strings.TrimSpace(in.Codex) != "" {
 		codex = strings.TrimSpace(in.Codex)
 	}
-	if kind == "codex" && !m.Demo {
+	if kind == "codex" && !m.Demo && !in.ApplicationsOnly {
 		codex, err = exec.LookPath(codex)
 		if err != nil {
 			return old, failure(400, "codex_not_found", "Codex executable not found; install Codex or select Kun")
@@ -346,7 +349,7 @@ func (m *Manager) saveSetup(in SetupInput) (SetupState, error) {
 			return old, err
 		}
 	}
-	if kind == "kun" && in.Completed {
+	if kind == "kun" && in.Completed && !in.ApplicationsOnly {
 		if _, err = exec.LookPath(m.kunExecutable()); err != nil {
 			return old, failure(400, "kun_not_found", "Build/install the Kun worker next to RunDesk, or set --kun")
 		}
@@ -354,12 +357,14 @@ func (m *Manager) saveSetup(in SetupInput) (SetupState, error) {
 			return old, failure(400, "kun_credential_missing", "Set the configured credential environment variable on the service process")
 		}
 	}
-	next.DefaultModel = strings.TrimSpace(in.Model)
-	if kind == "kun" {
-		next.DefaultModel = next.AgentRuntime.Model
+	if !in.ApplicationsOnly {
+		next.DefaultModel = strings.TrimSpace(in.Model)
+		if kind == "kun" {
+			next.DefaultModel = next.AgentRuntime.Model
+		}
 	}
 	next.Revision++
-	saved := SetupState{Completed: in.Completed || old.Completed, Codex: codex, WorkspaceID: in.WorkspaceID, Revision: old.Revision + 1, RuntimeKind: kind}
+	saved := SetupState{ApplicationsOnly: in.ApplicationsOnly, Completed: in.Completed || old.Completed, Codex: codex, WorkspaceID: in.WorkspaceID, Revision: old.Revision + 1, RuntimeKind: kind}
 	if err = m.Store.PutMany(store.Record{Kind: "instance", ID: next.ID, Value: next}, store.Record{Kind: "system", ID: "setup", Value: saved}); err != nil {
 		return old, err
 	}

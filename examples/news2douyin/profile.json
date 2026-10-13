@@ -1,13 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "runtime": "codex-docker",
   "id": "news2douyin",
   "title": "新闻采集与短视频准备",
   "description": "搜索新闻、读取原文和字幕、保存证据并准备短视频素材；不包含 news2douyin 应用本体或自动发布。",
   "searchBackends": [
-    "exa",
-    "wigolo"
+    "exa"
   ],
   "defaultSearchBackend": "exa",
   "aptPackages": [
@@ -42,7 +41,6 @@
   "resources": {
     "cpus": 2,
     "memoryMB": 2048,
-    "wigoloMemoryMB": 4096,
     "network": "bridge"
   },
   "optionalComponents": [

@@ -1,6 +1,6 @@
 # RunDesk 文档
 
-当前版本 RunDesk 0.47.1 / Kun 0.16.0 / worker 协议 16。按当前实现维护使用说明，历史过程与旧验收副本不再放在当前源码中。
+当前版本 RunDesk 0.48.0 / Kun 0.16.0 / worker 协议 16。按当前实现维护使用说明，历史过程与旧验收副本不再放在当前源码中。
 
 | 需要了解 | 入口 |
 | --- | --- |
@@ -22,4 +22,4 @@
 
 机器契约 `/api/v1/openapi.json` 同时包含应用与管理 API；请依据权限标记和应用 API 文档选择接口。
 
-典型运行配置与统一 CLI：[examples](../examples/README.md)。Wigolo 评估：[配置适配说明](../examples/news2douyin/WIGOLO.md)。
+典型运行配置与统一 CLI：[examples](../examples/README.md)。Agent-Reach 评估与初始化流程：[配置说明](../examples/news2douyin/AGENT-REACH.md)。

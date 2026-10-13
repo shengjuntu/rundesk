@@ -5,7 +5,7 @@ description: Research public professional information about named people, disamb
 
 # Research public professional profiles
 
-Read /opt/rundesk-profile/profile.lock.json to identify the configured Exa or Wigolo MCP. Use a new output directory and preserve source evidence.
+Read /opt/rundesk-profile/profile.lock.json to identify the configured Exa MCP. Use a new output directory and preserve source evidence.
 
 1. Extract the supplied name, organization, role, region and research purpose. Search names in relevant languages. Ask for a distinguishing fact only when the available evidence cannot resolve a material ambiguity.
 2. Inspect the enabled search tool's schema. Search official organization profiles, publication pages and the person's public professional website. Use secondary sources for context.

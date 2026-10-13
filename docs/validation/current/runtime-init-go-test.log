@@ -1,0 +1,20 @@
+ok  	github.com/shengjuntu/rundesk/cmd/kun	0.024s
+ok  	github.com/shengjuntu/rundesk/cmd/rundesk	0.025s
+?   	github.com/shengjuntu/rundesk/examples/docker	[no test files]
+?   	github.com/shengjuntu/rundesk/examples/profiletemplates	[no test files]
+?   	github.com/shengjuntu/rundesk/internal/adapters/kun	[no test files]
+ok  	github.com/shengjuntu/rundesk/internal/app	86.980s
+ok  	github.com/shengjuntu/rundesk/internal/containerruntime	(cached)
+ok  	github.com/shengjuntu/rundesk/internal/debugapi	0.006s
+ok  	github.com/shengjuntu/rundesk/internal/debugmcp	0.186s
+ok  	github.com/shengjuntu/rundesk/internal/experiment	0.007s
+ok  	github.com/shengjuntu/rundesk/internal/kun	10.169s
+ok  	github.com/shengjuntu/rundesk/internal/kunproto	0.009s
+ok  	github.com/shengjuntu/rundesk/internal/mcp	0.128s
+ok  	github.com/shengjuntu/rundesk/internal/mcptest	0.063s
+?   	github.com/shengjuntu/rundesk/internal/redaction	[no test files]
+ok  	github.com/shengjuntu/rundesk/internal/rpc	0.513s
+ok  	github.com/shengjuntu/rundesk/internal/servicelock	0.019s
+ok  	github.com/shengjuntu/rundesk/internal/store	0.525s
+ok  	github.com/shengjuntu/rundesk/internal/tracequery	0.158s
+ok  	github.com/shengjuntu/rundesk/internal/web	0.006s

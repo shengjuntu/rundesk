@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "runtime": "codex-docker",
   "id": "video-build",
   "title": "本地视频合成与验收",

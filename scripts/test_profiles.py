@@ -34,7 +34,8 @@ class ProfilesTest(unittest.TestCase):
     def cli(self, *args):
         stdout, stderr = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-            code = profiles.main(list(args))
+            try: code = profiles.main(list(args))
+            except SystemExit as exc: code = exc.code
         return code, stdout.getvalue(), stderr.getvalue()
 
     def test_catalog_and_uniform_wrappers(self):
@@ -58,12 +59,7 @@ class ProfilesTest(unittest.TestCase):
                     self.assertNotIn("VOLUME ", docker)
                     self.assertNotIn("docker.sock", docker)
                     self.assertIn("COPY skills/ /etc/codex/skills/", docker)
-                    if backend == "wigolo":
-                        self.assertFalse(config["mcp_servers"]["exa"]["enabled"])
-                        self.assertEqual(config["mcp_servers"]["wigolo"]["args"], ["mcp"])
-                        self.assertIn("wigolo@0.2.1", docker)
-                        self.assertNotIn("research", config["mcp_servers"]["wigolo"]["enabled_tools"])
-                    elif backend == "exa":
+                    if backend == "exa":
                         self.assertTrue(config["mcp_servers"]["exa"]["enabled"])
                     else:
                         self.assertNotIn("mcp_servers", config)
@@ -79,7 +75,7 @@ class ProfilesTest(unittest.TestCase):
         self.assertEqual(archives[0].read_bytes(), archives[1].read_bytes())
         with zipfile.ZipFile(archives[0]) as z:
             self.assertIn("Dockerfile", z.namelist()); self.assertIsNone(z.testzip())
-            self.assertTrue(z.getinfo("tools/rundesk-wigolo").external_attr >> 16 & 0o111)
+            self.assertTrue(z.getinfo("tools/mcporter").external_attr >> 16 & 0o111)
         original = archives[0].read_bytes()
         code, _, _ = self.cli("pack", "news2douyin", "--codex-version", "0.144.6", "--output", str(archives[0]))
         self.assertEqual(code, 2); self.assertEqual(archives[0].read_bytes(), original)
@@ -121,16 +117,37 @@ class ProfilesTest(unittest.TestCase):
             result = profiles.doctor(p, "example:tag")
             self.assertFalse(result["ready"]); self.assertEqual(run.call_count, 2)
 
-    def test_wigolo_wrapper_uses_runtime_home_and_no_inner_model(self):
-        fake = self.root / "node"
-        fake.write_text('#!' + sys.executable + '\nimport os,json,sys\nprint(json.dumps({"data":os.environ["WIGOLO_DATA_DIR"],"key":os.environ.get("OPENAI_API_KEY"),"provider":os.environ.get("WIGOLO_LLM_PROVIDER"),"ttl":os.environ["CACHE_TTL_SEARCH"],"args":sys.argv[1:]}))\n')
-        fake.chmod(0o755)
-        env = {"PATH": str(self.root) + os.pathsep + "/usr/bin:/bin", "HOME": str(self.root), "OPENAI_API_KEY": "fixture-key", "WIGOLO_LLM_PROVIDER": "openai"}
-        out = subprocess.check_output(["sh", str(ROOT / "examples/_shared/rundesk-wigolo"), "mcp"], env=env)
-        data = json.loads(out)
-        self.assertEqual(data["data"], str(self.root / ".wigolo")); self.assertTrue((self.root / ".wigolo").is_dir())
-        self.assertIsNone(data["key"]); self.assertIsNone(data["provider"])
-        self.assertEqual(data["ttl"], "300"); self.assertEqual(data["args"][-1], "mcp")
+    def test_agent_reach_runtime_config_is_per_home_and_preserves_existing(self):
+        config = module("agent_config", ROOT / "examples/_shared/agent_reach_config.py")
+        first = self.root / 'first'; second = self.root / 'second'
+        path = config.initialize(first)
+        self.assertEqual(json.loads(path.read_text())['mcpServers']['exa']['baseUrl'], 'https://mcp.exa.ai/mcp')
+        self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+        path.write_text('{"mcpServers":{"custom":{"baseUrl":"https://example.com/mcp"}}}')
+        original = path.read_bytes()
+        self.assertEqual(config.initialize(first), path)
+        self.assertEqual(path.read_bytes(), original)
+        self.assertNotEqual(config.initialize(second), path)
+        path.unlink(); alternate = path.with_suffix('.jsonc'); alternate.write_text('// keep JSONC\n{}')
+        self.assertEqual(config.initialize(first), alternate)
+        self.assertFalse(path.exists())
+
+    def test_default_includes_complete_reach_tools_and_codex_layer_is_last(self):
+        p = profiles.load_profile('news2douyin')
+        self.assertTrue(profiles.resolve(p)['agentReach'])
+        self.assertFalse(profiles.resolve(p, agent_reach=False)['agentReach'])
+        target = self.root / 'context'; target.mkdir()
+        profiles.render(p, profiles.resolve(p), '0.144.6', 'node:22-bookworm-slim', target)
+        docker = (target / 'Dockerfile').read_text()
+        self.assertLess(docker.index('npm ci'), docker.index('ARG CODEX_VERSION'))
+        self.assertIn('/etc/codex/skills/agent-reach', docker)
+        self.assertIn(' gh ', docker)
+        self.assertNotIn('wigolo', docker)
+        self.assertNotIn('chromium', docker)
+        lock = json.loads((target / 'agent-tools/package-lock.json').read_text())
+        for name, version in json.loads((ROOT / 'examples/_shared/dependencies.json').read_text())['npm'].items():
+            self.assertEqual(lock['packages']['node_modules/' + name]['version'], version)
+        self.assertIn('COPY tools/mcporter /usr/local/bin/mcporter', docker)
 
     def test_probe_cleanup_after_client_failure(self):
         p = profiles.load_profile("news2douyin")

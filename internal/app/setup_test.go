@@ -84,7 +84,7 @@ func TestSetupTemplatePinnedAndAdminOnly(t *testing.T) {
 		t.Fatal(e)
 	}
 	admin := NewHandler(m, "administrator-secret", true)
-	for _, route := range []string{"/setup", "/setup/docker-template?version=0.159.2"} {
+	for _, route := range []string{"/setup", "/setup/docker-template?version=0.159.2", "/setup/runtime-profiles"} {
 		r := appRequest(admin, "GET", "/api/v1"+route, "", key, "")
 		if r.Code != 403 {
 			t.Fatal(route, r.Code, r.Body.String())

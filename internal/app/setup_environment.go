@@ -48,6 +48,12 @@ func (m *Manager) setupEnvironment(iid, wid string) (SetupEnvironment, error) {
 		return SetupEnvironment{}, err
 	}
 	kind := runtimeKind(i.AgentRuntime.Kind)
+	applicationsOnly := false
+	if i.ID == DefaultInstance {
+		if setup, e := m.setupState(); e == nil {
+			applicationsOnly = setup.ApplicationsOnly
+		}
+	}
 	result := SetupEnvironment{InstanceID: i.ID, Backend: kind, Ready: true, Demo: m.Demo, Checks: []EnvironmentCheck{}}
 	add := func(id string, required bool, status, detail string) {
 		result.Checks = append(result.Checks, EnvironmentCheck{id, required, status, detail})
@@ -86,6 +92,9 @@ func (m *Manager) setupEnvironment(iid, wid string) (SetupEnvironment, error) {
 		case "docker":
 			required = i.Execution.normalized().Mode == "docker"
 		}
+		if applicationsOnly {
+			required = id == "docker"
+		}
 		resolved, e := exec.LookPath(path)
 		if e != nil {
 			add(id, required, "unavailable", path)
@@ -93,7 +102,10 @@ func (m *Manager) setupEnvironment(iid, wid string) (SetupEnvironment, error) {
 			add(id, required, "ready", resolved)
 		}
 	}
-	if kind == "kun" {
+	if applicationsOnly {
+		result.Backend = "docker-applications"
+		add("runtime-images", false, "unchecked", "Prepare an image in setup; each application still needs authentication and live checks")
+	} else if kind == "kun" {
 		cfg := i.AgentRuntime.Normalized()
 		if err := cfg.Validate(); err != nil {
 			add("configuration", true, "unconfigured", err.Error())

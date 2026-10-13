@@ -8,7 +8,7 @@ description: Collect and verify news sources for news2douyin, then draft a sourc
 Read /opt/rundesk-profile/profile.lock.json to identify the selected search backend and installed tools. Work within the supplied project directory. Create a new output subdirectory for each task; preserve previous evidence.
 
 1. Resolve the topic, language, location and time window from the task. Distinguish event time, publication time and retrieval time. State unresolved dates explicitly.
-2. Use the enabled Exa or Wigolo MCP search tools. Inspect the current tool schema rather than guessing parameter names. With Wigolo, request fresh results for current news and retain degradation, stale-cache and failed-engine indicators. Do not silently switch providers.
+2. Use the enabled Exa MCP search tools. Inspect the current tool schema rather than guessing parameter names. Do not silently switch providers.
 3. Open primary announcements and independent coverage. Read full sources; do not turn search snippets into verified facts. Use Jina only for public URLs: `python3 /opt/rundesk-profile/tools/read_web.py webpage URL --out NEW_DIRECTORY`. This sends the URL to Jina's service.
 4. Parse a supplied public RSS/Atom feed with the same helper using `rss` instead of `webpage`. Record a feed's date as source metadata, not as proof of the event date.
 5. When a relevant video is supplied, inspect metadata and available subtitles with yt-dlp. Save subtitle files and metadata before summarizing. Report absent subtitles; do not claim to have understood unseen frames. Download only the material needed for the task.

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Application API",
-    "version": "0.47.1",
+    "version": "0.48.0",
     "description": "RunDesk 应用与管理 API。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。Kun 0.16.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。当前应用接入、错误、幂等及示例见 docs/API-V1.md。"
   },
   "servers": [
@@ -14752,6 +14752,9 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "applicationsOnly": {
+                    "type": "boolean"
+                  },
                   "codex": {
                     "type": "string"
                   },
@@ -15097,6 +15100,161 @@
           }
         },
         "x-administrator-only": true
+      }
+    },
+    "/setup/runtime-profiles": {
+      "get": {
+        "operationId": "get_setup_runtime_profiles",
+        "summary": "/setup/runtime-profiles",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativeObject"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "内置配置目录、宿主平台和支持状态。只读；不会构建、拉取或登录。"
+      }
+    },
+    "/setup/runtime-images": {
+      "post": {
+        "operationId": "post_setup_runtime_images",
+        "summary": "/setup/runtime-images",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            },
+            "description": "每个逻辑操作唯一。相同请求重试必须复用，不能将 Key 用于不同请求。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Background job; acceptance is not readiness",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageBuild"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "profileId": {
+                    "type": "string",
+                    "enum": [
+                      "news2douyin",
+                      "people-search",
+                      "video-build"
+                    ]
+                  },
+                  "codexVersion": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string",
+                    "enum": [
+                      "build",
+                      "pull",
+                      "local"
+                    ]
+                  },
+                  "reference": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "profileId",
+                  "codexVersion",
+                  "reference"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "管理员在应用注册前准备共享镜像。build/pull/local 均异步入串行队列；相同在途请求复用任务。GET /instances/default/builds 与 log/cancel/delete 查看和管理。succeeded + offlineReady 仅代表离线工具检查，不表示模型认证、网络或研究通过；不会修改任何应用绑定。宿主机不需要 Python/npm。"
       }
     },
     "/setup/codex-install": {
@@ -25470,6 +25628,21 @@
           },
           "error": {
             "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "profileId": {
+            "type": "string"
+          },
+          "codexVersion": {
+            "type": "string"
+          },
+          "offlineReady": {
+            "type": "boolean"
           },
           "status": {
             "type": "string",

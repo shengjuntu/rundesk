@@ -1,0 +1,14 @@
+{
+  "version": "0.48.0",
+  "date": "2026-10-13",
+  "goAll": true,
+  "goRaceScope": "internal/app TestRuntimeImage|TestBuild|TestSetup",
+  "profileTests": 11,
+  "embeddedContextsMatch": true,
+  "uiContractTests": true,
+  "npmInstall": true,
+  "realMcporterConfigRead": true,
+  "realDockerBuild": false,
+  "liveModel": false,
+  "liveSearch": false
+}

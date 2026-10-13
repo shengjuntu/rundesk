@@ -1,13 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "runtime": "codex-docker",
   "id": "people-search",
   "title": "公开职业资料研究",
   "description": "检索人物公开职业资料、核对同名身份、整理带来源的履历和作品；不收集私人联系方式或自动联系他人。",
   "searchBackends": [
-    "exa",
-    "wigolo"
+    "exa"
   ],
   "defaultSearchBackend": "exa",
   "aptPackages": [],
@@ -31,7 +30,6 @@
   "resources": {
     "cpus": 2,
     "memoryMB": 2048,
-    "wigoloMemoryMB": 4096,
     "network": "bridge"
   },
   "optionalComponents": [

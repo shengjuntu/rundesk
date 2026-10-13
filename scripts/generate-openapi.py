@@ -70,7 +70,8 @@ schemas['Session']['properties'].update({'environmentId':st(),'executionMode':st
 paths={}
 requests={
  ('POST','/workspaces/{wid}/mcp-tests'):obj({'server':st(),'tool':st(),'arguments':obj({},extra=True),'cursor':st(),'confirm':bool_},['server','confirm']),
- ('PUT','/setup'):obj({'codex':st(),'workspaceId':st(),'model':st(),'completed':bool_,'revision':integer,'instanceRevision':integer,'agentRuntime':ref('KunConfig')},['workspaceId','revision']),
+ ('PUT','/setup'):obj({'applicationsOnly':bool_,'codex':st(),'workspaceId':st(),'model':st(),'completed':bool_,'revision':integer,'instanceRevision':integer,'agentRuntime':ref('KunConfig')},['workspaceId','revision']),
+ ('POST','/setup/runtime-images'):obj({'profileId':st(enum=['news2douyin','people-search','video-build']),'codexVersion':st(),'source':st(enum=['build','pull','local']),'reference':st()},['profileId','codexVersion','reference']),
  ('POST','/setup/codex-install'):obj({'version':st(pattern=r'^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$',maxLength=64),'confirm':{'const':True}},['version','confirm']),
  ('POST','/setup/check'):obj({'kind':st(enum=['kun','bash','codex','workspace','models','account','mcp','docker']),'workspaceId':st(),'instanceId':st()},['kind']),
  ('POST','/setup/provider'):obj({'workspaceId':st(),'baseUrl':st(),'envKey':st(),'model':st()},['workspaceId','baseUrl','model']),
@@ -101,7 +102,7 @@ requests={
  ('PUT','/workspaces/{wid}/mcp/{name}'):obj({'version':st(),'config':obj(extra=True),'remove':bool_},['version']),
  ('POST','/workspaces/{wid}/mcp/import'):obj({'version':st(),'bundle':obj(extra=True),'overwrite':bool_},['version','bundle']),
 }
-idempotent={('POST',p) for p in ['/setup/codex-install','/kun-task-sets','/kun-rubrics','/kun-evaluations','/kun-forks','/kun-forks/{fid}/start','/kun-forks/{fid}/hypotheses','/experiments','/experiments/{eid}/branches','/instances','/workspaces','/sessions','/sessions/{sid}/turns','/sessions/{sid}/recover','/sessions/{sid}/kun/resume','/tasks','/schedules','/workspaces/{wid}/mcp-tests']}
+idempotent={('POST',p) for p in ['/setup/codex-install','/setup/runtime-images','/kun-task-sets','/kun-rubrics','/kun-evaluations','/kun-forks','/kun-forks/{fid}/start','/kun-forks/{fid}/hypotheses','/experiments','/experiments/{eid}/branches','/instances','/workspaces','/sessions','/sessions/{sid}/turns','/sessions/{sid}/recover','/sessions/{sid}/kun/resume','/tasks','/schedules','/workspaces/{wid}/mcp-tests']}
 summaries={
  '/instances/{iid}/images':'管理员：GET 读取持久化镜像目录及环境差异；POST 检查并登记本机镜像，不构建、不拉取、不启动容器',
  '/instances/{iid}/images/{vid}/check':'管理员：按固定 Image ID 核对可用性；失败仍返回记录，检查 availability 和 error',
@@ -520,7 +521,7 @@ for path,ops in list(paths.items()):
   paths.setdefault('/member/{grantId}'+path,{})[method]=projected
 
 
-schemas['ImageBuild']=obj({k:st() for k in ['id','instanceId','name','dockerfile','reference','created','updated','started','finished','contextSha256','imageId','imageVersionId','error']}|{'status':st(enum=['draft','queued','running','canceling','canceled','interrupted','failed','succeeded']),'files':integer,'contextBytes':integer,'timeoutMinutes':integer,'noCache':bool_,'logTruncated':bool_},['id','instanceId','name','status','dockerfile','reference','contextSha256','files','contextBytes','timeoutMinutes','noCache','logTruncated'])
+schemas['ImageBuild']=obj({k:st() for k in ['id','instanceId','name','dockerfile','reference','created','updated','started','finished','contextSha256','imageId','imageVersionId','error','scope','source','profileId','codexVersion']}|{'offlineReady':bool_,'status':st(enum=['draft','queued','running','canceling','canceled','interrupted','failed','succeeded']),'files':integer,'contextBytes':integer,'timeoutMinutes':integer,'noCache':bool_,'logTruncated':bool_},['id','instanceId','name','status','dockerfile','reference','contextSha256','files','contextBytes','timeoutMinutes','noCache','logTruncated'])
 for path,ops in paths.items():
  if '/builds' not in path:continue
  for method,op in ops.items():
@@ -704,6 +705,9 @@ for path,method in [('/applications/{appId}/runtime','get'),('/applications/{app
  op['responses']['200']['content']['application/json']['schema']=ref('ApplicationRuntime')
  if method=='post':op['requestBody']={'required':True,'content':{'application/json':{'schema':ref('ApplicationRuntimeInput')}}}
 
+paths['/setup/runtime-images']['post']['responses']['200']={'description':'Background job; acceptance is not readiness','content':{'application/json':{'schema':ref('ImageBuild')}}}
+paths['/setup/runtime-images']['post']['description']='管理员在应用注册前准备共享镜像。build/pull/local 均异步入串行队列；相同在途请求复用任务。GET /instances/default/builds 与 log/cancel/delete 查看和管理。succeeded + offlineReady 仅代表离线工具检查，不表示模型认证、网络或研究通过；不会修改任何应用绑定。宿主机不需要 Python/npm。'
+paths['/setup/runtime-profiles']['get']['description']='内置配置目录、宿主平台和支持状态。只读；不会构建、拉取或登录。'
 spec={'openapi':'3.1.0','info':{'title':'RunDesk Application API','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk 应用与管理 API。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。Kun 0.16.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。当前应用接入、错误、幂等及示例见 docs/API-V1.md。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

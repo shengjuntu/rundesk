@@ -56,6 +56,6 @@ RunDesk 0.45.0 introduces its own Go host lifecycle interface and capability cat
 
 ## Runtime profiles in 0.46.0
 
-Thanks to Agent-Reach and Wigolo contributors. On 2026-10-12, the user-selected Agent-Reach fork at `https://github.com/silently0801/agent-reach`, commit `cf70302e928155703829439115a18132928f8913` (package 1.1.0, MIT), was inspected for installation and skill-path behavior. The recipe can install that exact source archive, but does not run its automatic installer or copy its Skill.
+Thanks to Agent-Reach contributors. The user-selected fork https://github.com/silently0801/agent-reach is pinned to cf70302e928155703829439115a18132928f8913 (1.1.0, MIT). RunDesk installs the CLI, its upstream tools and its Skill in the generated image; no credentials are distributed. Its system setup is translated into explicit Docker layers instead of running an unpinned best-effort installer. See [assessment](../examples/news2douyin/AGENT-REACH.md) and [notices](../examples/_shared/THIRD_PARTY.md).
 
-Wigolo's official Dockerfile, configuration, package 0.2.1 metadata and licensing guide were consulted for an independently written stdio MCP launcher and optional image recipe. Wigolo is AGPL-3.0-only with alternative commercial terms offered by upstream; no Wigolo code is copied into RunDesk. The package is downloaded only when the selected image is built. See [assessment and source links](../examples/news2douyin/WIGOLO.md) and [dependency notices](../examples/_shared/THIRD_PARTY.md).
+Wigolo was evaluated previously; it is no longer included in current recipes. Thank you to its contributors for the earlier reference material.

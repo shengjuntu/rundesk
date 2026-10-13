@@ -57,3 +57,11 @@ RunDesk 为每次任务生成独立的 `rundesk-build/<instanceId>:<buildId>` �
 首版不提供 Git 拉取、仓库推送、跨平台构建、用户自定义 build args/secrets、远程 builder 或自动重试。更大的上下文可在命令行或 CI 构建后登记镜像。
 
 官方接口参考：[Docker build](https://docs.docker.com/reference/cli/docker/buildx/build/)；[构建上下文](https://docs.docker.com/build/concepts/context/)。
+
+## 初始化阶段的典型镜像
+
+0.48.0 可在初始化向导提前构建/拉取/检查典型镜像，无需先注册应用。使用同一持久化后台队列，`scope=setup`，记录位于 `/instances/default/builds`；这只是任务归属，不会把通用助手改成 Docker。普通上传接口仍不允许在 default 创建任意构建。
+
+初始化任务有 source（build/pull/local）、profileId、codexVersion 和 offlineReady。失败时不切换业务环境、不自动回退到现场构建；可以修正网络/仓库/磁盘问题后重试。成功后保留本机镜像、ID 和日志。取消或超时不保证 Docker daemon 端撤销已生成的层；服务重启标记 interrupted，不自动重复提交。
+
+现有应用的 ZIP 构建仍是高级入口，成功后需管理员显式选择或更新镜像。

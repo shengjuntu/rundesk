@@ -1,6 +1,6 @@
 # 当前状态与后续工作
 
-RunDesk 0.47.1 / Kun 0.16.0 / worker 协议 16。这里只记录当前能力和缺口；“已实现”与“真实部署已验收”分别判断。
+RunDesk 0.48.0 / Kun 0.16.0 / worker 协议 16。这里只记录当前能力和缺口；“已实现”与“真实部署已验收”分别判断。
 
 | 范围 | 当前实现 | 主要缺口 |
 | --- | --- | --- |
@@ -14,11 +14,11 @@ RunDesk 0.47.1 / Kun 0.16.0 / worker 协议 16。这里只记录当前能力和�
 
 ## 典型配置目录
 
-`examples` 已提供 news2douyin、people-search、video-build 三套 manifest、独立入口和统一 CLI；支持 Exa/Wigolo 搜索选择、固定提交的可选 Agent-Reach、生成 ZIP 与 Docker 构建/检查。WebUI 目前仍使用已有 ZIP 构建入口，尚未提供配置选择页。当前环境未实际构建容器，详见 [配置目录](../examples/README.md) 与 [验证](VALIDATION.md)。
+`examples` 已提供 news2douyin、people-search、video-build 三套 manifest、独立入口和统一 CLI；默认 Exa + 完整 Agent-Reach 基础工具链。初始化向导可在应用注册前选择配置，后台构建/拉取/检查已有镜像，复用缓存、展示日志、取消与重试，并完成离线工具检查。当前环境未实际构建容器，详见 [配置目录](../examples/README.md) 与 [验证](VALIDATION.md)。
 
 ## news2douyin 联动
 
-配套 news2douyin 0.13.1，完成一次镜像与模型认证配置后，可在新闻应用一键准备对应 Docker 环境、检查工具并开始研究。业务 MCP 安装在实际容器配置中；Exa/Wigolo 搜索结果关联本轮票据，原文、判断和报告保存在新闻侧，执行轨迹保存在 RunDesk。重复点击复用活动研究，配置/镜像更新需管理员显式部署。两端真实 HTTP 与业务 MCP 联调通过；Docker、Codex 和搜索为测试替身，真实部署仍待验收。
+配套 news2douyin 0.13.2，完成一次镜像与模型认证配置后，可在新闻应用一键准备对应 Docker 环境、检查工具并开始研究。业务 MCP 安装在实际容器配置中；Exa 搜索结果关联本轮票据，原文、判断和报告保存在新闻侧，执行轨迹保存在 RunDesk。重复点击复用活动研究，配置/镜像更新需管理员显式部署。两端真实 HTTP 与业务 MCP 联调通过；Docker、Codex 和搜索为测试替身，真实部署仍待验收。
 
 ## 下一步
 
