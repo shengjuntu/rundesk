@@ -1,5 +1,12 @@
 # Changelog
 
+## RunDesk 0.47.1
+
+- Preserve and validate native Codex `default_tools_approval_mode`; advertise the configuration capability.
+- Distinguish empty MCP tool approval from real data-entry forms, so it no longer asks for meaningless JSON.
+- Support news2douyin 0.13.1 explicit Docker full-access setup and durable MCP approval configuration.
+- Keep Docker mounts, container isolation, Kun 0.16.0 and worker protocol 16 unchanged. Kun rejects the unsupported server-wide Codex setting instead of silently ignoring it.
+
 ## RunDesk 0.47.0
 
 - Add scoped application runtime status and prepare APIs, with expected-binding and environment-update guards.

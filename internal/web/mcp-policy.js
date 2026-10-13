@@ -4,12 +4,13 @@
 function mcpPolicyEditor(info, cp, serverName) {
   let config = {}, catalog = new Map(), changes = new Map(), cursor = "", generation = 0, busy = false;
   const rows = el("div", {class:"mcp-policy-rows"});
+  const defaultPolicy = el("p", {class:"help"});
   const status = el("p", {class:"help",role:"status"});
   const load = button(rdText("读取已保存服务的工具列表"),()=>discover(false),"quiet");
   const more = button(rdText("下一页工具"),()=>discover(true),"quiet"); more.hidden=true;
   const node = el("section",{class:"mcp-policy-editor"},el("h4",{},rdText("工具使用权限")),
     el("p",{class:"help"},rdText("设置仅作用于当前助手／应用。读取列表会连接已保存的服务，不执行工具；连接信息有改动时请先保存。")),
-    el("div",{class:"actions"},load,more),status,rows,
+    el("div",{class:"actions"},load,more),status,defaultPolicy,rows,
     el("p",{class:"help"},info.runtime==="kun"?"Kun 默认每次询问；“始终允许”直接执行。尚不支持 auto/writes 自动判断。已开始的运行保持原有权限快照。":rdText("托管策略仍可能要求审批。已弹出的审批、工具自己的表单及登录请求需单独处理。")));
   function mode(name) {
     if(changes.has(name)) return changes.get(name);
@@ -36,6 +37,7 @@ function mcpPolicyEditor(info, cp, serverName) {
   function fill(value) {
     generation++;busy=false;load.disabled=more.disabled=false;cursor="";more.hidden=true;status.textContent="";
     config=value;changes=new Map();catalog=new Map();
+    defaultPolicy.textContent = config.default_tools_approval_mode ? "服务默认审批："+config.default_tools_approval_mode+"；单项工具设置优先。" : "";
     const server=(info.status?.data||[]).find(s=>s.name===serverName());
     const tools=server?.tools;
     for(const tool of Array.isArray(tools)?tools:Object.values(tools||{})) if(typeof tool?.name==="string")catalog.set(tool.name,tool);

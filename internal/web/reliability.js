@@ -36,6 +36,9 @@ function approvalCard(a, id) {
   if (method === "mcpServer/elicitation/request") {
     if (p.mode === "url") {
       try { const u=new URL(p.url); if (["http:","https:"].includes(u.protocol)) card.append(el("a",{href:u.href,target:"_blank",rel:"noopener noreferrer"},rdText("打开认证页面 ↗"))); } catch {}
+    } else if (p._meta?.codex_approval_kind === "mcp_tool_call" && p.requestedSchema?.type === "object" && !Object.keys(p.requestedSchema.properties || {}).length && !(p.requestedSchema.required || []).length) {
+      card.append(el("p",{class:"help"},rdText("这是工具调用授权，无需填写 JSON。持续允许可在当前应用的 MCP 工具权限中配置；已有请求仍需处理或停止本轮。")));
+      content=()=>({});
     } else {
       const input=el("textarea",{rows:4},"{}");card.append(el("label",{},rdText("按照 requestedSchema 填写 JSON")),el("pre",{},json(p.requestedSchema)),input);content=()=>JSON.parse(input.value);
     }

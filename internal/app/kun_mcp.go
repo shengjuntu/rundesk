@@ -99,6 +99,9 @@ func (m *Manager) writeKunMCP(id, current string, servers map[string]any) (any, 
 }
 func kunMCPSpec(name, revision string, cfg map[string]any, resolve bool) (p.MCPServer, error) {
 	spec := p.MCPServer{Name: name, Revision: revision, StartupTimeout: 30, ToolTimeout: 60, Environment: map[string]string{}, Headers: map[string]string{}, ApprovalModes: map[string]string{}}
+	if _, exists := cfg["default_tools_approval_mode"]; exists {
+		return spec, fmt.Errorf("%s: Kun 暂不支持服务级默认审批，请使用 tools.<name>.approval_mode", name)
+	}
 	spec.Command, _ = cfg["command"].(string)
 	spec.URL, _ = cfg["url"].(string)
 	array := func(key string) []string {

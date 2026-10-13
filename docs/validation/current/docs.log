@@ -1,1 +1,1 @@
-{"passed": true, "version": "0.47.0", "documents": 57, "paths": 185, "checks": ["local links", "version", "startup admin scope", "install idempotency", "no historical release duplicates"]}
+{"passed": true, "version": "0.47.1", "documents": 57, "paths": 185, "checks": ["local links", "version", "startup admin scope", "install idempotency", "no historical release duplicates"]}

@@ -104,3 +104,11 @@ python3 scripts/docker-real-smoke.py --image rundesk-news:1.0
 脚本检查真实容器启动、Codex 配置/Skills/MCP 状态接口及移除重建后的持久数据，最后只移除它创建的容器，不调用模型，不删除项目数据。再登录该环境并执行一条实际研究任务，确认沙箱、模型认证、MCP 网络与产物路径。通过之前，不应把模拟结果当成生产验收。
 
 参考：[Docker bind mounts](https://docs.docker.com/engine/storage/bind-mounts/)、[Docker exec](https://docs.docker.com/reference/cli/docker/container/exec/)、[Codex App Server](https://developers.openai.com/codex/app-server/)、[Codex 配置](https://developers.openai.com/codex/config-reference/)。
+
+## 新闻 Docker 的 Codex 完整访问
+
+news2douyin 0.13.1 在“连接并配置环境”中选择完整访问后，为其 Codex Docker 实例保存 `danger-full-access` 与 `approvalPolicy=never`，为该环境当前启用的 MCP 设置服务默认 `approve`，并更新已有单工具审批覆盖。Docker 仍保留原有隔离；没有增加 privileged、宿主根目录或 Docker socket 挂载。
+
+实际可写 bind mount：项目 `workspace.path`、环境独立 `CODEX_HOME`、环境独立 `home/`。只读 bind mount：`leases/`、`traces/`、RunDesk 容器监管程序。系统根目录只读，`/tmp` 和 `/run` 为 tmpfs。项目文件修改会同步写回宿主目录；完整访问不会获得宿主机未挂载文件或额外系统权限。新闻数据库仍通过业务 MCP 读写，不自动挂载。
+
+已有等待审批的任务保持原状态，先停止旧研究再配置，随后启动新研究。普通启动不会反复重写权限；新增 MCP 后需再次连接配置。沿用选项不撤销已保存的授权，收紧权限在 RunDesk 中操作。

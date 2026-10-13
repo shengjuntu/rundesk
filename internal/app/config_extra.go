@@ -27,10 +27,16 @@ func prepareMCP(value, old map[string]any) (map[string]any, error) {
 		return nil, e
 	}
 	value = copy
-	allowed := map[string]bool{"command": true, "args": true, "env": true, "env_vars": true, "url": true, "bearer_token_env_var": true, "http_headers": true, "env_http_headers": true, "enabled": true, "startup_timeout_sec": true, "tool_timeout_sec": true, "enabled_tools": true, "disabled_tools": true, "tools": true}
+	allowed := map[string]bool{"command": true, "args": true, "env": true, "env_vars": true, "url": true, "bearer_token_env_var": true, "http_headers": true, "env_http_headers": true, "enabled": true, "startup_timeout_sec": true, "tool_timeout_sec": true, "enabled_tools": true, "disabled_tools": true, "tools": true, "default_tools_approval_mode": true}
 	for key := range value {
 		if !allowed[key] {
 			return nil, fmt.Errorf("暂不支持 MCP 字段: %s", key)
+		}
+	}
+	if raw, exists := value["default_tools_approval_mode"]; exists {
+		mode, ok := raw.(string)
+		if !ok || (mode != "auto" && mode != "prompt" && mode != "writes" && mode != "approve") {
+			return nil, errors.New("default_tools_approval_mode 必须为 auto/prompt/writes/approve")
 		}
 	}
 	if rawTools, exists := value["tools"]; exists {

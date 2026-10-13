@@ -1,0 +1,1 @@
+PASS: empty MCP tool approval needs no JSON; accept sends {}; real forms preserved; decline sends null

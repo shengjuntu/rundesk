@@ -1,34 +1,25 @@
 # 当前版本验证
 
-RunDesk **0.47.0** / Kun **0.16.0** / worker 协议 **16**。2026-10-12 完成应用运行环境 API 与 news2douyin 0.13.0 联调。当前环境没有 Docker Engine 或 Codex，容器和模型路径使用测试替身；交付源码，不交付已验收镜像。
+RunDesk **0.47.1** / Kun **0.16.0** / worker 协议 **16**。2026-10-12 验证 Docker 完整访问与 MCP 持久授权修复。没有实际 Docker Engine 或在线模型验收。
 
 | 检查 | 结果与范围 |
 | --- | --- |
-| Go 兼容性 | application、Docker、environment、v1、seed 和 containerruntime 相关测试通过 |
-| 应用环境并发 | 新增运行环境测试通过 race；并发 prepare 只创建/启动一次，活动连接保持，拒绝绑定/归属越权和待更新配置 |
-| HTTP 与业务 MCP | 真实两端 HTTP 服务，覆盖注册、镜像配置、MCP 初始化/工具发现、启动研究、检索记录、证据与报告、轨迹和停止 |
-| 重复启动 | 新闻重复点击复用运行；完整联调只创建一个对应环境；底层为 Docker CLI fixture |
-| news2douyin | 274 项测试通过，19 项可选媒体测试因缺少 Pillow/字体等依赖跳过；DOM 替身交互契约 5 项通过 |
-| Linux 构建与契约 | RunDesk/Kun 构建、版本输出和文档契约检查；OpenAPI 185 条路径、221 个操作 |
+| Go 全量 | `go test ./...` 通过，包括 Kun；[记录](validation/current/go-tests.log) |
+| 并发与审批 | MCP 审批及应用运行环境定向 race 通过；[记录](validation/current/go-race.log) |
+| 授权界面 | 空对象工具授权无需 JSON，accept 发空对象，真实表单和拒绝保持有效；[记录](validation/current/approval-ui.log) |
+| 两端 HTTP | 真实 HTTP 与业务 MCP，旧配置迁移、脱敏凭据保留、其他实例隔离、重复准备、研究和停止通过；[汇总](validation/current/http-summary.json) |
+| news2douyin | 279 通过、19 个可选媒体测试跳过；修复后的 Docker 专项 18 通过；5 项 DOM 交互契约通过 |
+| 构建与文档 | 两个 Linux 静态程序构建和版本输出通过；OpenAPI 185 条路径及本地文档链接通过 |
 
-原始记录见 [汇总](validation/current/summary.json)、[兼容性](validation/current/go-compatibility.log)、[race](validation/current/go-runtime-race.log) 和 [两端 HTTP](validation/current/http-summary.json)。新闻源码包另含完整 Python、UI 和 HTTP 联调入口。
+[本版汇总](validation/current/summary.json)。HTTP 联调的 Docker、Codex 和搜索为测试替身，没有验证模型是否实际免弹窗；部署时须用一轮连续读取多个来源/offset 的真实研究确认。UI 测试验证处理逻辑，不代表浏览器布局验收。
 
-本轮没有修改 Kun 内核，不将旧版全量 Kun、媒体或 Windows 日志作为本版验证。上一版配置目录与媒体实跑记录保留在 0.46.0 历史交付中。无浏览器视觉验收：Chromium 下载失败，DOM 契约检查不证明真实布局。
-
-## 部署仍需验证
-
-Docker 实际构建与权限、容器到新闻服务回调、该环境的 Codex 认证、Exa/Wigolo 发现和真实搜索，以及带来源引用的完整模型研究。prepare 的 accountReady 只表示认证元数据检查通过；modelTested=false，不表示真实模型和新闻质量通过。Wigolo 的浏览器正文提取没有接入新闻证据导入。
-
-## 复验入口
+## 复验
 
 ```bash
-go test ./internal/app ./internal/containerruntime -run 'Test(Application|Docker|Environment|V1|Seed)' -count=1 -timeout=180s
-go test -race ./internal/app -run TestApplicationRuntime -count=1 -timeout=180s
-go build -buildvcs=false -trimpath -o bin/rundesk ./cmd/rundesk
-go build -buildvcs=false -trimpath -o bin/kun ./cmd/kun
+go test ./...
+go test -race ./internal/app -run 'Test(MCP.*Approval|Approval|Permissions|ApplicationRuntime)' -count=1 -timeout=180s
+node scripts/mcp-approval-card-test.cjs
 python3 scripts/check-docs.py
 ```
 
-在安装研究开发依赖的 news2douyin 0.13.0 源码目录运行 `python tools/integration_docker_research.py --rundesk-root /absolute/path/to/rundesk --output /absolute/path/to/new-validation`。该脚本实际启动两端 HTTP，但显式使用 Docker/Codex/search fixture，不是部署验收。
-
-源码指纹记录于 summary.json；按相对路径排序，将路径、NUL、文件字节、NUL 依次送入 SHA-256。覆盖 Makefile、go.mod、go.sum、cmd、internal、scripts、examples，排除 Python 缓存。分发文件摘要见根目录 SHA256SUMS。
+在 news2douyin 0.13.1 源码目录安装开发依赖后，执行 `python tools/integration_docker_research.py --rundesk-root /absolute/path/to/rundesk --output /absolute/path/to/validation`。升级及真实验收见 [升级说明](UPGRADING.md)。

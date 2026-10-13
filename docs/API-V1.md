@@ -1,6 +1,6 @@
 # 应用 API v1
 
-当前契约随 RunDesk 0.47.0 发布。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
+当前契约随 RunDesk 0.47.1 发布。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
 
 ## 稳定范围
 
@@ -131,3 +131,11 @@ TaskSpec.input 的稳定入口是 `{text,files?,skills?}`；files 使用服务�
 [Python 客户端](../examples/application_client.py) 和 [最小接入程序](../examples/application_quickstart.py) 只使用 Python 标准库。运行前设置 RUNDESK_URL、RUNDESK_APP_TOKEN、RUNDESK_WORKSPACE_ID 和本次固定的 RUNDESK_OPERATION_KEY；程序提交后查询真实 Task 状态，不自动重试写操作。
 
 路由和契约修改必须同步更新 `scripts/generate-openapi.py`，重新生成 `internal/app/openapi.json`；运行 Go 应用/API/凭据/幂等回归。后端变化需验证既有 API 行为与取消/恢复/副作用边界。当前验证结果见 [VALIDATION](VALIDATION.md)。
+
+## Codex MCP 服务级审批
+
+0.47.1 的 `/meta` 声明 `mcp-server-approval-policy`。保存 MCP 配置时支持 `default_tools_approval_mode`，值为 `auto`、`prompt`、`writes`、`approve`；`tools.<name>.approval_mode` 优先于服务默认值。`approve` 用于管理员明确选定的持续授权，工具禁用列表仍生效。该字段是 Codex 配置；Kun 明确拒绝它，继续使用单工具审批。配置仍按实例及项目环境保存，凭据脱敏和配置版本校验不变。
+
+新闻 Docker 完整访问使用已有 `PATCH /instances/{iid}`，包含当前 `revision` 与 `permissions={sandbox: danger-full-access, approvalPolicy: never, reviewer: user}`。客户端先核对 Codex Docker 身份；普通研究启动不修改权限。
+
+原生字段依据：[Codex MCP 配置](https://learn.chatgpt.com/docs/extend/mcp)。

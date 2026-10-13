@@ -23,6 +23,22 @@ func TestMCPToolApprovalValidation(t *testing.T) {
 	}
 }
 
+func TestMCPServerApprovalValidation(t *testing.T) {
+	for _, mode := range []string{"auto", "prompt", "writes", "approve"} {
+		if _, err := prepareMCP(map[string]any{"command": "fixture", "default_tools_approval_mode": mode}, nil); err != nil {
+			t.Fatal(mode, err)
+		}
+	}
+	for _, mode := range []any{"never", "", true, 1, nil} {
+		if _, err := prepareMCP(map[string]any{"command": "fixture", "default_tools_approval_mode": mode}, nil); err == nil {
+			t.Fatalf("accepted invalid server approval: %#v", mode)
+		}
+	}
+	if _, err := kunMCPSpec("fixture", "0", map[string]any{"command": "fixture", "default_tools_approval_mode": "approve"}, false); err == nil {
+		t.Fatal("Kun silently ignored unsupported default approval")
+	}
+}
+
 func TestMCPToolApprovalSavedOnlyInSelectedInstance(t *testing.T) {
 	m := testManager(t)
 	wid := m.Workspaces()[0].ID
@@ -35,7 +51,7 @@ func TestMCPToolApprovalSavedOnlyInSelectedInstance(t *testing.T) {
 		t.Fatal(err)
 	}
 	policy := map[string]any{"tavily-search": map[string]any{"approval_mode": "approve"}, "other": map[string]any{"approval_mode": "prompt"}}
-	if _, err = m.SaveMCP(wid, "tavily", "0", map[string]any{"url": "https://example.com/mcp", "tools": policy}, false, a.ID); err != nil {
+	if _, err = m.SaveMCP(wid, "tavily", "0", map[string]any{"url": "https://example.com/mcp", "tools": policy, "default_tools_approval_mode": "approve"}, false, a.ID); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := m.readConfig(wid, a.ID)
@@ -43,6 +59,9 @@ func TestMCPToolApprovalSavedOnlyInSelectedInstance(t *testing.T) {
 		t.Fatal(err)
 	}
 	servers, _ := userMCP(cfg)
+	if servers["tavily"].(map[string]any)["default_tools_approval_mode"] != "approve" {
+		t.Fatal("server approval mode lost", servers)
+	}
 	if !reflect.DeepEqual(servers["tavily"].(map[string]any)["tools"], policy) {
 		t.Fatal("policy lost", servers)
 	}

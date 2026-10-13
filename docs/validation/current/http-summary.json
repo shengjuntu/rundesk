@@ -2,6 +2,7 @@
   "passed": true,
   "checks": [
     "real_http_registration_and_container_configuration",
+    "native_permission_and_mcp_config_upgrade_preserves_secret_and_instance_scope",
     "real_business_mcp_initialize_and_tools_list",
     "one_click_bound_docker_session_and_duplicate_start",
     "real_mcp_ticket_evidence_and_report_persistence",

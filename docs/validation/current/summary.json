@@ -1,51 +1,18 @@
 {
-  "version": "0.47.0",
+  "version": "0.47.1",
   "kunVersion": "0.16.0",
   "workerProtocol": 16,
-  "goCompatibility": "passed",
-  "applicationRuntimeRace": "passed",
-  "builds": [
-    "rundesk",
-    "kun"
+  "passed": true,
+  "checks": [
+    "go test ./...",
+    "targeted MCP approval/application runtime race",
+    "MCP approval UI handlers",
+    "Linux static RunDesk and Kun builds",
+    "OpenAPI and docs links",
+    "real HTTP migration/credential/scope integration"
   ],
-  "openAPI": {
-    "paths": 185,
-    "operations": 221
-  },
-  "date": "2026-10-12",
-  "source": {
-    "sha256": "bafb10307baf8a5ed30361f9ff401bc49daf94819828070992b3bd3b54cb9d48",
-    "fileCount": 421,
-    "roots": [
-      "Makefile",
-      "go.mod",
-      "go.sum",
-      "cmd",
-      "internal",
-      "scripts",
-      "examples"
-    ],
-    "algorithm": "sorted relative UTF-8 path, NUL, bytes, NUL; exclude Python caches and egg-info"
-  },
-  "http": {
-    "passed": true,
-    "checks": [
-      "real_http_registration_and_container_configuration",
-      "real_business_mcp_initialize_and_tools_list",
-      "one_click_bound_docker_session_and_duplicate_start",
-      "real_mcp_ticket_evidence_and_report_persistence",
-      "run_trace_and_guarded_stop",
-      "one_environment_reused_across_setup_check_and_research"
-    ],
-    "scope": "Actual RunDesk/news2douyin HTTP and business MCP; fixture Docker CLI, Codex and search; no real container/model/search quality",
-    "dockerCreates": 1,
-    "dockerStarts": 1
-  },
-  "limitations": [
-    "No real Docker Engine, Codex or online search",
-    "No real model-quality acceptance",
-    "No browser layout acceptance",
-    "No Windows acceptance"
-  ],
-  "documentationChecks": "passed"
+  "limits": [
+    "Docker CLI, Codex and search are fixtures in HTTP integration",
+    "No actual Docker Engine, live model or browser layout acceptance"
+  ]
 }

@@ -6,7 +6,7 @@ RunDesk is an Agent execution platform for applications: one API connects Kun an
 
 ## Current release
 
-**RunDesk 0.47.0 · Kun 0.16.0 · worker protocol 16**. This release connects news2douyin 0.13.0 to its managed Docker environment through scoped runtime preparation and readiness APIs. The Kun execution kernel and wire protocol are unchanged.
+**RunDesk 0.47.1 · Kun 0.16.0 · worker protocol 16**. This patch adds native MCP server approval policy support and news2douyin 0.13.1 Docker full-access configuration. The Kun execution kernel and wire protocol are unchanged.
 
 - Prepare and reuse an application’s configured Docker environment before work, without changing its image or disconnecting active sessions.
 - Integrate applications with scoped credentials, durable queues, sessions, streaming events, files, and idempotency receipts.
