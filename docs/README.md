@@ -23,3 +23,5 @@
 机器契约 `/api/v1/openapi.json` 同时包含应用与管理 API；请依据权限标记和应用 API 文档选择接口。
 
 典型运行配置与统一 CLI：[examples](../examples/README.md)。Agent-Reach 评估与初始化流程：[配置说明](../examples/news2douyin/AGENT-REACH.md)。
+
+- [视频应用与 Docker 联调](VIDEO-APP.md)：Video App 0.7.0 与 RunDesk 0.48.1 的双容器职责、启动、认证、素材和验收。

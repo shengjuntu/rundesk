@@ -13,3 +13,18 @@ python3 /opt/rundesk-profile/tools/video_smoke.py --out ./video-smoke-001
 这会生成两秒 360×640 H.264/AAC 视频及 render.json、probe.json，并核对分辨率、编码、音频流和时长。输出目录已存在时拒绝覆盖。
 
 业务任务示例：把已提供的三张图片、一段旁白和字幕合成为 1080×1920 视频，保存实际渲染命令并检查时长和中文字体。还应抽帧检查字幕布局、试听音频；媒体元数据通过不能代替视觉/听觉验收。
+
+## 配合 Video App 0.7.0
+
+此配置生成 **Codex 工具镜像**，不包含 Video App、HyperFrames 或浏览器。Video App 的渲染镜像及 Compose 位于 Video App 发布包的 `docker/`，完整部署见 [视频应用联调](../../docs/VIDEO-APP.md)。
+
+```bash
+export VIDEO_APP_DIR=/absolute/path/rundesk-video-app-v0.7.0
+bash examples/video-build/run-app.sh init
+bash examples/video-build/run-app.sh build
+bash examples/video-build/run-app.sh up
+bash examples/video-build/run-app.sh doctor
+bash examples/video-build/run-app.sh smoke
+```
+
+RunDesk 管理的 `video-build` Codex 镜像仍通过初始化向导准备一次、供任务复用；`run-app.sh build` 只构建 App/渲染镜像。无需为每个视频重新构建。

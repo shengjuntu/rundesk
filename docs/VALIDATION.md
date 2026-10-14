@@ -1,3 +1,9 @@
+# 0.48.1 视频配套验证
+
+2026-10-13：应用 runtime/镜像相关 Go 测试、11 个 profile 测试、内置 profile 一致性、当前文档/API 版本检查通过。Video App 0.7.0 的真实双服务 HTTP 联调通过 8 项，Docker CLI/Codex 为测试替身；没有真实镜像构建、模型推理或 HyperFrames 视频验收。实际部署使用 Video App 包内 doctor/smoke，再发送真实制作任务。详见 [VIDEO-APP](VIDEO-APP.md)。
+
+以下为既有版本验证记录。
+
 # 当前验证
 
 RunDesk **0.48.0** / Kun **0.16.0** / worker 协议 **16**。本轮验证日期 2026-10-13。

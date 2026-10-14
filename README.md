@@ -6,7 +6,7 @@ RunDesk is an Agent execution platform for applications: one API connects Kun an
 
 ## Current release
 
-**RunDesk 0.48.0 · Kun 0.16.0 · worker protocol 16**. This release prepares reusable Exa / Agent-Reach images during initialization, with background build/pull jobs, cache reuse and offline checks. The Kun execution kernel and wire protocol are unchanged.
+**RunDesk 0.48.1 · Kun 0.16.0 · worker protocol 16**. This release prepares reusable Exa / Agent-Reach images during initialization, with background build/pull jobs, cache reuse and offline checks. The Kun execution kernel and wire protocol are unchanged.
 
 - Prepare and reuse an application’s configured Docker environment before work, without changing its image or disconnecting active sessions.
 - Integrate applications with scoped credentials, durable queues, sessions, streaming events, files, and idempotency receipts.
@@ -46,3 +46,5 @@ Thanks to [MichaelKinsy/PiG](https://github.com/MichaelKinsy/PiG), its contribut
 ## Runtime profiles
 
 See [examples](examples/README.md) for news2douyin, people-search and video-build. The shared CLI inspects, validates, prepares, packages and builds standalone Docker contexts. Research profiles use Exa and include a pinned Agent-Reach toolchain by default; the setup wizard can prepare them before application registration.
+
+Video App 0.7.0 deployment: [VIDEO-APP](docs/VIDEO-APP.md). The renderer image is separate from the managed Codex image.

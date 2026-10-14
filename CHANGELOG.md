@@ -1,5 +1,13 @@
 # Changelog
 
+## RunDesk 0.48.1
+
+- Add Video App 0.7.0 deployment guide and a uniform Docker lifecycle entry point under video-build.
+- Document separate renderer/App and managed Codex images, persistent storage, HTTP MCP callbacks and initialization-time image preparation.
+- Generalize the runtime binding error for research and video applications. Existing API, runtime image format, Kun and worker protocol are unchanged.
+- Video App performs Docker/account/MCP readiness checks before new submissions; recovery keeps its original operation receipt.
+
+
 ## RunDesk 0.47.1
 
 - Preserve and validate native Codex `default_tools_approval_mode`; advertise the configuration capability.

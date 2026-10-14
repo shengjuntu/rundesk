@@ -6,7 +6,7 @@ RunDesk 是面向应用的 Agent 执行平台，通过一套 API 接入 Kun 与 
 
 ## 当前版本
 
-**RunDesk 0.48.0 · Kun 0.16.0 · worker 协议 16**。本版将镜像构建/拉取前移到初始化向导，补齐 Exa + Agent-Reach 工具链，配套 news2douyin 0.13.2；Kun 执行内核及协议未升级。
+**RunDesk 0.48.1 · Kun 0.16.0 · worker 协议 16**。本版补充 Video App 0.7.0 的双容器部署与统一启动入口；初始化镜像准备及 Kun 内核保持兼容。视频渲染在独立 Video App 镜像中执行。
 
 - 应用环境：按绑定启动/复用容器，检查认证和工具；开始研究不改镜像，不断开现有活动会话。
 - 应用接入：独立凭据、项目与操作范围、持久任务队列、会话、事件订阅、文件与幂等回执。
@@ -30,6 +30,8 @@ Windows、模型配置与安装说明见 [启动与部署](docs/SETUP.md)。本�
 ## 典型运行配置
 
 [examples](examples/README.md) 提供 news2douyin、people-search、video-build 三套配置和统一 CLI，可生成现有构建页可用的 ZIP；初始化向导可直接选配置并后台构建、拉取或检查镜像；研究配置默认包含 Exa 与固定版本 Agent-Reach 工具链。
+
+视频环境与联调见 [VIDEO-APP](docs/VIDEO-APP.md)。
 
 ## 应用接入与架构
 

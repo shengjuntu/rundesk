@@ -59,7 +59,7 @@ func (m *Manager) PrepareApplicationRuntime(id string, in ApplicationRuntimeInpu
 	m.executionMu.RLock()
 	a, i, e := m.applicationRuntimeBinding(id)
 	if e == nil && (in.InstanceID == "" || in.WorkspaceID == "" || in.InstanceID != a.InstanceID || in.WorkspaceID != a.WorkspaceID) {
-		e = failure(409, "application_binding_changed", "应用绑定已变化，请重新连接后开始研究")
+		e = failure(409, "application_binding_changed", "应用绑定已变化，请重新连接后开始任务")
 	}
 	if e == nil && (i.Execution.normalized().Mode != "docker" || runtimeKind(i.AgentRuntime.Kind) != "codex") {
 		e = failure(409, "docker_configuration_required", "请先由管理员为此应用选择 Codex Docker 镜像")
