@@ -1,0 +1,3 @@
+$ CGO_ENABLED=0 go build -buildvcs=false -trimpath -o bin/kun ./cmd/kun
+$ bin/kun --version
+Kun 0.16.0

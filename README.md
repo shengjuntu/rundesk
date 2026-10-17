@@ -6,7 +6,7 @@ RunDesk is an Agent execution platform for applications: one API connects Kun an
 
 ## Current release
 
-**RunDesk 0.49.0 · Kun 0.16.0 · worker protocol 16**. This release brings trace inspection and DevTools into one debugging workbench, adds structured model-request evidence, and introduces an optional pass-through observation proxy for Codex. The Kun execution kernel and wire protocol are unchanged.
+**RunDesk 0.49.1 · Kun 0.16.0 · worker protocol 16**. Codex HTTP observation is now off by default and saved per session. Enable it in the debugging workbench when needed; changes apply on the next submitted turn without interrupting current work. The unified workbench, pass-through transport, Kun execution kernel and wire protocol are unchanged.
 
 - Prepare and reuse an application’s configured Docker environment before work, without changing its image or disconnecting active sessions.
 - Integrate applications with scoped credentials, durable queues, sessions, streaming events, files, and idempotency receipts.
@@ -24,6 +24,8 @@ make build
 ```
 
 Open http://127.0.0.1:3210 and choose Kun or Codex in the setup wizard. Kun uses a tool-capable Chat Completions service; Codex uses its native provider and authentication configuration. Different instances can use different backends; existing sessions retain their backend. `--demo` explores the interface without real model calls or software installation.
+
+HTTP observation stays off until enabled for a Codex session. `--observe-http=true` changes the default for newly created Codex sessions; saved settings of existing sessions are retained. When off, no observation proxy starts and no endpoint discovery is performed for that session. See [capture settings](docs/UNIFIED_DEBUGGING.md).
 
 This is a source distribution. Build both executables and keep them together. See [setup and deployment](docs/SETUP.md) for Windows and optional Codex installation.
 

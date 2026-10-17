@@ -263,7 +263,7 @@ func (p *Proxy) serveHTTP(w http.ResponseWriter, req *http.Request) {
 				}
 				x.record.Association = "websocket-connection"
 				x.record.ConnectionStartLabels = &labels
-				x.record.Labels = Labels{SessionID: labels.SessionID}
+				x.record.Labels = Labels{CaptureID: labels.CaptureID, SessionID: labels.SessionID}
 				x.duplex = &duplexBody{ReadWriteCloser: rw, upstream: p.newCapture(started, -1), client: p.newCapture(started, -1), proxy: p}
 				p.duplexMu.Lock()
 				p.duplex[x.duplex] = true

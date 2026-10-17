@@ -1,0 +1,2 @@
+$ go test -race ./internal/observeproxy -count=1 -timeout=300s
+ok  	github.com/shengjuntu/rundesk/internal/observeproxy	3.168s

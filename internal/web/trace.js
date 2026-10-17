@@ -12,3 +12,11 @@ window.RunDeskTraceUI={
 };
 $("#trace-button").textContent=rdText("调试工作台");
 $("#trace-button").onclick=RunDeskTraceUI.open;
+
+// The session menu opens the same control, so preference state has one editor.
+const captureMenuEntry=document.querySelector("#session-http-observation");
+if(captureMenuEntry)captureMenuEntry.onclick=()=>{
+ if(!state.session){toast(rdText("请先选择会话"));return;}
+ const menu=document.querySelector("#session-menu");if(menu)menu.open=false;
+ return RunDeskDebug.open(state.session,{panel:"http"});
+};

@@ -257,9 +257,9 @@ def exercise(executable, root, upstream, provider, override, ephemeral=True, cus
             else:
                 overrides["model_providers." + provider + ".base_url"] = upstream + "/override/v1"
         params = {"cwd": str(workspace), "approvalPolicy": "never", "sandbox": "read-only",
-                  "config": overrides, "experimentalRawEvents": False}
+                  "config": overrides, "experimentalRawEvents": False, "environments": []}
         if ephemeral:
-            params.update(ephemeral=True, environments=[])
+            params["ephemeral"] = True
         started = app.call("thread/start", params)
         thread = started["thread"]["id"]
         app.call("turn/start", {"threadId": thread, "input": [{"type": "text", "text": "Reply OK. Do not use tools.", "text_elements": []}]})

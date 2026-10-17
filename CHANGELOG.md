@@ -1,5 +1,13 @@
 # Changelog
 
+## RunDesk 0.49.1
+
+- Default Codex HTTP observation to off, persist `observeHTTP` per session, and expose its toggle in the unified debugging workbench.
+- Make `--observe-http` a creation default for new Codex sessions. Restarting with a different flag never overwrites saved session preferences.
+- Start the pass-through proxy lazily for an enabled thread. Disabled sessions skip observation configuration discovery and endpoint routing.
+- Save changes during active work without canceling requests; reconnect and resume the same Codex thread on the next submitted turn. Report requested settings, pending changes and applied state separately.
+- Keep Kun's native model evidence unchanged and reject enabling the Codex-only capture setting for Kun sessions. Existing captured history remains readable.
+
 ## RunDesk 0.49.0
 
 - Unify trace inspection, LLM request/response evidence, summaries, diagnostic questions and embedded Kun DevTools in one debugging workbench with a shared session and fixed history scope.

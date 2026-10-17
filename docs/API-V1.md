@@ -1,10 +1,12 @@
 # 应用 API v1
 
-当前契约随 RunDesk 0.48.0 发布。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
+当前契约随 RunDesk 0.49.1 发布。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
 
 ## 稳定范围
 
 应用依赖任务、会话、文件、事件信封、错误与幂等语义。保持既有必需字段与含义，新增可选字段、错误码或原生事件时客户端应容忍未知值。后端原生 `data`、模型配置、Kun 内部调试/实验接口不等于跨后端统一能力；使用前读取对应能力声明。
+
+0.49.1 的 `Session.observeHTTP` 表示保存的 Codex HTTP 采集偏好，默认关闭。`PATCH /sessions/{sid}` 可传 `{"observeHTTP":true}` 或 `false`；沿用会话写入权限和归属校验，应用凭据需 `read` + `run`。修改不打断当前任务，下一轮提交时重连并恢复原 thread 应用。`observation.pending` 表示偏好待应用，`observation.appliedEnabled` 表示原生线程已确认配置代理；开启偏好但不支持接入时后者仍为 false。保存值不等于采集已发生。Kun 拒绝开启此 Codex 专用设置。完整配置与覆盖边界见 [统一调试](UNIFIED_DEBUGGING.md)。
 
 OpenAPI 同时包含应用和管理接口。`x-administrator-only=true` 为管理操作；`x-application-scopes` 列出应用所需 scopes，此外仍受应用、实例、项目和资源归属约束。不能将所有列出的路径都视为应用授权。
 

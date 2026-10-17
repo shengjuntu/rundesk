@@ -1,0 +1,97 @@
+{
+  "version": "0.49.1",
+  "date": "2026-10-17",
+  "go": "go1.25.12",
+  "platform": "linux/amd64",
+  "checks": [
+    {
+      "name": "go-test",
+      "command": "go test ./... -count=1 -timeout=300s",
+      "exitCode": 0,
+      "seconds": 85.615,
+      "log": "go-test.log"
+    },
+    {
+      "name": "go-vet",
+      "command": "go vet ./...",
+      "exitCode": 0,
+      "seconds": 2.726,
+      "log": "go-vet.log"
+    },
+    {
+      "name": "go-race-proxy",
+      "command": "go test -race ./internal/observeproxy -count=1 -timeout=300s",
+      "exitCode": 0,
+      "seconds": 4.294,
+      "log": "go-race-proxy.log"
+    },
+    {
+      "name": "build-rundesk",
+      "command": "CGO_ENABLED=0 go build -buildvcs=false -trimpath -o bin/rundesk ./cmd/rundesk",
+      "exitCode": 0,
+      "seconds": 2.809,
+      "log": "build-rundesk.log"
+    },
+    {
+      "name": "build-kun",
+      "command": "CGO_ENABLED=0 go build -buildvcs=false -trimpath -o bin/kun ./cmd/kun",
+      "exitCode": 0,
+      "seconds": 0.488,
+      "log": "build-kun.log"
+    },
+    {
+      "name": "docs-check",
+      "command": "python3 scripts/check-docs.py",
+      "exitCode": 0,
+      "seconds": 0.034,
+      "log": "docs-check.log"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check",
+      "exitCode": 0,
+      "seconds": 0.019,
+      "log": "diff-check.log"
+    },
+    {
+      "name": "observation-switch-race",
+      "command": "go test -race ./internal/app -run 'TestObservation(Switch|Manager)' -count=1",
+      "exitCode": 0,
+      "log": "observation-switch-race.log"
+    },
+    {
+      "name": "capture-settings-browser",
+      "command": "node scripts/capture-settings-ui-test.cjs",
+      "exitCode": 0,
+      "log": "capture-settings-browser.log"
+    },
+    {
+      "name": "unified-browser",
+      "command": "node scripts/unified-debug-ui-test.cjs",
+      "exitCode": 0,
+      "log": "unified-browser.log"
+    },
+    {
+      "name": "codex-persistent-smoke",
+      "command": "python3 scripts/codex-observation-smoke.py --codex /opt/codex/versions/0.158.0/bin/codex --include-openai --persistent",
+      "exitCode": 0,
+      "log": "codex-observation-persistent-smoke.log"
+    },
+    {
+      "name": "javascript-syntax",
+      "command": "node --check <91 shipped JavaScript files>",
+      "exitCode": 0,
+      "log": "javascript-syntax.log"
+    }
+  ],
+  "browser": {
+    "version": "Chromium 155.0.8059.84",
+    "PLAYWRIGHT_PATH": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright",
+    "CHROMIUM_PATH": "/workspace/scratch/80b35bf25fcc/browser/chrome-headless-shell-linux64/chrome-headless-shell"
+  },
+  "limits": [
+    "Synthetic local HTTP/WebSocket upstreams; no real model account or credentials.",
+    "Real CLI persistent thread/start passed; cold thread/resume timed out in this environment.",
+    "No real Docker/news2douyin acceptance; older 0.49.0 logs are historical."
+  ]
+}

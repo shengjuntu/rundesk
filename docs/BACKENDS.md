@@ -1,6 +1,6 @@
 # 后端能力与扩展边界
 
-当前后端为 Kun 0.16.0 与 Codex App Server。RunDesk 0.49.0 的共同任务接口保持 `/api/v1`，内部运行与停止通过后端注册表分派。
+当前后端为 Kun 0.16.0 与 Codex App Server。RunDesk 0.49.1 的共同任务接口保持 `/api/v1`，内部运行与停止通过后端注册表分派。
 
 | 能力 | Kun | Codex |
 | --- | --- | --- |

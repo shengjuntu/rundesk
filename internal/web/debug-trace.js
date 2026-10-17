@@ -107,8 +107,60 @@ window.RunDeskDebug=(()=>{
    }catch(err){if(alive(e)&&detailVersion===detailTicket&&ticket===eventTicket)host.replaceChildren(el('p',{class:'error'},err.message));}
   }
   const captureState=el('p',{class:'debug-capture-state',role:'status'});
-  function captureMessage(value){const status=value?.observation;captureState.textContent=status?`采集状态：${({active:'已接入',configured:'已配置，待核对请求',observed:'已有采集记录',degraded:'采集有缺口',unavailable:'不可用',disabled:'已关闭',simulated:'协议模拟'}[status.state]||status.state)} · ${status.message||''}${status.maxBodyBytes?' · 每方向正文上限 '+status.maxBodyBytes+' bytes':''}`:'此会话未报告 HTTP 代理接入状态，不能据此认定采集完整。';}
-  captureMessage(session);
+  const captureSettings=el('section',{class:'debug-capture-settings','aria-label':'此会话的 HTTP 采集设置'}),captureToggle=el('input',{type:'checkbox',id:'debug-observe-http','aria-label':'为此会话启用 HTTP 采集'}),captureSaved=el('strong'),captureApplied=el('p',{class:'help'}),captureFeedback=el('p',{role:'status'});
+  let captureSession=session,captureReady=false,captureBusy=false,captureLoading=false,captureTicket=0,captureDraft=false;
+  const captureSupported=session.runtimeKind!=='kun';
+  const captureRefresh=button('核对采集状态',()=>readCaptureSettings());
+  function captureMessage(value){
+   const status=value?.observation;
+   captureState.textContent=status?`采集记录状态：${({active:'已接入',configured:'已配置，待核对请求',observed:'已有采集记录',pending:'设置等待下一轮生效',degraded:'采集有缺口',unavailable:'不可用',disabled:'采集关闭',simulated:'协议模拟'}[status.state]||status.state)} · ${status.message||''}${status.maxBodyBytes?' · 每方向正文上限 '+status.maxBodyBytes+' bytes':''}`:'此会话未报告 HTTP 代理接入状态，不能据此认定采集完整。';
+  }
+  function renderCaptureSettings(){
+   const saved=captureSession.observeHTTP===true,status=captureSession.observation,applied=status?.appliedEnabled,pending=status?.pending===true;
+   captureToggle.checked=captureBusy?captureDraft:saved;
+   captureToggle.disabled=!captureSupported||!captureReady||captureBusy||captureLoading;
+   captureRefresh.disabled=captureBusy||captureLoading;
+   captureSaved.textContent='已保存设置：'+(saved?'开启':'关闭');
+   captureSettings.setAttribute('aria-busy',captureBusy||captureLoading?'true':'false');
+   if(!captureSupported){captureApplied.textContent='Kun 不使用 Codex HTTP 采集开关。Kun 的模型与工具记录可在轨迹和 Kun 高级调试中查看。';return;}
+   let actual=applied===true?'最近核对的连接：已应用直通代理配置。':applied===false?'最近核对的连接：未配置 RunDesk 采集代理。':'尚未报告实际连接是否已应用采集代理。';
+   if(pending){
+    if(!saved&&applied===true)actual+=' 关闭设置尚未生效，'+(['starting','running','waiting','stopping'].includes(captureSession.status)?'当前轮':'已有线程')+'仍沿用代理配置；下一轮提交时关闭。';
+    else if(saved&&applied===false)actual+=' 开启设置尚未生效，下一轮提交时应用。';
+    else actual+=' 设置等待下一轮提交时应用。';
+   }else if(saved&&applied===false)actual+=' 开启偏好已保存，但尚未应用代理；请核对下方状态。';
+   else if(!saved&&applied===true)actual+=' 关闭偏好已保存，当前连接仍有代理配置；请核对下一轮的生效状态。';
+   if(status?.state==='observed')actual+=' 已存在采集记录，各请求是否完整以记录标记为准。';
+   else actual+=' 设置或连接配置成功不代表已采集到真实请求。';
+   captureApplied.textContent=actual;
+  }
+  function acceptCaptureSettings(value){
+   if(value?.id!==sid||(captureSupported&&typeof value.observeHTTP!=='boolean'))throw Error('会话设置响应与目标不符或缺少采集开关，请重新核对。');
+   captureSession=value;captureReady=true;captureMessage(value);
+   // Only update these settings: a delayed PATCH must not rewind a live turn/status.
+   if(state.session?.id===sid)state.session={...state.session,observeHTTP:value.observeHTTP,observation:value.observation};
+   if(Array.isArray(state.sessions))state.sessions=state.sessions.map(item=>item.id===sid?{...item,observeHTTP:value.observeHTTP,observation:value.observation}:item);
+  }
+  async function readCaptureSettings(){
+   if(captureBusy)return;const ticket=++captureTicket;captureLoading=true;renderCaptureSettings();
+   try{
+    const value=await api('/sessions/'+encodeURIComponent(sid));if(closed||!d.open||active?.dialog!==d||ticket!==captureTicket)return;
+    acceptCaptureSettings(value);captureFeedback.textContent='已核对服务端保存的设置与连接状态。';
+   }catch(err){if(!closed&&d.open&&active?.dialog===d&&ticket===captureTicket)captureFeedback.textContent='核对失败：'+err.message;}
+   finally{if(!closed&&d.open&&active?.dialog===d&&ticket===captureTicket){captureLoading=false;renderCaptureSettings();}}
+  }
+  async function saveCaptureSettings(){
+   if(!captureSupported||!captureReady||captureBusy||captureLoading){renderCaptureSettings();return;}
+   captureDraft=captureToggle.checked;const ticket=++captureTicket;captureBusy=true;captureFeedback.textContent='正在保存此会话设置…';renderCaptureSettings();
+   try{
+    const value=await api('/sessions/'+encodeURIComponent(sid),{method:'PATCH',body:{observeHTTP:captureDraft}});if(closed||!d.open||active?.dialog!==d||ticket!==captureTicket)return;
+    acceptCaptureSettings(value);captureFeedback.textContent='设置已保存，下一轮提交时应用；不会中断当前轮。';
+   }catch(err){if(!closed&&d.open&&active?.dialog===d&&ticket===captureTicket)captureFeedback.textContent='未确认保存：'+err.message+' 已恢复上次确认的显示，请点击“核对采集状态”确认服务端设置。';}
+   finally{if(!closed&&d.open&&active?.dialog===d&&ticket===captureTicket){captureBusy=false;renderCaptureSettings();}}
+  }
+  captureToggle.onchange=()=>safe(saveCaptureSettings);
+  captureSettings.append(el('h3',{},'此会话的 HTTP 采集'),captureSupported?el('label',{class:'debug-capture-toggle'},captureToggle,el('span',{},'启用直通代理采集'),captureSaved):el('strong',{},'Kun 会话不提供此开关'),captureSupported?el('p',{class:'help'},'修改只保存此会话的偏好，下一轮提交时生效；不打断当前请求，也不删除既有采集记录。'):null,captureApplied,el('div',{class:'actions'},captureRefresh),captureFeedback);
+  captureMessage(session);renderCaptureSettings();
   const httpList=el('div',{class:'debug-http-list'}),httpDetail=el('section',{class:'debug-http-detail'}),httpStatus=el('p',{class:'help',role:'status'}),httpPage=el('span',{});
   const httpPrev=button('上一批请求',()=>{httpOffset=Math.max(0,httpOffset-20);return loadHTTP();}),httpMoreButton=button('下一批请求',()=>{httpOffset=httpNext;return loadHTTP();});
   const completeness=r=>r.complete&&!r.truncated&&!r.incomplete&&!r.captureLoss?'完整采集':r.truncated?'已截断':r.error?'采集 / 请求异常':'记录不完整';
@@ -207,8 +259,8 @@ window.RunDeskDebug=(()=>{
   async function refresh(keepOrigin=false){
    const e=++epoch;through=null;offset=0;runOffset=0;httpOffset=0;listTicket++;httpTicket++;httpDetailTicket++;clearDetail();error.textContent='';info.textContent='固定当前历史范围…';list.replaceChildren();stats.textContent='';latest.disabled=true;syncDiagnosis();
    try{
-    const values=await Promise.all([api(base+'capabilities'),read({kind:'events',limit:1,...(keepOrigin&&selection.through!=null?{through:selection.through}:{})}),api('/sessions/'+encodeURIComponent(sid))]);if(!alive(e))return;
-    caps=values[0];captureMessage(values[2]);through=values[1].data.through;d.dataset.through=through;
+    const values=await Promise.all([api(base+'capabilities'),read({kind:'events',limit:1,...(keepOrigin&&selection.through!=null?{through:selection.through}:{})}),readCaptureSettings()]);if(!alive(e))return;
+    caps=values[0];through=values[1].data.through;d.dataset.through=through;
     info.textContent=`${session.title||sid} · ${caps.backend} · 固定宿主历史 ≤ #${through}，新增记录需手动刷新。`;
     capabilities.replaceChildren(el('summary',{},'记录来源与后端能力'),el('p',{class:'help'},'轨迹与摘要共用后端结构化查询。未配对记录明确标记；HTTP 正文只有经过代理才可观测。历史缺失不会被推测成完整记录。'),el('pre',{},txt(caps.queries)));
     await Promise.all([loadRuns(),loadSteps()]);
@@ -223,12 +275,12 @@ window.RunDeskDebug=(()=>{
   runs.onchange=apply;types.onchange=apply;issues.onchange=apply;search.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();apply();}};
   for(const [key,label]of Object.entries({trace:'轨迹',http:'LLM 请求 / 响应',analysis:'摘要与问答',...(session.runtimeKind==='kun'?{kun:'Kun 高级调试'}:{})})){const b=button(label,()=>switchPanel(key));b.dataset.panel=key;tabs.append(b);}
   tracePanel.append(el('div',{class:'debug-filters'},el('label',{},'类型',types),el('label',{},'预览搜索',search),el('label',{class:'debug-check'},issues,'仅需关注'),filter),stats,el('div',{class:'debug-columns'},el('section',{},list,el('div',{class:'debug-pages'},prev,pageLabel,more)),detail));
-  httpPanel.append(captureState,el('p',{class:'help'},'直通观测保留原协议。Request 与 Response 来自旁路副本，凭据头会脱敏，正文保留实际字节；未采集、截断或丢失会明确标记。'),httpStatus,el('div',{class:'debug-columns'},el('section',{},httpList,el('div',{class:'debug-pages'},httpPrev,httpPage,httpMoreButton)),httpDetail));
+  httpPanel.append(captureSettings,captureState,el('p',{class:'help'},'直通观测保留原协议。Request 与 Response 来自旁路副本，凭据头会脱敏，正文保留实际字节；未采集、截断或丢失会明确标记。'),httpStatus,el('div',{class:'debug-columns'},el('section',{},httpList,el('div',{class:'debug-pages'},httpPrev,httpPage,httpMoreButton)),httpDetail));
   analysisPanel.append(el('h3',{},'当前范围摘要'),analysisStats,el('p',{class:'help'},'以上为结构化记录统计，沿用轨迹中的步骤筛选。模型分析会通过只读查询工具按需读取选定轮次的固定历史，并引用来源事件。'),el('section',{class:'debug-diagnosis'},el('h3',{},'询问这段轨迹'),el('p',{class:'help'},'请先选择一个轮次。创建独立诊断会话后使用原会话配置的模型；用量记入诊断会话。诊断结论和建议需要审核。'),diagnosisQuestion,diagnosisStart,diagnosisFeedback));
   if(session.runtimeKind==='kun')analysisPanel.append(el('section',{class:'debug-diagnosis'},el('h3',{},'离线记录实验'),el('p',{class:'help'},'复制所选轮次固定范围的 Kun 记录；离线编辑不会调用模型或工具。'),experimentStart,button('查看已有离线分支',()=>{d.close();RunDeskExperiments.open({sessionId:sid});})));
   d.append(el('div',{class:'dialog-head'},el('h2',{},'调试工作台'),button('返回对话',()=>d.close(),'quiet')),info,error,
    el('div',{class:'debug-scope'},el('label',{},'轮次',runs),latest),el('div',{class:'debug-pages debug-run-pages'},runsPrev,runPage,runsNext),tabs,tracePanel,httpPanel,analysisPanel,kunPanel,capabilities);
-  d.onclose=()=>{closed=true;epoch++;kunView?.destroy();if(active?.dialog===d)active=null;d.remove();if(location.hash==='#trace')history.replaceState(null,'',location.pathname+location.search+'#session/'+encodeURIComponent(sid));if(typeof scheduleRender==='function')scheduleRender();};
+  d.onclose=()=>{closed=true;epoch++;captureTicket++;kunView?.destroy();if(active?.dialog===d)active=null;d.remove();if(location.hash==='#trace')history.replaceState(null,'',location.pathname+location.search+'#session/'+encodeURIComponent(sid));if(typeof scheduleRender==='function')scheduleRender();};
   active={sid,dialog:d,close:()=>d.close(),select:async value=>{if(value.runId!==undefined){selectedRun=value.runId;if(selectedRun&&![...runs.options].some(v=>v.value===selectedRun))runs.append(el('option',{value:selectedRun},'已选轮次 · '+selectedRun));runs.value=selectedRun;await apply();}if(value.through!=null&&value.through!==through){selection=value;await refresh(true);}await switchPanel(value.panel||panel,value);if(value.eventId&&through!==null){detail.replaceChildren();await loadEvent(value.eventId,0,detail,epoch,detailTicket);}}};
   document.body.append(d);d.showModal();syncDiagnosis();switchPanel(panel);refresh(true);return d;
  }

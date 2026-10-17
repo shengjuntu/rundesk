@@ -67,8 +67,10 @@ schemas['ImageVersion']=obj({k:st() for k in ['id','instanceId','reference','ima
 schemas['ImageCatalog']=obj({'versions':arr(ref('ImageVersion')),'execution':ref('ExecutionSpec'),'instanceRevision':integer,'environments':arr(ref('Environment')),'pendingUpdates':integer},['versions','execution','instanceRevision','environments','pendingUpdates'])
 schemas['Instance']['properties']['execution']=ref('ExecutionSpec')
 schemas['Session']['properties'].update({'environmentId':st(),'executionMode':st(enum=['local','docker'])})
-schemas['ObservationStatus']=obj({'state':st(enum=['configured','observed','degraded','disabled','unavailable','simulated']),'transport':st(enum=['http-pass-through']),'provider':st(),'upstream':st(),'message':st(),'maxBodyBytes':integer},['state','transport','message'])
+schemas['ObservationStatus']=obj({'state':st(enum=['pending','configured','observed','degraded','disabled','unavailable','simulated']),'transport':st(enum=['http-pass-through']),'provider':st(),'upstream':st(),'message':st(),'maxBodyBytes':integer,'captureId':st(description='当前观测连接代次标识；用于防止旧队列记录更新新连接状态，不是模型请求 ID。'),'pending':{'type':'boolean','description':'保存的 observeHTTP 偏好尚待下一轮提交应用；不打断当前请求。'},'appliedEnabled':{'type':'boolean','description':'原生线程已确认配置观测代理；开启偏好但不支持采集时仍为 false。不证明请求已完整入库，仍需检查 state 和逐条完整性。'}},['state','transport','message','pending','appliedEnabled'])
 schemas['Session']['properties']['observation']=ref('ObservationStatus')
+schemas['Session']['properties']['observeHTTP']={'type':'boolean','default':False,'description':'持久化的会话级 Codex HTTP 采集偏好；默认关闭。CLI --observe-http 只决定新建 Codex 会话默认值，不覆盖已有会话；修改在下一轮提交应用。Kun 不允许设为 true。'}
+schemas['Session']['required'].append('observeHTTP')
 paths={}
 requests={
  ('POST','/workspaces/{wid}/mcp-tests'):obj({'server':st(),'tool':st(),'arguments':obj({},extra=True),'cursor':st(),'confirm':bool_},['server','confirm']),
@@ -97,7 +99,7 @@ requests={
  ('POST','/sessions/{sid}/recovery/check'):obj({'expectedRunId':st()},['expectedRunId']),
  ('POST','/sessions/{sid}/recover'):ref('RecoveryRequest'),
  ('POST','/sessions/{sid}/stop'):obj({'expectedRunId':st()},['expectedRunId']),
- ('PATCH','/sessions/{sid}'):obj({'title':st(),'pinned':bool_,'archived':bool_}),
+ ('PATCH','/sessions/{sid}'):obj({'title':st(),'pinned':bool_,'archived':bool_,'observeHTTP':{'type':'boolean','description':'保存此 Codex 会话的 HTTP 采集开关；当前执行继续，下一轮提交自动重连并 resume 原线程应用。Kun 拒绝 true；不删除历史记录。'}}),
  ('POST','/sessions/{sid}/approvals/{aid}'):obj({'decision':{},'scope':st(enum=['turn','session']),'answers':obj(extra=True),'content':{}}),
  ('PUT','/workspaces/{wid}/skills/{name}'):obj({'content':st()},['content']),
  ('POST','/workspaces/{wid}/skills/toggle'):obj({'path':st(),'enabled':bool_},['path','enabled']),
@@ -209,6 +211,10 @@ for file in sorted((root/'internal/app').glob('*.go')):
   op['x-administrator-only']=scopes is None and path!='/login'
   if scopes:op['x-application-scopes']=scopes;op['description']='应用凭据还必须符合服务端的应用、专用配置和项目归属校验。'
   paths.setdefault(path,{})[method.lower()]=op
+
+session_patch=paths['/sessions/{sid}']['patch']
+session_patch['description']+=' observeHTTP 保存会话级偏好，不立即重配当前线程；活动请求继续。下一轮提交时自动重连并恢复同一 Codex thread，应用新值；空闲会话同样下一轮生效。Session.observeHTTP 是保存值，observation.pending/appliedEnabled 区分待应用与已应用状态。关闭时不执行采集配置发现或走观测路由；代理在首个确实启用的线程按需启动。Kun 不允许启用此 Codex 开关；历史证据保持可读。'
+session_patch['responses']['400']={'description':'请求字段无效，或尝试为 Kun 开启 Codex HTTP 采集。'}
 
 # Human member API is a constrained projection of application routes.
 schemas['UserGrant']=obj({'id':st(),'appId':st(),'workspaceId':st(),'role':st(enum=['viewer','runner'])},['appId','workspaceId','role'])

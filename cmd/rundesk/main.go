@@ -69,7 +69,7 @@ func run() error {
 	data := flag.String("data", defaultDataDir(base), "persistent data directory; reuses a v0.1 codex-base database when present")
 	codex := flag.String("codex", "codex", "Codex executable")
 	kun := flag.String("kun", "", "Kun executable (default: sibling kun binary)")
-	observe := flag.Bool("observe-http", true, "observe Codex model HTTP traffic through an in-process pass-through proxy")
+	observe := flag.Bool("observe-http", false, "default HTTP capture preference for new Codex sessions; existing sessions keep their saved setting")
 	observeListen := flag.String("observe-listen", "127.0.0.1:0", "observation proxy listen address; use a reachable private interface for Docker")
 	observeAdvertise := flag.String("observe-advertise", "", "proxy origin reachable from Codex/Docker, e.g. http://host.docker.internal:3211")
 	demo := flag.Bool("demo", false, "explicit simulation; no model calls, isolated demo data")
@@ -119,8 +119,8 @@ func run() error {
 	}
 	m.Kun = *kun
 	defer m.Close()
-	if *observe && !*demo {
-		if e := m.EnableHTTPObservation(app.ObservationOptions{ListenAddr: *observeListen, AdvertiseOrigin: *observeAdvertise}); e != nil {
+	if !*demo {
+		if e := m.ConfigureHTTPObservation(app.ObservationOptions{DefaultEnabled: *observe, ListenAddr: *observeListen, AdvertiseOrigin: *observeAdvertise}); e != nil {
 			return fmt.Errorf("HTTP observation proxy: %w", e)
 		}
 	}

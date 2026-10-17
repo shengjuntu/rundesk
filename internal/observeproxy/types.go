@@ -5,6 +5,7 @@ package observeproxy
 import "time"
 
 type Labels struct {
+	CaptureID string `json:"captureId,omitempty"`
 	SessionID string `json:"sessionId,omitempty"`
 	RunID     string `json:"runId,omitempty"`
 	ThreadID  string `json:"threadId,omitempty"`

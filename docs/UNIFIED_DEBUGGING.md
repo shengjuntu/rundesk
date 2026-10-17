@@ -1,6 +1,6 @@
 # 统一调试工作台与 Codex 观测
 
-RunDesk 0.49.0 将轨迹、结构化检查和 Kun DevTools 放到同一个调试工作台。共同视图使用会话和固定宿主事件范围；Kun 的内部状态与控制继续按自身 run、sequence 和 revision 校验。合并入口不改变原任务的执行权限，也不让 Codex 获得 Kun 的单步能力。
+RunDesk 0.49.1 使用同一个调试工作台检查轨迹、结构化证据和 Kun DevTools。Codex HTTP 采集默认关闭，按会话保存开关。共同视图使用会话和固定宿主事件范围；Kun 的内部状态与控制继续按自身 run、sequence 和 revision 校验。合并入口不改变原任务的执行权限，也不让 Codex 获得 Kun 的单步能力。
 
 ## 采集和问答的数据来源
 
@@ -33,15 +33,40 @@ SSE 和 WebSocket 数据继续按实际传输顺序流动；观测副本记录�
 
 ## 启动与 Codex 接入
 
-正常启动默认启用内置代理，并监听一个随机的宿主回环端口：
+正常启动默认关闭 Codex HTTP 采集；关闭的会话不为采集读取模型配置、发现上游或设置代理路径。代理只在首次处理已启用会话的 Codex 线程时按需启动，默认监听随机宿主回环端口：
 
 ```bash
 ./bin/rundesk --data ./data
-# 如需关闭 HTTP 正文观测，保留原有协议事件：
-./bin/rundesk --data ./data --observe-http=false
+# 可选：让此后新建的 Codex 会话默认开启采集
+./bin/rundesk --data ./data --observe-http=true
 ```
 
-RunDesk 在创建或恢复 Codex 线程前读取原生有效配置，仅在该线程覆写模型地址，使它经过观测代理后直达原上游；不永久修改用户配置或替换 `model_provider`。其他 provider 字段、认证和协议仍由 Codex 处理。
+`--observe-http` 是**新建 Codex 会话的默认值**，不覆盖已有会话保存的设置，也不强制整个服务统一开关。只配置 `--observe-listen` / `--observe-advertise` 不会开启采集。Kun 保留自身的原生模型证据，不允许开启这个 Codex 专用开关。
+
+在会话菜单选择“HTTP 采集设置”，或进入调试工作台的“LLM 请求 / 响应”视图，切换当前 Codex 会话的采集设置。也可调用会话 PATCH：
+
+```http
+PATCH /api/v1/sessions/{sid}
+Content-Type: application/json
+
+{"observeHTTP": true}
+```
+
+关闭时将 `true` 改为 `false`。设置持久保存；重启服务、改变 CLI 默认值或浏览器刷新不会覆盖已有设置。已有采集记录仍可查询，关闭不会删除历史。
+
+界面分别显示保存值与当前连接状态。如果保存响应丢失或报错，点击“核对采集状态”读取服务端结果；此操作不提交新任务，也不推进已固定的轨迹历史范围。
+
+修改在**下一轮提交**生效，包括当前空闲的会话。运行期间保存新偏好不会取消、重发或改写当前请求；当前执行继续使用已应用设置。下一轮开始前，RunDesk 自动重连 App Server 并 resume 原来的 Codex thread，再应用保存值，不创建新的业务会话。若在运行中关闭采集，当前已走代理的请求仍可能在结束后入库。
+
+| 字段 | 含义 |
+| --- | --- |
+| `Session.observeHTTP` | 当前保存的会话偏好 |
+| `observation.pending` | 新偏好是否尚待下一轮提交应用 |
+| `observation.appliedEnabled` | 原生线程已确认配置观测代理；开启偏好但不支持采集时仍为 `false`，不证明请求已经入库 |
+| `observation.state` | `pending` 为待应用；应用后通过 configured/observed/disabled/unavailable 等状态说明采集情况 |
+| `observation.captureId` | 可选的当前观测连接代次；旧连接延迟入库的记录不能将新连接标记为已采集 |
+
+只有已启用的会话在创建或恢复 Codex 线程前进行观测所需的原生配置读取，并在线程内覆写模型地址，使它经过代理直达原上游；不永久修改用户配置或替换 `model_provider`。其他 provider 字段、认证和协议仍由 Codex 处理。
 
 | Codex 配置 | 接入方式与边界 |
 | --- | --- |
@@ -51,9 +76,9 @@ RunDesk 在创建或恢复 Codex 线程前读取原生有效配置，仅在该�
 | Docker 内置 provider | 要求显式 `openai_base_url`，不以宿主环境猜测容器认证路由 |
 | 工作区特殊路由、未知账户类型、未确认的 `OPENAI_BASE_URL` 环境覆盖 | 保留原连接，标记 HTTP 采集缺口 |
 
-真实 Codex CLI 的自定义 provider HTTP 和内置 provider 原生 WebSocket 地址覆盖已通过本地合成凭据/上游测试，测试线程使用 `ephemeral: true, environments: []`。当前环境的持久线程基线在未设置覆盖时也会阻塞，因此这不等同于完整 RunDesk 持久线程的真实模型联调；**没有使用真实 ChatGPT 登录凭据完成线上模型调用验收**。
+真实 Codex CLI 0.158.0 的自定义 provider HTTP 和内置 provider 原生 WebSocket 地址覆盖已通过本地合成凭据/上游测试。本轮使用 `environments: []` 创建持久线程，基线与线程级覆盖四项均通过；跨进程 `thread/resume` 在当前环境仍超时，尚未完成动态验证。恢复时重新读取当前配置、不会恢复旧代理 URL 的行为已核对该精确版本源码，并由 Manager 子进程测试覆盖开关时序；这不等同于完整真实 CLI 生命周期验收。**没有使用真实 ChatGPT 登录凭据完成线上模型调用验收**。当前结果与边界见 [验证记录](VALIDATION.md)。
 
-无法安全发现上游、Docker 网络尚未配置或观测关闭时，原模型连接继续执行，会话的 `observation` 状态和 `llm/capture-status` 事件标记覆盖缺口。`configured` 只表示设置了线程路由；第一条实际观测写入后变为 `observed`，仍需检查每条记录完整性。记录失败时为 `degraded`，存储恢复后重试丢失标记，不重发模型调用。尚未完成的连接不会提前出现在已保留列表中。
+无法安全发现上游或 Docker 网络尚未配置时，原模型连接继续执行，会话的 `observation` 状态和 `llm/capture-status` 事件标记覆盖缺口。关闭采集时状态为 `disabled`，仍保留原有 App Server 协议事件。`configured` 只表示设置了线程路由；第一条实际观测写入后变为 `observed`，仍需检查每条记录完整性。记录失败时为 `degraded`，存储恢复后重试丢失标记，不重发模型调用。尚未完成的连接不会提前出现在已保留列表中。
 
 Docker 内的 Codex 不能访问宿主回环端口。需要选择容器可达的私有监听地址和同一端口，并显式提供容器使用的代理 origin，例如：
 
@@ -63,7 +88,7 @@ Docker 内的 Codex 不能访问宿主回环端口。需要选择容器可达的
   --observe-advertise http://host.docker.internal:3211
 ```
 
-示例要求 Docker bridge 网络和有效的 `host.docker.internal` 宿主映射；在目标部署确认端口可达。`--observe-advertise` 仅接受 HTTP origin，不接受凭据、路径、query 或 fragment。代理只为已注册上游提供随机 capability 路径，不提供任意目标的通用 forward proxy；仍应只将端口开放给所需的私有网络。不要将生成的内部路径用于公开链接。
+该示例只配置代理网络地址，仍需开启目标 Codex 会话的采集开关；也可另加 `--observe-http=true` 为新会话设置默认值。示例要求 Docker bridge 网络和有效的 `host.docker.internal` 宿主映射；在目标部署确认端口可达。`--observe-advertise` 仅接受 HTTP origin，不接受凭据、路径、query 或 fragment。代理只为已注册上游提供随机 capability 路径，不提供任意目标的通用 forward proxy；仍应只将端口开放给所需的私有网络。不要将生成的内部路径用于公开链接。
 
 `--demo` 没有真实模型请求。旧记录、未经过代理的连接以及真实 Codex 没有暴露的内容不会补回。完成一次实际模型调用后，再在 HTTP 面板检查请求、响应和采集标记。
 

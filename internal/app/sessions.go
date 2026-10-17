@@ -8,9 +8,10 @@ import (
 )
 
 type SessionPatch struct {
-	Title    *string `json:"title,omitempty"`
-	Pinned   *bool   `json:"pinned,omitempty"`
-	Archived *bool   `json:"archived,omitempty"`
+	ObserveHTTP *bool   `json:"observeHTTP,omitempty"`
+	Title       *string `json:"title,omitempty"`
+	Pinned      *bool   `json:"pinned,omitempty"`
+	Archived    *bool   `json:"archived,omitempty"`
 }
 
 func (m *Manager) PatchSession(id string, p SessionPatch) (Session, error) {
@@ -37,7 +38,30 @@ func (m *Manager) PatchSession(id string, p SessionPatch) (Session, error) {
 	if p.Archived != nil && *p.Archived && (active(s.Status) || m.queueReserved(id)) {
 		return s, errors.New("运行中的会话不能归档，请先停止任务")
 	}
+	if p.ObserveHTTP != nil && *p.ObserveHTTP && runtimeKind(s.RuntimeKind) != "codex" {
+		return s, failure(400, "observation_not_supported", "模型 HTTP 采集开关仅适用于 Codex 会话")
+	}
+	h.mu.Lock()
+	appliedPreference := h.client != nil && h.thread != "" && h.observationEnabled
+	h.mu.Unlock()
 	e = m.update(id, func(s *Session) {
+		if p.ObserveHTTP != nil && s.ObserveHTTP != *p.ObserveHTTP {
+			s.ObserveHTTP = *p.ObserveHTTP
+			status := waitingObservation(s.ObserveHTTP, s.Observation)
+			if s.Observation != nil {
+				*status = *s.Observation
+				// The desired preference can be applied even when the endpoint is
+				// unsupported. Do not confuse a coverage gap with a queued switch.
+				status.Pending = s.ObserveHTTP != appliedPreference
+				if status.Pending && status.State == "disabled" {
+					status.State, status.Message = "pending", "已保存开启设置，下一轮提交时应用；当前连接继续直连。"
+				}
+				if !status.Pending && status.State == "pending" {
+					status.State, status.Message = "disabled", "HTTP 观测已关闭；下次任务直接使用原生模型连接。"
+				}
+			}
+			s.Observation = status
+		}
 		if p.Title != nil {
 			s.Title = *p.Title
 		}

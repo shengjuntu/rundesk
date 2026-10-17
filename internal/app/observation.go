@@ -15,30 +15,37 @@ import (
 
 	"github.com/shengjuntu/rundesk/internal/observeproxy"
 	"github.com/shengjuntu/rundesk/internal/rpc"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 // ObservationOptions controls only transport observation, never model routing,
 // provider selection, credentials, retry policy, prompts, or model parameters.
 type ObservationOptions struct {
+	DefaultEnabled  bool
 	ListenAddr      string
 	AdvertiseOrigin string
 	MaxBodyBytes    int64
 }
 
 type ObservationStatus struct {
-	State        string `json:"state"`
-	Transport    string `json:"transport"`
-	Provider     string `json:"provider,omitempty"`
-	Upstream     string `json:"upstream,omitempty"`
-	Message      string `json:"message"`
-	MaxBodyBytes int64  `json:"maxBodyBytes,omitempty"`
+	CaptureID      string `json:"captureId,omitempty"`
+	Pending        bool   `json:"pending"`
+	AppliedEnabled bool   `json:"appliedEnabled"`
+	State          string `json:"state"`
+	Transport      string `json:"transport"`
+	Provider       string `json:"provider,omitempty"`
+	Upstream       string `json:"upstream,omitempty"`
+	Message        string `json:"message"`
+	MaxBodyBytes   int64  `json:"maxBodyBytes,omitempty"`
 }
 
-func (m *Manager) EnableHTTPObservation(options ObservationOptions) error {
+// ConfigureHTTPObservation stores defaults without binding a listener. A session
+// must request capture before discovery or proxy startup is needed.
+func (m *Manager) ConfigureHTTPObservation(options ObservationOptions) error {
 	m.observationMu.Lock()
 	defer m.observationMu.Unlock()
 	if m.observation != nil {
-		return errors.New("HTTP observation is already enabled")
+		return errors.New("HTTP observation proxy options cannot change after startup")
 	}
 	if options.ListenAddr == "" {
 		options.ListenAddr = "127.0.0.1:0"
@@ -53,6 +60,30 @@ func (m *Manager) EnableHTTPObservation(options ObservationOptions) error {
 		}
 		options.AdvertiseOrigin = strings.TrimSuffix(options.AdvertiseOrigin, "/")
 	}
+	m.observationOptions = options
+	return nil
+}
+
+// EnableHTTPObservation explicitly starts the listener for integration callers;
+// it does not overwrite any session's saved capture preference.
+func (m *Manager) EnableHTTPObservation(options ObservationOptions) error {
+	if err := m.ConfigureHTTPObservation(options); err != nil {
+		return err
+	}
+	_, err := m.ensureHTTPObservation()
+	return err
+}
+
+func (m *Manager) ensureHTTPObservation() (*observeproxy.Proxy, error) {
+	m.observationMu.Lock()
+	defer m.observationMu.Unlock()
+	if m.observation != nil {
+		return m.observation, nil
+	}
+	if m.ctx != nil && m.ctx.Err() != nil {
+		return nil, errors.New("HTTP observation host is shutting down")
+	}
+	options := m.observationOptions
 	p, err := observeproxy.New(observeproxy.Config{
 		ListenAddr:   options.ListenAddr,
 		MaxBodyBytes: options.MaxBodyBytes,
@@ -68,21 +99,19 @@ func (m *Manager) EnableHTTPObservation(options ObservationOptions) error {
 				// not leave its captured prompts behind as orphan events.
 				return nil
 			}
+			currentCapture := session.Observation != nil && session.Observation.AppliedEnabled && session.Observation.CaptureID != "" && session.Observation.CaptureID == record.Labels.CaptureID
 			_, e := m.Store.Add(record.Labels.SessionID, "internal", "llm/exchange", record)
 			if e != nil {
 				log.Printf("HTTP observation persistence failed: %v", e)
 				// A failed disk write cannot persist its own warning. Keep the
 				// coverage warning visible in the current session immediately;
 				// the recorder retries a loss marker when storage recovers.
-				if session != nil {
-					status := ObservationStatus{State: "degraded", Transport: "http-pass-through", Message: "HTTP 观测写入失败，存在采集缺口；原始请求未重发。"}
-					if session.Observation != nil {
-						status = *session.Observation
-						status.State, status.Message = "degraded", "HTTP 观测写入失败，存在采集缺口；原始请求未重发。"
-					}
+				if currentCapture {
+					status := *session.Observation
+					status.State, status.Message = "degraded", "HTTP 观测写入失败，存在采集缺口；原始请求未重发。"
 					session.Observation = &status
 				}
-			} else if session.Observation != nil && session.Observation.State == "configured" && record.Association != "observation-loss" {
+			} else if currentCapture && session.Observation.State == "configured" && record.Association != "observation-loss" {
 				status := *session.Observation
 				status.State, status.Message = "observed", "已有请求观测入库；请逐条检查完整性，未结束的连接尚不在列表中。"
 				session.Observation = &status
@@ -94,10 +123,47 @@ func (m *Manager) EnableHTTPObservation(options ObservationOptions) error {
 		},
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	m.observation, m.observationOptions = p, options
-	return nil
+	m.observation = p
+	return p, nil
+}
+
+func waitingObservation(enabled bool, previous *ObservationStatus) *ObservationStatus {
+	status := &ObservationStatus{State: "disabled", Transport: "http-pass-through", Message: "HTTP 观测已关闭；下次任务直接使用原生模型连接。"}
+	if previous != nil {
+		status.Provider, status.Upstream, status.MaxBodyBytes = previous.Provider, previous.Upstream, previous.MaxBodyBytes
+	}
+	if enabled {
+		status.State, status.Pending = "pending", true
+		status.Message = "已保存开启设置，下一轮任务连接时应用；当前尚未接入观测代理。"
+	}
+	return status
+}
+
+func (m *Manager) observationDisconnected(sid string) {
+	if err := m.update(sid, func(s *Session) {
+		s.Observation = waitingObservation(s.ObserveHTTP, s.Observation)
+	}); err != nil {
+		log.Printf("HTTP observation connection status: %v", err)
+	}
+}
+
+// Called only after thread/start or thread/resume acknowledged the override.
+func (m *Manager) observationApplied(sid string, requested bool) {
+	if err := m.update(sid, func(s *Session) {
+		if s.Observation == nil {
+			return
+		}
+		status := *s.Observation
+		status.Pending = s.ObserveHTTP != requested
+		status.AppliedEnabled = true
+		status.State = "configured"
+		status.Message = "此线程已接入原协议直通观测；HTTP 完成或 WebSocket 关闭后入库，请逐条检查完整性。"
+		s.Observation = &status
+	}); err != nil {
+		log.Printf("HTTP observation applied status: %v", err)
+	}
 }
 
 func (m *Manager) closeHTTPObservation() {
@@ -113,9 +179,13 @@ func (m *Manager) closeHTTPObservation() {
 	}
 }
 
-func (m *Manager) observationState(sid string, status ObservationStatus) {
+func (m *Manager) observationState(sid string, status ObservationStatus, requested bool) {
 	status.Transport = "http-pass-through"
-	if err := m.update(sid, func(s *Session) { copy := status; s.Observation = &copy }); err != nil {
+	if err := m.update(sid, func(s *Session) {
+		status.Pending = status.Pending || s.ObserveHTTP != requested
+		copy := status
+		s.Observation = &copy
+	}); err != nil {
 		log.Printf("HTTP observation status: %v", err)
 	}
 	if _, err := m.Store.Add(sid, "internal", "llm/capture-status", status); err != nil {
@@ -128,32 +198,32 @@ func (m *Manager) observationState(sid string, status ObservationStatus) {
 // Failure to discover an endpoint leaves execution untouched and visible as a
 // coverage gap. A registered endpoint failure is returned by the proxy normally;
 // it never triggers a hidden direct fallback.
-func (m *Manager) configureHTTPObservation(ctx context.Context, c *rpc.Client, s Session, w Workspace, params map[string]any) {
+func (m *Manager) configureHTTPObservation(ctx context.Context, c *rpc.Client, s Session, w Workspace, params map[string]any) bool {
 	m.observationMu.RLock()
-	p, options := m.observation, m.observationOptions
+	options := m.observationOptions
 	m.observationMu.RUnlock()
 	status := ObservationStatus{State: "unavailable", MaxBodyBytes: options.MaxBodyBytes}
+	if !s.ObserveHTTP {
+		status.State, status.Message = "disabled", "HTTP 观测已关闭；此线程直接使用原生模型连接，工具协议事件继续记录。"
+		m.observationState(s.ID, status, s.ObserveHTTP)
+		return false
+	}
 	if m.Demo {
 		status.State, status.Message = "simulated", "演示模式没有真实模型 HTTP 请求。"
-		m.observationState(s.ID, status)
-		return
-	}
-	if p == nil {
-		status.State, status.Message = "disabled", "HTTP 观测未启用；协议工具事件仍会记录。"
-		m.observationState(s.ID, status)
-		return
+		m.observationState(s.ID, status, s.ObserveHTTP)
+		return false
 	}
 	if s.ExecutionMode == "docker" && options.AdvertiseOrigin == "" {
 		status.Message = "Docker 需要配置可达的 --observe-listen 和 --observe-advertise；当前仅采集 App Server 协议事件。"
-		m.observationState(s.ID, status)
-		return
+		m.observationState(s.ID, status, s.ObserveHTTP)
+		return false
 	}
 	if s.ExecutionMode == "docker" {
 		host, _, _ := net.SplitHostPort(options.ListenAddr)
 		if host == "localhost" || (net.ParseIP(host) != nil && net.ParseIP(host).IsLoopback()) {
 			status.Message = "观测代理只监听宿主回环地址，Docker 无法访问；请设置可达的私有监听地址。"
-			m.observationState(s.ID, status)
-			return
+			m.observationState(s.ID, status, s.ObserveHTTP)
+			return false
 		}
 	}
 	discover, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -161,16 +231,16 @@ func (m *Manager) configureHTTPObservation(ctx context.Context, c *rpc.Client, s
 	raw, err := c.Call(discover, "config/read", map[string]any{"cwd": w.Path, "includeLayers": false})
 	if err != nil {
 		status.Message = "无法读取 Codex 有效配置；没有改变模型连接，HTTP 正文未采集。"
-		m.observationState(s.ID, status)
-		return
+		m.observationState(s.ID, status, s.ObserveHTTP)
+		return false
 	}
 	var cfg nativeConfig
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.UseNumber()
 	if err = decoder.Decode(&cfg); err != nil {
 		status.Message = "Codex 配置响应无法解析，HTTP 正文未采集。"
-		m.observationState(s.ID, status)
-		return
+		m.observationState(s.ID, status, s.ObserveHTTP)
+		return false
 	}
 	provider, upstream, key, err := observationTarget(cfg.Config)
 	if errors.Is(err, errObservationNeedsAuth) {
@@ -180,20 +250,27 @@ func (m *Manager) configureHTTPObservation(ctx context.Context, c *rpc.Client, s
 	status.Provider = provider
 	if err != nil {
 		status.Message = err.Error()
-		m.observationState(s.ID, status)
-		return
+		m.observationState(s.ID, status, s.ObserveHTTP)
+		return false
 	}
+	p, err := m.ensureHTTPObservation()
+	if err != nil {
+		status.Message = "无法启动观测代理；保持原模型连接，HTTP 正文未采集。"
+		m.observationState(s.ID, status, s.ObserveHTTP)
+		return false
+	}
+	captureID := store.ID()
 	route, revoke, err := p.Register(upstream, func() observeproxy.Labels {
 		current, e := m.Session(s.ID)
 		if e != nil {
-			return observeproxy.Labels{SessionID: s.ID}
+			return observeproxy.Labels{CaptureID: captureID, SessionID: s.ID}
 		}
-		return observeproxy.Labels{SessionID: s.ID, RunID: current.RunID, ThreadID: current.ThreadID, TurnID: current.TurnID}
+		return observeproxy.Labels{CaptureID: captureID, SessionID: s.ID, RunID: current.RunID, ThreadID: current.ThreadID, TurnID: current.TurnID}
 	})
 	if err != nil {
 		status.Message = "无法注册直通观测路由；保持原模型连接。"
-		m.observationState(s.ID, status)
-		return
+		m.observationState(s.ID, status, s.ObserveHTTP)
+		return false
 	}
 	go func() { <-c.Done(); revoke() }()
 	if options.AdvertiseOrigin != "" {
@@ -206,9 +283,11 @@ func (m *Manager) configureHTTPObservation(ctx context.Context, c *rpc.Client, s
 	}
 	config[key] = route
 	params["config"] = config
-	status.State, status.Upstream = "configured", upstream
-	status.Message = "已为此线程配置原协议直通观测；HTTP 完成或 WebSocket 关闭后入库。正文按方向保留至上限，缺失与截断会显式标记。"
-	m.observationState(s.ID, status)
+	status.State, status.Upstream, status.Pending = "pending", upstream, true
+	status.CaptureID = captureID
+	status.Message = "观测路由已准备，等待原生线程接受设置；尚未确认接入。"
+	m.observationState(s.ID, status, s.ObserveHTTP)
+	return true
 }
 
 var errObservationNeedsAuth = errors.New("built-in OpenAI endpoint requires native authentication routing")

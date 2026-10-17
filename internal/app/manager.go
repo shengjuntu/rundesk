@@ -31,6 +31,7 @@ type Workspace struct {
 	Revision int    `json:"revision"`
 }
 type Session struct {
+	ObserveHTTP   bool               `json:"observeHTTP"`
 	Observation   *ObservationStatus `json:"observation,omitempty"`
 	KunCase       *KunCaseOrigin     `json:"kunCase,omitempty"`
 	KunFork       *p.ForkOrigin      `json:"kunFork,omitempty"`
@@ -83,18 +84,19 @@ type Skill struct {
 	Path string `json:"path"`
 }
 type handle struct {
-	kun            *kc.Client
-	instanceID     string
-	permissionsKey string
-	op             sync.Mutex
-	admission      sync.Mutex
-	mu             sync.Mutex
-	client         *rpc.Client
-	thread         string
-	previousTurn   string
-	canceled       bool
-	last           time.Time
-	requests       map[string]Approval
+	kun                *kc.Client
+	instanceID         string
+	permissionsKey     string
+	observationEnabled bool
+	op                 sync.Mutex
+	admission          sync.Mutex
+	mu                 sync.Mutex
+	client             *rpc.Client
+	thread             string
+	previousTurn       string
+	canceled           bool
+	last               time.Time
+	requests           map[string]Approval
 }
 type Manager struct {
 	observationMu       sync.RWMutex
@@ -203,6 +205,9 @@ func New(data, codex string, demo bool) (*Manager, error) {
 				return fail(e)
 			}
 		}
+		// No native connection survives a host restart. Keep the preference,
+		// but do not advertise the previous process's capture as currently live.
+		v.Observation = waitingObservation(v.ObserveHTTP, v.Observation)
 		m.sessions[v.ID] = &v
 	}
 	if e = m.migrateApplications(); e != nil {
@@ -398,6 +403,10 @@ func (m *Manager) prepareSession(wid, title, model, iid string, source SessionSo
 		}
 	}
 	s := Session{RuntimeKind: runtimeKind(i.AgentRuntime.Kind), ExecutionMode: i.Execution.normalized().Mode, Source: source, TraceOrigin: origin, ID: store.ID(), InstanceID: i.ID, WorkspaceID: wid, Title: title, Model: model, Status: "idle", Created: store.Now(), Updated: store.Now()}
+	m.observationMu.RLock()
+	s.ObserveHTTP = s.RuntimeKind == "codex" && m.observationOptions.DefaultEnabled
+	m.observationMu.RUnlock()
+	s.Observation = waitingObservation(s.ObserveHTTP, nil)
 	if s.ExecutionMode == "docker" {
 		w, _ := m.Workspace(wid)
 		v, e := m.ensureEnvironment(i, w)
@@ -579,6 +588,7 @@ func (m *Manager) connect(id string, w Workspace, h *handle, ids ...string) (*rp
 		}
 		h.mu.Unlock()
 		if same {
+			m.observationDisconnected(id)
 			m.expire(id, h)
 			s, e := m.Session(id)
 			if e == nil && active(s.Status) && s.Status != "starting" {
@@ -1022,6 +1032,7 @@ func (m *Manager) runCodex(s Session, w Workspace, h *handle, in Input, recovery
 			c.Close()
 			<-c.Done()
 		}
+		m.observationDisconnected(s.ID)
 		m.expire(s.ID, h)
 		if canceled {
 			m.finish(s.ID, "interrupted", "")
@@ -1041,7 +1052,7 @@ func (m *Manager) runCodex(s Session, w Workspace, h *handle, in Input, recovery
 	}
 	h.mu.Lock()
 	old := h.client
-	changed := old != nil && h.permissionsKey != "" && h.permissionsKey != permissions.key()
+	changed := old != nil && (h.permissionsKey != "" && h.permissionsKey != permissions.key() || h.thread != "" && h.observationEnabled != s.ObserveHTTP)
 	if changed {
 		h.client = nil
 		h.thread = ""
@@ -1072,7 +1083,7 @@ func (m *Manager) runCodex(s Session, w Workspace, h *handle, in Input, recovery
 	var raw json.RawMessage
 	if !ready {
 		params := permissions.threadParams(w.Path)
-		m.configureHTTPObservation(ctx, c, s, w, params)
+		captureConfigured := m.configureHTTPObservation(ctx, c, s, w, params)
 		if s.TraceOrigin != nil {
 			if e := m.configureTraceAnalysis(s, params); e != nil {
 				fail(e)
@@ -1110,7 +1121,11 @@ func (m *Manager) runCodex(s Session, w Workspace, h *handle, in Input, recovery
 		h.mu.Lock()
 		h.thread = s.ThreadID
 		h.permissionsKey = permissions.key()
+		h.observationEnabled = s.ObserveHTTP
 		h.mu.Unlock()
+		if captureConfigured {
+			m.observationApplied(s.ID, s.ObserveHTTP)
+		}
 		m.recordEffective(s.ID, raw, permissions)
 	}
 	// Reload queues updated MCP configuration for the next turn on this thread.

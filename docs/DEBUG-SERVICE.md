@@ -78,6 +78,8 @@ GET /api/v1/sessions/{sid}/debug/query?kind=statistics&through=500&runId=RUN_ID
 
 会话的 **调试工作台** 复用上述服务，轨迹、模型交互、摘要问答与 Kun 高级视图共享历史范围。桌面并列显示列表和详情，窄屏纵向排列；支持轮次、类型、需关注过滤、预览搜索、分页、证据分块和显式读取最新记录。打开后固定会话与 through，过期异步响应不能覆盖新筛选；检查查询均为 GET。创建独立诊断、离线实验及 Kun 控制仍为显式写操作，不混入只读查询。当前入口位于管理员主工作台，成员可使用同权限 API，尚未另加成员页面按钮。
 
+Codex HTTP 采集开关通过会话 PATCH 保存，默认关闭、下一轮提交生效；不属于上述只读 DebugService 或只读 MCP 工具。`observeHTTP` 与 `observation.pending/appliedEnabled` 的含义见 [采集设置](UNIFIED_DEBUGGING.md)。只读客户端仍可查询权限范围内的已有记录，不能借查询开启采集。
+
 ## stdio MCP 接入
 
 构建后使用 `rundesk debug-mcp`，不需要另开 HTTP MCP 服务。它固定一个服务来源与 sid，经上述 HTTP 路由读取；不能直接访问宿主数据库或 worker。

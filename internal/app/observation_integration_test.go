@@ -129,6 +129,11 @@ func TestObservationManagerEndpointToStoredQuery(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			enabled := true
+			session, err = manager.PatchSession(session.ID, SessionPatch{ObserveHTTP: &enabled})
+			if err != nil {
+				t.Fatal(err)
+			}
 			manager.Demo = false
 			if err = manager.EnableHTTPObservation(ObservationOptions{MaxBodyBytes: 1 << 20}); err != nil {
 				t.Fatal(err)
@@ -138,6 +143,10 @@ func TestObservationManagerEndpointToStoredQuery(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			manager.configureHTTPObservation(ctx, client, session, workspace, params)
+			prepared, err := manager.Session(session.ID)
+			if err != nil || prepared.Observation == nil || prepared.Observation.State != "pending" || !prepared.Observation.Pending || prepared.Observation.AppliedEnabled {
+				t.Fatalf("capture reported applied before native acknowledgement: %+v %v", prepared.Observation, err)
+			}
 			overrides := params["config"].(map[string]any)
 			route, _ := overrides[overrideKey].(string)
 			if route == "" || !strings.HasSuffix(route, basePath) || len(overrides) != 3 {
@@ -159,6 +168,7 @@ func TestObservationManagerEndpointToStoredQuery(t *testing.T) {
 			if json.Unmarshal(echo, &received) != nil || !reflect.DeepEqual(received, params) {
 				t.Fatal("thread parameters changed over App Server RPC")
 			}
+			manager.observationApplied(session.ID, true)
 			for index, runID := range []string{"run-first", "run-second"} {
 				if err := manager.update(session.ID, func(s *Session) { s.RunID, s.ThreadID, s.TurnID = runID, "thread-native", "turn-"+runID }); err != nil {
 					t.Fatal(err)
@@ -237,13 +247,17 @@ func TestObservationManagerUnavailableLeavesNativeParameters(t *testing.T) {
 				t.Fatal(err)
 			}
 			manager.Demo = false
-			if sample.docker {
-				session.ExecutionMode = "docker"
-			}
 			if sample.enabled {
+				session, err = manager.PatchSession(session.ID, SessionPatch{ObserveHTTP: &sample.enabled})
+				if err != nil {
+					t.Fatal(err)
+				}
 				if err := manager.EnableHTTPObservation(ObservationOptions{}); err != nil {
 					t.Fatal(err)
 				}
+			}
+			if sample.docker {
+				session.ExecutionMode = "docker"
 			}
 			cfg := map[string]any{"model_provider": "fixture", "model_providers": map[string]any{"fixture": map[string]any{"name": "Native"}}}
 			if !sample.missingEndpoint {
