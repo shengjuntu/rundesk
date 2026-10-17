@@ -67,6 +67,8 @@ schemas['ImageVersion']=obj({k:st() for k in ['id','instanceId','reference','ima
 schemas['ImageCatalog']=obj({'versions':arr(ref('ImageVersion')),'execution':ref('ExecutionSpec'),'instanceRevision':integer,'environments':arr(ref('Environment')),'pendingUpdates':integer},['versions','execution','instanceRevision','environments','pendingUpdates'])
 schemas['Instance']['properties']['execution']=ref('ExecutionSpec')
 schemas['Session']['properties'].update({'environmentId':st(),'executionMode':st(enum=['local','docker'])})
+schemas['ObservationStatus']=obj({'state':st(enum=['configured','observed','degraded','disabled','unavailable','simulated']),'transport':st(enum=['http-pass-through']),'provider':st(),'upstream':st(),'message':st(),'maxBodyBytes':integer},['state','transport','message'])
+schemas['Session']['properties']['observation']=ref('ObservationStatus')
 paths={}
 requests={
  ('POST','/workspaces/{wid}/mcp-tests'):obj({'server':st(),'tool':st(),'arguments':obj({},extra=True),'cursor':st(),'confirm':bool_},['server','confirm']),
@@ -479,7 +481,7 @@ for path,method,response in [('/kun-task-sets','post',ref('KunTaskSet')),('/kun-
  for code,desc in [('400','字段、案例、规则、总量或查询参数无效；缺少幂等 Key。'),('403','应用与成员不得访问任务集。'),('404','任务集不存在。'),('409','持久化内容校验失败或幂等 Key 用于不同请求。')]:op['responses'][code]={'description':desc}
 
 # Unified read-only debug facade. Existing Kun aliases retain their response shape.
-debug_kinds=['overview','run','events','event','context','tools','budget','modules','breakpoints','actions','snapshot','evidence','diff','runs','steps','step','issues','statistics']
+debug_kinds=['overview','run','events','event','context','tools','budget','modules','breakpoints','actions','snapshot','evidence','diff','runs','steps','step','issues','statistics','llm_requests','llm_request']
 schemas['DebugCapability']=obj({'supported':bool_,'available':bool_,'reason':st()},['supported','available'])
 schemas['DebugCapabilities']=obj({'sessionId':st(),'backend':st(enum=['codex','kun']),'readOnly':{'const':True},'queries':{'type':'object','additionalProperties':ref('DebugCapability')},'hostEventCursor':st(),'workerSequence':st()},['sessionId','backend','readOnly','queries','hostEventCursor','workerSequence'])
 schemas['DebugEventMeta']=obj({'id':integer,'time':st(),'direction':st(),'method':st(),'bytes':integer},['id','time','direction','method','bytes'])
@@ -487,11 +489,11 @@ schemas['DebugEventPage']=obj({'events':arr(ref('DebugEventMeta')),'through':int
 schemas['DebugEventChunk']=obj({'eventId':integer,'text':st(),'offset':integer,'nextOffset':integer,'totalCharacters':integer,'hasMore':bool_,'encoding':st()},['eventId','text','offset','nextOffset','totalCharacters','hasMore','encoding'])
 schemas['DebugRun']=obj({'id':st(),'question':st(),'status':st(),'start':st(),'end':st(),'inputEventId':integer,'association':st(enum=['observed','reconstructed','inferred','missing']),'eventIds':arr(integer)},['id','question','status','start','inputEventId','association','eventIds'])
 schemas['DebugStep']=obj({'id':st(),'runId':st(),'type':st(),'title':st(),'status':st(),'start':st(),'end':st(),'durationMs':integer,'reportedDurationMs':integer,'point':bool_,'eventIds':arr(integer),'preview':obj(extra=True),'previewOnly':bool_,'clock':st(),'association':st(enum=['observed','reconstructed','inferred','missing']),'startObserved':bool_,'endObserved':bool_,'missing':arr(st()),'issues':arr(st()),'previewTruncated':bool_,'evidenceTruncated':bool_,'workerSequences':arr(integer)},['id','runId','type','title','status','point','eventIds','preview','previewOnly','clock','association','startObserved','endObserved','missing','issues','previewTruncated','evidenceTruncated'])
-schemas['DebugResult']=obj({'sessionId':st(),'backend':st(enum=['codex','kun']),'source':st(enum=['host_session','host_journal','host_projection','kun_worker']),'kind':st(enum=debug_kinds),'through':integer,'runId':st(),'revision':integer,'sequence':integer,'data':{}},['sessionId','backend','source','kind','data'])
+schemas['DebugResult']=obj({'sessionId':st(),'backend':st(enum=['codex','kun']),'source':st(enum=['host_session','host_journal','host_projection','http_observation','kun_worker']),'kind':st(enum=debug_kinds),'through':integer,'runId':st(),'revision':integer,'sequence':integer,'data':{}},['sessionId','backend','source','kind','data'])
 for suffix,response in [('capabilities','DebugCapabilities'),('query','DebugResult')]:
  op=paths['/sessions/{sid}/debug/'+suffix]['get']
  op['summary']='Unified read-only debug '+suffix
- op['description']='只读；应用凭据需 read 与会话归属，成员需项目授权。Codex 支持 overview/run（宿主概况，无 revision/sequence）、events/event（宿主保留事件）及 runs/steps/step/issues/statistics（生命周期记录重建）；内部快照/上下文等仍返回 409 debug_unsupported。Kun 内部查询需在线 worker；不启动/恢复进程，不调用模型或工具，不写入对话。source 区分 host_session、host_journal、host_projection、kun_worker。重建步骤不等于完整模型内部状态。先查询 capabilities；supported 与 available 区分支持情况与当前可用性。响应最大 4 MiB，超限返回 413。'
+ op['description']='只读；应用凭据需 read 与会话归属，成员需项目授权。Codex 支持 overview/run（宿主概况，无 revision/sequence）、events/event（宿主保留事件）、runs/steps/step/issues/statistics（生命周期记录重建）及 llm_requests/llm_request（已保留的 HTTP 观测）；内部快照/上下文等仍返回 409 debug_unsupported。Kun 内部查询需在线 worker；不启动/恢复进程，不调用模型或工具，不写入对话。source 区分 host_session、host_journal、host_projection、http_observation、kun_worker。重建步骤不等于完整模型内部状态。先查询 capabilities；supported 与 available 区分支持情况与当前可用性。响应最大 4 MiB，超限返回 413。'
  op['x-administrator-only']=False;op['x-application-scopes']=['read']
  op['responses']['200']['content']['application/json']['schema']=ref(response)
  op['responses']['400']={'description':'无效、重复、未知、不适用参数或越界游标'}
@@ -500,13 +502,16 @@ for suffix,response in [('capabilities','DebugCapabilities'),('query','DebugResu
  op['responses']['413']={'description':'响应超过 4 MiB 或单个宿主事件解析前超过 8 MiB；重建超过 20000 生命周期事件或 64 MiB'}
  if suffix=='capabilities':continue
  op['parameters'].append({'name':'kind','in':'query','required':True,'schema':st(enum=debug_kinds)})
- selectors=[('sequence',0,None,'Kun worker 序号。run/context/tools/budget/modules/breakpoints/actions 省略或 0 表示当前；snapshot/evidence/diff 要求正数。不是宿主事件 ID。'),('fromSequence',1,None,'仅 diff 使用且必填；与 sequence 属于同一会话。'),('after',0,None,'仅 events；宿主事件 ID 下界，不包含；默认 0。'),('through',0,None,'用于 events/event 与五种重建查询；省略时固定当前宿主事件上界（event 默认不限上界）。后续分页必须原样保留响应 through，包括 0。不接受大于当前已保留最大 ID 的值。'),('eventId',1,None,'仅 event，必填，严格属于此会话的宿主事件 ID。'),('offset',0,2147483647,'event 为脱敏 JSON 的 Unicode 字符偏移；runs/steps/issues 为记录偏移。默认 0。'),('limit',1,16000,'events 默认 50、最大 200；event 默认 4000、最大 16000 字符；runs/steps/issues 默认 50、最大 50。其他 kind 不接受。')]
+ selectors=[('sequence',0,None,'Kun worker 序号。run/context/tools/budget/modules/breakpoints/actions 省略或 0 表示当前；snapshot/evidence/diff 要求正数。不是宿主事件 ID。'),('fromSequence',1,None,'仅 diff 使用且必填；与 sequence 属于同一会话。'),('after',0,None,'仅 events；宿主事件 ID 下界，不包含；默认 0。'),('through',0,None,'用于 events/event、五种重建查询和 llm_requests/llm_request；省略时固定当前宿主事件上界（event 默认不限上界）。后续分页必须原样保留响应 through，包括 0。不接受大于当前已保留最大 ID 的值。'),('eventId',1,None,'event/llm_request 必填，严格属于此会话的宿主事件 ID。llm_request 仅接受 llm/exchange 事件。'),('offset',0,2147483647,'event 为脱敏 JSON 的 Unicode 字符偏移；llm_request 正文为字节偏移，metadata 仅接受 0，*_chunks 为采集片段偏移，*_messages 为消息偏移，*_payload 为选定消息的字节偏移；runs/steps/issues/llm_requests 为记录偏移。默认 0。'),('limit',1,16000,'events 默认 50、最大 200；event 默认 4000、最大 16000 字符；runs/steps/issues 默认 50、最大 50；llm_requests 默认 25、最大 50；llm_request 正文默认 4000、最大 16000 字节，*_chunks 和 *_messages 默认/最大 50，*_payload 默认 4000、最大 16000 字节。其他 kind 不接受。')]
  for name,minimum,maximum,description in selectors:
   schema={'type':'integer','minimum':minimum}
   if maximum is not None:schema['maximum']=maximum
   op['parameters'].append({'name':name,'in':'query','required':False,'schema':schema,'description':description})
- for name,maximum,description in [('runId',256,'steps/step/issues/statistics 的所属轮次，存在性与 step 归属均核对。'),('type',256,'steps/issues/statistics 的准确类型匹配。'),('status',256,'steps/issues/statistics 的准确状态匹配。'),('query',1000,'steps/issues/statistics 的脱敏预览字面子串搜索，不是完整输出搜索。'),('stepId',256,'step 必填，由 steps 返回的 step-宿主事件ID。')]:
+ for name,maximum,description in [('runId',256,'steps/step/issues/statistics 的所属轮次，存在性与 step 归属均核对；llm_requests/llm_request 按已记录 labels.runId 精确筛选，不猜测缺失关联。'),('type',256,'steps/issues/statistics 的准确类型匹配。'),('status',256,'steps/issues/statistics 的准确状态匹配。'),('query',1000,'steps/issues/statistics 的脱敏预览字面子串搜索，不是完整输出搜索。'),('stepId',256,'step 必填，由 steps 返回的 step-宿主事件ID。')]:
   op['parameters'].append({'name':name,'in':'query','required':False,'schema':st(maxLength=maximum),'description':description})
+ op['parameters'].append({'name':'section','in':'query','required':False,'schema':st(enum=['metadata','request','response','websocket_upstream','websocket_client','request_chunks','response_chunks','websocket_upstream_chunks','websocket_client_chunks','websocket_upstream_messages','websocket_client_messages','websocket_upstream_payload','websocket_client_payload']),'description':'仅 llm_request；默认 metadata。正文返回 bodyBase64（精确字节）和 text（UTF-8 显示），*_chunks 读取采集片段元数据；采集片段不是 SSE/WebSocket 消息边界。*_messages 为只读解码消息列表，*_payload 按 messageIndex 读取解码载荷；压缩消息保留压缩字节并显式标记，不伪造文本。'})
+ op['parameters'].append({'name':'messageIndex','in':'query','required':False,'schema':{'type':'integer','minimum':0,'maximum':4095},'description':'仅 llm_request 的 websocket_upstream_payload/websocket_client_payload；默认 0。其余 section 即使显式传 0 也拒绝。'})
+ op['description']+=' llm_requests/llm_request 的 source=http_observation。列表只返回已保留观测的摘要；缺记录不代表没有上游请求。请求详情以 metadata、request/response 和 websocket 方向分块读取；正文 offset/limit 为字节，跨块精确恢复须拼接 bodyBase64 解码后的字节，不可拼接可能替换无效 UTF-8 的 text。标记 complete、truncated、incomplete 与 captureLoss，不能将有限采集判为完整。元数据上限 512 KiB，查询期限 8 秒。WebSocket 只读解码最多读取 32 MiB 原始帧，聚合载荷最多 16 MiB、4096 消息和 16384 帧；部分/压缩/非法帧明确标记。'
  op['description']+=' runs/steps/step/issues/statistics 的 through 是宿主固定范围，source=host_projection，最多 20000 生命周期记录/64 MiB、单记录 8 MiB、查询索引期限 8 秒；超限 413，不返回不完整统计。 step.data 为 DebugStep；列表按首次来源事件顺序，issues 为确定性信号而非根因诊断。'
  op['description']+=' events.data 为 DebugEventPage，仅元数据，不加载正文；event.data 为 DebugEventChunk，单事件超过 8 MiB 返回 413。历史查询从 through/sequence 固定，但不同请求不承诺组成跨数据源原子快照。未知和不适用字段即使为 0 也拒绝。'
 

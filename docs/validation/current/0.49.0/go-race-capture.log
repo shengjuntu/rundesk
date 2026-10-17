@@ -1,0 +1,6 @@
+ok  	github.com/shengjuntu/rundesk/internal/observeproxy	3.434s
+ok  	github.com/shengjuntu/rundesk/internal/tracequery	9.717s
+ok  	github.com/shengjuntu/rundesk/internal/rpc	2.716s
+ok  	github.com/shengjuntu/rundesk/internal/store	4.937s
+ok  	github.com/shengjuntu/rundesk/internal/debugapi	1.012s
+ok  	github.com/shengjuntu/rundesk/internal/debugmcp	1.221s

@@ -24,10 +24,11 @@ flowchart TD
 | 平台服务 | 应用/实例、任务队列、会话、审批入口、文件、事件投影 | `internal/app`、`internal/store` |
 | 后端入口 | 注册内置后端、能力描述、运行和停止分派 | `internal/app/backends.go` |
 | Codex 连接 | App Server JSON-RPC、原生线程/轮次、恢复和事件 | `internal/rpc`、`internal/app/manager.go` |
+| HTTP 观测 | 原协议直通、旁路字节副本、有界队列与采集完整性 | `internal/observeproxy`、`internal/app/observation.go` |
 | Kun 连接 | worker 启动、协议握手、请求关联、事件补取 | `internal/adapters/kun`、`internal/app/kun.go` |
 | Kun 执行内核 | 模型/工具循环、控制、快照、动作账本、回放、Skill 快速路径 | `internal/kun`、`cmd/kun` |
 | 执行环境 | 本机进程、Codex 容器与挂载/租约 | `internal/app/execution.go` 及 environment 文件 |
-| 界面与调试 | 业务操作、轨迹、公共只读查询、Kun DevTools | `internal/web`、`internal/debugapi`、`internal/tracequery` |
+| 界面与调试 | 统一工作台、轨迹/模型交互、只读问答工具和 Kun 高级面板 | `internal/web`、`internal/debugapi`、`internal/tracequery` |
 
 ## 三类身份
 
@@ -49,7 +50,9 @@ flowchart TD
 
 共同事件信封为宿主 `id/sessionId/time/direction/method/data`。`data` 保留后端原生载荷；统一投影呈现运行、步骤、审批、异常与统计，不推测模型隐藏推理。宿主事件 ID 与 Kun worker sequence 分别固定，不能互换。缺失证据保持未知。
 
-Codex 提供宿主记录与原生协议暴露的检查；Kun 可进一步固定模型输入输出、工具证据、上下文快照、条件断点和单步控制。回放/分叉、评测、Skill 验证属于显式扩展，不以最低公共能力限制 Kun，也不为 Codex伪造内部状态。
+Codex 提供宿主记录与原生协议暴露的检查；经过内置直通代理的模型请求另外保存原始字节副本，不改变供应商 API 或模型语义。查询层按会话与固定事件范围读取摘要、元数据和字节分页，供工作台和独立诊断共用；不会让模型执行任意 SQL。Kun 可进一步固定模型输入输出、工具证据、上下文快照、条件断点和单步控制。回放/分叉、评测、Skill 验证属于显式扩展，不以最低公共能力限制 Kun，也不为 Codex 伪造内部状态。
+
+网络转发不等待数据库持久化；采集资源不足或写入失败只影响可观测性，记录丢失标记与计数，不重发业务请求。正文和队列均有明确上限；元数据与正文完整性、当前控制状态与历史检查范围分别建模。部署与认证覆盖见 [统一调试与采集](UNIFIED_DEBUGGING.md)。
 
 Hybrid 重算只回放录制工具结果；Live 分叉使用当前工具真实执行。K4 受限快速路径复用审批、预算和账本，守卫失败保留已完成结果后回退。结果未知的副作用不会自动重发，取消不等于回滚。详见 [调试](DEBUG.md)。
 

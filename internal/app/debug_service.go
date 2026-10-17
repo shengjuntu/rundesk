@@ -41,7 +41,7 @@ func (s DebugService) Capabilities(sid string) (d.Capabilities, error) {
 	for _, kind := range d.Kinds {
 		v := d.Capability{Supported: true, Available: true}
 		switch kind {
-		case "overview", "events", "event", "runs", "steps", "step", "issues", "statistics":
+		case "overview", "events", "event", "runs", "steps", "step", "issues", "statistics", "llm_requests", "llm_request":
 		case "run":
 			if backend != "kun" {
 				v.Reason = "host session overview only; no internal Codex state revision or snapshot"
@@ -71,7 +71,7 @@ func (s DebugService) Query(ctx context.Context, sid string, q d.Query) (d.Resul
 		return out, err
 	}
 	out.Backend = runtimeKind(session.RuntimeKind)
-	if d.Projection(q.Kind) {
+	if d.Projection(q.Kind) || d.Observation(q.Kind) {
 		page, e := s.manager.Store.DebugEvents(sid, 0, q.Through, 1)
 		if e != nil {
 			return out, failure(400, "invalid_debug_cursor", e.Error())
@@ -81,8 +81,8 @@ func (s DebugService) Query(ctx context.Context, sid string, q d.Query) (d.Resul
 			return out, e
 		}
 		defer reader.Close()
-		methods := map[string]string{"runs": "trace_list_runs", "steps": "trace_find_steps", "step": "trace_get_step", "issues": "trace_find_issues", "statistics": "trace_statistics"}
-		value, e := reader.CallContext(ctx, methods[q.Kind], tracequery.Args{RunID: q.RunID, Type: q.Type, Status: q.Status, Query: q.Search, StepID: q.StepID, Offset: q.Offset, Limit: q.Limit})
+		methods := map[string]string{"runs": "trace_list_runs", "steps": "trace_find_steps", "step": "trace_get_step", "issues": "trace_find_issues", "statistics": "trace_statistics", "llm_requests": "trace_list_llm_requests", "llm_request": "trace_read_llm_request"}
+		value, e := reader.CallContext(ctx, methods[q.Kind], tracequery.Args{RunID: q.RunID, EventID: q.EventID, Section: q.Section, MessageIndex: q.MessageIndex, Type: q.Type, Status: q.Status, Query: q.Search, StepID: q.StepID, Offset: q.Offset, Limit: q.Limit})
 		if e != nil {
 			if errors.Is(e, tracequery.ErrProjectionLimit) {
 				return out, failure(413, "debug_projection_too_large", e.Error())
@@ -90,6 +90,9 @@ func (s DebugService) Query(ctx context.Context, sid string, q d.Query) (d.Resul
 			return out, failure(409, "debug_projection_rejected", e.Error())
 		}
 		out.Source = "host_projection"
+		if d.Observation(q.Kind) {
+			out.Source = "http_observation"
+		}
 		out.Through = &page.Through
 		out.RunID = q.RunID
 		out.Data = value

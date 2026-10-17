@@ -38,8 +38,6 @@
     <script defer src="/processes.js"></script><script defer src="/usage.js"></script><script defer src="/tasks.js"></script><script defer src="/schedules.js"></script><script defer src="/application-keys.js"></script>
     <link rel="stylesheet" href="/tasks.css"/>
     <script defer src="/skill-bundles.js"></script>
-    <script defer src="/trace-model.js"></script>
-    <script defer src="/trace-process.js"></script>
     <script defer src="/debug-trace.js"></script>
     <script defer src="/experiments.js"></script>
     <script defer src="/kun-benchmarks.js"></script>
@@ -131,11 +129,11 @@
             <strong id="workspace-name">默认工作区</strong>
           </div>
           <div class="row">
-            <button id="trace-button" class="quiet">轨迹</button
+            <button id="trace-button" class="quiet">调试工作台</button
             ><span id="mode" class="badge">CODEX</span
             ><button id="settings-button" class="quiet">助手设置</button
             ><button id="diagnostics-button" class="quiet" data-diagnostics-open title="查看请求与运行错误">错误记录</button><button id="debug-button" class="quiet">
-              调试台 <span class="shortcut">⌘ J</span>
+              产物与上下文 <span class="shortcut">⌘ J</span>
             </button>
           </div>
         </header>
@@ -241,8 +239,8 @@
           </section>
           <aside id="debug" class="debug hidden">
             <div class="debug-heading">
-              <strong>运行调试台</strong
-              ><button id="close-debug" class="icon" title="关闭调试台">
+              <strong>会话资料</strong
+              ><button id="close-debug" class="icon" title="关闭产物与上下文">
                 ×
               </button>
             </div>
@@ -252,7 +250,7 @@
               ><button data-debug-tab="files">产物</button>
             </div>
             <div class="debug-info">
-              展示 App Server 实际事件。完整模型请求与内部推理不一定由接口公开。
+              实时事件缓存与会话资料。完整轨迹和 HTTP 记录请打开调试工作台。
             </div>
             <div id="event-controls" class="event-controls">
               <div class="row">

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Application API",
-    "version": "0.48.1",
+    "version": "0.49.0",
     "description": "RunDesk 应用与管理 API。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。Kun 0.16.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。当前应用接入、错误、幂等及示例见 docs/API-V1.md。"
   },
   "servers": [
@@ -2130,7 +2130,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "只读；应用凭据需 read 与会话归属，成员需项目授权。Codex 支持 overview/run（宿主概况，无 revision/sequence）、events/event（宿主保留事件）及 runs/steps/step/issues/statistics（生命周期记录重建）；内部快照/上下文等仍返回 409 debug_unsupported。Kun 内部查询需在线 worker；不启动/恢复进程，不调用模型或工具，不写入对话。source 区分 host_session、host_journal、host_projection、kun_worker。重建步骤不等于完整模型内部状态。先查询 capabilities；supported 与 available 区分支持情况与当前可用性。响应最大 4 MiB，超限返回 413。",
+        "description": "只读；应用凭据需 read 与会话归属，成员需项目授权。Codex 支持 overview/run（宿主概况，无 revision/sequence）、events/event（宿主保留事件）、runs/steps/step/issues/statistics（生命周期记录重建）及 llm_requests/llm_request（已保留的 HTTP 观测）；内部快照/上下文等仍返回 409 debug_unsupported。Kun 内部查询需在线 worker；不启动/恢复进程，不调用模型或工具，不写入对话。source 区分 host_session、host_journal、host_projection、http_observation、kun_worker。重建步骤不等于完整模型内部状态。先查询 capabilities；supported 与 available 区分支持情况与当前可用性。响应最大 4 MiB，超限返回 413。",
         "x-application-scopes": [
           "read"
         ]
@@ -2181,7 +2181,9 @@
                 "steps",
                 "step",
                 "issues",
-                "statistics"
+                "statistics",
+                "llm_requests",
+                "llm_request"
               ]
             }
           },
@@ -2223,7 +2225,7 @@
               "type": "integer",
               "minimum": 0
             },
-            "description": "用于 events/event 与五种重建查询；省略时固定当前宿主事件上界（event 默认不限上界）。后续分页必须原样保留响应 through，包括 0。不接受大于当前已保留最大 ID 的值。"
+            "description": "用于 events/event、五种重建查询和 llm_requests/llm_request；省略时固定当前宿主事件上界（event 默认不限上界）。后续分页必须原样保留响应 through，包括 0。不接受大于当前已保留最大 ID 的值。"
           },
           {
             "name": "eventId",
@@ -2233,7 +2235,7 @@
               "type": "integer",
               "minimum": 1
             },
-            "description": "仅 event，必填，严格属于此会话的宿主事件 ID。"
+            "description": "event/llm_request 必填，严格属于此会话的宿主事件 ID。llm_request 仅接受 llm/exchange 事件。"
           },
           {
             "name": "offset",
@@ -2244,7 +2246,7 @@
               "minimum": 0,
               "maximum": 2147483647
             },
-            "description": "event 为脱敏 JSON 的 Unicode 字符偏移；runs/steps/issues 为记录偏移。默认 0。"
+            "description": "event 为脱敏 JSON 的 Unicode 字符偏移；llm_request 正文为字节偏移，metadata 仅接受 0，*_chunks 为采集片段偏移，*_messages 为消息偏移，*_payload 为选定消息的字节偏移；runs/steps/issues/llm_requests 为记录偏移。默认 0。"
           },
           {
             "name": "limit",
@@ -2255,7 +2257,7 @@
               "minimum": 1,
               "maximum": 16000
             },
-            "description": "events 默认 50、最大 200；event 默认 4000、最大 16000 字符；runs/steps/issues 默认 50、最大 50。其他 kind 不接受。"
+            "description": "events 默认 50、最大 200；event 默认 4000、最大 16000 字符；runs/steps/issues 默认 50、最大 50；llm_requests 默认 25、最大 50；llm_request 正文默认 4000、最大 16000 字节，*_chunks 和 *_messages 默认/最大 50，*_payload 默认 4000、最大 16000 字节。其他 kind 不接受。"
           },
           {
             "name": "runId",
@@ -2265,7 +2267,7 @@
               "type": "string",
               "maxLength": 256
             },
-            "description": "steps/step/issues/statistics 的所属轮次，存在性与 step 归属均核对。"
+            "description": "steps/step/issues/statistics 的所属轮次，存在性与 step 归属均核对；llm_requests/llm_request 按已记录 labels.runId 精确筛选，不猜测缺失关联。"
           },
           {
             "name": "type",
@@ -2306,6 +2308,41 @@
               "maxLength": 256
             },
             "description": "step 必填，由 steps 返回的 step-宿主事件ID。"
+          },
+          {
+            "name": "section",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "metadata",
+                "request",
+                "response",
+                "websocket_upstream",
+                "websocket_client",
+                "request_chunks",
+                "response_chunks",
+                "websocket_upstream_chunks",
+                "websocket_client_chunks",
+                "websocket_upstream_messages",
+                "websocket_client_messages",
+                "websocket_upstream_payload",
+                "websocket_client_payload"
+              ]
+            },
+            "description": "仅 llm_request；默认 metadata。正文返回 bodyBase64（精确字节）和 text（UTF-8 显示），*_chunks 读取采集片段元数据；采集片段不是 SSE/WebSocket 消息边界。*_messages 为只读解码消息列表，*_payload 按 messageIndex 读取解码载荷；压缩消息保留压缩字节并显式标记，不伪造文本。"
+          },
+          {
+            "name": "messageIndex",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4095
+            },
+            "description": "仅 llm_request 的 websocket_upstream_payload/websocket_client_payload；默认 0。其余 section 即使显式传 0 也拒绝。"
           }
         ],
         "responses": {
@@ -2368,7 +2405,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "只读；应用凭据需 read 与会话归属，成员需项目授权。Codex 支持 overview/run（宿主概况，无 revision/sequence）、events/event（宿主保留事件）及 runs/steps/step/issues/statistics（生命周期记录重建）；内部快照/上下文等仍返回 409 debug_unsupported。Kun 内部查询需在线 worker；不启动/恢复进程，不调用模型或工具，不写入对话。source 区分 host_session、host_journal、host_projection、kun_worker。重建步骤不等于完整模型内部状态。先查询 capabilities；supported 与 available 区分支持情况与当前可用性。响应最大 4 MiB，超限返回 413。 runs/steps/step/issues/statistics 的 through 是宿主固定范围，source=host_projection，最多 20000 生命周期记录/64 MiB、单记录 8 MiB、查询索引期限 8 秒；超限 413，不返回不完整统计。 step.data 为 DebugStep；列表按首次来源事件顺序，issues 为确定性信号而非根因诊断。 events.data 为 DebugEventPage，仅元数据，不加载正文；event.data 为 DebugEventChunk，单事件超过 8 MiB 返回 413。历史查询从 through/sequence 固定，但不同请求不承诺组成跨数据源原子快照。未知和不适用字段即使为 0 也拒绝。",
+        "description": "只读；应用凭据需 read 与会话归属，成员需项目授权。Codex 支持 overview/run（宿主概况，无 revision/sequence）、events/event（宿主保留事件）、runs/steps/step/issues/statistics（生命周期记录重建）及 llm_requests/llm_request（已保留的 HTTP 观测）；内部快照/上下文等仍返回 409 debug_unsupported。Kun 内部查询需在线 worker；不启动/恢复进程，不调用模型或工具，不写入对话。source 区分 host_session、host_journal、host_projection、http_observation、kun_worker。重建步骤不等于完整模型内部状态。先查询 capabilities；supported 与 available 区分支持情况与当前可用性。响应最大 4 MiB，超限返回 413。 llm_requests/llm_request 的 source=http_observation。列表只返回已保留观测的摘要；缺记录不代表没有上游请求。请求详情以 metadata、request/response 和 websocket 方向分块读取；正文 offset/limit 为字节，跨块精确恢复须拼接 bodyBase64 解码后的字节，不可拼接可能替换无效 UTF-8 的 text。标记 complete、truncated、incomplete 与 captureLoss，不能将有限采集判为完整。元数据上限 512 KiB，查询期限 8 秒。WebSocket 只读解码最多读取 32 MiB 原始帧，聚合载荷最多 16 MiB、4096 消息和 16384 帧；部分/压缩/非法帧明确标记。 runs/steps/step/issues/statistics 的 through 是宿主固定范围，source=host_projection，最多 20000 生命周期记录/64 MiB、单记录 8 MiB、查询索引期限 8 秒；超限 413，不返回不完整统计。 step.data 为 DebugStep；列表按首次来源事件顺序，issues 为确定性信号而非根因诊断。 events.data 为 DebugEventPage，仅元数据，不加载正文；event.data 为 DebugEventChunk，单事件超过 8 MiB 返回 413。历史查询从 through/sequence 固定，但不同请求不承诺组成跨数据源原子快照。未知和不适用字段即使为 0 也拒绝。",
         "x-application-scopes": [
           "read"
         ]
@@ -16931,7 +16968,9 @@
                 "steps",
                 "step",
                 "issues",
-                "statistics"
+                "statistics",
+                "llm_requests",
+                "llm_request"
               ]
             }
           },
@@ -16973,7 +17012,7 @@
               "type": "integer",
               "minimum": 0
             },
-            "description": "用于 events/event 与五种重建查询；省略时固定当前宿主事件上界（event 默认不限上界）。后续分页必须原样保留响应 through，包括 0。不接受大于当前已保留最大 ID 的值。"
+            "description": "用于 events/event、五种重建查询和 llm_requests/llm_request；省略时固定当前宿主事件上界（event 默认不限上界）。后续分页必须原样保留响应 through，包括 0。不接受大于当前已保留最大 ID 的值。"
           },
           {
             "name": "eventId",
@@ -16983,7 +17022,7 @@
               "type": "integer",
               "minimum": 1
             },
-            "description": "仅 event，必填，严格属于此会话的宿主事件 ID。"
+            "description": "event/llm_request 必填，严格属于此会话的宿主事件 ID。llm_request 仅接受 llm/exchange 事件。"
           },
           {
             "name": "offset",
@@ -16994,7 +17033,7 @@
               "minimum": 0,
               "maximum": 2147483647
             },
-            "description": "event 为脱敏 JSON 的 Unicode 字符偏移；runs/steps/issues 为记录偏移。默认 0。"
+            "description": "event 为脱敏 JSON 的 Unicode 字符偏移；llm_request 正文为字节偏移，metadata 仅接受 0，*_chunks 为采集片段偏移，*_messages 为消息偏移，*_payload 为选定消息的字节偏移；runs/steps/issues/llm_requests 为记录偏移。默认 0。"
           },
           {
             "name": "limit",
@@ -17005,7 +17044,7 @@
               "minimum": 1,
               "maximum": 16000
             },
-            "description": "events 默认 50、最大 200；event 默认 4000、最大 16000 字符；runs/steps/issues 默认 50、最大 50。其他 kind 不接受。"
+            "description": "events 默认 50、最大 200；event 默认 4000、最大 16000 字符；runs/steps/issues 默认 50、最大 50；llm_requests 默认 25、最大 50；llm_request 正文默认 4000、最大 16000 字节，*_chunks 和 *_messages 默认/最大 50，*_payload 默认 4000、最大 16000 字节。其他 kind 不接受。"
           },
           {
             "name": "runId",
@@ -17015,7 +17054,7 @@
               "type": "string",
               "maxLength": 256
             },
-            "description": "steps/step/issues/statistics 的所属轮次，存在性与 step 归属均核对。"
+            "description": "steps/step/issues/statistics 的所属轮次，存在性与 step 归属均核对；llm_requests/llm_request 按已记录 labels.runId 精确筛选，不猜测缺失关联。"
           },
           {
             "name": "type",
@@ -17056,6 +17095,41 @@
               "maxLength": 256
             },
             "description": "step 必填，由 steps 返回的 step-宿主事件ID。"
+          },
+          {
+            "name": "section",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "metadata",
+                "request",
+                "response",
+                "websocket_upstream",
+                "websocket_client",
+                "request_chunks",
+                "response_chunks",
+                "websocket_upstream_chunks",
+                "websocket_client_chunks",
+                "websocket_upstream_messages",
+                "websocket_client_messages",
+                "websocket_upstream_payload",
+                "websocket_client_payload"
+              ]
+            },
+            "description": "仅 llm_request；默认 metadata。正文返回 bodyBase64（精确字节）和 text（UTF-8 显示），*_chunks 读取采集片段元数据；采集片段不是 SSE/WebSocket 消息边界。*_messages 为只读解码消息列表，*_payload 按 messageIndex 读取解码载荷；压缩消息保留压缩字节并显式标记，不伪造文本。"
+          },
+          {
+            "name": "messageIndex",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4095
+            },
+            "description": "仅 llm_request 的 websocket_upstream_payload/websocket_client_payload；默认 0。其余 section 即使显式传 0 也拒绝。"
           }
         ],
         "responses": {
@@ -20928,6 +21002,9 @@
               "docker"
             ]
           },
+          "observation": {
+            "$ref": "#/components/schemas/ObservationStatus"
+          },
           "runtimeKind": {
             "type": "string",
             "enum": [
@@ -21914,6 +21991,46 @@
           "instanceRevision",
           "environments",
           "pendingUpdates"
+        ],
+        "additionalProperties": false
+      },
+      "ObservationStatus": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "configured",
+              "observed",
+              "degraded",
+              "disabled",
+              "unavailable",
+              "simulated"
+            ]
+          },
+          "transport": {
+            "type": "string",
+            "enum": [
+              "http-pass-through"
+            ]
+          },
+          "provider": {
+            "type": "string"
+          },
+          "upstream": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "maxBodyBytes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "state",
+          "transport",
+          "message"
         ],
         "additionalProperties": false
       },
@@ -25538,6 +25655,7 @@
               "host_session",
               "host_journal",
               "host_projection",
+              "http_observation",
               "kun_worker"
             ]
           },
@@ -25561,7 +25679,9 @@
               "steps",
               "step",
               "issues",
-              "statistics"
+              "statistics",
+              "llm_requests",
+              "llm_request"
             ]
           },
           "through": {

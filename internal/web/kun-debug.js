@@ -107,7 +107,8 @@ function kunConsole({sid,getCurrent,getSelected,refresh}){
  const preview=el("pre",{class:"kun-proposal hidden"});let proposal=null;
  const clear=()=>{proposal=null;preview.textContent="";preview.classList.add("hidden");apply.disabled=true;};
  const apply=button("执行已预览的控制",async()=>{
-  if(!proposal)return;apply.disabled=true;
+  if(!proposal)return;
+  const current=getCurrent();if(!current||current.runId!==proposal.runId||current.revision!==proposal.expectedStateRevision||kunControlReason(current,proposal.operation)){clear();feedback.textContent="运行或选择范围已变化，请重新预览控制。";return;}apply.disabled=true;
   const command=proposal;
   try{const receipt=await api("/sessions/"+sid+"/kun/control",{method:"POST",body:command});append("控制回执 · "+command.operation,{command,receipt});clear();feedback.textContent="控制回执："+receipt.status;await refresh();}
   catch(e){feedback.textContent=e.message;apply.disabled=false;}
@@ -122,9 +123,9 @@ function kunConsole({sid,getCurrent,getSelected,refresh}){
  operation.onchange=()=>{clear();text.disabled=operation.value!=="steer";};text.disabled=true;text.oninput=clear;
  const node=el("section",{class:"kun-console hidden"},el("h3",{},"Console"),target,
   el("p",{class:"help"},"查询只读取当前状态或选定快照，不会向目标对话添加消息。自然语言问题可另建独立诊断会话；会调用模型，用量单独记录。"),
-  el("div",{class:"actions"},query,inspect,button("独立诊断",async()=>{const source=await api("/sessions/"+encodeURIComponent(sid)),selected=getSelected();RunDeskDebug.open(source,{runId:selected?.data.runId||getCurrent()?.runId,...(selected?.id?{through:selected.id}:{})});})),el("h4",{},"控制提案"),
+  el("div",{class:"actions"},query,inspect,button("独立诊断",async()=>{const source=await api("/sessions/"+encodeURIComponent(sid)),selected=getSelected();RunDeskDebug.open(source,{panel:"analysis",runId:selected?.data.runId||getCurrent()?.runId});})),el("h4",{},"控制提案"),
   el("p",{class:"help"},"控制始终针对当前运行。提案固定运行编号和状态版本；过期后重新预览。继续和单步不会代替 MCP 审批。"),
   operation,text,el("div",{class:"actions"},propose,apply),preview,feedback,
   el("div",{class:"actions"},button("清空本地显示",()=>history.replaceChildren())),history);
- return {node,update(){const selected=getSelected(),current=getCurrent();target.textContent=selected?"查询目标：固定快照 #"+selected.data.sequence+" · "+selected.data.runId:"查询目标：当前状态";target.textContent+="；控制目标："+(current?.runId||"无在线运行");}};
+ return {node,update(){const selected=getSelected(),current=getCurrent();if(proposal&&(!current||current.runId!==proposal.runId||current.revision!==proposal.expectedStateRevision)){clear();feedback.textContent="运行或选择范围已变化，旧控制提案已失效。";}target.textContent=selected?"查询目标：固定快照 #"+selected.data.sequence+" · "+selected.data.runId:"查询目标：当前状态";target.textContent+="；控制目标："+(current?.runId||"无在线运行");}};
 }

@@ -6,11 +6,11 @@ RunDesk is an Agent execution platform for applications: one API connects Kun an
 
 ## Current release
 
-**RunDesk 0.48.1 · Kun 0.16.0 · worker protocol 16**. This release prepares reusable Exa / Agent-Reach images during initialization, with background build/pull jobs, cache reuse and offline checks. The Kun execution kernel and wire protocol are unchanged.
+**RunDesk 0.49.0 · Kun 0.16.0 · worker protocol 16**. This release brings trace inspection and DevTools into one debugging workbench, adds structured model-request evidence, and introduces an optional pass-through observation proxy for Codex. The Kun execution kernel and wire protocol are unchanged.
 
 - Prepare and reuse an application’s configured Docker environment before work, without changing its image or disconnecting active sessions.
 - Integrate applications with scoped credentials, durable queues, sessions, streaming events, files, and idempotency receipts.
-- Inspect recorded traces from both backends. Kun additionally exposes internal state, step controls, conditional breakpoints, snapshots, diagnostic sessions, and Hybrid/Live forks.
+- Inspect recorded traces and model exchanges from one debugging workbench. Kun additionally exposes internal state, step controls, conditional breakpoints, snapshots, diagnostic sessions, and Hybrid/Live forks.
 - Evaluate fixed cases and artifacts, validate parameterized Skills independently, and compare repeated runs with explicit missing evidence.
 - Check local prerequisites on opening the workbench. Configure Kun without Codex, or optionally install a pinned Codex release into the data directory.
 
@@ -29,7 +29,7 @@ This is a source distribution. Build both executables and keep them together. Se
 
 ## Documentation
 
-[Application API v1](docs/API-V1.md) · [Architecture](docs/ARCHITECTURE.md) · [Backend capabilities](docs/BACKENDS.md) · [Trace debugging](docs/DEBUG.md) · [Current status](docs/STATUS.md) · [Validation](docs/VALIDATION.md) · [Upgrading](docs/UPGRADING.md)
+[Application API v1](docs/API-V1.md) · [Architecture](docs/ARCHITECTURE.md) · [Backend capabilities](docs/BACKENDS.md) · [Unified debugging and capture](docs/UNIFIED_DEBUGGING.md) · [Trace debugging](docs/DEBUG.md) · [Current status](docs/STATUS.md) · [Validation](docs/VALIDATION.md) · [Upgrading](docs/UPGRADING.md)
 
 The machine-readable contract is served at `/api/v1/openapi.json`. [Python client](examples/application_client.py) and [minimal application example](examples/application_quickstart.py) use the same contract.
 

@@ -203,3 +203,77 @@ func TestDebugMemberBoundaryAndKunOffline(t *testing.T) {
 		t.Fatal("read opened worker handle")
 	}
 }
+
+func TestModelObservationDebugSharesReadOnlyScopeAndFixedCursor(t *testing.T) {
+	m := testManager(t)
+	workspace := m.Workspaces()[0]
+	application, _, token := setupKey(t, m, "model-observation", workspace.ID, "read")
+	session, err := m.CreateSessionWithSource(workspace.ID, "model capture", "", application.InstanceID, SessionSource{Kind: "application", AppID: application.AppID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload := []byte(`{"tools":[{"name":"search","parameters":{"type":"object"}}],"count":9007199254740993}`)
+	record := map[string]any{"id": "capture", "labels": map[string]string{"sessionId": session.ID, "runId": "run-1"}, "request": map[string]any{"headers": map[string][]string{"Authorization": {"[redacted]"}}, "body": map[string]any{"bytes": payload, "size": len(payload), "complete": true}}, "response": map[string]any{"status": 200, "body": map[string]any{"bytes": []byte("data: done\n\n"), "size": 12, "complete": true}}}
+	event, err := m.Store.Add(session.ID, "internal", "llm/exchange", record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := NewHandler(m, userTestAdmin, true)
+	root := "/api/v1/sessions/" + session.ID + "/debug/"
+	get := func(query string) *httptest.ResponseRecorder {
+		return appRequest(handler, "GET", root+query, "", token, "")
+	}
+	caps := get("capabilities")
+	var capabilities d.Capabilities
+	if caps.Code != 200 || json.Unmarshal(caps.Body.Bytes(), &capabilities) != nil || !capabilities.Queries["llm_requests"].Available || !capabilities.Queries["llm_request"].Supported {
+		t.Fatal(caps.Code, caps.Body.String())
+	}
+	listed := get("query?kind=llm_requests&runId=run-1&limit=1")
+	var page struct {
+		Through int64  `json:"through"`
+		Source  string `json:"source"`
+		Data    struct {
+			Total    int              `json:"total"`
+			Requests []map[string]any `json:"requests"`
+		} `json:"data"`
+	}
+	if listed.Code != 200 || json.Unmarshal(listed.Body.Bytes(), &page) != nil || page.Through != event.ID || page.Source != "http_observation" || page.Data.Total != 1 || len(page.Data.Requests) != 1 {
+		t.Fatal(listed.Code, listed.Body.String())
+	}
+	if _, err = m.Store.Add(session.ID, "internal", "llm/exchange", record); err != nil {
+		t.Fatal(err)
+	}
+	frozen := get(fmt.Sprintf("query?kind=llm_requests&through=%d", page.Through))
+	if frozen.Code != 200 || json.Unmarshal(frozen.Body.Bytes(), &page) != nil || page.Data.Total != 1 {
+		t.Fatal(frozen.Code, frozen.Body.String())
+	}
+	body := get(fmt.Sprintf("query?kind=llm_request&eventId=%d&through=%d&section=request", event.ID, event.ID))
+	if body.Code != 200 || !strings.Contains(body.Body.String(), "9007199254740993") || !strings.Contains(body.Body.String(), `"bodyBase64"`) || !strings.Contains(body.Body.String(), `"totalBytes"`) {
+		t.Fatal(body.Code, body.Body.String())
+	}
+	wrongRun := get(fmt.Sprintf("query?kind=llm_request&eventId=%d&runId=other", event.ID))
+	if wrongRun.Code != 409 {
+		t.Fatal("unmatched run exposed body", wrongRun.Code)
+	}
+	if len(m.handles) != 0 {
+		t.Fatal("inspection started a backend")
+	}
+	remote := httptest.NewServer(handler)
+	defer remote.Close()
+	client, err := debugmcp.New(remote.URL, session.ID, token)
+	if err != nil {
+		t.Fatal(err)
+	}
+	transcript := fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"debug_llm_requests","arguments":{"through":%d,"runId":"run-1"}}}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"debug_llm_request","arguments":{"through":%d,"eventId":%d,"section":"request","limit":16000}}}
+`, event.ID, event.ID, event.ID)
+	var output bytes.Buffer
+	if err = debugmcp.Serve(context.Background(), client, strings.NewReader(transcript), &output, "test"); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(output.String(), "9007199254740993") || strings.Contains(output.String(), `"isError":true`) {
+		t.Fatal(output.String())
+	}
+}

@@ -39,7 +39,8 @@ func Open(path string) (*Store, error) {
  CREATE TABLE IF NOT EXISTS objects(kind TEXT NOT NULL,id TEXT NOT NULL,data BLOB NOT NULL, PRIMARY KEY(kind,id));
  CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY AUTOINCREMENT,session TEXT NOT NULL,time TEXT NOT NULL,direction TEXT NOT NULL,method TEXT NOT NULL,data BLOB NOT NULL);
  CREATE INDEX IF NOT EXISTS events_session ON events(session,id);
- CREATE INDEX IF NOT EXISTS events_method_id ON events(method,id);`)
+ CREATE INDEX IF NOT EXISTS events_method_id ON events(method,id);
+ CREATE INDEX IF NOT EXISTS events_session_method_id ON events(session,method,id);`)
 	if e != nil {
 		db.Close()
 		return nil, e
@@ -109,7 +110,7 @@ func (s *Store) QueryEvents(session string, after int64, limit int, f EventFilte
 	if limit < 1 || limit > 1000 {
 		limit = 250
 	}
-	query := "SELECT id,time,direction,method,data FROM events WHERE session=? AND id>?"
+	query := "SELECT id,time,direction,method," + eventListPayload + " FROM events WHERE session=? AND id>?"
 	args := []any{session, after}
 	if f.Direction != "" {
 		query += " AND direction=?"
@@ -216,3 +217,8 @@ func (s *Store) DeleteObject(kind, id string) error {
 	_, e := s.db.Exec("DELETE FROM objects WHERE kind=? AND id=?", kind, id)
 	return e
 }
+
+// Session polling and SSE carry only the observation manifest. The complete
+// retained body stays in SQLite and is read through fixed-snapshot llm_request
+// byte pages, so a large response cannot overwhelm the conversation event feed.
+const eventListPayload = `CAST(CASE WHEN method='llm/exchange' THEN json_set(json_remove(data,'$.request.body.bytes','$.request.body.chunks','$.response.body.bytes','$.response.body.chunks','$.websocket.toUpstream.bytes','$.websocket.toUpstream.chunks','$.websocket.toClient.bytes','$.websocket.toClient.chunks'),'$.payloadOmitted',json('true'),'$.readWith','llm_request') ELSE data END AS BLOB)`

@@ -30,12 +30,12 @@ const {spawn}=require('node:child_process'),fs=require('node:fs'),os=require('no
   const page=await browser.newPage({viewport:{width:1440,height:1000}});page.setDefaultTimeout(12000);page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{localStorage.setItem('rundesk-language','zh');sessionStorage.setItem('rundesk-setup-dismissed','1')});await page.goto(base);
   await page.locator('#settings-button').click();await page.locator('[data-settings-tab=kun]').click();
-  const form=page.locator('.kun-config');await form.locator('select').selectOption('kun');
+  const form=page.locator('.kun-config');await form.locator('select').first().selectOption('kun');
   await form.locator('label').filter({hasText:'基础地址'}).locator('input').fill(`http://127.0.0.1:${model.address().port}/v1`);
   await form.locator('label').filter({hasText:'模型名称'}).locator('input').fill('kun-mcp-fixture');assert.equal(await form.locator(':invalid').count(),0,'initial engine defaults are invalid');await form.locator('button[type=submit]').click();
   await page.waitForFunction(()=>document.querySelector('.kun-config [role=status]')?.textContent.includes('已保存'));
   await page.locator('[data-settings-tab=mcp]').click();
-  const editor=page.locator('details.configuration-editor');if(await editor.count())await editor.locator('summary').click();
+  const editor=page.locator('details.configuration-editor');await editor.locator('summary').waitFor();if(!await editor.evaluate(n=>n.open))await editor.locator('summary').click();
   await page.locator('#mcp-name').fill('weather');await page.locator('#mcp-type').selectOption('http');await page.locator('#mcp-url').fill(`http://127.0.0.1:${fixture.address().port}/mcp`);
   const save=async()=>{const [res]=await Promise.all([page.waitForResponse(r=>r.url().includes('/mcp/weather')&&r.request().method()==='PUT'),page.getByRole('button',{name:'保存配置',exact:true}).click()]);assert(res.ok(),await res.text());await page.locator('#mcp-name').waitFor({state:'attached'})};
   const edit=async()=>page.locator('.skill-row').filter({hasText:'weather'}).getByRole('button',{name:'编辑',exact:true}).click();
@@ -48,7 +48,8 @@ const {spawn}=require('node:child_process'),fs=require('node:fs'),os=require('no
   await page.screenshot({path:pictures+'/kun-mcp-approval.png'});
   await page.locator('.kun-approval').getByRole('button',{name:'允许本次',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#messages')?.textContent.includes('MCP 调用完成'));assert.equal(toolCalls,1);
-  await page.locator('#kun-debug-open').click();const dialog=page.locator('#kun-devtools');
+  await page.waitForFunction(()=>state.session?.runtimeKind==='kun');await page.evaluate(()=>RunDeskKun.open());const dialog=page.locator('#kun-devtools');
+  await dialog.getByRole('button',{name:'检查当前控制状态',exact:true}).click();
   await dialog.getByRole('button',{name:'Application · MCP',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-application')?.textContent.includes('lookup'));
   assert((await dialog.locator('.kun-application').innerText()).includes('每次调用前询问'));await page.screenshot({path:pictures+'/kun-mcp-application.png'});
@@ -56,7 +57,7 @@ const {spawn}=require('node:child_process'),fs=require('node:fs'),os=require('no
   assert((await dialog.locator('.kun-detail').innerText()).includes('Shanghai 24°C'));await page.screenshot({path:pictures+'/kun-mcp-network.png'});
   await dialog.getByRole('button',{name:'Elements · 上下文',exact:true}).click();await dialog.locator('.kun-call-list button').first().click();
   await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-detail')?.textContent.includes('"mcpTools"'));
-  await dialog.getByRole('button',{name:'关闭',exact:true}).click();
+  await page.locator('#debug-inspector').getByRole('button',{name:'返回对话',exact:true}).click();
   await page.locator('#settings-button').click();if(await page.locator('#settings').isVisible())await page.locator('[data-settings-tab=mcp]').click();await edit();await page.locator('[data-mcp-tool=lookup]').selectOption('approve');await save();await edit();
   await page.locator('[data-mcp-tool=lookup]').scrollIntoViewIfNeeded();await page.screenshot({path:pictures+'/kun-mcp-policy.png'});
   await page.locator('#capability-page .back-link').click();await page.locator('#prompt').fill('再查一次。');await page.locator('#send').click();
@@ -64,7 +65,7 @@ const {spawn}=require('node:child_process'),fs=require('node:fs'),os=require('no
   assert.equal(toolCalls,2);assert.equal(modelCalls,4);assert.equal(await page.locator('.kun-approval').count(),0);
   const sessions=await api('/sessions');const sid=sessions.find(s=>s.runtimeKind==='kun').id;const events=await api(`/sessions/${sid}/events?limit=1000`);
   assert.equal(events.filter(e=>e.method==='kun/approval.requested').length,1,'always-allow asked again');
-  await page.reload();await page.locator('#kun-debug-open').waitFor();await page.setViewportSize({width:390,height:844});await page.locator('#kun-debug-open').click();
+  await page.reload();await page.locator('#trace-button').waitFor();await page.setViewportSize({width:390,height:844});await page.waitForFunction(()=>state.session?.runtimeKind==='kun');await page.evaluate(()=>RunDeskKun.open());
   await page.locator('#kun-devtools').getByRole('button',{name:'Application · MCP',exact:true}).click();assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   await page.screenshot({path:pictures+'/kun-mcp-mobile.png'});assert.deepEqual(errors,[]);
   const report={passed:true,modelCalls,toolCalls,listCalls,pageErrors:errors,checks:['Kun config UI','MCP discovery without tool execution','prompt holds execution','approve once','request/result inspection','tool definitions snapshot','always-allow next turn without approval','reload','390px viewport']};

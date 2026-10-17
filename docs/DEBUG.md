@@ -1,19 +1,19 @@
 # 执行轨迹调试
 
-RunDesk 将执行过程作为可检查证据保存。共同轨迹入口适用于 Kun 与 Codex；内部状态、单步和运行分叉由 Kun 扩展提供。记录反映实际输入输出和控制动作，不推测模型隐藏推理。
+RunDesk 将执行过程作为可检查证据保存。0.49.0 使用共同的调试工作台检查 Kun 与 Codex；轨迹、HTTP、摘要问答和 Kun 高级面板共享会话与历史范围。内部状态、单步和运行分叉由 Kun 扩展提供。记录反映实际输入输出和控制动作，不推测模型隐藏推理。
 
 ## 从任务定位到证据
 
-1. 打开会话的轨迹，按 Run 查看输入、回复、工具步骤、审批和异常。
+1. 打开会话的“调试工作台”，在轨迹视图按 Run 查看输入、回复、工具步骤、审批和异常。
 2. 定位失败或空返回步骤，核对工具参数、实际结果与原始事件；缺少结束事件保持未知，不能等同失败或成功。
 3. 使用只读调试检查固定宿主事件游标，查看轮次、步骤、异常和统计。分块读取完整事件，避免把预览当作全部证据。
 4. 需要模型解释时创建独立诊断会话，固定来源范围；审核建议后再明确发送控制操作，不让分析自动修改原任务。
 
-[共同只读接口与 MCP](DEBUG-SERVICE.md) · [诊断与建议审核](KUN-DIAGNOSIS.md) · [轨迹界面](TRACE.md)
+[直通观测与统一工作台](UNIFIED_DEBUGGING.md) · [共同只读接口与 MCP](DEBUG-SERVICE.md) · [诊断与建议审核](KUN-DIAGNOSIS.md) · [轨迹界面](TRACE.md)
 
 ## Kun 内部调试
 
-Kun DevTools 提供 Network 调用证据、Elements 上下文与快照差异、Sources 暂停/单步/补充指令、Performance 用量、Application MCP、Layers 模块及 Console 结构化查询。控制需要当前运行和状态 revision；单步/继续不绕过审批、预算或检查点守卫。
+工作台中的 Kun 高级面板保留原 DevTools 的 Network 调用证据、Elements 上下文与快照差异、Sources 暂停/单步/补充指令、Performance 用量、Application MCP、Layers 模块及 Console 结构化查询。历史记录保持固定游标；“读取最新记录”才推进共同历史范围。“检查当前控制状态”用于当前 worker 状态，不能把它当成历史快照。控制需要当前运行和状态 revision；单步/继续不绕过审批、预算或检查点守卫。
 
 [断点与 Console](KUN-DEBUG.md) · [调用证据与快照](KUN-INSPECT.md) · [控制与模块面板](KUN-PANELS.md) · [安全检查点](KUN-CHECKPOINTS.md)
 

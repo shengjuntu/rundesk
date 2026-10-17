@@ -1,5 +1,13 @@
 # Changelog
 
+## RunDesk 0.49.0
+
+- Unify trace inspection, LLM request/response evidence, summaries, diagnostic questions and embedded Kun DevTools in one debugging workbench with a shared session and fixed history scope.
+- Add an in-process pass-through HTTP observation proxy for supported Codex endpoint configuration. Forward original payloads and streams without API conversion, model replacement, additional retries or failover; record bounded copies and explicit capture-loss markers.
+- Add indexed read-only `llm_requests` / `llm_request` queries, exact byte pagination, chunk timing metadata, and matching trace/debug MCP tools. Keep model capture bodies out of ordinary conversation event polling while preserving database evidence.
+- Preserve unknown Codex RPC fields and JSON integer precision, and load all source events for full tool argument/result inspection. Keep incomplete association and evidence explicit.
+- Keep Kun 0.16.0 / worker protocol 16 unchanged. Proxy capture defaults to enabled on loopback; Docker needs an explicitly reachable private endpoint. Built-in provider authentication paths remain subject to the documented capture coverage limits.
+
 ## RunDesk 0.48.1
 
 - Add Video App 0.7.0 deployment guide and a uniform Docker lifecycle entry point under video-build.

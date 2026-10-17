@@ -21,11 +21,15 @@ type Message struct {
 	Params json.RawMessage `json:"params,omitempty"`
 	Result json.RawMessage `json:"result,omitempty"`
 	Error  *Error          `json:"error,omitempty"`
+	// Preserve protocol extensions when a received message is journaled. This
+	// is structured JSON capture, not a byte-for-byte copy of the JSONL frame.
+	retained map[string]json.RawMessage
 }
 type Error struct {
-	Code    int             `json:"code"`
-	Message string          `json:"message"`
-	Data    json.RawMessage `json:"data,omitempty"`
+	Code     int             `json:"code"`
+	Message  string          `json:"message"`
+	Data     json.RawMessage `json:"data,omitempty"`
+	retained map[string]json.RawMessage
 }
 
 func (e *Error) Error() string { return fmt.Sprintf("RPC %d: %s", e.Code, e.Message) }

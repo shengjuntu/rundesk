@@ -49,8 +49,8 @@ func TestDiagnosticExclusiveToolsAndRestart(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		if len(req.Tools) != 7 {
-			t.Errorf("expected 7 exclusive diagnostic tools: %v", req.Tools)
+		if len(req.Tools) != 9 {
+			t.Errorf("expected 9 exclusive diagnostic tools: %v", req.Tools)
 		}
 		for _, tool := range req.Tools {
 			if !strings.HasPrefix(tool.Function.Name, "trace_") {

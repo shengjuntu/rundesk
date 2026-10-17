@@ -17,7 +17,7 @@ import (
 	"github.com/shengjuntu/rundesk/internal/store"
 )
 
-const Version = "0.48.1"
+const Version = "0.49.0"
 
 type apiError struct {
 	Status        int

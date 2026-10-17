@@ -5,11 +5,13 @@ import "fmt"
 // DebugEventMeta deliberately excludes the payload, so listing a page cannot
 // allocate hundreds of large model responses or tool outputs.
 type DebugEventMeta struct {
-	ID        int64  `json:"id"`
-	Time      string `json:"time"`
-	Direction string `json:"direction"`
-	Method    string `json:"method"`
-	Bytes     int64  `json:"bytes"`
+	ID             int64  `json:"id"`
+	Time           string `json:"time"`
+	Direction      string `json:"direction"`
+	Method         string `json:"method"`
+	Bytes          int64  `json:"bytes"`
+	PayloadOmitted bool   `json:"payloadOmitted,omitempty"`
+	ReadWith       string `json:"readWith,omitempty"`
 }
 type DebugEventPage struct {
 	Events     []DebugEventMeta `json:"events"`
@@ -43,6 +45,10 @@ func (s *Store) DebugEvents(session string, after int64, through *int64, limit i
 		var v DebugEventMeta
 		if err = rows.Scan(&v.ID, &v.Time, &v.Direction, &v.Method, &v.Bytes); err != nil {
 			return out, err
+		}
+		if v.Method == "llm/exchange" {
+			v.PayloadOmitted = true
+			v.ReadWith = "llm_request"
 		}
 		if len(out.Events) == limit {
 			out.HasMore = true

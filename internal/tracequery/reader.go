@@ -59,15 +59,17 @@ type Step struct {
 	ReportedDurationMS *int64         `json:"reportedDurationMs,omitempty"`
 }
 type Args struct {
-	Proposal *ProposalInput `json:"proposal,omitempty"`
-	RunID    string         `json:"runId,omitempty"`
-	Query    string         `json:"query,omitempty"`
-	Type     string         `json:"type,omitempty"`
-	Status   string         `json:"status,omitempty"`
-	Offset   int            `json:"offset,omitempty"`
-	Limit    int            `json:"limit,omitempty"`
-	StepID   string         `json:"stepId,omitempty"`
-	EventID  int64          `json:"eventId,omitempty"`
+	MessageIndex *int           `json:"messageIndex,omitempty"`
+	Section      string         `json:"section,omitempty"`
+	Proposal     *ProposalInput `json:"proposal,omitempty"`
+	RunID        string         `json:"runId,omitempty"`
+	Query        string         `json:"query,omitempty"`
+	Type         string         `json:"type,omitempty"`
+	Status       string         `json:"status,omitempty"`
+	Offset       int            `json:"offset,omitempty"`
+	Limit        int            `json:"limit,omitempty"`
+	StepID       string         `json:"stepId,omitempty"`
+	EventID      int64          `json:"eventId,omitempty"`
 }
 
 func Open(path, session string, through int64) (*Reader, error) {
@@ -182,6 +184,9 @@ func (r *Reader) Call(name string, a Args) (any, error) {
 func (r *Reader) CallContext(ctx context.Context, name string, a Args) (any, error) {
 	if a.Offset < 0 || a.Limit < 0 || a.Limit > 20000 || utf8.RuneCountInString(a.Query) > 1000 {
 		return nil, errors.New("invalid query limits")
+	}
+	if name == "trace_list_llm_requests" || name == "trace_read_llm_request" {
+		return r.observation(ctx, name, a)
 	}
 	if name == "trace_read_event" {
 		var raw []byte

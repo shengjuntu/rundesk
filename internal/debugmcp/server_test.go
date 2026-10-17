@@ -87,13 +87,18 @@ func TestLifecycleValidationAndNoControlForwarding(t *testing.T) {
 			Annotations map[string]bool `json:"annotations"`
 		} `json:"tools"`
 	}
-	if json.Unmarshal(rows[10]["result"], &catalog) != nil || len(catalog.Tools) != 19 {
+	if json.Unmarshal(rows[10]["result"], &catalog) != nil || len(catalog.Tools) != 21 {
 		t.Fatal("missing tools", string(rows[10]["result"]))
 	}
+	names := map[string]bool{}
 	for _, tool := range catalog.Tools {
+		names[tool.Name] = true
 		if !tool.Annotations["readOnlyHint"] || tool.Annotations["destructiveHint"] {
 			t.Fatal(tool)
 		}
+	}
+	if !names["debug_llm_requests"] || !names["debug_llm_request"] {
+		t.Fatal("missing observation tools")
 	}
 	if !bytes.Contains(rows[11]["result"], []byte(`"isError":false`)) {
 		t.Fatal(string(rows[11]["result"]))

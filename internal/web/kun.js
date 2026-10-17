@@ -46,13 +46,14 @@ async function renderKunSettings(target){
 }
 
 window.RunDeskKun={
- async open(){
+ open(selection={}){
   if(!state.session||state.session.runtimeKind!=="kun")throw Error("请先选择 Kun 会话");
-  const sid=state.session.id;
-  let dialog=document.querySelector("#kun-devtools");if(dialog){dialog.close();dialog.remove();}
-  dialog=el("dialog",{id:"kun-devtools",class:"kun-devtools"});
-  const title=el("h2",{},"Kun Agent DevTools");
-  const close=button("关闭",()=>{dialog.close();dialog.remove();});
+  return RunDeskDebug.open(state.session,{...selection,panel:"kun"});
+ },
+ async mount({host,session,scope:initialScope,selection={}}){
+  const sid=session.id;
+  let scope={...initialScope},destroyed=false,live=false;
+  const dialog=el("section",{id:"kun-devtools",class:"kun-devtools kun-embedded","aria-label":"Kun 高级调试"});
   const summary=el("p",{class:"help"}),feedback=el("p",{role:"status"}),list=el("div",{class:"kun-call-list"}),detail=el("div",{class:"kun-detail"});
   const tabs=el("div",{class:"tabs"}),controls=el("div",{class:"kun-controls"}),controlHint=el("p",{class:"help kun-control-hint",role:"status"});
   const controlButtons=new Map();let controlBusy=false,currentFloor=0;
@@ -63,7 +64,7 @@ window.RunDeskKun={
    snapshots.set(event.data.sequence,await api("/sessions/"+sid+"/kun/snapshots/"+event.data.sequence));
    while(snapshots.size>12){const key=[...snapshots.keys()].find(k=>k!==selected?.data.sequence);if(key===undefined)break;snapshots.delete(key);}
   }catch(e){if(selected===event)feedback.textContent=e.message;}}};
-  const selectEvent=async event=>{selected=event;redraw();await loadSelected();redraw();};
+  const selectEvent=async event=>{selected=event;live=false;redraw();await loadSelected();if(!destroyed)redraw();};
   const openEvidence=event=>{panel="network";return selectEvent(event);};
   const kinds={network:"Network · 调用",elements:"Elements · 上下文",sources:"Sources · 控制",performance:"Performance · 用量",application:"Application · MCP",layers:"Layers · 模块",console:"Console · 查询"};
   let detailKey="";
@@ -83,8 +84,9 @@ window.RunDeskKun={
    if(current?.fork)summary.textContent+=current.fork.origin.mode==="live"?" · Live · 真实工具执行":" · Hybrid · 工具仅回放";
    if(historyLimited)summary.textContent+=" · 缓存已截断，部分事件可能缺失";
    if(historyPending)summary.textContent+=" · 正在补取历史事件";
-   summary.textContent+=(selected?" · 固定快照 #"+selected.data.sequence:" · 跟随现场");
-   const inspected=selected?inspectState():current;
+   summary.textContent+=" · 共享历史 ≤ #"+scope.through+(scope.runId?" · 所选轮次 "+scope.runId:"");
+   summary.textContent+=(selected?" · 固定快照 #"+selected.data.sequence:live?" · 检查当前控制状态":" · 尚未选定历史快照");
+   const inspected=selected?inspectState():live?current:null;
    for(const b of tabs.children)b.classList.toggle("selected",b.dataset.panel===panel);
    controls.classList.toggle("hidden",panel!=="sources");
    consoleView.node.classList.toggle("hidden",panel!=="console");consoleView.update();
@@ -99,7 +101,7 @@ window.RunDeskKun={
      const b=button("#"+event.data.sequence+" · "+(event.data.data.purpose==="plan"?"规划模型 ":"执行模型 ")+event.data.data.step+" · "+event.data.runId,()=>selectEvent(event));
      b.classList.toggle("selected",selected?.data.sequence===event.data.sequence);list.append(b);
     }
-    detail.append(kunRenderContext(selected,selected?snapshots.get(selected.data.sequence):null,current));return;
+    detail.append(kunRenderContext(selected,selected?snapshots.get(selected.data.sequence):null,live?current:null));return;
    }
    const rows=kunCallRows(selected&&!events.some(e=>e.data.sequence===selected.data.sequence)?[selected,...events]:events);
    for(const row of rows){
@@ -123,34 +125,38 @@ window.RunDeskKun={
     // Incremental host-event cursor; commit only complete fetches, and serialize
     // manual/timer refreshes so an older response cannot rewind the cursor.
     let after=lastEventId,lastBatchSize=0;const incoming=[];
-    for(let page=0;page<2;page++){
-     const value=await api("/sessions/"+sid+"/events?after="+after+"&limit=1000");
+    for(let page=0;page<2&&after<scope.through;page++){
+     const value=await api("/sessions/"+sid+"/events?after="+after+"&limit=1000&method=kun%2F");
+     if(destroyed)return;
      const batch=Array.isArray(value)?value:value.events||value.items||[];lastBatchSize=batch.length;
      if(!batch.length)break;
-     incoming.push(...batch.filter(e=>e.method.startsWith("kun/")));after=batch.at(-1).id;
+     incoming.push(...batch.filter(e=>e.id<=scope.through&&e.method.startsWith("kun/")&&(!scope.runId||e.data.runId===scope.runId)));after=Math.min(scope.through,batch.at(-1).id);
      if(batch.length<1000)break;
     }
-    historyPending=lastBatchSize===1000;
+    historyPending=lastBatchSize===1000&&after<scope.through;
     for(const event of incoming){const bytes=JSON.stringify(event).length*2;eventSizes.set(event,bytes);retainedBytes+=bytes;events.push(event);}lastEventId=after;
     let trim=0;while(events.length-trim>1&&(events.length-trim>20000||retainedBytes>64*1024*1024)){retainedBytes-=eventSizes.get(events[trim++])||0;historyLimited=true;}
     if(trim)events=events.slice(trim);
     try{acceptCurrent(await api("/sessions/"+sid+"/kun/state"));}catch(e){current=null;feedback.textContent=e.message;}
-    redraw();
+    if(destroyed)return;
+    if(!selected&&!live&&events.length){selected=events.find(e=>e.data.sequence===selection.sequence)||events.at(-1);await loadSelected();}
+    if(!destroyed)redraw();
 
    })().finally(()=>{refreshPending=null;});
    return refreshPending;
   };
+  const scopeControlReason=()=>scope.runId&&current?.runId!==scope.runId?"所选历史轮次不是当前运行，请在工作台选择当前轮次后操作。":"";
   const updateControlButtons=()=>{
-   for(const [op,b]of controlButtons){let reason=controlBusy?"控制提交中…":kunControlReason(current,op);
+   for(const [op,b]of controlButtons){let reason=controlBusy?"控制提交中…":scopeControlReason()||kunControlReason(current,op);
     if(op==="set_breakpoints"&&!reason){if(!policyBase)reason="请先读取当前断点";else if(policyBase.runId!==current.runId||policyBase.revision!==current.revision)reason="读取后运行状态已变化，请重新读取断点";}
     b.disabled=!!reason;b.title=reason;
    }
    if(policyBase&&current&&(policyBase.runId!==current.runId||policyBase.revision!==current.revision))policyHint.textContent="读取后状态已变化，应用前请重新读取；草稿仍保留。";else policyHint.textContent="规则仅作用于当前运行及其检查点续跑。";
-   recoverButton.disabled=controlBusy||!recoveryCheck?.eligible||!current||recoveryCheck.selection.sourceRunId!==current.runId||recoveryCheck.selection.expectedStateRevision!==current.revision;
-   controlHint.textContent=controlBusy?"正在提交当前运行控制…":!current?"worker 离线。控制不可用；历史记录仍可检查。":current.approval?(current.approval.decision?"审批决定已提交，等待引擎处理。":"工具审批须明确允许或拒绝；继续/单步不可代替审批。"):!["running","paused","pausing"].includes(current.status)?"运行已结束。可检查历史或展开恢复检查。":"操作会校验当前运行和状态版本，过期时需刷新。";
+   recoverButton.disabled=controlBusy||!!scopeControlReason()||!recoveryCheck?.eligible||!current||recoveryCheck.selection.sourceRunId!==current.runId||recoveryCheck.selection.expectedStateRevision!==current.revision;
+   controlHint.textContent=scopeControlReason()||(current?"控制对象："+current.runId+" · 当前版本 "+current.revision+"。 ":"")+(controlBusy?"正在提交当前运行控制…":!current?"worker 离线。控制不可用；历史记录仍可检查。":current.approval?(current.approval.decision?"审批决定已提交，等待引擎处理。":"工具审批须明确允许或拒绝；继续/单步不可代替审批。"):!["running","paused","pausing"].includes(current.status)?"运行已结束。可检查历史或展开恢复检查。":"操作会校验当前运行和状态版本，过期时需刷新。");
   };
   const sendControl=async(operation,text)=>{
-   const reason=controlBusy?"控制提交中…":kunControlReason(current,operation);if(reason){feedback.textContent=reason;return;}
+   const reason=controlBusy?"控制提交中…":scopeControlReason()||kunControlReason(current,operation);if(reason){feedback.textContent=reason;return;}
    const command={requestId:crypto.randomUUID(),runId:current.runId,expectedStateRevision:current.revision,operation};
    if(operation==="approve"||operation==="reject")command.callId=current.approval.callId;
    if(operation==="steer")command.text=text;
@@ -170,7 +176,7 @@ window.RunDeskKun={
   const runtimePolicy=kunPolicyEditor(),policyStatus=el("p",{role:"status"}),policyHint=el("p",{class:"help"});let policyBase=null;
   const policyLoad=button("读取当前断点",async()=>{try{acceptCurrent(await api("/sessions/"+sid+"/kun/state"));runtimePolicy.set(current.debug?.policy);policyBase={runId:current.runId,revision:current.revision};policyStatus.textContent="已读取规则版本 "+(current.debug?.revision||0)+"，状态版本 "+current.revision;redraw();}catch(e){policyStatus.textContent=e.message;}});
   const policyApply=button("应用断点到当前运行",async()=>{
-   if(controlBusy||!policyBase||kunControlReason(current,"set_breakpoints"))return;
+   if(controlBusy||!policyBase||scopeControlReason()||kunControlReason(current,"set_breakpoints"))return;
    try{
     const debug=runtimePolicy.get();controlBusy=true;updateControlButtons();
     const receipt=await api("/sessions/"+sid+"/kun/control",{method:"POST",body:{requestId:crypto.randomUUID(),runId:policyBase.runId,expectedStateRevision:policyBase.revision,operation:"set_breakpoints",debug}});
@@ -181,13 +187,13 @@ window.RunDeskKun={
    el("p",{class:"help"},"先读取当前规则再编辑。清空规则不会解除已有暂停，也不改变模型前固定暂停。重新读取会替换当前草稿。"),policyLoad,policyApply,policyHint,policyStatus));
   const diffView=kunDiffView({sid,getSelected:()=>selected});
   const harnessView=kunHarnessCompare({sid,getSelected:()=>selected});
-  const harnessSwitch=kunHarnessSwitch({sid,getCurrent:()=>current,getSelected:()=>selected,refresh,isActive:()=>dialog.isConnected&&dialog.open});
-  const consoleView=kunConsole({sid,getCurrent:()=>current,getSelected:()=>selected,refresh});
+  const harnessSwitch=kunHarnessSwitch({sid,getCurrent:()=>current,getSelected:()=>selected||(!live||scopeControlReason()?{}:null),refresh,isActive:()=>dialog.isConnected&&!destroyed});
+  const consoleView=kunConsole({sid,getCurrent:()=>scopeControlReason()?null:current,getSelected:()=>selected,refresh});
   const steer=el("textarea",{rows:"2",placeholder:"给当前运行补充文本指令"});
   const recoveryStatus=el("p",{role:"status",class:"help"});
   const recoveryReasons={live_use_new_fork:"Live 分支需重新创建固定预览",hybrid_use_new_fork:"Hybrid 分支需重新创建固定预览",run_not_stopped:"当前运行尚未结束",run_still_closing:"运行正在关闭，请稍后重试",inflight_action_or_unapplied_control:"模型/工具结果未知，或有未应用指令",no_safe_checkpoint:"没有可用安全检查点（旧版本记录不能恢复）",runtime_manifest_changed:"配置、项目版本、凭据或技能已变化",checkpoint_incompatible:"引擎或模块版本不兼容",checkpoint_consumed:"检查点已使用",no_run:"会话没有运行记录"};
   const recoverButton=button("从检查点继续",async()=>{
-   if(controlBusy||!recoveryCheck?.eligible)return;controlBusy=true;updateControlButtons();
+   if(controlBusy||scopeControlReason()||!recoveryCheck?.eligible)return;controlBusy=true;updateControlButtons();
    try{const session=await api("/sessions/"+sid+"/kun/resume",{method:"POST",body:recoveryCheck.selection});
     if(state.session?.id===sid)state.session=session;
     state.sessions=state.sessions.map(s=>s.id===sid?session:s);
@@ -205,20 +211,22 @@ window.RunDeskKun={
   controls.append(button("预览运行时分叉",()=>window.RunDeskKunForks.open({sessionId:sid})));
   const steerButton=button("提交补充指令",()=>{if(!steer.value.trim()){feedback.textContent="请输入补充指令。";return;}return sendControl("steer",steer.value);});
   controlButtons.set("steer",steerButton);controls.append(steer,steerButton);
-  dialog.append(el("div",{class:"dialog-head"},title,close),summary,tabs,button("刷新记录",refresh),button("跟随现场",()=>{selected=null;redraw();}),controls,consoleView.node,feedback,diffView.node,el("div",{class:"kun-inspector"},list,detail));
-  document.body.append(dialog);dialog.showModal();await refresh();
+  dialog.append(el("p",{class:"help"},"历史检查沿用工作台的轮次与固定范围。Sources 控制操作始终校验当前运行和状态版本。"),summary,tabs,button("刷新当前状态",refresh),button("检查当前控制状态",()=>{selected=null;live=true;panel="sources";redraw();}),controls,consoleView.node,feedback,diffView.node,el("div",{class:"kun-inspector"},list,detail));
+  host.replaceChildren(dialog);await refresh();
   let refreshing=false;
-  const timer=setInterval(async()=>{if(!dialog.isConnected||!dialog.open){clearInterval(timer);return;}if(refreshing)return;refreshing=true;try{await refresh();}catch(e){feedback.textContent=e.message;}finally{refreshing=false;}},1500);
-  dialog.addEventListener("close",()=>clearInterval(timer),{once:true});
+  const timer=setInterval(async()=>{if(!dialog.isConnected||destroyed){clearInterval(timer);return;}if(refreshing)return;refreshing=true;try{await refresh();}catch(e){feedback.textContent=e.message;}finally{refreshing=false;}},1500);
+  return {
+   async setScope(value){
+    await refreshPending;if(destroyed)return;
+    const changed=scope.through!==value.through||scope.runId!==value.runId;
+    scope={through:value.through,runId:value.runId||""};
+    if(changed){events=[];lastEventId=0;retainedBytes=0;historyLimited=false;historyPending=false;selected=null;live=false;snapshots.clear();selection={sequence:value.sequence};await refresh();}
+    if(value.sequence){const found=events.find(e=>e.data.sequence===value.sequence);if(found)await selectEvent(found);}
+   },
+   destroy(){destroyed=true;clearInterval(timer);dialog.remove();}
+  };
  }
 };
-// Keep the existing conversation layout; add one explicit debugger entry.
-document.addEventListener("DOMContentLoaded",()=>{
- const anchor=document.querySelector("#debug-button");
- const b=button("Kun DevTools",()=>window.RunDeskKun.open());b.id="kun-debug-open";b.className="quiet hidden";
- if(anchor)anchor.after(b);else document.querySelector("#messages")?.before(b);
- renderCapabilityStrip();
-});
 
 // Kun approvals belong to its persisted loop state, not to Codex server requests.
 async function refreshKunApproval(sid){

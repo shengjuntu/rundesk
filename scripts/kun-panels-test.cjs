@@ -90,14 +90,14 @@ assert(context.kunControlReason({...live,approval:{callId:'x',decision:'approve'
 assert(context.kunControlReason({...live,status:'running',queuedControls:[{operation:'pause'}]},'pause'));
 
 (async()=>{
- await context.window.RunDeskKun.open();
- const dialog=document.querySelector('#kun-devtools');assert(dialog.open);
+ const view=await context.window.RunDeskKun.mount({host:document.body,session:context.state.session,scope:{through:8}});
+ const dialog=document.querySelector('#kun-devtools');assert.equal(dialog.tagName,'SECTION');
  const tab=label=>byText(dialog,label).click();
  await tab('Elements · 上下文');const list=dialog.querySelector('.kun-call-list');await list.querySelector('button').click();
  const sequence=dialog.querySelector('.kun-context').dataset.sequence;assert.equal(sequence,'3');
  await tab('Layers · 模块');assert.equal(dialog.querySelector('.kun-layers').dataset.sequence,sequence);assert.equal(dialog.querySelector('.kun-layers').dataset.runId,'old-run');
  const raw=dialog.querySelector('.kun-module-card').querySelector('details');raw.open=true;
- await byText(dialog,'刷新记录').click();assert(dialog.querySelector('.kun-module-card').querySelector('details').open,'refresh collapsed module details');
+ await byText(dialog,'刷新当前状态').click();assert(dialog.querySelector('.kun-module-card').querySelector('details').open,'refresh collapsed module details');
  await byText(dialog.querySelector('.kun-layers'),'证据 #1').click();assert.equal(dialog.dataset.panel,'network');assert.equal(dialog.querySelector('.kun-event-evidence').dataset.sequence,'1');
  await tab('Application · MCP');assert.equal(dialog.querySelector('.kun-application').dataset.sequence,'1');
  await tab('Performance · 用量');assert.equal(dialog.querySelector('.kun-performance').dataset.sequence,'1');
@@ -110,13 +110,14 @@ assert(context.kunControlReason({...live,status:'running',queuedControls:[{opera
  live={...live,revision:21,status:'completed',phase:'after_model'};pendingControl({status:'applied',revision:21});await submission;
  assert(byText(dialog,'继续').disabled);assert(byText(dialog,'停止').disabled);assert.equal(dialog.querySelector('.kun-sources-state').dataset.status,'completed');
  // Older refresh data must not rewind the current control target.
- live={...live,revision:19,status:'paused'};await byText(dialog,'刷新记录').click();assert.equal(dialog.querySelector('.kun-sources-state').dataset.revision,'21');
+ live={...live,revision:19,status:'paused'};await byText(dialog,'刷新当前状态').click();assert.equal(dialog.querySelector('.kun-sources-state').dataset.revision,'21');
  live={...live,revision:22,status:'paused',phase:'approval',approval:{callId:'current-approval',server:'weather',tool:'lookup',arguments:'{}'}};
- await byText(dialog,'刷新记录').click();assert(byText(dialog,'继续').disabled);assert(!byText(dialog,'允许本次工具调用').disabled);
+ await byText(dialog,'刷新当前状态').click();assert(byText(dialog,'继续').disabled);assert(!byText(dialog,'允许本次工具调用').disabled);
  await byText(dialog,'读取当前断点').click();assert(!byText(dialog,'应用断点到当前运行').disabled);
- live={...live,revision:23};await byText(dialog,'刷新记录').click();assert(byText(dialog,'应用断点到当前运行').disabled,'stale policy enabled');
+ live={...live,revision:23};await byText(dialog,'刷新当前状态').click();assert(byText(dialog,'应用断点到当前运行').disabled,'stale policy enabled');
  const approval=byText(dialog,'允许本次工具调用').click();assert.equal(writes[1].body.callId,'current-approval');assert.equal(writes[1].body.expectedStateRevision,23);assert.equal(writes[1].body.runId,'current-run');
  live={...live,revision:24,status:'completed',approval:null};pendingControl({status:'applied',revision:24});await approval;
  assert(byText(dialog,'允许本次工具调用').disabled);assert.equal(writes.length,2);
+ view.destroy();assert(!document.querySelector('#kun-devtools'));
  console.log('Kun panel regressions passed: scope/cutoff, missing usage, nested timing, permissions display, evidence navigation, expansion keys, actual DevTools initialization, live control target, busy guard, stale state.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

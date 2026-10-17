@@ -15,6 +15,8 @@ import (
 )
 
 var descriptions = map[string]string{
+	"llm_requests": "List retained pass-through model HTTP observations at one fixed host through cursor, optionally scoped by explicit runId. Max 50. Evidence event IDs identify records; an empty list is not proof no API request occurred.",
+	"llm_request":  "Read retained HTTP request/response observation metadata or exact captured byte pages (base64; byte offsets), including incomplete/redacted states. Request/response and websocket_upstream/websocket_client sections contain bytes; *_chunks contain observer chunk metadata. For WebSocket list *_messages, then read *_payload with messageIndex for unmasked message bytes. Compressed payloads are not decompressed; inspect decode flags. Follow nextOffset. No replay or upstream request.",
 	"runs":         "List recorded runs for either backend at a fixed host through cursor. Max 50 per page; keep returned through including zero for later queries. Synthetic IDs indicate missing run identity.",
 	"steps":        "List reconstructed lifecycle steps, including calls, approvals and warnings. Filter by runId/type/status or literal query over redacted previews. Max 50; retain through and follow nextOffset. Missing text in previews is not proof of absence.",
 	"step":         "Read one projected step by stepId, with source host event IDs, pairing evidence, missing boundaries and preview truncation. Optional runId must match. Read full evidence with debug_event and the same through cursor.",
@@ -44,6 +46,11 @@ func Tools() []any {
 		for _, field := range d.Fields(kind) {
 			schema := map[string]any{"type": "integer", "minimum": 0}
 			switch field {
+			case "messageIndex":
+				schema["maximum"] = 4095
+				schema["description"] = "Only for WebSocket payload sections; message index, defaults to0"
+			case "section":
+				schema = map[string]any{"type": "string", "enum": []string{"metadata", "request", "response", "websocket_upstream", "websocket_client", "request_chunks", "response_chunks", "websocket_upstream_chunks", "websocket_client_chunks", "websocket_upstream_messages", "websocket_client_messages", "websocket_upstream_payload", "websocket_client_payload"}}
 			case "runId", "type", "status", "query", "stepId":
 				schema = map[string]any{"type": "string", "maxLength": 256}
 				if field == "query" {
@@ -64,7 +71,7 @@ func Tools() []any {
 				required = append(required, field)
 			case "limit":
 				schema["minimum"] = 1
-				if d.Projection(kind) {
+				if d.Projection(kind) || kind == "llm_requests" {
 					schema["maximum"] = 50
 				} else if kind == "events" {
 					schema["maximum"] = 200
@@ -98,7 +105,7 @@ func arguments(kind string, raw json.RawMessage) (url.Values, error) {
 		if !allowed[name] {
 			return nil, fmt.Errorf("unknown or inapplicable tool argument")
 		}
-		if name == "runId" || name == "type" || name == "status" || name == "query" || name == "stepId" {
+		if name == "runId" || name == "type" || name == "status" || name == "query" || name == "stepId" || name == "section" {
 			var text string
 			if len(value) == 0 || value[0] != '"' || json.Unmarshal(value, &text) != nil {
 				return nil, fmt.Errorf("invalid text argument")

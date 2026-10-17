@@ -1,0 +1,1 @@
+{"passed": true, "version": "0.49.0", "documents": 59, "paths": 187, "checks": ["local links", "version", "startup admin scope", "install idempotency", "no historical release duplicates"]}

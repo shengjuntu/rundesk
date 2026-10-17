@@ -6,7 +6,7 @@ const assert=require('assert');
 const path=require('node:path'),os=require('node:os');
 const root=path.resolve(__dirname,'..');
 const scratch=fs.mkdtempSync(path.join(os.tmpdir(),'rundesk-kun-ui-'));
-const pictures=path.join(root,'docs/screenshots/0.35.0');fs.mkdirSync(pictures,{recursive:true});
+const pictures=path.join(root,'docs/screenshots/0.49.0');fs.mkdirSync(pictures,{recursive:true});
 (async()=>{
  let calls=0,server,browser;const requests=[];const errors=[];
  const model=http.createServer(async(req,res)=>{
@@ -28,7 +28,7 @@ const pictures=path.join(root,'docs/screenshots/0.35.0');fs.mkdirSync(pictures,{
   await page.goto('http://127.0.0.1:38730');
   await page.locator('#settings-button').click();
   await page.locator('[data-settings-tab="kun"]').click();
-  const form=page.locator('.kun-config');await form.locator('select').selectOption('kun');
+  const form=page.locator('.kun-config');await form.locator('select').first().selectOption('kun');
   await form.locator('label').filter({hasText:'基础地址'}).locator('input').fill('http://127.0.0.1:'+model.address().port+'/v1');
   await form.locator('label').filter({hasText:'模型名称'}).locator('input').fill('kun-ui-fixture');
   await form.locator('label').filter({hasText:'允许 Kun 写入'}).locator('input').check();
@@ -41,7 +41,7 @@ const pictures=path.join(root,'docs/screenshots/0.35.0');fs.mkdirSync(pictures,{
   await page.locator('#close-settings').click();
   await page.locator('#new-session').click();
   await page.locator('#prompt').fill('请创建 kun-ui-result.txt 并说明结果。');await page.locator('#send').click();
-  await page.locator('#kun-debug-open').waitFor({state:'visible'});await page.locator('#kun-debug-open').click();
+  await page.locator('#trace-button').waitFor({state:'visible'});await page.waitForFunction(()=>state.session?.runtimeKind==='kun');await page.evaluate(()=>RunDeskKun.open());
   const dialog=page.locator('#kun-devtools');
   await dialog.getByRole('button',{name:'Sources · 控制',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-detail')?.textContent.includes('"status": "paused"'));
@@ -55,11 +55,12 @@ const pictures=path.join(root,'docs/screenshots/0.35.0');fs.mkdirSync(pictures,{
   await dialog.getByRole('button',{name:'单步',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-detail')?.textContent.includes('before_model'));
   await dialog.locator('.kun-controls textarea').fill('最后用中文简短回答。');await dialog.getByRole('button',{name:'提交补充指令',exact:true}).click();
-  await dialog.getByRole('button',{name:'刷新记录',exact:true}).click();
+  await dialog.getByRole('button',{name:'刷新当前状态',exact:true}).click();
   await dialog.getByRole('button',{name:'继续',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-detail')?.textContent.includes('"status": "completed"'));
   assert.equal(await dialog.locator('.diagnostics-inline').count(),0,'normal worker startup emitted an error banner');
   assert.equal(calls,2);assert(requests[1].messages.some(m=>m.content==='最后用中文简短回答。'));
+  await page.locator('#debug-inspector').getByRole('button',{name:'读取最新记录',exact:true}).click();
   await dialog.getByRole('button',{name:'Elements · 上下文',exact:true}).click();
   await page.waitForFunction(()=>document.querySelectorAll('#kun-devtools .kun-call-list button').length===2);
   await dialog.locator('.kun-call-list button').last().click();
@@ -68,7 +69,7 @@ const pictures=path.join(root,'docs/screenshots/0.35.0');fs.mkdirSync(pictures,{
   const selectedSnapshot=Number(await dialog.locator('.kun-context').getAttribute('data-sequence'));
   assert((await dialog.locator('.kun-context').innerText()).includes('实际模型请求'));
   const messageDetails=dialog.locator('.kun-context-messages details').first();await messageDetails.locator('summary').first().click();
-  await dialog.getByRole('button',{name:'刷新记录',exact:true}).click();assert(await messageDetails.evaluate(n=>n.open),'refresh collapsed the open message');
+  await dialog.getByRole('button',{name:'刷新当前状态',exact:true}).click();assert(await messageDetails.evaluate(n=>n.open),'refresh collapsed the open message');
   const diff=dialog.locator('.kun-diff');await diff.locator('summary').first().click();
   await diff.getByRole('button',{name:'设为比较起点',exact:true}).click();
   await dialog.locator('.kun-call-list button').first().click();
@@ -79,17 +80,17 @@ const pictures=path.join(root,'docs/screenshots/0.35.0');fs.mkdirSync(pictures,{
   await dialog.locator('.kun-call-list button').last().click();
   await dialog.getByRole('button',{name:'Layers · 模块',exact:true}).click();
   assert.equal(Number(await dialog.locator('.kun-layers').getAttribute('data-sequence')),selectedSnapshot);assert.equal(await dialog.locator('.kun-module-card').count(),4);assert((await dialog.locator('.kun-layers').innerText()).includes('tool-loop-v1'));
-  await dialog.getByRole('button',{name:'刷新记录',exact:true}).click();assert.equal(Number(await dialog.locator('.kun-panel').getAttribute('data-sequence')),selectedSnapshot);
+  await dialog.getByRole('button',{name:'刷新当前状态',exact:true}).click();assert.equal(Number(await dialog.locator('.kun-panel').getAttribute('data-sequence')),selectedSnapshot);
   await page.screenshot({path:pictures+'/kun-layers.png'});
   await dialog.getByRole('button',{name:'Application · MCP',exact:true}).click();assert.equal(Number(await dialog.locator('.kun-panel').getAttribute('data-sequence')),selectedSnapshot);
-  await dialog.getByRole('button',{name:'跟随现场',exact:true}).click();
+  await dialog.getByRole('button',{name:'检查当前控制状态',exact:true}).click();
   await dialog.getByRole('button',{name:'Layers · 模块',exact:true}).click();assert.equal(Number(await dialog.locator('.kun-layers').getAttribute('data-sequence')),0);
   await dialog.getByRole('button',{name:'Performance · 用量',exact:true}).click();assert((await dialog.locator('.kun-detail').innerText()).includes('110'));
-  await dialog.getByRole('button',{name:'关闭',exact:true}).click();
+  await page.locator('#debug-inspector').getByRole('button',{name:'返回对话',exact:true}).click();
   assert((await page.locator('#messages').innerText()).includes('Kun 独立进程验证成功'));
   await page.reload();await page.waitForFunction(()=>document.querySelector('#messages')?.textContent.includes('Kun 独立进程验证成功'));
   await page.locator('#prompt').fill('验证暂停点恢复。');await page.locator('#send').click();
-  await page.locator('#kun-debug-open').click();
+  await page.waitForFunction(()=>state.session?.runtimeKind==='kun');await page.evaluate(()=>RunDeskKun.open());
   await dialog.getByRole('button',{name:'Sources · 控制',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-detail')?.textContent.includes('"status": "paused"'));
   await dialog.getByRole('button',{name:'停止',exact:true}).click();
@@ -124,8 +125,8 @@ const pictures=path.join(root,'docs/screenshots/0.35.0');fs.mkdirSync(pictures,{
   await page.waitForFunction(()=>document.querySelector('#kun-devtools .kun-detail')?.textContent.includes('"status": "completed"'));
   assert.equal(calls,3);
   await page.screenshot({path:pictures+'/kun-checkpoint.png'});
-  await dialog.getByRole('button',{name:'关闭',exact:true}).click();
-  await page.setViewportSize({width:390,height:844});await page.locator('#kun-debug-open').click();
+  await page.locator('#debug-inspector').getByRole('button',{name:'返回对话',exact:true}).click();
+  await page.setViewportSize({width:390,height:844});await page.waitForFunction(()=>state.session?.runtimeKind==='kun');await page.evaluate(()=>RunDeskKun.open());
   await page.screenshot({path:pictures+'/kun-mobile.png'});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false,'mobile overflow');
   assert.deepEqual(errors,[],'browser errors');

@@ -66,8 +66,15 @@ func (r *Reader) propose(ctx context.Context, runID string, p *ProposalInput) (P
 	}
 	seen := map[int64]bool{}
 	for _, id := range p.EvidenceIDs {
+		if !owned[id] && id > 0 && id <= r.Through {
+			var captured int
+			if err := r.db.QueryRowContext(ctx, "SELECT count(*) FROM events WHERE session=? AND id=? AND id<=? AND method='llm/exchange' AND json_extract(data,'$.labels.runId')=?", r.SessionID, id, r.Through, runID).Scan(&captured); err != nil {
+				return out, err
+			}
+			owned[id] = captured == 1
+		}
 		if id <= 0 || id > r.Through || !owned[id] || seen[id] {
-			return out, errors.New("citation must be a distinct retained lifecycle event of the selected run")
+			return out, errors.New("citation must be a distinct retained lifecycle or model observation event of the selected run")
 		}
 		var exists int
 		if err := r.db.QueryRowContext(ctx, "SELECT count(*) FROM events WHERE session=? AND id=? AND id<=?", r.SessionID, id, r.Through).Scan(&exists); err != nil {

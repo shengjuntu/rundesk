@@ -2,7 +2,14 @@
 // derived debug projections. Free text is not interpreted as credential JSON.
 package redaction
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
+
+// A local observation route is a bearer capability, even when it appears in a
+// thread configuration rather than an Authorization header.
+var observationRoute = regexp.MustCompile(`(/_rundesk_observe/)[A-Za-z0-9_-]+`)
 
 func SensitiveField(key string) bool {
 	key = strings.NewReplacer("_", "", "-", "").Replace(strings.ToLower(key))
@@ -29,6 +36,8 @@ func Fields(v any) any {
 		for n, value := range x {
 			x[n] = Fields(value)
 		}
+	case string:
+		return observationRoute.ReplaceAllString(x, "${1}[redacted]")
 	}
 	return v
 }

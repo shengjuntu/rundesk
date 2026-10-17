@@ -11,6 +11,7 @@ DebugService 提供统一只读入口，按后端声明能力。它不让 Codex 
 | event | 精确宿主事件，脱敏 JSON 分块 | 精确宿主事件，脱敏 JSON 分块 |
 | runs / steps / step | 宿主轮次、步骤列表与详情重建 | 同左，worker 离线仍可读取保留记录 |
 | issues / statistics | 确定性异常信号与步骤统计 | 同左 |
+| llm_requests / llm_request | 已保留的直通代理模型请求摘要、元数据与精确字节分块 | 同一记录查询契约；不会自动为 Kun 建立代理采集 |
 | context | 不支持 | 状态上下文；model.started 快照返回实际请求 |
 | tools / budget / modules | 不支持内部查询 | 工具目录、预算、四模块状态 |
 | breakpoints / actions | 不支持内部查询 | 断点状态、动作账本，只读 |
@@ -37,7 +38,7 @@ GET /api/v1/sessions/{sid}/debug/query?kind=diff&fromSequence=40&sequence=42
 - 新入口仅注册 GET。没有调试 SQL、任意文件、shell、审批、step、resume 或控制代理。
 - 接口最多返回 4 MiB，超限返回 `413 debug_response_too_large`，不把静默截断伪装成完整数据。旧 `/kun/query` 也采用此响应上限与保留整数精度的脱敏器。
 
-新响应为 `{sessionId, backend, source, kind, data, runId?, revision?, sequence?, through?}`。`source` 是 `host_session`、`host_journal`、`host_projection` 或 `kun_worker`。宿主概况不带内部 revision/sequence，跨运行事件页不虚构一个统一 runId。Kun 当前查询 sequence 为 0，固定查询为正数；revision 对应返回的 worker 状态。能力不支持返回 `409 debug_unsupported`，离线返回 `409 kun_offline`，worker 拒绝固定查询返回 `409 kun_query_rejected`。
+新响应为 `{sessionId, backend, source, kind, data, runId?, revision?, sequence?, through?}`。`source` 是 `host_session`、`host_journal`、`host_projection`、`http_observation` 或 `kun_worker`。宿主概况不带内部 revision/sequence，跨运行事件页不虚构一个统一 runId。Kun 当前查询 sequence 为 0，固定查询为正数；revision 对应返回的 worker 状态。能力不支持返回 `409 debug_unsupported`，离线返回 `409 kun_offline`，worker 拒绝固定查询返回 `409 kun_query_rejected`。
 
 能力清单不接受参数。查询拒绝未知、重复、不适用参数，包括不适用的显式零值。`snapshot`、`evidence` 必须有正数 sequence；`diff` 必须有两个正数序号；其他 Kun 查询可省略 sequence 或传 0。Codex run 的正数 sequence 被拒绝。具体契约随源码的 OpenAPI 提供。
 
@@ -63,7 +64,7 @@ GET /api/v1/sessions/{sid}/debug/query?kind=issues&through=500&runId=RUN_ID
 GET /api/v1/sessions/{sid}/debug/query?kind=statistics&through=500&runId=RUN_ID
 ```
 
-这五种查询通过同一个 `internal/tracequery` 固定快照重建器读取宿主日志；旧独立分析会话的 trace MCP 也复用它。已有 `trace_find_issues`，旧接口事件分块也先按共享字段规则脱敏。当前的独立分析工具集新增 `trace_propose`，仅生成有来源引用的建议，不修改目标；公共 `debug-mcp` 仍为 19 个只读查询工具。
+这五种查询通过同一个 `internal/tracequery` 固定快照重建器读取宿主日志；旧独立分析会话的 trace MCP 也复用它。已有 `trace_find_issues`，旧接口事件分块也先按共享字段规则脱敏。独立分析工具集含 `trace_propose`，仅生成有来源引用的建议，不修改目标；0.49.0 新增模型请求列表与分块读取，公共 `debug-mcp` 为 21 个只读查询工具。
 
 - 返回 `source=host_projection` 与顶层 `through`；它不是 worker sequence。首次可省略 through，后续查询与读取证据应原样保留，包括 0。不自动推进到最新记录。
 - runs/steps/issues 用 offset/limit 分页，默认且最多 50。steps/issues/statistics 可按 runId/type/status 精确筛选，query 为脱敏预览的字面子串搜索，不接受 SQL/正则。单个字符串限制 256 字符，query 1000 字符；step 需 stepId，传 runId 时须匹配。
@@ -75,7 +76,7 @@ GET /api/v1/sessions/{sid}/debug/query?kind=statistics&through=500&runId=RUN_ID
 - 预览限制深度、键数、数组项数和字符预算，JSON 大整数不转为浮点；在搜索和预览前脱敏。previewTruncated/evidenceTruncated 明确标记，原始事件仍按权限分块读取。
 - 重建前限制 20000 条已支持的生命周期记录、64 MiB 总载荷、单条 8 MiB，并使用 8 秒索引期限和请求取消。超限返回 `413 debug_projection_too_large`，不输出部分统计冒充全量；可选择更早 through 或较小来源会话。未识别的方法及流式 delta 不进入步骤统计，仍保留在 events/event 中。
 
-会话和轨迹页的 **调试检查** 入口复用上述服务。桌面并列显示列表和详情，窄屏纵向排列；支持轮次、类型、需关注过滤、预览搜索、分页、证据分块和显式读取最新记录。打开后固定会话与 through，过期异步响应不能覆盖新筛选；所有查询均为 GET。当前入口位于管理员主工作台，成员可使用同权限 API，尚未另加成员页面按钮。
+会话的 **调试工作台** 复用上述服务，轨迹、模型交互、摘要问答与 Kun 高级视图共享历史范围。桌面并列显示列表和详情，窄屏纵向排列；支持轮次、类型、需关注过滤、预览搜索、分页、证据分块和显式读取最新记录。打开后固定会话与 through，过期异步响应不能覆盖新筛选；检查查询均为 GET。创建独立诊断、离线实验及 Kun 控制仍为显式写操作，不混入只读查询。当前入口位于管理员主工作台，成员可使用同权限 API，尚未另加成员页面按钮。
 
 ## stdio MCP 接入
 
@@ -101,10 +102,10 @@ MCP 客户端启动配置示意：
 
 启动环境必须注入所选环境变量。不会自动读取 `RUNDESK_TOKEN`、Codex 登录信息或浏览器 Cookie。优先使用目标应用的 read key；此 CLI 不提供成员 grant 路径参数。服务 URL 仅接受 HTTPS 或回环 HTTP 来源，不接受用户信息、路径、query、fragment；不跟随 HTTP 重定向。每次 GET 最长 15 秒，响应最多 4 MiB。服务器错误仅转达 HTTP 状态与机器错误码，避免把凭据或服务端原始错误正文写入 stderr/协议输出。
 
-19 个工具：`debug_capabilities`，以及矩阵中 18 个查询 kind 对应的 `debug_<kind>`。先调用 capabilities，再选择受支持的工具；不支持的工具调用仍返回 `isError: true`。每个工具 schema 只接受其 kind 的参数，没有 sid、URL、SQL 或控制字段。所有工具标记 readOnly，但真正权限由 HTTP gate 和工具实现保证。
+21 个工具：`debug_capabilities`，以及矩阵中 20 个查询 kind 对应的 `debug_<kind>`。先调用 capabilities，再选择受支持的工具；不支持的工具调用仍返回 `isError: true`。每个工具 schema 只接受其 kind 的参数，没有 sid、URL、SQL 或控制字段。所有工具标记 readOnly，但真正权限由 HTTP gate 和工具实现保证。
 
 支持 MCP stdio 的 initialize → notifications/initialized → tools/list / tools/call，及 ping。协议版本可协商 2024-11-05、2025-03-26、2025-06-18、2025-11-25；未知版本返回 2025-11-25，由客户端决定是否兼容。只声明 tools，不声明 resources、prompts、tasks、sampling、HTTP/OAuth。输入每行最多 1 MiB，串行处理，EOF 退出；stdout 仅 JSON-RPC，诊断输出走 stderr。不是全功能 MCP 服务实现。
 
 协议依据：[stdio transport](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)、[lifecycle](https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle)、[tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)。这里只实现所需的只读子集，没有引入新依赖。
 
-验证范围与未完成事项见 [VALIDATION.md](VALIDATION.md) 和 [STATUS.md](STATUS.md)。
+模型请求的 `llm_requests/llm_request` 通过独立字节分块查询读取，不受通用 `event` 单事件 8 MiB 解析上限约束；仍受响应、查询时间与元数据大小限制。参数、数据完整性和直通代理配置见 [统一调试与采集](UNIFIED_DEBUGGING.md)。验证范围与未完成事项见 [VALIDATION.md](VALIDATION.md) 和 [STATUS.md](STATUS.md)。

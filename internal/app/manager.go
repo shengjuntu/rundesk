@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -16,6 +17,7 @@ import (
 
 	kc "github.com/shengjuntu/rundesk/internal/adapters/kun"
 	p "github.com/shengjuntu/rundesk/internal/kunproto"
+	"github.com/shengjuntu/rundesk/internal/observeproxy"
 	"github.com/shengjuntu/rundesk/internal/redaction"
 	"github.com/shengjuntu/rundesk/internal/rpc"
 	"github.com/shengjuntu/rundesk/internal/store"
@@ -29,30 +31,31 @@ type Workspace struct {
 	Revision int    `json:"revision"`
 }
 type Session struct {
-	KunCase       *KunCaseOrigin  `json:"kunCase,omitempty"`
-	KunFork       *p.ForkOrigin   `json:"kunFork,omitempty"`
-	RuntimeKind   string          `json:"runtimeKind,omitempty"`
-	ExecutionMode string          `json:"executionMode,omitempty"`
-	EnvironmentID string          `json:"environmentId,omitempty"`
-	TaskID        string          `json:"taskId,omitempty"`
-	ID            string          `json:"id"`
-	WorkspaceID   string          `json:"workspaceId"`
-	InstanceID    string          `json:"instanceId"`
-	Title         string          `json:"title"`
-	ThreadID      string          `json:"threadId"`
-	Model         string          `json:"model"`
-	Status        string          `json:"status"`
-	RunID         string          `json:"runId"`
-	TurnID        string          `json:"turnId"`
-	Error         string          `json:"error,omitempty"`
-	Created       string          `json:"created"`
-	Updated       string          `json:"updated"`
-	Pinned        bool            `json:"pinned"`
-	Archived      bool            `json:"archived"`
-	Source        SessionSource   `json:"source"`
-	TraceOrigin   *TraceOrigin    `json:"traceOrigin,omitempty"`
-	Recovery      *RecoveryOrigin `json:"recovery,omitempty"`
-	Retry         *RetryNotice    `json:"retry,omitempty"`
+	Observation   *ObservationStatus `json:"observation,omitempty"`
+	KunCase       *KunCaseOrigin     `json:"kunCase,omitempty"`
+	KunFork       *p.ForkOrigin      `json:"kunFork,omitempty"`
+	RuntimeKind   string             `json:"runtimeKind,omitempty"`
+	ExecutionMode string             `json:"executionMode,omitempty"`
+	EnvironmentID string             `json:"environmentId,omitempty"`
+	TaskID        string             `json:"taskId,omitempty"`
+	ID            string             `json:"id"`
+	WorkspaceID   string             `json:"workspaceId"`
+	InstanceID    string             `json:"instanceId"`
+	Title         string             `json:"title"`
+	ThreadID      string             `json:"threadId"`
+	Model         string             `json:"model"`
+	Status        string             `json:"status"`
+	RunID         string             `json:"runId"`
+	TurnID        string             `json:"turnId"`
+	Error         string             `json:"error,omitempty"`
+	Created       string             `json:"created"`
+	Updated       string             `json:"updated"`
+	Pinned        bool               `json:"pinned"`
+	Archived      bool               `json:"archived"`
+	Source        SessionSource      `json:"source"`
+	TraceOrigin   *TraceOrigin       `json:"traceOrigin,omitempty"`
+	Recovery      *RecoveryOrigin    `json:"recovery,omitempty"`
+	Retry         *RetryNotice       `json:"retry,omitempty"`
 }
 type Approval struct {
 	ID         string      `json:"id"`
@@ -94,6 +97,9 @@ type handle struct {
 	requests       map[string]Approval
 }
 type Manager struct {
+	observationMu       sync.RWMutex
+	observation         *observeproxy.Proxy
+	observationOptions  ObservationOptions
 	kunBenchmarkMu      sync.Mutex
 	kunBenchmarkActive  string
 	kunForkMu           sync.Mutex
@@ -444,7 +450,9 @@ func (m *Manager) event(id, dir, method string, data any) error {
 func redact(v any) any {
 	b, _ := json.Marshal(v)
 	var x any
-	_ = json.Unmarshal(b, &x)
+	d := json.NewDecoder(bytes.NewReader(b))
+	d.UseNumber()
+	_ = d.Decode(&x)
 	return redaction.Fields(x)
 }
 func sensitiveField(key string) bool { return redaction.SensitiveField(key) }
@@ -1064,6 +1072,7 @@ func (m *Manager) runCodex(s Session, w Workspace, h *handle, in Input, recovery
 	var raw json.RawMessage
 	if !ready {
 		params := permissions.threadParams(w.Path)
+		m.configureHTTPObservation(ctx, c, s, w, params)
 		if s.TraceOrigin != nil {
 			if e := m.configureTraceAnalysis(s, params); e != nil {
 				fail(e)
@@ -1394,5 +1403,6 @@ func (m *Manager) Close() {
 		}
 	}
 	m.wg.Wait()
+	m.closeHTTPObservation()
 	_ = m.Store.Close()
 }

@@ -9,7 +9,7 @@ import (
 
 func Tools() []any {
 	tools := []any{}
-	for _, v := range [][2]string{{"trace_list_runs", "List source-session rounds at the fixed snapshot cursor. Does not read other sessions."}, {"trace_find_steps", "Filter recorded step previews by runId, type, status or query. Paginated; follow nextOffset while hasMore. Search previews are not exhaustive full-output search."}, {"trace_get_step", "Read one step preview with inputs, results, status and stable source event IDs."}, {"trace_read_event", "Read structurally redacted JSON of a source event in bounded Unicode character chunks. Follow nextOffset while hasMore."}, {"trace_find_issues", "List recorded failures, pending approvals and incomplete lifecycle evidence at the fixed snapshot; not inferred root causes. Same filters and paging as trace_find_steps."}, {"trace_propose", "Return a suggestion only, with verified historical event references. Never applies control, patches, configuration or reruns. Existing citations are not proof that the model claim is true."}, {"trace_statistics", "Count filtered steps, statuses and types; report available recorded durations without inventing missing endpoints or treating duration sums as wall time."}} {
+	for _, v := range [][2]string{{"trace_list_runs", "List source-session rounds at the fixed snapshot cursor. Does not read other sessions."}, {"trace_find_steps", "Filter recorded step previews by runId, type, status or query. Paginated; follow nextOffset while hasMore. Search previews are not exhaustive full-output search."}, {"trace_get_step", "Read one step preview with inputs, results, status and stable source event IDs."}, {"trace_read_event", "Read structurally redacted JSON of a source event in bounded Unicode character chunks. Follow nextOffset while hasMore."}, {"trace_find_issues", "List recorded failures, pending approvals and incomplete lifecycle evidence at the fixed snapshot; not inferred root causes. Same filters and paging as trace_find_steps."}, {"trace_propose", "Return a suggestion only, with verified historical event references. Never applies control, patches, configuration or reruns. Existing citations are not proof that the model claim is true."}, {"trace_list_llm_requests", "List retained model HTTP observations at the fixed session snapshot, optionally filtered by explicit runId. Max 50; evidence host event IDs identify each exchange. Empty results do not prove no request occurred."}, {"trace_read_llm_request", "Read HTTP observation metadata or captured request/response bytes without executing or replaying requests. Byte sections return base64 and a UTF-8 display; offsets count bytes. For WebSocket use *_messages to list decoded messages, then *_payload with messageIndex for exact unmasked message payload bytes. Compressed payloads are retained without decompression. *_chunks sections page observer segments. Inspect completeness/redaction/decode flags and follow nextOffset."}, {"trace_statistics", "Count filtered steps, statuses and types; report available recorded durations without inventing missing endpoints or treating duration sums as wall time."}} {
 		props := map[string]any{}
 		required := []string{}
 		switch v[0] {
@@ -17,6 +17,18 @@ func Tools() []any {
 			props["runId"] = map[string]any{"type": "string", "minLength": 1, "maxLength": 256}
 			props["proposal"] = proposalSchema()
 			required = []string{"runId", "proposal"}
+		case "trace_read_llm_request":
+			props["messageIndex"] = map[string]any{"type": "integer", "minimum": 0, "maximum": 4095, "description": "Only for WebSocket payload sections; message index, defaults to0"}
+			props["eventId"] = map[string]any{"type": "integer", "minimum": 1}
+			props["runId"] = map[string]any{"type": "string", "maxLength": 256}
+			props["section"] = map[string]any{"type": "string", "enum": []string{"metadata", "request", "response", "websocket_upstream", "websocket_client", "request_chunks", "response_chunks", "websocket_upstream_chunks", "websocket_client_chunks", "websocket_upstream_messages", "websocket_client_messages", "websocket_upstream_payload", "websocket_client_payload"}}
+			props["offset"] = map[string]any{"type": "integer", "minimum": 0}
+			props["limit"] = map[string]any{"type": "integer", "minimum": 1, "maximum": 16000}
+			required = []string{"eventId"}
+		case "trace_list_llm_requests":
+			props["runId"] = map[string]any{"type": "string", "maxLength": 256}
+			props["offset"] = map[string]any{"type": "integer", "minimum": 0}
+			props["limit"] = map[string]any{"type": "integer", "minimum": 1, "maximum": 50}
 		case "trace_list_runs":
 			props["offset"] = map[string]any{"type": "integer", "minimum": 0}
 			props["limit"] = map[string]any{"type": "integer", "minimum": 1, "maximum": 50}

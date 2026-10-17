@@ -1,0 +1,3 @@
+$ go test ./internal/app -run '^TestObservation' -count=1
+ok  	github.com/shengjuntu/rundesk/internal/app	0.101s
+Exit code: 0

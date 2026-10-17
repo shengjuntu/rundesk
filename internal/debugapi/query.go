@@ -13,10 +13,12 @@ import (
 
 const MaxResponseBytes = 4 << 20
 
-var Kinds = []string{"overview", "run", "events", "event", "context", "tools", "budget", "modules", "breakpoints", "actions", "snapshot", "evidence", "diff", "runs", "steps", "step", "issues", "statistics"}
+var Kinds = []string{"overview", "run", "events", "event", "context", "tools", "budget", "modules", "breakpoints", "actions", "snapshot", "evidence", "diff", "runs", "steps", "step", "issues", "statistics", "llm_requests", "llm_request"}
 
 type Query struct {
 	Kind         string `json:"kind"`
+	Section      string `json:"section,omitempty"`
+	MessageIndex *int   `json:"messageIndex,omitempty"`
 	Sequence     int64  `json:"sequence,omitempty"`
 	FromSequence int64  `json:"fromSequence,omitempty"`
 	After        int64  `json:"after,omitempty"`
@@ -37,6 +39,10 @@ func Fields(kind string) []string {
 	switch kind {
 	case "overview":
 		return []string{}
+	case "llm_requests":
+		return []string{"through", "runId", "offset", "limit"}
+	case "llm_request":
+		return []string{"through", "runId", "eventId", "section", "messageIndex", "offset", "limit"}
 	case "events":
 		return []string{"after", "through", "limit"}
 	case "event":
@@ -68,13 +74,13 @@ func (q Query) Validate() error {
 	for _, field := range Fields(q.Kind) {
 		allowed[field] = true
 	}
-	present := map[string]bool{"sequence": q.Sequence != 0, "fromSequence": q.FromSequence != 0, "after": q.After != 0, "through": q.Through != nil, "eventId": q.EventID != 0, "offset": q.Offset != 0, "limit": q.Limit != 0, "runId": q.RunID != "", "type": q.Type != "", "status": q.Status != "", "query": q.Search != "", "stepId": q.StepID != ""}
+	present := map[string]bool{"sequence": q.Sequence != 0, "fromSequence": q.FromSequence != 0, "after": q.After != 0, "through": q.Through != nil, "eventId": q.EventID != 0, "offset": q.Offset != 0, "limit": q.Limit != 0, "runId": q.RunID != "", "type": q.Type != "", "status": q.Status != "", "query": q.Search != "", "stepId": q.StepID != "", "section": q.Section != "", "messageIndex": q.MessageIndex != nil}
 	for field, yes := range present {
 		if yes && !allowed[field] {
 			return fmt.Errorf("inapplicable debug selector")
 		}
 	}
-	for field, value := range map[string]string{"runId": q.RunID, "type": q.Type, "status": q.Status, "query": q.Search, "stepId": q.StepID} {
+	for field, value := range map[string]string{"runId": q.RunID, "type": q.Type, "status": q.Status, "query": q.Search, "stepId": q.StepID, "section": q.Section} {
 		limit := 256
 		if field == "query" {
 			limit = 1000
@@ -84,6 +90,28 @@ func (q Query) Validate() error {
 		}
 	}
 	switch q.Kind {
+	case "llm_requests":
+		if q.Limit > 50 {
+			return fmt.Errorf("at most 50 model requests per page")
+		}
+		return nil
+	case "llm_request":
+		if q.MessageIndex != nil && (*q.MessageIndex < 0 || *q.MessageIndex > 4095 || q.Section != "websocket_upstream_payload" && q.Section != "websocket_client_payload") {
+			return fmt.Errorf("messageIndex is only valid for WebSocket payload sections (0..4095)")
+		}
+		if q.EventID <= 0 || q.Limit > 16000 {
+			return fmt.Errorf("model request requires a positive eventId and at most 16000 bytes")
+		}
+		switch q.Section {
+		case "", "metadata", "request", "response", "websocket_upstream", "websocket_client", "websocket_upstream_payload", "websocket_client_payload":
+		case "request_chunks", "response_chunks", "websocket_upstream_chunks", "websocket_client_chunks", "websocket_upstream_messages", "websocket_client_messages":
+			if q.Limit > 50 {
+				return fmt.Errorf("at most 50 observation chunks per page")
+			}
+		default:
+			return fmt.Errorf("unsupported model request section")
+		}
+		return nil
 	case "runs", "steps", "step", "issues", "statistics":
 		if q.Limit > 50 {
 			return fmt.Errorf("at most 50 projected records per page")
@@ -127,6 +155,9 @@ func Parse(values url.Values) (Query, error) {
 			continue
 		}
 		switch name {
+		case "section":
+			q.Section = items[0]
+			continue
 		case "runId":
 			q.RunID = items[0]
 			continue
@@ -158,6 +189,12 @@ func Parse(values url.Values) (Query, error) {
 			q.Through = &n
 		case "eventId":
 			q.EventID = n
+		case "messageIndex":
+			if n > 4095 {
+				return q, fmt.Errorf("messageIndex too large")
+			}
+			index := int(n)
+			q.MessageIndex = &index
 		case "offset", "limit":
 			if n > 1<<31-1 {
 				return q, fmt.Errorf("debug integer too large")
@@ -200,3 +237,5 @@ type Result struct {
 func Projection(kind string) bool {
 	return kind == "runs" || kind == "steps" || kind == "step" || kind == "issues" || kind == "statistics"
 }
+
+func Observation(kind string) bool { return kind == "llm_requests" || kind == "llm_request" }
