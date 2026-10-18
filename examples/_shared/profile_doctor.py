@@ -42,6 +42,27 @@ def main():
     if "ffmpeg" in profile["aptPackages"]:
         for argv in (["ffmpeg", "-version"], ["ffprobe", "-version"], ["fc-match", "Noto Sans CJK SC"]):
             checks.append({"name": argv[0], **run(argv)})
+    if profile["id"] == "video-build":
+        vendor = Path("/opt/video-use")
+        expected = config["dependencies"]["videoUse"]["commit"]
+        try:
+            pin = json.loads((vendor / "RUNDESK_PIN.json").read_text())
+            checks.append({"name": "video-use-source-pin", "ok": pin["commit"] == expected and (vendor / "LICENSE").is_file() and (vendor / "helpers/render.py").is_file(), "commit": pin.get("commit")})
+        except (OSError, ValueError, KeyError) as e:
+            checks.append({"name": "video-use-source-pin", "ok": False, "error": str(e)})
+        for package, expected in config["dependencies"]["videoUse"]["python"].items():
+            try:
+                installed = importlib.metadata.version(package)
+                checks.append({"name": "video-use " + package, "ok": installed == expected, "version": installed, "expected": expected})
+            except importlib.metadata.PackageNotFoundError:
+                checks.append({"name": "video-use " + package, "ok": False, "error": "not installed"})
+        with tempfile.TemporaryDirectory(prefix="rundesk-video-use-doctor-") as tmp:
+            command = [sys.executable, str(Path(__file__).with_name("video_use_smoke.py")), "--out", str(Path(tmp) / "run")]
+            try:
+                p = subprocess.run(command, capture_output=True, text=True, timeout=120)
+                checks.append({"name": "video-use-script-media-render", "ok": p.returncode == 0, "output": (p.stdout + p.stderr)[-4000:]})
+            except (OSError, subprocess.TimeoutExpired) as e:
+                checks.append({"name": "video-use-script-media-render", "ok": False, "error": str(e)})
     skill = Path("/etc/codex/skills") / profile["skill"] / "SKILL.md"
     checks.append({"name": "admin-skill", "ok": skill.is_file(), "path": str(skill)})
     try:

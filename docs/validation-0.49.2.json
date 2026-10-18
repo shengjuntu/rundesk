@@ -1,0 +1,32 @@
+{
+  "version": "0.49.2",
+  "goTests": {
+    "passed": 524,
+    "skipped": 0,
+    "failures": []
+  },
+  "profile": "video-build1.2.0",
+  "videoUseCommit": "43cfc566833548093455c9d4a46bd69913b7e552",
+  "dockerBuildTested": false,
+  "realCodexModelTested": false,
+  "pythonProfileAndAdapterTestsPassed": 18,
+  "goVet": true,
+  "builtInTemplatesMatch": true,
+  "dependencyLock": {
+    "packages": 36,
+    "target": "CPython3.11 Linux x86_64",
+    "wheelSelection": "passed dry run",
+    "dependencyMarkerClosure": "passed",
+    "runtimeInstallTested": false
+  },
+  "adapterTests": [
+    "actual images+silent video+continuous WAV+SRT render",
+    "300 one-frame60fps segments without accumulating AAC drift",
+    "reject source ranges exceeding actual visual stream",
+    "strict input demuxers and hashes",
+    "freeze EDL used for render"
+  ],
+  "limits": [
+    "first script-media adapter supports sequential cuts and cover/contain; advanced native effects stay in native backend"
+  ]
+}

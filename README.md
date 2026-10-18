@@ -4,9 +4,11 @@
 
 RunDesk is an Agent execution platform for applications: one API connects Kun and Codex and manages tasks, sessions, tool approvals, and artifacts. Its independently developed Kun runtime makes execution traces debuggable through step controls, breakpoints, replay, and comparative evaluation. Independently validated successful traces can become reusable Skills, carrying debugging results into real application workflows.
 
+Video build integration: the built-in video-build profile is now 1.2.0, with pinned MIT video-use sources, a script/media EDL adapter, continuous external narration, offline smoke checks and shared-workspace handoff for Video App0.21. Existing workspaces and model credentials remain in the current runtime. Rebuild/select the new tool image to use these additions. See [video-build](examples/video-build/README.md).
+
 ## Current release
 
-**RunDesk 0.49.1 · Kun 0.16.0 · worker protocol 16**. Codex HTTP observation is now off by default and saved per session. Enable it in the debugging workbench when needed; changes apply on the next submitted turn without interrupting current work. The unified workbench, pass-through transport, Kun execution kernel and wire protocol are unchanged.
+**RunDesk 0.49.2 · Kun 0.16.0 · worker protocol 16**. Codex HTTP observation is now off by default and saved per session. Enable it in the debugging workbench when needed; changes apply on the next submitted turn without interrupting current work. The unified workbench, pass-through transport, Kun execution kernel and wire protocol are unchanged.
 
 - Prepare and reuse an application’s configured Docker environment before work, without changing its image or disconnecting active sessions.
 - Integrate applications with scoped credentials, durable queues, sessions, streaming events, files, and idempotency receipts.

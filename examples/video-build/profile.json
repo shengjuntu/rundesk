@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "runtime": "codex-docker",
   "id": "video-build",
-  "title": "本地视频合成与验收",
-  "description": "使用 FFmpeg、Pillow 和中文字体组织图像、音频、字幕并生成视频，保存渲染命令及媒体验收报告；不内置 TTS 或生成视频模型。",
+  "title": "文字驱动视频制作",
+  "description": "素材准备与对齐、剪辑、精修；提供固定版本 video-use、脚本素材适配器、FFmpeg 和中文字体。TTS/图片生成/视频生成由 Video App MCP 服务提供。",
   "searchBackends": [
     "none"
   ],
@@ -27,12 +27,15 @@
     "FFmpeg",
     "ffprobe",
     "Pillow",
-    "Noto CJK"
+    "Noto CJK",
+    "video-use 0.1.0",
+    "script-media adapter"
   ],
   "outputs": [
-    "video.mp4",
-    "render.json",
-    "probe.json"
+    "completion.json",
+    "final.mp4",
+    "edl.json",
+    "validation.json"
   ],
   "resources": {
     "cpus": 4,

@@ -162,9 +162,17 @@ func runtimeImageMatches(v ImageBuild, image imageInspection) bool {
 		reach = "false"
 	}
 	return labels["io.rundesk.profile"] == v.ProfileID &&
-		labels["org.opencontainers.image.version"] == "1.1.0" &&
+		labels["org.opencontainers.image.version"] == runtimeProfileVersion(v.ProfileID) &&
 		labels["io.rundesk.agent-reach"] == reach &&
-		labels["io.rundesk.codex.version"] == v.CodexVersion
+		labels["io.rundesk.codex.version"] == v.CodexVersion &&
+		(v.ProfileID != "video-build" || (labels["io.rundesk.video-use.commit"] == "43cfc566833548093455c9d4a46bd69913b7e552" && labels["io.rundesk.video-use.adapter"] == "1"))
+}
+
+func runtimeProfileVersion(profile string) string {
+	if profile == "video-build" {
+		return "1.2.0"
+	}
+	return "1.1.0"
 }
 
 func (m *Manager) cachedRuntimeImage(v ImageBuild) string {
@@ -209,7 +217,7 @@ func (m *Manager) verifyRuntimeImage(parent context.Context, v ImageBuild, id st
 		return err
 	}
 	if !runtimeImageMatches(v, image) {
-		return fmt.Errorf("镜像与所选配置或 Codex 版本不匹配；需要 RunDesk profile 1.1.0 的完整工具镜像")
+		return fmt.Errorf("镜像与所选配置或 Codex 版本不匹配；需要 RunDesk %s profile %s 的完整工具镜像", v.ProfileID, runtimeProfileVersion(v.ProfileID))
 	}
 	fmt.Fprintln(out, "检查只读根目录、运行用户、Codex、工具版本、Skills 与 Exa 配置；不调用模型或公网服务。")
 	ctx, cancel := context.WithTimeout(parent, 3*time.Minute)
@@ -230,7 +238,7 @@ func (s *Server) setupImageRoutes(mux *http.ServeMux) {
 		writeJSON(w, 200, map[string]any{"items": []map[string]any{
 			{"id": "news2douyin", "name": "新闻研究 · Exa + Agent-Reach", "reference": "rundesk-news2douyin:exa-agent-reach"},
 			{"id": "people-search", "name": "公开人物研究 · Exa + Agent-Reach", "reference": "rundesk-people-search:exa-agent-reach"},
-			{"id": "video-build", "name": "视频制作 · FFmpeg", "reference": "rundesk-video-build:local"},
+			{"id": "video-build", "name": "文字驱动视频 · video-use + FFmpeg", "reference": "rundesk-video-build:local"},
 		}, "platform": "linux/" + runtime.GOARCH, "supported": runtime.GOOS == "linux", "modelTested": false})
 	})
 	mux.HandleFunc("POST /api/setup/runtime-images", func(w http.ResponseWriter, r *http.Request) {

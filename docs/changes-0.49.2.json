@@ -1,0 +1,31 @@
+{
+  "baseline": "rundesk-v0.49.1-source.zip",
+  "added": [
+    "docs/validation-0.49.2.json",
+    "examples/_shared/video_use_adapter.py",
+    "examples/_shared/video_use_smoke.py",
+    "examples/video-build/dependency-validation.json",
+    "examples/video-build/vendor/video-use-43cfc566833548093455c9d4a46bd69913b7e552.tar.gz",
+    "examples/video-build/video-use-requirements.txt",
+    "scripts/test_video_use_adapter.py"
+  ],
+  "modified": [
+    "CHANGELOG.md",
+    "README.md",
+    "README.zh-CN.md",
+    "examples/_shared/THIRD_PARTY.md",
+    "examples/_shared/dependencies.json",
+    "examples/_shared/profile_doctor.py",
+    "examples/profiles.py",
+    "examples/profiletemplates/news2douyin.zip",
+    "examples/profiletemplates/people-search.zip",
+    "examples/profiletemplates/video-build.zip",
+    "examples/video-build/README.md",
+    "examples/video-build/profile.json",
+    "examples/video-build/skills/build-video-artifacts/SKILL.md",
+    "examples/video-build/skills/build-video-artifacts/agents/openai.yaml",
+    "internal/app/api_v1.go",
+    "internal/app/setup_images.go"
+  ],
+  "removed": []
+}

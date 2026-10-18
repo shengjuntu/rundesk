@@ -1,3 +1,10 @@
+# 0.49.2
+
+- video-build1.2.0打包固定MIT video-use源码、准确Python依赖锁、连续配音脚本素材适配器、离线烟测及三阶段Skill。
+- 内置镜像按profile独立版本判断，video-build核对上游commit/adapter标签；保留现有工作区与认证。
+- 与Video App0.21通过现有应用工作目录交换冻结输入及可校验产物，无需新增任意目录挂载权限。
+- Kun及workerprotocol不变；Codex HTTP观测默认关闭的设置保留。
+
 # Changelog
 
 ## RunDesk 0.49.1

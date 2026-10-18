@@ -1,4 +1,4 @@
 interface:
-  display_name: "本地视频合成与验收"
-  short_description: "Create grounded, reviewable outputs with this runtime profile"
-  default_prompt: "Use $build-video-artifacts to complete the task and save its evidence and artifacts."
+  display_name: "文字驱动视频制作"
+  short_description: "Prepare and align material, edit with video-use, then refine the actual render"
+  default_prompt: "Use $build-video-artifacts to produce a script-led video through preparation and alignment, editing, and refinement. Save the EDL, render and verification evidence."
