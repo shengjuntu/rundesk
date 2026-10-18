@@ -80,6 +80,19 @@ class ProfilesTest(unittest.TestCase):
         code, _, _ = self.cli("pack", "news2douyin", "--codex-version", "0.144.6", "--output", str(archives[0]))
         self.assertEqual(code, 2); self.assertEqual(archives[0].read_bytes(), original)
 
+    def test_video_build_context_pins_adapter_contract(self):
+        profile = profiles.load_profile("video-build")
+        self.assertEqual(profile["version"], "1.3.0")
+        target = self.root / "video-context"; target.mkdir()
+        profiles.render(profile, profiles.resolve(profile), "0.144.6", "node:22-bookworm-slim", target)
+        docker = (target / "Dockerfile").read_text()
+        self.assertIn('io.rundesk.video-use.adapter="2"', docker)
+        lock = json.loads((target / "profile.lock.json").read_text())
+        actual = json.loads(subprocess.check_output([sys.executable, "-I", str(target / "tools/video_use_adapter.py"), "--version"]))
+        self.assertEqual(actual, {"schemaVersion": 1, "adapterVersion": 2, "upstreamCommit": lock["dependencies"]["videoUse"]["commit"]})
+        self.assertIn("textRefs", (target / "skills/build-video-artifacts/SKILL.md").read_text())
+        self.assertIn("video-use-adapter-contract", (target / "tools/profile_doctor.py").read_text())
+
     def test_invalid_versions_backends_and_injection(self):
         for version in ("latest", "", "0.1.0\nRUN echo injected", "$(touch pwned)"):
             code, _, _ = self.cli("prepare", "video-build", "--codex-version", version, "--output", str(self.root / "dest"))

@@ -45,6 +45,13 @@ def main():
     if profile["id"] == "video-build":
         vendor = Path("/opt/video-use")
         expected = config["dependencies"]["videoUse"]["commit"]
+        adapter = run([sys.executable, "-I", str(Path(__file__).with_name("video_use_adapter.py")), "--version"])
+        try:
+            identity = json.loads(adapter.get("output", ""))
+            adapter["ok"] = adapter["ok"] and identity == {"schemaVersion": 1, "adapterVersion": 2, "upstreamCommit": expected}
+        except (ValueError, TypeError):
+            adapter["ok"] = False
+        checks.append({"name": "video-use-adapter-contract", **adapter})
         try:
             pin = json.loads((vendor / "RUNDESK_PIN.json").read_text())
             checks.append({"name": "video-use-source-pin", "ok": pin["commit"] == expected and (vendor / "LICENSE").is_file() and (vendor / "helpers/render.py").is_file(), "commit": pin.get("commit")})

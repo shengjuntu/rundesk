@@ -36,4 +36,6 @@ POST /api/v1/applications/{appId}/connect 接收 name、description、installati
 
 GET 需要 read，POST 需要 read/run，且 appId、实例与工作区必须匹配凭据和当前应用绑定。接口不选择镜像、不构建、不更改工具、不删除容器；待部署配置返回冲突。完整契约见 [API v1](API-V1.md)。
 
+0.49.3 增加 `application-runtime-diagnostics`：在已运行的绑定容器内检查实际工具版本，可验证本应用会话目录中的双向文件挑战，以及固定只读 MCP 测试图的实际 HTTP 传输。该接口不启动环境、不回退宿主机、不调用模型，`modelVisionVerified` 始终 false；完整请求、错误码与验证责任见 [诊断契约](API-V1.md#已选容器诊断0493)。
+
 配套 news2douyin 0.13.0 在开始研究前使用此接口。首次 Docker 接入先登记应用，再选定镜像并准备环境，最后将业务 MCP 与 Skill 装到该环境；模型认证由管理员完成。部署入口见 [news2douyin 配置](../examples/news2douyin/README.md)。

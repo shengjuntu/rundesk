@@ -141,6 +141,7 @@ func (m *Manager) PrepareApplicationRuntime(id string, in ApplicationRuntimeInpu
 }
 
 func (s *Server) applicationRuntimeRoutes(mux *http.ServeMux) {
+	s.applicationRuntimeDiagnosticRoutes(mux)
 	mux.HandleFunc("GET /api/applications/{appId}/runtime", func(w http.ResponseWriter, r *http.Request) {
 		v, e := s.Manager.ApplicationRuntime(r.PathValue("appId"))
 		respond(w, v, e)

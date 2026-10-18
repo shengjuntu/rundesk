@@ -25,15 +25,22 @@ def main():
         f.setparams((1, 2, 24000, 0, "NONE", "not compressed"))
         f.writeframes(b"".join(struct.pack("<h", int(1500 * math.sin(2 * math.pi * 440 * i / 24000))) for i in range(48000)))
     (root / "input/subtitles.srt").write_text("1\n00:00:00,000 --> 00:00:01,000\nScript drives the picture.\n\n2\n00:00:01,000 --> 00:00:02,000\nContinuous narration, silent source clip.\n", encoding="utf-8")
+    # CRLF, CJK, emoji and repeated text exercise exact source identity and
+    # occurrence selection without requiring a model or network service.
+    source = "芯片发布🚀。\r\n计划量产。芯片发布🚀。".encode("utf-8")
+    (root / "input/narration.txt").write_bytes(source)
     def entry(rel, **kwargs):
         path = root / rel
         return {"path": rel, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "size": path.stat().st_size, **kwargs}
-    manifest = {"schemaVersion": 1, "projectId": "offline-smoke", "productionRunId": "offline-smoke-run", "sourceHash": "a" * 64, "inputHash": "b" * 64,
+    manifest = {"schemaVersion": 1, "projectId": "offline-smoke", "productionRunId": "offline-smoke-run", "sourceHash": hashlib.sha256(source).hexdigest(), "inputHash": "b" * 64,
+                "textPath": "input/narration.txt",
                 "media": [entry("input/image.ppm", assetId="image", type="image"), entry("input/generated-silent.mp4", assetId="generated", type="video")],
                 "narration": entry("input/narration.wav", duration=2), "subtitles": entry("input/subtitles.srt")}
     edl = {"schemaVersion": 1, "canvas": {"width": 180, "height": 320, "fps": 12},
-           "clips": [{"id": "opening", "assetId": "image", "path": "input/image.ppm", "type": "image", "start": 0, "duration": 1},
-                     {"id": "explain", "assetId": "generated", "path": "input/generated-silent.mp4", "type": "video", "start": 1, "duration": 1, "sourceIn": .25}]}
+           "clips": [{"id": "opening", "assetId": "image", "path": "input/image.ppm", "type": "image", "start": 0, "duration": 1,
+                      "textRefs": [{"quote": "芯片发布🚀。", "occurrence": 1}]},
+                     {"id": "explain", "assetId": "generated", "path": "input/generated-silent.mp4", "type": "video", "start": 1, "duration": 1, "sourceIn": .25,
+                      "textRefs": [{"quote": "计划量产。"}, {"quote": "芯片发布🚀。", "occurrence": 2}]}]}
     for path, value in ((root / "input/manifest.json", manifest), (root / "work/edl.json", edl)):
         path.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
     command = [sys.executable, str(Path(__file__).with_name("video_use_adapter.py")), "render", "--manifest", str(root / "input/manifest.json"), "--edl", str(root / "work/edl.json"), "--out", str(root / "artifacts/render-smoke"), "--video-use-root", args.video_use_root]

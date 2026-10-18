@@ -20,6 +20,88 @@ ADAPTER = ROOT / "examples/_shared/video_use_adapter.py"
 SMOKE = ADAPTER.with_name("video_use_smoke.py")
 
 
+def load_adapter():
+    spec = importlib.util.spec_from_file_location("adapter_text_refs_test", ADAPTER)
+    adapter = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(adapter)
+    return adapter
+
+
+class TextReferencesTest(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="rundesk-text-refs-")
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        (self.root / "input").mkdir()
+        self.private = self.root / "private"; self.private.mkdir()
+        self.adapter = load_adapter()
+
+    def prepare(self, source="中文🚀。\r\n第二段。中文🚀。"):
+        data = source.encode("utf-8")
+        (self.root / "input/text.txt").write_bytes(data)
+        return {"textPath": "input/text.txt", "sourceHash": hashlib.sha256(data).hexdigest()}
+
+    def report(self, manifest, refs):
+        return self.adapter.text_reference_report(self.root, manifest, [{"id": "clip", "textRefs": refs}], self.private)
+
+    def test_exact_unicode_multiple_references_and_coverage(self):
+        manifest = self.prepare()
+        refs = [{"quote": "中文🚀。", "occurrence": 2}, {"quote": "第二段。"}, {"quote": "🚀。", "occurrence": 2}]
+        report = self.report(manifest, refs)
+        resolved = report["clips"][0]["textRefs"]
+        source = (self.root / "input/text.txt").read_bytes()
+        self.assertEqual(report["referenceCount"], 3)
+        self.assertTrue(report["sourceVerified"])
+        self.assertEqual(report["referencedClipCount"], 1)
+        self.assertEqual(report["coveredUTF8Bytes"], len("中文🚀。第二段。".encode()))
+        for row in resolved:
+            self.assertNotIn("quote", row)
+            self.assertEqual(source[row["startByte"]:row["endByte"]].decode(), refs[row["refIndex"]]["quote"])
+        # Resolution metadata must not add or change fields in the edit source.
+        self.assertNotIn("occurrence", refs[1])
+
+    def test_overlapping_occurrence_matches(self):
+        manifest = self.prepare("哈哈哈🚀🚀🚀")
+        result = self.report(manifest, [{"quote": "哈哈", "occurrence": 2}, {"quote": "🚀🚀", "occurrence": 2}])
+        rows = result["clips"][0]["textRefs"]
+        self.assertEqual([r["startByte"] for r in rows], [3, 13])
+        with self.assertRaisesRegex(self.adapter.RenderError, "repeated quote"):
+            self.report(manifest, [{"quote": "哈哈"}])
+
+    def test_source_integrity_before_media(self):
+        manifest = self.prepare()
+        (self.root / "input/text.txt").write_bytes("中问🚀。\r\n第二段。中文🚀。".encode())
+        with self.assertRaisesRegex(self.adapter.RenderError, "digest changed"):
+            self.report(manifest, [{"quote": "第二段。"}])
+        # Even unreferenced supplied text is verified; no newline normalization.
+        (self.root / "input/text.txt").write_bytes("中文🚀。\n第二段。中文🚀。".encode())
+        with self.assertRaises(self.adapter.RenderError):
+            self.report(manifest, [])
+
+    def test_optional_legacy_without_source(self):
+        result = self.report({"sourceHash": "a" * 64}, [])
+        self.assertFalse(result["sourceVerified"])
+        self.assertEqual(result["unreferencedClipIds"], ["clip"])
+        with self.assertRaisesRegex(self.adapter.RenderError, "textPath"):
+            self.report({"sourceHash": "a" * 64}, [{"quote": "text"}])
+
+    def test_invalid_references(self):
+        manifest = self.prepare()
+        invalid = [None, {}, [None], ["中文"], [{}], [{"quote": None}], [{"quote": " \t\n"}],
+                   [{"quote": "missing"}], [{"quote": "中文🚀。"}],
+                   [{"quote": "中文🚀。", "occurrence": 3}], [{"quote": "第二段。", "unknown": True}],
+                   [{"quote": "中文\x00"}], [{"quote": "\x01"}], [{"quote": "\ud800"}],
+                   [{"quote": "中" * 5462}], [{"quote": "第二段。"}] * 33]
+        invalid += [[{"quote": "第二段。", "occurrence": v}] for v in [0, -1, None, True, 1.0, "1"]]
+        for refs in invalid:
+            with self.subTest(refs=repr(refs)[:120]), self.assertRaises(self.adapter.RenderError):
+                self.report(manifest, refs)
+
+    def test_static_version_without_required_render_arguments(self):
+        p = subprocess.run([sys.executable, "-I", str(ADAPTER), "--version"], capture_output=True, text=True, check=True)
+        self.assertEqual(json.loads(p.stdout), {"schemaVersion": 1, "adapterVersion": 2, "upstreamCommit": self.adapter.PIN})
+
+
 @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg required")
 class VideoUseAdapterTest(unittest.TestCase):
     @classmethod
@@ -78,6 +160,13 @@ class VideoUseAdapterTest(unittest.TestCase):
         self.assertEqual(validation["engine"], "video_use")
         self.assertEqual(validation["upstreamCommit"], completion["upstreamCommit"])
         self.assertEqual(validation["edlHash"], artifacts["edit"]["sha256"])
+        self.assertEqual(validation["adapterVersion"], 2)
+        self.assertEqual(validation["textReferences"]["referenceCount"], 3)
+        self.assertEqual(validation["textReferences"]["referencedClipCount"], 2)
+        self.assertTrue(validation["textReferences"]["sourceVerified"])
+        edl = json.loads((self.runroot / artifacts["edit"]["path"]).read_text())
+        self.assertEqual(edl["clips"][0]["textRefs"], [{"quote": "芯片发布🚀。", "occurrence": 1}])
+        self.assertEqual(edl["clips"][1]["textRefs"], [{"quote": "计划量产。"}, {"quote": "芯片发布🚀。", "occurrence": 2}])
         manifest = json.loads((self.runroot / "input/manifest.json").read_text())
         self.assertEqual(validation["narrationSHA256"], manifest["narration"]["sha256"])
         self.assertTrue(validation["checks"])
@@ -110,6 +199,7 @@ class VideoUseAdapterTest(unittest.TestCase):
             changed = json.loads(path.read_text())
             changed["canvas"]["width"] = 720
             changed["clips"][0]["duration"] = 999
+            changed["clips"][0]["textRefs"] = [{"quote": "this edit happened after validation"}]
             path.write_text(json.dumps(changed))
             return module
         args = SimpleNamespace(manifest=str(root / "input/manifest.json"), edl=str(path),
@@ -126,6 +216,42 @@ class VideoUseAdapterTest(unittest.TestCase):
         self.assertEqual(report["edlHash"], hashlib.sha256(frozen.read_bytes()).hexdigest())
         self.assertEqual(report["edlHash"], edit["sha256"])
         self.assertEqual(completion["video"]["width"], original["canvas"]["width"])
+
+    def test_old_edl_and_manifest_without_references_still_render(self):
+        root = self.copy_inputs("legacy-without-refs")
+        path = root / "work/edl.json"; edl = json.loads(path.read_text())
+        for clip in edl["clips"]:
+            clip.pop("textRefs")
+        path.write_text(json.dumps(edl))
+        path = root / "input/manifest.json"; manifest = json.loads(path.read_text())
+        manifest.pop("textPath"); path.write_text(json.dumps(manifest))
+        p = self.command(root)
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        report = json.loads((root / "artifacts/render-next/validation.json").read_text())
+        self.assertFalse(report["textReferences"]["sourceVerified"])
+        self.assertEqual(report["textReferences"]["referenceCount"], 0)
+
+    def test_invalid_source_hash_or_quote_fails_before_media_probe(self):
+        for mode in ("invalid-hash", "changed-source", "ambiguous-quote", "null-refs"):
+            root = self.copy_inputs(mode)
+            path = root / "input/manifest.json"; manifest = json.loads(path.read_text())
+            edl_path = root / "work/edl.json"; edl = json.loads(edl_path.read_text())
+            if mode == "invalid-hash":
+                manifest["sourceHash"] = "not-a-hash"; path.write_text(json.dumps(manifest))
+            elif mode == "changed-source":
+                (root / manifest["textPath"]).write_bytes("错误文本".encode())
+            elif mode == "ambiguous-quote":
+                edl["clips"][0]["textRefs"][0].pop("occurrence")
+            else:
+                edl["clips"][0]["textRefs"] = None
+            edl_path.write_text(json.dumps(edl))
+            adapter = load_adapter()
+            args = SimpleNamespace(manifest=str(path), edl=str(edl_path), out=str(root / "artifacts/render-next"), run_root=None, video_use_root=str(self.vendor))
+            with patch.object(adapter, "probe", side_effect=AssertionError("media must not be probed")) as probe:
+                with self.assertRaises(adapter.RenderError):
+                    adapter.render(args)
+                probe.assert_not_called()
+            self.assertFalse((root / "completion.json").exists())
 
     def test_completion_is_not_overwritten(self):
         original = (self.runroot / "completion.json").read_bytes()

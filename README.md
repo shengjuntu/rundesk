@@ -4,11 +4,11 @@
 
 RunDesk is an Agent execution platform for applications: one API connects Kun and Codex and manages tasks, sessions, tool approvals, and artifacts. Its independently developed Kun runtime makes execution traces debuggable through step controls, breakpoints, replay, and comparative evaluation. Independently validated successful traces can become reusable Skills, carrying debugging results into real application workflows.
 
-Video build integration: the built-in video-build profile is now 1.2.0, with pinned MIT video-use sources, a script/media EDL adapter, continuous external narration, offline smoke checks and shared-workspace handoff for Video App0.21. Existing workspaces and model credentials remain in the current runtime. Rebuild/select the new tool image to use these additions. See [video-build](examples/video-build/README.md).
+Video build integration: the built-in video-build profile is now 1.3.0 with adapter contract 2, pinned MIT video-use sources, continuous external narration and optional exact-text references on EDL clips for Video App 0.22. Runtime diagnostics inspect the selected running container, verify shared-workspace roundtrips and receive a nonce-bound PNG through the current MCP configuration; they do not call a model, prove model vision or rebuild environments. Existing unreferenced EDLs remain compatible. Rebuild the tool image, select it and explicitly update the application execution environment while retaining its workspace and model credentials. See [video-build](examples/video-build/README.md).
 
 ## Current release
 
-**RunDesk 0.49.2 · Kun 0.16.0 · worker protocol 16**. Codex HTTP observation is now off by default and saved per session. Enable it in the debugging workbench when needed; changes apply on the next submitted turn without interrupting current work. The unified workbench, pass-through transport, Kun execution kernel and wire protocol are unchanged.
+**RunDesk 0.49.3 · Kun 0.16.0 · worker protocol 16**. Scoped application runtime diagnostics and video-build 1.3.0 support text-driven video production with explicit evidence boundaries. Codex HTTP observation remains off by default and saved per session; enable it in the debugging workbench when needed. The Kun execution kernel and worker protocol are unchanged.
 
 - Prepare and reuse an application’s configured Docker environment before work, without changing its image or disconnecting active sessions.
 - Integrate applications with scoped credentials, durable queues, sessions, streaming events, files, and idempotency receipts.

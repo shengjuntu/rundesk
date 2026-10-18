@@ -21,8 +21,10 @@ import subprocess
 import sys
 import tempfile
 from types import SimpleNamespace
+import unicodedata
 
 PIN = "43cfc566833548093455c9d4a46bd69913b7e552"
+ADAPTER_VERSION = 2
 COMMANDS = []
 SAFE_FORMATS = "mov,matroska,avi,mpegts,png_pipe,jpeg_pipe,webp_pipe,bmp_pipe,tiff_pipe,gif,ppm_pipe,wav,flac,ogg,aac,mp3"
 SAFE_INPUT_OPTIONS = ["-protocol_whitelist", "file,pipe", "-format_whitelist", SAFE_FORMATS]
@@ -175,6 +177,91 @@ def verify_file(root, record, private=None):
     return path
 
 
+def text_reference_report(root, manifest, clips, private):
+    """Resolve editorial references before probing or decoding any media.
+
+    References are optional metadata, not a required partition of the script.
+    The returned offsets count exact UTF-8 bytes; the frozen EDL remains intact.
+    """
+    references = []
+    for clip in clips:
+        if not isinstance(clip, dict):
+            raise RenderError("Invalid clip")
+        refs = clip.get("textRefs", [])
+        if not isinstance(refs, list) or len(refs) > 32:
+            raise RenderError("textRefs must be an array of at most 32 references")
+        for ref in refs:
+            if not isinstance(ref, dict) or set(ref) - {"quote", "occurrence"}:
+                raise RenderError("Unknown text reference fields")
+            quote = ref.get("quote")
+            if not isinstance(quote, str) or not quote.strip():
+                raise RenderError("Text reference quote must be nonblank exact text")
+            try:
+                encoded = quote.encode("utf-8")
+            except UnicodeError as exc:
+                raise RenderError("Text reference quote must be valid Unicode") from exc
+            if len(encoded) > 16 * 1024 or any(unicodedata.category(c) == "Cc" and c not in "\t\n\r" for c in quote):
+                raise RenderError("Text reference quote exceeds 16 KiB or contains control characters")
+            if "occurrence" in ref and (type(ref["occurrence"]) is not int or ref["occurrence"] < 1):
+                raise RenderError("Text reference occurrence must be a one-based integer")
+        references.append((clip, refs))
+    has_refs = any(refs for _, refs in references)
+    text_path = manifest.get("textPath")
+    text = None
+    source_size = 0
+    if text_path is not None:
+        source = inside(root, text_path)
+        source_size = source.stat().st_size
+        if not 0 < source_size <= 4 * 1024 * 1024:
+            raise RenderError("Frozen source text must be nonempty and at most 4 MiB")
+        verified = verify_file(root, {"path": text_path, "sha256": manifest["sourceHash"], "size": source_size}, private)
+        # read_text normalizes CRLF; exact source identity must use original bytes.
+        try:
+            text = verified.read_bytes().decode("utf-8")
+        except UnicodeError as exc:
+            raise RenderError("Frozen source text must be valid UTF-8") from exc
+    elif has_refs:
+        raise RenderError("Text references require frozen manifest.textPath")
+    result = {"sourceVerified": text is not None, "sourceUTF8Bytes": source_size,
+              "coveredUTF8Bytes": 0, "clipCount": len(clips), "referencedClipCount": 0,
+              "referenceCount": 0, "unreferencedClipIds": [], "clips": []}
+    ranges = []
+    resolved_cache = {}
+    for clip, refs in references:
+        resolved = []
+        for ref_index, ref in enumerate(refs):
+            quote, occurrence = ref["quote"], ref.get("occurrence")
+            cache_key = (quote, occurrence)
+            if cache_key not in resolved_cache:
+                at = -1
+                if occurrence is None:
+                    at = text.find(quote)
+                    if at < 0 or text.find(quote, at + 1) >= 0:
+                        raise RenderError("Text reference must match exact source; repeated quote requires valid occurrence")
+                    occurrence = 1
+                else:
+                    for _ in range(occurrence):
+                        at = text.find(quote, at + 1)  # Count overlapping Unicode matches.
+                        if at < 0:
+                            raise RenderError("Text reference must match exact source; repeated quote requires valid occurrence")
+                start = len(text[:at].encode("utf-8"))
+                resolved_cache[cache_key] = (occurrence, start, start + len(quote.encode("utf-8")))
+            occurrence, start, end = resolved_cache[cache_key]
+            resolved.append({"refIndex": ref_index, "occurrence": occurrence, "startByte": start, "endByte": end})
+            ranges.append((start, end))
+        if resolved:
+            result["referencedClipCount"] += 1
+            result["referenceCount"] += len(resolved)
+        else:
+            result["unreferencedClipIds"].append(clip.get("id"))
+        result["clips"].append({"clipId": clip.get("id"), "textRefs": resolved})
+    previous_end = 0
+    for start, end in sorted(ranges):
+        result["coveredUTF8Bytes"] += max(0, end - max(start, previous_end))
+        previous_end = max(previous_end, end)
+    return result
+
+
 def upstream_module(path):
     path = path.resolve()
     if not (path / "helpers/render.py").is_file():
@@ -239,6 +326,8 @@ def render_snapshot(args, private):
     for key in ("projectId", "productionRunId", "sourceHash", "inputHash"):
         if not isinstance(manifest.get(key), str) or not manifest[key]:
             raise RenderError("Missing input identity: " + key)
+    if not re.fullmatch(r"[0-9a-f]{64}", manifest["sourceHash"]):
+        raise RenderError("sourceHash must be SHA-256 of exact UTF-8 source")
     edl_path = Path(args.edl).absolute()
     edl_path = inside(root, edl_path.relative_to(root).as_posix())
     edl = read_json(edl_path)
@@ -251,6 +340,10 @@ def render_snapshot(args, private):
     if any(type(n) is not int or n < 64 or n > 3840 or n % 2 for n in (width, height)):
         raise RenderError("Canvas dimensions must be even integers 64..3840")
     fps = number(canvas["fps"], "fps", 1, 60)
+    clips = edl.get("clips")
+    if not isinstance(clips, list) or not 1 <= len(clips) <= 300:
+        raise RenderError("Expected 1..300 clips")
+    text_references = text_reference_report(root, manifest, clips, private)
     narration = verify_file(root, manifest.get("narration"), private)
     audio_info = probe(narration)
     if not any(s.get("codec_type") == "audio" for s in audio_info.get("streams", [])):
@@ -263,13 +356,10 @@ def render_snapshot(args, private):
         if record.get("path") in media:
             raise RenderError("Duplicate input media path")
         media[record["path"]] = (record, verify_file(root, record, private))
-    clips = edl.get("clips")
-    if not isinstance(clips, list) or not 1 <= len(clips) <= 300:
-        raise RenderError("Expected 1..300 clips")
     cursor, ids = 0.0, set()
     validated = []
     for clip in clips:
-        if not isinstance(clip, dict) or set(clip) - {"id", "assetId", "path", "type", "start", "duration", "sourceIn", "fit", "note"}:
+        if not isinstance(clip, dict) or set(clip) - {"id", "assetId", "path", "type", "start", "duration", "sourceIn", "fit", "note", "textRefs"}:
             raise RenderError("Unknown clip fields")
         ident = clip.get("id")
         if not isinstance(ident, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", ident) or ident in ids:
@@ -329,11 +419,13 @@ def render_snapshot(args, private):
     frozen_edl = output / "edl.json"
     write_json(frozen_edl, edl)
     edl_hash = sha256(frozen_edl)
-    validation = {"schemaVersion": 1, "engine": "video_use", "upstreamCommit": PIN,
+    validation = {"schemaVersion": 1, "adapterVersion": ADAPTER_VERSION, "engine": "video_use", "upstreamCommit": PIN,
                   **{k: manifest[k] for k in ("projectId", "productionRunId", "sourceHash", "inputHash")},
                   "edlHash": edl_hash, "narrationSHA256": sha256(narration),
+                  "textReferences": text_references,
                   "checks": [], "visualInspected": False, "audioListened": False,
                   "limitations": ["Metadata and decoded sample frames do not prove semantic fit, readable captions or narration quality.",
+                                  "Text reference coverage records declared editorial associations, not visual relevance or factual verification.",
                                   "Baseline adapter supports sequential image/video cuts; advanced layers, transitions and motion require another edit implementation."]}
     try:
         with tempfile.TemporaryDirectory(prefix="render-work-", dir=private) as temporary:
@@ -431,6 +523,7 @@ def render(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--version", action="version", version=json.dumps({"schemaVersion": 1, "adapterVersion": ADAPTER_VERSION, "upstreamCommit": PIN}))
     parser.add_argument("command", choices=["render"])
     parser.add_argument("--manifest", required=True)
     parser.add_argument("--edl", required=True)

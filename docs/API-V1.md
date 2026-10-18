@@ -52,6 +52,31 @@ Content-Type: application/json
 
 prepare 按实例/工作区串行保证容器复用，可重复调用，不使用任务幂等回执，也不提交模型任务。保持现有活动会话及租约；不会改变镜像、构建、更新配置或删除环境。绑定变化返回 `application_binding_changed`，非 Codex Docker 配置返回 `docker_configuration_required`，已选择配置但环境未更新返回 `environment_update_required`（均为 409）；按错误提示在管理界面处理。
 
+### 已选容器诊断（0.49.3）
+
+`/meta` 声明 `application-runtime-diagnostics` 后，应用可调用 `POST /applications/{appId}/runtime/diagnostics`（read + run；当前应用绑定）。它只探测已运行的 Codex Docker 容器，不会启动、选镜像、重建或回退宿主机，也不调用模型。先执行 `prepare`（`probe:true`）可初始化实际配置读取连接；配置连接不存在或忙时，图片结果明确返回 `mcp_config_unavailable`。
+
+```json
+{
+  "instanceId": "BOUND_INSTANCE_ID",
+  "workspaceId": "BOUND_WORKSPACE_ID",
+  "nonce": "0123456789abcdef01234567",
+  "mcpImageServer": "YOUR_CONFIGURED_HTTP_MCP_SERVER",
+  "challenge": {
+    "path": "outputs/OWNED_SESSION_ID/.rundesk-probes/0123456789abcdef01234567/request.json",
+    "nonce": "0123456789abcdef01234567"
+  }
+}
+```
+
+`nonce` 为 24 位小写十六进制；`challenge` 与 `mcpImageServer` 均可省略。共享目录挑战必须属于本应用、实例和工作区的现有会话：应用写入 `{ "schemaVersion": 1, "nonce": "..." }`；容器以拒绝符号链接的目录访问读取，原子、排他创建同目录 `response.json`，内容为 `schemaVersion`、`nonce` 和原始请求字节的 `requestSHA256`。应用须独立读取响应、验证哈希与请求未变化，并清理本次挑战目录；仅 HTTP 成功不证明共享挂载一致。
+
+返回顶层 `probed`、`accountReady`、`servers` 和 `errors`，来自现有容器配置连接的只读 account/read、mcpServerStatus/list；连接未初始化/忙时明确 probed=false，不会创建连接或启动环境。GET runtime 仍然只是缓存状态，不提供本次认证/工具探测结果。`runtime` 中的实际 profile ID/版本、Python、FFmpeg/FFprobe 版本、适配器契约版本和源码 commit，以及 `checks`（profile/ffmpeg/ffprobe/pythonDependencies/adapter/sourcePin）由固定容器程序报告。pythonDependencies 仅核对已安装分发包元数据与 profile.lock 精确版本，不导入重型模型或执行渲染。调用方须核对自己要求的工具版本。不会把旧镜像默认为新契约；缺失字段、工具或版本命令失败明确标为 incomplete/missing/invalid。
+
+可选图片检查从同一运行容器使用实际有效 MCP 配置，固定调用只读 `rundesk_diagnostic_image({nonce})`。尊重服务启用、enabled_tools/disabled_tools；HTTP 请求头和 token 环境变量只在容器内使用，配置经 stdin 传递。仅支持 HTTP JSON；SSE/stdio 返回 unsupported，重定向拒绝，响应不超过 2 MiB。`imageTransport` 返回 state（passed/failed/unsupported）、nonce、PNG SHA-256、mimeType、width、height 和可选固定错误 code；调用方须与预先约定的测试图独立核对。该接口没有自定义工具名、参数、URL 或命令入口。
+
+诊断前后校验应用绑定、实例/工作区/环境修订、容器归属、镜像和有效 MCP 配置；变化返回 409。响应不包含宿主路径、URL、密钥、原图或原始命令输出。`modelTested`、`modelVisionVerified` 始终 false：图片通过实际容器的 MCP HTTP 传输，与模型在某次任务中理解了图片，是不同的验收步骤。
+
 ## 最小任务流程
 
 ```bash

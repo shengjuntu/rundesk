@@ -176,7 +176,7 @@ def render(profile, selection, codex_version, base_image, destination):
               "io.rundesk.capabilities.skills": skill,
               "io.rundesk.capabilities.mcp": selection["searchBackend"]}
     if video_use:
-        labels.update({"io.rundesk.video-use.commit": video_use["commit"], "io.rundesk.video-use.adapter": "1"})
+        labels.update({"io.rundesk.video-use.commit": video_use["commit"], "io.rundesk.video-use.adapter": "2"})
         archive = ROOT / profile["id"] / video_use["sourceArchive"]
         destination.joinpath("vendor").mkdir()
         shutil.copyfile(archive, destination / "vendor/video-use.tar.gz")

@@ -165,12 +165,12 @@ func runtimeImageMatches(v ImageBuild, image imageInspection) bool {
 		labels["org.opencontainers.image.version"] == runtimeProfileVersion(v.ProfileID) &&
 		labels["io.rundesk.agent-reach"] == reach &&
 		labels["io.rundesk.codex.version"] == v.CodexVersion &&
-		(v.ProfileID != "video-build" || (labels["io.rundesk.video-use.commit"] == "43cfc566833548093455c9d4a46bd69913b7e552" && labels["io.rundesk.video-use.adapter"] == "1"))
+		(v.ProfileID != "video-build" || (labels["io.rundesk.video-use.commit"] == "43cfc566833548093455c9d4a46bd69913b7e552" && labels["io.rundesk.video-use.adapter"] == "2"))
 }
 
 func runtimeProfileVersion(profile string) string {
 	if profile == "video-build" {
-		return "1.2.0"
+		return "1.3.0"
 	}
 	return "1.1.0"
 }

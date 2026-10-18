@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Application API",
-    "version": "0.49.1",
+    "version": "0.49.3",
     "description": "RunDesk 应用与管理 API。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。Kun 0.16.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。当前应用接入、错误、幂等及示例见 docs/API-V1.md。"
   },
   "servers": [
@@ -1115,6 +1115,93 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ApplicationRuntimeInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/applications/{appId}/runtime/diagnostics": {
+      "post": {
+        "operationId": "post_applications_appId_runtime_diagnostics",
+        "summary": "诊断已选运行容器、共享目录和固定 MCP 图片传输",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationRuntimeDiagnostics"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run"
+        ],
+        "description": "需要 application-runtime-diagnostics 能力。只在已运行且绑定一致的 Codex Docker 容器执行固定隔离 Python；不会启动、选择、重建环境或回退宿主机，不调用模型。nonce 必须为24位小写十六进制。可选 challenge 路径必须属于本应用现有会话，challenge.nonce 等于顶层 nonce；请求文件为 {schemaVersion:1,nonce}，返回同目录原子创建 response.json 的路径及原始请求 SHA-256。可选 mcpImageServer 只能选择有效配置的服务，调用固定只读工具 rundesk_diagnostic_image({nonce})；支持 HTTP JSON，SSE/stdio 明确返回 unsupported。凭据只经容器 stdin/环境传递，返回图片摘要而非原图、URL、密钥或宿主路径。调用方须验证共享响应与预期图片摘要；modelVisionVerified 始终 false。诊断前后重新检查绑定、配置和容器。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationRuntimeDiagnosticsInput"
               }
             }
           }
@@ -27156,6 +27243,211 @@
           "modelTested"
         ],
         "additionalProperties": false
+      },
+      "ApplicationRuntimeDiagnosticsInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "instanceId",
+          "workspaceId",
+          "nonce"
+        ],
+        "properties": {
+          "instanceId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "nonce": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{24}$"
+          },
+          "challenge": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "nonce"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "pattern": "^outputs/[A-Za-z0-9_-]{1,128}/\\.rundesk-probes/[0-9a-f]{24}/request\\.json$"
+              },
+              "nonce": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{24}$"
+              }
+            }
+          },
+          "mcpImageServer": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,64}$"
+          }
+        }
+      },
+      "ApplicationRuntimeDiagnostics": {
+        "type": "object",
+        "required": [
+          "schemaVersion",
+          "appId",
+          "instanceId",
+          "workspaceId",
+          "instanceRevision",
+          "executionMode",
+          "checkedAt",
+          "modelTested",
+          "modelVisionVerified",
+          "runtime",
+          "errors",
+          "probed",
+          "accountReady",
+          "servers"
+        ],
+        "properties": {
+          "schemaVersion": {
+            "const": 1
+          },
+          "appId": {
+            "type": "string"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "instanceRevision": {
+            "type": "integer"
+          },
+          "executionMode": {
+            "const": "docker"
+          },
+          "checkedAt": {
+            "type": "string"
+          },
+          "modelTested": {
+            "const": false
+          },
+          "modelVisionVerified": {
+            "const": false
+          },
+          "runtime": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "enum": [
+                  "ready",
+                  "incomplete"
+                ]
+              },
+              "profileId": {
+                "type": "string"
+              },
+              "profileVersion": {
+                "type": "string"
+              },
+              "adapterContractVersion": {
+                "type": "integer"
+              },
+              "videoUseCommit": {
+                "type": "string"
+              },
+              "pythonVersion": {
+                "type": "string"
+              },
+              "ffmpegVersion": {
+                "type": "string"
+              },
+              "checks": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "ffprobeVersion": {
+                "type": "string"
+              }
+            }
+          },
+          "challenge": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "enum": [
+                  "verified",
+                  "failed"
+                ]
+              },
+              "path": {
+                "type": "string"
+              },
+              "responsePath": {
+                "type": "string"
+              },
+              "nonce": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{24}$"
+              },
+              "requestSHA256": {
+                "type": "string"
+              }
+            }
+          },
+          "imageTransport": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "enum": [
+                  "verified",
+                  "failed",
+                  "unsupported"
+                ]
+              },
+              "nonce": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{24}$"
+              },
+              "imageSHA256": {
+                "type": "string"
+              },
+              "mimeType": {
+                "type": "string"
+              },
+              "width": {
+                "type": "integer"
+              },
+              "height": {
+                "type": "integer"
+              },
+              "code": {
+                "type": "string"
+              }
+            }
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "probed": {
+            "type": "boolean"
+          },
+          "accountReady": {
+            "type": "boolean"
+          },
+          "servers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
       }
     }
   }
