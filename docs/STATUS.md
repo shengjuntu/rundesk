@@ -1,6 +1,6 @@
 # 当前状态与后续工作
 
-RunDesk 0.50.0 / 独立 Kun 0.17.0 / worker 协议 16，配套 Video App 0.25.0。RunDesk 通过轻量 SDK 与独立 Kun 通信，不再包含 Kun 执行内核。这里只记录当前能力和缺口；“已实现”与“真实部署已验收”分别判断。
+RunDesk 0.51.0 / 独立 Kun 0.17.0 / worker 协议 16，配套 Video App 0.25.0。RunDesk 通过轻量 SDK 与独立 Kun 通信，不再包含 Kun 执行内核。这里只记录当前能力和缺口；“已实现”与“真实部署已验收”分别判断。
 
 | 范围 | 当前实现 | 主要缺口 |
 | --- | --- | --- |
@@ -38,3 +38,7 @@ RunDesk 0.50.0 / 独立 Kun 0.17.0 / worker 协议 16，配套 Video App 0.25.0�
 视频应用配套：Video App 0.25.0 将命名预设选择保存到项目，首次连接后固定具体实例与工作区；更改 App 启动默认不迁移旧项目、会话或已提交请求。工具环境选择与 App 渲染后端分别管理。部署及验证边界见 [VIDEO-APP](VIDEO-APP.md)。
 
 本轮验证范围以 [0.50.0 验证记录](validation-0.50.0.json) 为准。历史版本的验证记录继续保留，不能据此推定本轮真实 Docker、Codex/模型认证或自主视频制作已通过验收。
+
+## 0.51.0 独立上游视频环境
+
+保留自研 video-build；新增 HyperFrames、video-use、OpenMontage 三套独立 Codex Docker 配方和生成 MCP 接入。各自采用原生制作/渲染，从 RunDesk 独立会话发起；Video App 0.26.0 供给独立文本 TTS、图像和视频生成。镜像构建、真实 Codex/GPU 与完整制作仍需目标环境验收，不自动将上游成片登记到 App 自研版本列表。详见 [接入说明](UPSTREAM-VIDEO-ENVIRONMENTS.md) 和 [本轮验证](validation-0.51.0.json)。

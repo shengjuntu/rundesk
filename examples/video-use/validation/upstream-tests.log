@@ -1,0 +1,32 @@
+test_output_timeline_cues (test_render_captions.BuildMasterSrtTests.test_output_timeline_cues) ... ok
+test_caps_at_max_words (test_render_captions.ChunkWordsTests.test_caps_at_max_words) ... ok
+test_no_multiword_cue_flashes (test_render_captions.ChunkWordsTests.test_no_multiword_cue_flashes) ... ok
+test_pause_splits_across_words (test_render_captions.ChunkWordsTests.test_pause_splits_across_words) ... ok
+test_punctuation_still_breaks (test_render_captions.ChunkWordsTests.test_punctuation_still_breaks) ... ok
+test_real_take (test_render_captions.ChunkWordsTests.test_real_take) ... ok
+test_skips_empty_words (test_render_captions.ChunkWordsTests.test_skips_empty_words) ... ok
+test_falls_back_to_cwd (test_render_captions.SubtitlesPathTests.test_falls_back_to_cwd) ... ok
+test_missing_is_an_error (test_render_captions.SubtitlesPathTests.test_missing_is_an_error) ... ok
+test_relative_to_edl_dir (test_render_captions.SubtitlesPathTests.test_relative_to_edl_dir) ... ok
+test_accepts_integer_decimal_and_rational_rates (test_render_fps.ParseFpsTests.test_accepts_integer_decimal_and_rational_rates) ... ok
+test_canonical_rates_are_idempotent (test_render_fps.ParseFpsTests.test_canonical_rates_are_idempotent) ... ok
+test_rejects_invalid_or_non_positive_rates (test_render_fps.ParseFpsTests.test_rejects_invalid_or_non_positive_rates) ... ok
+test_falls_back_to_nominal_rate (test_render_fps.ProbeSourceFpsTests.test_falls_back_to_nominal_rate) ... ok
+test_prefers_average_rate (test_render_fps.ProbeSourceFpsTests.test_prefers_average_rate) ... ok
+test_returns_none_for_unusable_probe_output (test_render_fps.ProbeSourceFpsTests.test_returns_none_for_unusable_probe_output) ... ok
+test_returns_none_when_ffprobe_fails (test_render_fps.ProbeSourceFpsTests.test_returns_none_when_ffprobe_fails) ... ok
+test_explicit_rate_skips_probe_and_applies_to_every_segment (test_render_fps.RenderRateTests.test_explicit_rate_skips_probe_and_applies_to_every_segment) ... ok
+test_failed_probe_falls_back_to_24_for_every_segment (test_render_fps.RenderRateTests.test_failed_probe_falls_back_to_24_for_every_segment) ... ok
+test_multi_source_render_resolves_one_rate_from_first_source (test_render_fps.RenderRateTests.test_multi_source_render_resolves_one_rate_from_first_source) ... ok
+test_invalid_probe_output_falls_back_to_landscape (test_render_orientation.PortraitDetectionTests.test_invalid_probe_output_falls_back_to_landscape) ... ok
+test_native_landscape_dimensions (test_render_orientation.PortraitDetectionTests.test_native_landscape_dimensions) ... ok
+test_native_portrait_dimensions (test_render_orientation.PortraitDetectionTests.test_native_portrait_dimensions) ... ok
+test_plain_rotation_tag_without_side_data_is_ignored (test_render_orientation.PortraitDetectionTests.test_plain_rotation_tag_without_side_data_is_ignored) ... ok
+test_rotation_can_turn_coded_portrait_into_landscape (test_render_orientation.PortraitDetectionTests.test_rotation_can_turn_coded_portrait_into_landscape) ... ok
+test_side_data_rotation_turns_coded_landscape_into_portrait (test_render_orientation.PortraitDetectionTests.test_side_data_rotation_turns_coded_landscape_into_portrait) ... ok
+
+----------------------------------------------------------------------
+Ran 26 tests in 0.005s
+
+OK
+master SRT → master.srt (6 cues)

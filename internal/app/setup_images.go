@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/shengjuntu/rundesk/examples/profiletemplates"
@@ -35,7 +36,7 @@ func runtimeImageContext(profile, version string) ([]byte, error) {
 		return nil, failure(400, "invalid_version", "请填写已选定的 Codex 精确版本 X.Y.Z")
 	}
 	switch profile {
-	case "news2douyin", "people-search", "video-build":
+	case "news2douyin", "people-search", "video-build", "hyperframes", "video-use", "openmontage":
 	default:
 		return nil, failure(400, "invalid_profile", "请选择内置运行环境")
 	}
@@ -160,7 +161,7 @@ const runtimeHyperframesLockSHA256 = "b3f48e9687cd27dea097203e928e6e7fd84344b881
 func runtimeImageMatches(v ImageBuild, image imageInspection) bool {
 	labels := image.Config.Labels
 	reach := "true"
-	if v.ProfileID == "video-build" {
+	if v.ProfileID == "video-build" || independentVideoProfile(v.ProfileID) {
 		reach = "false"
 	}
 	videoTools := true
@@ -170,13 +171,83 @@ func runtimeImageMatches(v ImageBuild, image imageInspection) bool {
 			labels["io.rundesk.hyperframes.lock"] == runtimeHyperframesLockSHA256 &&
 			(labels["io.rundesk.video-use.enabled"] == "false" || labels["io.rundesk.video-use.enabled"] == "true" && labels["io.rundesk.video-use.commit"] == "43cfc566833548093455c9d4a46bd69913b7e552" && labels["io.rundesk.video-use.adapter"] == "2")
 	}
+	if independentVideoProfile(v.ProfileID) {
+		expected, ok := independentRuntimeIdentity(v.ProfileID)
+		videoTools = ok && labels["io.rundesk.upstream.repository"] == expected.Repository &&
+			labels["io.rundesk.upstream.commit"] == expected.Commit &&
+			labels["io.rundesk.upstream.source.sha256"] == expected.SourceSHA256 &&
+			labels["io.rundesk.video-app-media.contract"] == "1"
+	}
 	return videoTools && labels["io.rundesk.profile"] == v.ProfileID &&
 		labels["org.opencontainers.image.version"] == runtimeProfileVersion(v.ProfileID) &&
 		labels["io.rundesk.agent-reach"] == reach &&
 		labels["io.rundesk.codex.version"] == v.CodexVersion
 }
 
+func independentVideoProfile(profile string) bool {
+	return profile == "hyperframes" || profile == "video-use" || profile == "openmontage"
+}
+
+type independentImageIdentity struct {
+	Repository   string `json:"repository"`
+	Commit       string `json:"commit"`
+	SourceSHA256 string `json:"sourceSHA256"`
+	Version      string
+}
+
+var independentRuntimeIdentities struct {
+	sync.Once
+	values map[string]independentImageIdentity
+}
+
+// Image identity comes from the same embedded source pin as the build recipe.
+// A correctly named image from another upstream revision is not interchangeable.
+func independentRuntimeIdentity(profile string) (independentImageIdentity, bool) {
+	independentRuntimeIdentities.Do(func() {
+		independentRuntimeIdentities.values = map[string]independentImageIdentity{}
+		for _, id := range []string{"hyperframes", "video-use", "openmontage"} {
+			data, err := profiletemplates.Files.ReadFile(id + ".zip")
+			if err != nil {
+				continue
+			}
+			archive, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+			if err != nil {
+				continue
+			}
+			for _, file := range archive.File {
+				if file.Name != "profile.lock.json" {
+					continue
+				}
+				reader, err := file.Open()
+				if err != nil {
+					break
+				}
+				var lock struct {
+					Profile struct {
+						ID      string `json:"id"`
+						Version string `json:"version"`
+					} `json:"profile"`
+					Upstream independentImageIdentity `json:"upstream"`
+				}
+				err = json.NewDecoder(io.LimitReader(reader, 128<<10)).Decode(&lock)
+				reader.Close()
+				if err == nil && lock.Profile.ID == id && lock.Profile.Version == "1.0.0" && len(lock.Upstream.Commit) == 40 && len(lock.Upstream.SourceSHA256) == 64 {
+					lock.Upstream.Version = lock.Profile.Version
+					independentRuntimeIdentities.values[id] = lock.Upstream
+				}
+				break
+			}
+		}
+	})
+	identity, ok := independentRuntimeIdentities.values[profile]
+	return identity, ok
+}
+
 func runtimeProfileVersion(profile string) string {
+	if independentVideoProfile(profile) {
+		identity, _ := independentRuntimeIdentity(profile)
+		return identity.Version
+	}
 	if profile == "video-build" {
 		return "1.4.0"
 	}
@@ -229,8 +300,8 @@ func (m *Manager) verifyRuntimeImage(parent context.Context, v ImageBuild, id st
 	}
 	fmt.Fprintln(out, "检查只读根目录、运行用户、Codex、工具版本、Skills 与 Exa 配置；不调用模型或公网服务。")
 	timeout, memory, temporary, pids := 3*time.Minute, "512m", "/tmp:rw,nosuid,nodev,size=128m,mode=1777", "128"
-	if v.ProfileID == "video-build" {
-		// The offline doctor renders real browser frames and audio, rather than only printing versions.
+	if v.ProfileID == "video-build" || independentVideoProfile(v.ProfileID) {
+		// The custom builder renders browser frames/audio; independent profiles run their native tool and source checks.
 		timeout, memory, temporary, pids = 8*time.Minute, "2048m", "/tmp:rw,nosuid,nodev,size=768m,mode=1777", "256"
 	}
 	ctx, cancel := context.WithTimeout(parent, timeout)
@@ -252,6 +323,9 @@ func (s *Server) setupImageRoutes(mux *http.ServeMux) {
 			{"id": "news2douyin", "name": "新闻研究 · Exa + Agent-Reach", "reference": "rundesk-news2douyin:exa-agent-reach"},
 			{"id": "people-search", "name": "公开人物研究 · Exa + Agent-Reach", "reference": "rundesk-people-search:exa-agent-reach"},
 			{"id": "video-build", "name": "文字驱动视频 · HyperFrames + FFmpeg", "reference": "rundesk-video-build:local"},
+			{"id": "hyperframes", "name": "HyperFrames · 上游原生制作", "reference": "rundesk-hyperframes:local"},
+			{"id": "video-use", "name": "video-use · 上游原生剪辑", "reference": "rundesk-video-use:local"},
+			{"id": "openmontage", "name": "OpenMontage · 上游原生制作", "reference": "rundesk-openmontage:local"},
 		}, "platform": "linux/" + runtime.GOARCH, "supported": runtime.GOOS == "linux", "modelTested": false})
 	})
 	mux.HandleFunc("POST /api/setup/runtime-images", func(w http.ResponseWriter, r *http.Request) {

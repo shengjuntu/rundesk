@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "version": "1.0.0",
+  "runtime": "codex-docker",
+  "id": "hyperframes",
+  "title": "HyperFrames 上游制作环境",
+  "description": "原版 HyperFrames 0.8.87 CLI 与21个上游Skills；保留HTML动画、预览、检查、渲染流程，TTS和图像/视频生成统一调用Video App MCP。独立于自研video-build。",
+  "searchBackends": [
+    "none"
+  ],
+  "defaultSearchBackend": "none",
+  "aptPackages": [
+    "ffmpeg",
+    "fonts-noto-cjk",
+    "fontconfig",
+    "chromium"
+  ],
+  "pythonPackages": [],
+  "skill": "rundesk-hyperframes",
+  "tools": [
+    "Node.js 22+",
+    "HyperFrames 0.8.87",
+    "GSAP 3.15.0",
+    "Chromium",
+    "FFmpeg",
+    "ffprobe",
+    "Noto CJK"
+  ],
+  "outputs": [
+    "hyperframes-project",
+    "final.mp4",
+    "validation.json"
+  ],
+  "resources": {
+    "cpus": 4,
+    "memoryMB": 4096,
+    "network": "bridge"
+  },
+  "optionalComponents": [],
+  "skillFiles": [
+    "SKILL.md",
+    "agents/openai.yaml"
+  ],
+  "upstream": "upstream.json"
+}

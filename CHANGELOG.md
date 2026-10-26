@@ -1,3 +1,10 @@
+# 0.51.0
+
+- 保留自研 video-build，新增 HyperFrames、video-use、OpenMontage 三套独立上游配置和 Codex Docker 构建入口。
+- 保留固定上游 Skills/原生工程与渲染流程，增加统一 Video App 生成 MCP 接入及精确源码、依赖、许可记录。
+- 接入初始化构建目录、镜像身份与离线检查；生成配置和密钥在运行时提供，不打包到镜像。
+- 配套 App 0.26.0 独立文本 TTS，不以切换环境代替自研工程转换。
+
 # 0.50.0
 
 - Add administrator-approved named runtime presets for one application. Each preset binds a dedicated Codex Docker instance and workspace; names and enabled state may change, while the execution identity remains fixed. Registration does not start containers, install tools or replace the application's default image.

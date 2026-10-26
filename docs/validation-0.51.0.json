@@ -1,0 +1,219 @@
+{
+  "version": "0.51.0",
+  "checkedAt": "2026-10-20T04:26:44.633900+00:00",
+  "kunVersion": "0.17.0 unchanged",
+  "workerProtocol": 16,
+  "videoAppVersion": "0.26.0",
+  "sourceBaseCommit": "8b9184a",
+  "preservation": {
+    "oldContexts": {
+      "news2douyin": {
+        "unchanged": true,
+        "sha256": "9e5043241bfb406301bee2de5d0700c9dea71dff0fec22632f2fda7ed951fa5a"
+      },
+      "people-search": {
+        "unchanged": true,
+        "sha256": "03a92d7ae9c3d9b07937efb64d8baaabb4a54c1dcc274c79cc213de6e122eac9"
+      },
+      "video-build": {
+        "unchanged": true,
+        "sha256": "4d1ff5cc7a0ebb4618b262ce7a2cd1a2319cc8eb0d04139f855511841ea583b2"
+      }
+    },
+    "newContexts": {
+      "hyperframes": {
+        "bytes": 11256430,
+        "sha256": "0673f51da7d7204aebe2e358809d845befa3a5bce19d47a0063f178b5959cabe",
+        "verifiedContextFiles": 18,
+        "sourceCommit": "82ae73a03156f782e48d631907db08232aeed817",
+        "sourceSHA256": "492a80be9507b50abae44b6f10df4f5107feeab71d1dccfacd81c7f371c87fc2"
+      },
+      "video-use": {
+        "bytes": 595016,
+        "sha256": "056cda772c5bfb4c57344a5165ab6335df6a013534fa0f37188a5046ab2cf77a",
+        "verifiedContextFiles": 16,
+        "sourceCommit": "43cfc566833548093455c9d4a46bd69913b7e552",
+        "sourceSHA256": "b7c181c855265f5e88a2bacde46959b3a07034ee7dce00aed1f4b00bce6a3367"
+      },
+      "openmontage": {
+        "bytes": 57137,
+        "sha256": "58c343cac8e4b3aa099e9fa9fce4a9e3e3c38ff620443f941ce449081fe0e749",
+        "verifiedContextFiles": 25,
+        "sourceCommit": "c8066452325cb57c8fc1ba8c2a71b6e8842e6b65",
+        "sourceSHA256": "dff7cd1cdf2cb0522398e00b3f0b75f32336b695a8be34ac8e6b6913055aab25"
+      }
+    },
+    "videoBuildDirectoryUnchanged": true
+  },
+  "preservationEvidence": "upstream-preservation-0.51.0.json",
+  "profileContracts": {
+    "existingPassed": 15,
+    "independentPassed": 7,
+    "evidence": [
+      "profiles-all-final.log",
+      "profiles-upstream-final.log"
+    ]
+  },
+  "goSetupTargeted": {
+    "passed": 15,
+    "topLevelPassed": 6,
+    "skipped": 0,
+    "evidence": "setup-upstream-final-tests.jsonl"
+  },
+  "mediaBridge": {
+    "passed": 9,
+    "evidence": "media-bridge-validation-0.51.0.json"
+  },
+  "actualAppIntegration": {
+    "passed": true,
+    "scope": "real Go Video App process, HTTP/MCP, durable jobs, media validation/archive and authenticated download; local deterministic inference fixtures",
+    "actualModelTested": false,
+    "realDockerTested": false,
+    "runDeskServerUsed": false,
+    "binaryVersion": "RunDesk Video App 0.26.0",
+    "checks": [
+      "literal_text_tts_real_job_wav_archive_download_and_identical_retry_one_inference_without_editor_changes",
+      "image_real_job_validated_import_provenance_and_authenticated_download",
+      "video_real_job_validated_import_provenance_and_authenticated_download",
+      "cli_rejects_non_generation_type_and_foreign_project",
+      "stdio_real_app_tool_discovery_and_generation_only_project_scoped_rejections",
+      "real_app_rejects_unauthenticated_artifact_and_wrong_bearer_token"
+    ],
+    "checkCount": 6,
+    "inferenceFixtureCalls": {
+      "/v1/audio/speech": 1,
+      "/image": 1,
+      "/video": 1
+    },
+    "fixtureErrors": [],
+    "projectId": "7d0a2cbe0319737170a2ccca",
+    "downloadedFiles": [
+      "downloaded/clip.mp4",
+      "downloaded/image.png",
+      "downloaded/narration.wav"
+    ],
+    "editorialFieldsPreserved": [
+      "narrationText",
+      "shots",
+      "editDsl",
+      "editActive",
+      "audio",
+      "subtitles",
+      "hyperframes",
+      "workflow"
+    ],
+    "appArchivePresent": true
+  },
+  "actualAppIntegrationEvidence": "video-app-media-http-0.51.0.json",
+  "nativeUpstreams": {
+    "hyperframes": {
+      "sourceCommit": "82ae73a03156f782e48d631907db08232aeed817",
+      "nativeSkills": 21,
+      "sourceScope": "native-skills-and-metadata; CLI/engine installed from exact npm lock",
+      "tests": 3,
+      "actualLocalPngIngest": true,
+      "newChromiumRenderTested": false,
+      "evidence": "../examples/hyperframes/validation.json"
+    },
+    "video-use": {
+      "sourceCommit": "43cfc566833548093455c9d4a46bd69913b7e552",
+      "upstreamTestsPassed": 26,
+      "actualNativeHostRender": true,
+      "evidence": [
+        "../examples/video-use/validation/upstream-tests.log",
+        "../examples/video-use/validation/native-render.json"
+      ]
+    },
+    "openmontage": {
+      "sourceCommit": "c8066452325cb57c8fc1ba8c2a71b6e8842e6b65",
+      "nativeInterfaceTestsPassed": 9,
+      "evidence": "../examples/openmontage/validation.json",
+      "scope": "real native registry/selector interfaces; bridge subprocess stub and small local writable/cache fixtures, not complete native rendering",
+      "cacheIdentity": "installed profile lock and declared integration buildFiles fingerprints; no scan of node_modules"
+    }
+  },
+  "skillValidation": {
+    "integrationSkills": 3,
+    "syntax": "official quick_validate passed",
+    "forwardTest": "read-only fresh-agent tasks using native skills and raw files for news draft plus section-2 revision, without generation or render execution"
+  },
+  "goVet": "passed",
+  "embeddedContextsCheck": "passed",
+  "openAPI": {
+    "paths": 191,
+    "operations": 227,
+    "newRuntimeProfileIds": [
+      "hyperframes",
+      "video-use",
+      "openmontage"
+    ]
+  },
+  "limitations": [
+    "No actual Docker Engine build/runtime, live Codex account, or real GPU inference.",
+    "Generation integration used deterministic local inference fixtures with actual App HTTP/MCP/durable jobs/validated media archive/authenticated downloads.",
+    "No new HyperFrames Chromium render; video-use host native FFmpeg render is separately labeled. No OpenMontage full native video render.",
+    "Upstream native final.mp4 remains in RunDesk workspace; no automatic App director switching or completed-version import.",
+    "Generation-only/project restriction belongs to the bridge client, not a new server-side scoped token.",
+    "Base image/apt and upstream OpenMontage Python dependency resolution are not fully locked; no bitwise-reproducible-image claim."
+  ],
+  "goTests": {
+    "exitCode": 0,
+    "elapsedSeconds": 84.63,
+    "passed": 458,
+    "topLevelPassed": 319,
+    "skippedTests": [],
+    "failures": [],
+    "packageTerminals": {
+      "github.com/shengjuntu/rundesk/examples/docker": "skip",
+      "github.com/shengjuntu/rundesk/examples/profiletemplates": "skip",
+      "github.com/shengjuntu/rundesk/cmd/rundesk": "pass",
+      "github.com/shengjuntu/rundesk/internal/experiment": "pass",
+      "github.com/shengjuntu/rundesk/internal/debugapi": "pass",
+      "github.com/shengjuntu/rundesk/internal/redaction": "skip",
+      "github.com/shengjuntu/rundesk/internal/mcptest": "pass",
+      "github.com/shengjuntu/rundesk/internal/debugmcp": "pass",
+      "github.com/shengjuntu/rundesk/internal/mcp": "pass",
+      "github.com/shengjuntu/rundesk/internal/servicelock": "pass",
+      "github.com/shengjuntu/rundesk/internal/containerruntime": "pass",
+      "github.com/shengjuntu/rundesk/internal/rpc": "pass",
+      "github.com/shengjuntu/rundesk/internal/web": "pass",
+      "github.com/shengjuntu/rundesk/internal/store": "pass",
+      "github.com/shengjuntu/rundesk/internal/tracequery": "pass",
+      "github.com/shengjuntu/rundesk/internal/observeproxy": "pass",
+      "github.com/shengjuntu/rundesk/internal/app": "pass"
+    },
+    "missingPackages": [],
+    "command": [
+      "/workspace/scratch/62bf478f3a8e/toolchain/go/bin/go",
+      "test",
+      "./...",
+      "-count=1",
+      "-json",
+      "-timeout",
+      "5m"
+    ]
+  },
+  "rawGoTests": "tests-0.51.0.jsonl",
+  "builds": [
+    {
+      "path": "bin/rundesk",
+      "bytes": 34875766,
+      "sha256": "7665e2988451273a5b945247c618903717663895da4e91ebafe0818441bbc597",
+      "target": "linux/amd64",
+      "runtimeExecuted": true
+    },
+    {
+      "path": "bin/rundesk-windows-amd64.exe",
+      "bytes": 35107840,
+      "sha256": "870efa179a1501e49f1c5ab037c0b071df3f2e534fd1c2419965c689b8939503",
+      "target": "windows/amd64",
+      "runtimeExecuted": false
+    }
+  ],
+  "finalTextNormalization": "Removed extra EOF blank lines in four new video-use profile text files after full Go pass. Regenerated contexts and verified old templates unchanged and all new SHA entries; reran setup context tests and rebuilt both targets. No Go logic changed.",
+  "postNormalizationTests": {
+    "passed": 15,
+    "topLevelPassed": 6,
+    "evidence": "setup-upstream-post-normalization.jsonl"
+  }
+}

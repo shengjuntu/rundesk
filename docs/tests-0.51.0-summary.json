@@ -1,0 +1,37 @@
+{
+  "exitCode": 0,
+  "elapsedSeconds": 84.63,
+  "passed": 458,
+  "topLevelPassed": 319,
+  "skippedTests": [],
+  "failures": [],
+  "packageTerminals": {
+    "github.com/shengjuntu/rundesk/examples/docker": "skip",
+    "github.com/shengjuntu/rundesk/examples/profiletemplates": "skip",
+    "github.com/shengjuntu/rundesk/cmd/rundesk": "pass",
+    "github.com/shengjuntu/rundesk/internal/experiment": "pass",
+    "github.com/shengjuntu/rundesk/internal/debugapi": "pass",
+    "github.com/shengjuntu/rundesk/internal/redaction": "skip",
+    "github.com/shengjuntu/rundesk/internal/mcptest": "pass",
+    "github.com/shengjuntu/rundesk/internal/debugmcp": "pass",
+    "github.com/shengjuntu/rundesk/internal/mcp": "pass",
+    "github.com/shengjuntu/rundesk/internal/servicelock": "pass",
+    "github.com/shengjuntu/rundesk/internal/containerruntime": "pass",
+    "github.com/shengjuntu/rundesk/internal/rpc": "pass",
+    "github.com/shengjuntu/rundesk/internal/web": "pass",
+    "github.com/shengjuntu/rundesk/internal/store": "pass",
+    "github.com/shengjuntu/rundesk/internal/tracequery": "pass",
+    "github.com/shengjuntu/rundesk/internal/observeproxy": "pass",
+    "github.com/shengjuntu/rundesk/internal/app": "pass"
+  },
+  "missingPackages": [],
+  "command": [
+    "/workspace/scratch/62bf478f3a8e/toolchain/go/bin/go",
+    "test",
+    "./...",
+    "-count=1",
+    "-json",
+    "-timeout",
+    "5m"
+  ]
+}

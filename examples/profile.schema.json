@@ -139,6 +139,9 @@
         "minLength": 1,
         "maxLength": 160
       }
+    },
+    "upstream": {
+      "const": "upstream.json"
     }
   }
 }

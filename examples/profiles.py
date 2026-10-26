@@ -13,6 +13,9 @@ import tempfile
 import uuid
 import zipfile
 
+sys.path.insert(0, str(Path(__file__).resolve().parent / "_shared"))
+import upstream_profiles
+
 ROOT = Path(__file__).resolve().parent
 VERSION = "1.3.0"
 PROFILE_IDS = tuple(sorted(p.parent.name for p in ROOT.glob("*/profile.json") if re.fullmatch(r"[a-z0-9-]+", p.parent.name)))
@@ -40,7 +43,7 @@ def load_profile(name):
         raise ProfileError("Invalid profile identity or schema")
     if value.get("runtime") != "codex-docker":
         raise ProfileError("Unsupported runtime")
-    if set(value) - {"skillFiles"} != {"schemaVersion", "id", "version", "title", "description", "runtime", "searchBackends", "defaultSearchBackend", "aptPackages", "pythonPackages", "skill", "tools", "outputs", "resources", "optionalComponents"}:
+    if set(value) - {"skillFiles", "upstream"} != {"schemaVersion", "id", "version", "title", "description", "runtime", "searchBackends", "defaultSearchBackend", "aptPackages", "pythonPackages", "skill", "tools", "outputs", "resources", "optionalComponents"}:
         raise ProfileError("Unknown or missing profile fields")
     for key in ("version", "title", "description", "skill", "defaultSearchBackend"):
         if not isinstance(value[key], str) or not value[key]:
@@ -129,6 +132,10 @@ def load_profile(name):
     front = (skill / "SKILL.md").read_text(encoding="utf-8")
     if not front.startswith("---\nname: " + value["skill"] + "\n") or "\ndescription: " not in front:
         raise ProfileError("Invalid skill frontmatter")
+    if "upstream" in value:
+        upstream_profiles.load(ROOT, value)
+    elif name in upstream_profiles.REPOSITORIES:
+        raise ProfileError("Independent upstream profile requires upstream.json")
     return value
 
 
@@ -142,7 +149,10 @@ def resolve(profile, backend=None, agent_reach=None, video_use=False):
         raise ProfileError("Agent-Reach is not offered by this profile")
     if video_use and "video-use" not in profile["optionalComponents"]:
         raise ProfileError("video-use compatibility is not offered by this profile")
-    return {"searchBackend": backend, "agentReach": bool(agent_reach), "videoUse": bool(video_use)}
+    result = {"searchBackend": backend, "agentReach": bool(agent_reach), "videoUse": bool(video_use)}
+    if profile.get("upstream"):
+        result["nativeUpstream"] = profile["id"]
+    return result
 
 
 def write(path, text, executable=False):
@@ -166,6 +176,8 @@ def render(profile, selection, codex_version, base_image, destination):
         raise ProfileError("Pass --codex-version X.Y.Z using an exact, deployed Codex release")
     if not IMAGE.fullmatch(base_image):
         raise ProfileError("Invalid base image reference")
+    if profile.get("upstream"):
+        return upstream_profiles.render(ROOT, profile, selection, codex_version, base_image, destination, write, VERSION)
     pins = read_json(ROOT / "_shared" / "dependencies.json")
     pkgs = sorted(set(["ca-certificates", "git", "curl", "ripgrep", "python3", "python3-venv"] + profile["aptPackages"]))
     if selection["agentReach"]:

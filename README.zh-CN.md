@@ -6,13 +6,16 @@ RunDesk 是面向应用的 Agent 执行平台，通过一套 API 接入 Kun 与 
 
 ## 当前版本
 
-**RunDesk 0.50.0 · 外部 Kun 0.17.0 · worker 协议 16**。Kun 已拆为独立工程、独立构建；RunDesk 只链接轻量 SDK 快照，通过 JSONL 连接所选可执行文件。Kun 管执行日志，RunDesk 管平台数据和统一调试工作台。本版支持同一应用选择多个管理员批准的运行预设，每个预设绑定独立 Codex Docker 实例和工作区。旧默认绑定、独立 Kun 边界及 Codex HTTP 采集默认关闭行为保留。见 [多运行环境预设](docs/APPLICATION-RUNTIME-PRESETS.md)。见 [拆分与兼容说明](docs/KUN-SEPARATION.md)。
+**RunDesk 0.51.0 · 外部 Kun 0.17.0 · worker 协议 16**。Kun 已拆为独立工程、独立构建；RunDesk 只链接轻量 SDK 快照，通过 JSONL 连接所选可执行文件。Kun 管执行日志，RunDesk 管平台数据和统一调试工作台。本版支持同一应用选择多个管理员批准的运行预设，每个预设绑定独立 Codex Docker 实例和工作区。旧默认绑定、独立 Kun 边界及 Codex HTTP 采集默认关闭行为保留。见 [多运行环境预设](docs/APPLICATION-RUNTIME-PRESETS.md)。见 [拆分与兼容说明](docs/KUN-SEPARATION.md)。
 
 - 应用环境：按绑定启动/复用容器，检查认证和工具；开始研究不改镜像，不断开现有活动会话。
 - 应用接入：独立凭据、项目与操作范围、持久任务队列、会话、事件订阅、文件与幂等回执。
 - 统一调试：一个工作台检查两个后端的执行轨迹、调用证据与模型交互；Kun 另有单步、条件断点、上下文快照、独立诊断、Hybrid/Live 分叉及对照评测。
 - 验证与复用：固定案例、产物规则、独立验证、参数化 Skill、守卫回退和重复采样对照；业务收益由实际任务评测确认。
 - 启动配置：自动检查所选后端的本机依赖；Kun 可独立完成初始化；Codex 可选安装到数据目录，精确固定版本。
+
+
+独立视频环境：保留自研 `examples/video-build`，另增 `examples/hyperframes`、`examples/video-use` 和 `examples/openmontage`，分别运行上游原生制作流程。三者通过 Video App 0.26.0 的生成 MCP 获取配音、图像和视频素材。见 [四套独立制作环境](docs/UPSTREAM-VIDEO-ENVIRONMENTS.md)。
 
 ## 快速开始
 

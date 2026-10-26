@@ -1,6 +1,6 @@
 # 升级到当前版本
 
-当前版本 RunDesk 0.50.0，配套独立 Kun 0.17.0、worker 协议 16、fork schema 3；视频工具 profile 为 video-build 1.4.0。
+当前版本 RunDesk 0.51.0，配套独立 Kun 0.17.0、worker 协议 16、fork schema 3；视频工具 profile 为 video-build 1.4.0。
 
 1. 等待活动任务结束，停止原服务，备份数据目录、工作区、Codex HOME/配置、独立 Kun 执行日志及服务环境设置。
 2. 在 RunDesk 源码执行 `make build`，本包只构建宿主；Kun 在其独立源码目录执行 `go build -o bin/kun ./cmd/kun`。将 Kun 放在 RunDesk 可执行文件旁，或通过 `--kun /absolute/path/to/kun` 指定。RunDesk 使用轻量 SDK 快照构建，不再包含 `cmd/kun` 或引擎源码。
@@ -12,6 +12,12 @@
 重启不会重放已开始或结果未确认的任务；排队任务保留。先检查原回执、任务状态与副作用证据再决定后续操作。一个可靠本地文件系统的数据目录只运行一个 RunDesk；不要删除运行中的 server.lock 来并行启动服务。
 
 验证记录按实际版本与执行范围保存；0.49.4 的普通全量测试和局部 race 结果不是 0.49.5 全量 race 验收。当前能力与本版实际测试见 [STATUS](STATUS.md) 和 [VALIDATION](VALIDATION.md)。
+
+## 0.51.0：三个独立上游视频配置
+
+自研 `examples/video-build` 及已有实例不迁移、不切换。新增 hyperframes、video-use、openmontage 三套独立配置，构建新镜像后建立专用实例和工作区，运行时配置其 `video_app_media` MCP。完整上游代码或必要 Skill 快照按各自固定来源保留。OpenMontage 的完整源码在镜像构建时下载并验证摘要，prepare/pack 不代表镜像已构建。
+
+调用任意文本 TTS 需升级 Video App 至 0.26.0；已有配音、生成服务、项目和凭据保留。三个上游从 RunDesk 独立会话运行，App 自研导演入口保持原流程。详见 [独立视频环境](UPSTREAM-VIDEO-ENVIRONMENTS.md)。
 
 ## 0.50.0：应用多运行环境预设
 

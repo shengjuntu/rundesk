@@ -8,13 +8,16 @@ Video build integration: Video App 0.23 uses an original Codex-directed HyperFra
 
 ## Current release
 
-**RunDesk 0.50.0 · external Kun 0.17.0 · worker protocol 16**. Kun now builds and ships as an independent project. RunDesk links only a lightweight SDK snapshot and connects to the selected executable through JSONL; the engine owns its execution journal, while RunDesk owns platform data and the debugging workbench. This release adds administrator-approved application runtime presets, each bound to its own Codex Docker instance and workspace. Existing default bindings, independent Kun and default-off Codex HTTP observation remain unchanged. See [runtime presets](docs/APPLICATION-RUNTIME-PRESETS.md). See [Kun separation and compatibility](docs/KUN-SEPARATION.md).
+**RunDesk 0.51.0 · external Kun 0.17.0 · worker protocol 16**. Kun now builds and ships as an independent project. RunDesk links only a lightweight SDK snapshot and connects to the selected executable through JSONL; the engine owns its execution journal, while RunDesk owns platform data and the debugging workbench. This release adds administrator-approved application runtime presets, each bound to its own Codex Docker instance and workspace. Existing default bindings, independent Kun and default-off Codex HTTP observation remain unchanged. See [runtime presets](docs/APPLICATION-RUNTIME-PRESETS.md). See [Kun separation and compatibility](docs/KUN-SEPARATION.md).
 
 - Prepare and reuse an application’s configured Docker environment before work, without changing its image or disconnecting active sessions.
 - Integrate applications with scoped credentials, durable queues, sessions, streaming events, files, and idempotency receipts.
 - Inspect recorded traces and model exchanges from one debugging workbench. Kun additionally exposes internal state, step controls, conditional breakpoints, snapshots, diagnostic sessions, and Hybrid/Live forks.
 - Evaluate fixed cases and artifacts, validate parameterized Skills independently, and compare repeated runs with explicit missing evidence.
 - Check local prerequisites on opening the workbench. Configure Kun without Codex, or optionally install a pinned Codex release into the data directory.
+
+
+Independent video environments: keep our own `examples/video-build`, and add separate `examples/hyperframes`, `examples/video-use`, and `examples/openmontage` profiles for the native upstream workflows. They use Video App 0.26.0 generation MCP for speech, images and video assets. See [independent video environments](docs/UPSTREAM-VIDEO-ENVIRONMENTS.md).
 
 ## Quick start
 

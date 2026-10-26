@@ -1,3 +1,13 @@
+# 0.51.0 验证记录
+
+新增独立 HyperFrames、video-use、OpenMontage 环境，共享生成 MCP 和配套 App 0.26.0 独立文本 TTS。自研 video-build 目录保持原样。完整 Go 回归 **458 项含子测试 / 319 项顶层通过，0 失败、0 测试跳过**；逐包终止结果完整，使用独立 Kun 0.17.0 与新编译 RunDesk host。Go vet、Linux/Windows amd64 构建和生成模板一致性检查通过，Windows 仅交叉编译。配套 App 完整 race 444 项通过，真实 App HTTP/MCP 生成联测 6 项通过。具体命令、计数和原始日志见 [validation-0.51.0.json](validation-0.51.0.json)。
+
+验证分别记录源码/依赖/构建上下文、原生工具、受限生成桥、实际 App HTTP/MCP、宿主媒体处理与完整 Go 回归。推理使用本地测试服务；没有运行 Docker Engine、真实 Codex 认证或 GPU 模型，不能将目录/镜像配方准备成功表述为三个上游完整制作流程实机验收。HyperFrames 本轮无新的 Chromium 渲染；video-use 有独立标注的实际宿主剪辑小样，OpenMontage 接入以原生 registry/selector 和可写工作区等接口回归为准。
+
+以下保留历史验证。
+
+---
+
 # 0.50.0 验证记录
 
 本轮验证 RunDesk **0.50.0**，使用独立 Kun **0.17.0**、worker 协议 **16** 和 Video App **0.25.0**。新增应用命名运行预设、精确绑定授权、成员授权、只读技能查询与多环境管理界面。详细命令和原始证据见 [validation-0.50.0.json](validation-0.50.0.json)。

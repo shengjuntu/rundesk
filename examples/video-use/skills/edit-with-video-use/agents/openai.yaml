@@ -1,0 +1,4 @@
+interface:
+  display_name: "Video Use via RunDesk"
+  short_description: "Edit with native video-use and Video App media services"
+  default_prompt: "Use $edit-with-video-use to edit these sources with the native video-use workflow and Video App generation tools."

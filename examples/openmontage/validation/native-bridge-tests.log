@@ -1,0 +1,14 @@
+test_all_three_real_selectors_return_verified_files (__main__.NativeBridgeTests.test_all_three_real_selectors_return_verified_files) ... ok
+test_bad_receipt_and_missing_id_do_not_start_replacement (__main__.NativeBridgeTests.test_bad_receipt_and_missing_id_do_not_start_replacement) ... ok
+test_failure_retains_request_and_does_not_fallback (__main__.NativeBridgeTests.test_failure_retains_request_and_does_not_fallback) ... ok
+test_native_image_selector_preserves_rejected_controls (__main__.NativeBridgeTests.test_native_image_selector_preserves_rejected_controls) ... ok
+test_native_registry_discovers_providers (__main__.NativeBridgeTests.test_native_registry_discovers_providers) ... ok
+test_native_tts_controls_are_rejected_without_dispatch (__main__.NativeBridgeTests.test_native_tts_controls_are_rejected_without_dispatch) ... ok
+test_overlay_lock_and_profile_updates_select_distinct_preserved_caches (__main__.NativeBridgeTests.test_overlay_lock_and_profile_updates_select_distinct_preserved_caches) ... ok
+test_reviewed_runtime_patch_is_local_and_compiles (__main__.NativeBridgeTests.test_reviewed_runtime_patch_is_local_and_compiles) ... ok
+test_writable_native_copy_is_distinct_and_reused (__main__.NativeBridgeTests.test_writable_native_copy_is_distinct_and_reused) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.048s
+
+OK

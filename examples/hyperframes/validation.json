@@ -1,0 +1,37 @@
+{
+  "profile": "hyperframes",
+  "upstreamCommit": "82ae73a03156f782e48d631907db08232aeed817",
+  "runtimeCLI": "0.8.87",
+  "scope": "Actual host npm CLI native ingest and missing-cache checks; no container, model or video render. Generation wrapper is separately exercised with a stand-in native engine.",
+  "passed": true,
+  "checks": [
+    {
+      "name": "actual pinned CLI local image ingest",
+      "exitCode": 0,
+      "stdout": "{\"ok\":true,\"id\":\"image_001\",\"type\":\"image\",\"path\":\".media/images/image_001.png\",\"source\":\"ingested\",\"description\":\"material.png\",\"provenance\":{\"provider\":\"local\",\"from\":\"/tmp/hf-native-ingest-as1zea0n/material.png\"},\"_source\":\"ingested\"}\n",
+      "stderr": ""
+    },
+    {
+      "name": "actual pinned CLI cache miss rejects without provider fallback",
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": "error: no reusable global asset matches sha \"00000000\"\n"
+    }
+  ],
+  "providerBoundaryTests": {
+    "command": "python3 examples/hyperframes/test_integration.py -v",
+    "passed": 3,
+    "failed": 0,
+    "scope": "real shipped shell wrapper and guard; stand-in native entry records dispatch"
+  },
+  "context": {
+    "catalogValidated": true,
+    "prepareCommand": "python3 examples/hyperframes/run.py prepare --codex-version 0.158.0 --output <scratch-context>",
+    "imageBuilt": false
+  },
+  "renderCheck": {
+    "attempted": true,
+    "executed": false,
+    "reason": "No system Chromium or previously installed Chrome Headless Shell remains in this session; smoke tool refused an implicit browser download."
+  }
+}

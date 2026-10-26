@@ -1,12 +1,17 @@
 # 典型运行配置
 
-RunDesk 0.48.0 的初始化向导可在应用注册前准备可复用镜像。镜像包含 Codex 和工具环境，不包含 news2douyin 应用本体、业务数据库或账号。Kun 内核不变。
+RunDesk 0.51.0 的初始化向导可在应用注册前准备可复用镜像。镜像包含 Codex 和工具环境，不包含 news2douyin 应用本体、业务数据库或账号。Kun 内核不变。
 
 | 配置 | 默认工具 | 搜索 |
 | --- | --- | --- |
 | [news2douyin](news2douyin/README.md) | Agent-Reach、gh、mcporter、bird、undici、Python、RSS、yt-dlp、FFmpeg、Pillow、中文字体 | Exa |
 | [people-search](people-search/README.md) | Agent-Reach 工具链、Python、公开网页/RSS | Exa |
 | [video-build](video-build/README.md) | FFmpeg、ffprobe、Pillow、中文字体 | 无预置搜索 MCP |
+| [hyperframes](hyperframes/README.md) | 上游原生 Skills、HyperFrames、GSAP、Chromium | Video App 生成 MCP |
+| [video-use](video-use/README.md) | 上游原生 Skill、EDL 与剪辑 helpers | Video App 生成 MCP |
+| [openmontage](openmontage/README.md) | 上游指南、pipelines、tools、生成 provider 接入 | Video App 生成 MCP |
+
+自研 video-build 保持原样。三个新目录分别对应上游项目，独立构建镜像和创建实例；不会自动把 App 一键制作改成这些上游流程。入口、服务配置和边界见 [独立视频环境](../docs/UPSTREAM-VIDEO-ENVIRONMENTS.md)。
 
 ## 推荐：初始化向导
 

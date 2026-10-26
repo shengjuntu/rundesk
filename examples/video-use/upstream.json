@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/browser-use/video-use",
+  "commit": "43cfc566833548093455c9d4a46bd69913b7e552",
+  "sourceArchive": "vendor/video-use-43cfc566833548093455c9d4a46bd69913b7e552.tar.gz",
+  "sourceSHA256": "b7c181c855265f5e88a2bacde46959b3a07034ee7dce00aed1f4b00bce6a3367",
+  "license": "MIT",
+  "installScript": "install.sh",
+  "buildFiles": [
+    "install.sh",
+    "requirements.lock",
+    "doctor.py"
+  ],
+  "skillDirectories": [
+    {
+      "source": ".",
+      "name": "video-use"
+    }
+  ],
+  "requiredFiles": [
+    "LICENSE",
+    "SKILL.md",
+    "install.md",
+    "pyproject.toml",
+    "helpers/render.py",
+    "helpers/transcribe.py",
+    "helpers/pack_transcripts.py",
+    "helpers/timeline_view.py",
+    "tests/test_render_fps.py"
+  ]
+}

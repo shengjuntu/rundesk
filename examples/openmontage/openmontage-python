@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+# /opt is read-only in RunDesk. The launcher prepares a writable native copy.
+exec python3 /opt/rundesk-upstream/launch.py "$@"

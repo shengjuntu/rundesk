@@ -75,7 +75,7 @@ paths={}
 requests={
  ('POST','/workspaces/{wid}/mcp-tests'):obj({'server':st(),'tool':st(),'arguments':obj({},extra=True),'cursor':st(),'confirm':bool_},['server','confirm']),
  ('PUT','/setup'):obj({'applicationsOnly':bool_,'codex':st(),'workspaceId':st(),'model':st(),'completed':bool_,'revision':integer,'instanceRevision':integer,'agentRuntime':ref('KunConfig')},['workspaceId','revision']),
- ('POST','/setup/runtime-images'):obj({'profileId':st(enum=['news2douyin','people-search','video-build']),'codexVersion':st(),'source':st(enum=['build','pull','local']),'reference':st()},['profileId','codexVersion','reference']),
+ ('POST','/setup/runtime-images'):obj({'profileId':st(enum=['news2douyin','people-search','video-build','hyperframes','video-use','openmontage']),'codexVersion':st(),'source':st(enum=['build','pull','local']),'reference':st()},['profileId','codexVersion','reference']),
  ('POST','/setup/codex-install'):obj({'version':st(pattern=r'^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$',maxLength=64),'confirm':{'const':True}},['version','confirm']),
  ('POST','/setup/check'):obj({'kind':st(enum=['kun','bash','codex','workspace','models','account','mcp','docker']),'workspaceId':st(),'instanceId':st()},['kind']),
  ('POST','/setup/provider'):obj({'workspaceId':st(),'baseUrl':st(),'envKey':st(),'model':st()},['workspaceId','baseUrl','model']),

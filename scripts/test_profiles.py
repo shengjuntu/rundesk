@@ -61,6 +61,8 @@ class ProfilesTest(unittest.TestCase):
                     self.assertIn("COPY skills/ /etc/codex/skills/", docker)
                     if backend == "exa":
                         self.assertTrue(config["mcp_servers"]["exa"]["enabled"])
+                    elif name in ("hyperframes", "video-use", "openmontage"):
+                        self.assertEqual(config["mcp_servers"]["video_app_media"]["args"][-1], "serve-mcp")
                     else:
                         self.assertNotIn("mcp_servers", config)
                     for line in (dest / "SHA256SUMS").read_text().splitlines():

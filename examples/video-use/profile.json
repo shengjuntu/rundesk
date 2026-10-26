@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "version": "1.0.0",
+  "runtime": "codex-docker",
+  "id": "video-use",
+  "title": "Video Use · 上游原生剪辑",
+  "description": "独立 browser-use/video-use 上游 Skill 与原生 EDL/FFmpeg 剪辑环境；TTS、图片与视频生成走 Video App MCP，不改变我们自己的 video-build。",
+  "searchBackends": [
+    "none"
+  ],
+  "defaultSearchBackend": "none",
+  "aptPackages": [
+    "ffmpeg",
+    "fontconfig",
+    "fonts-noto-cjk"
+  ],
+  "pythonPackages": [],
+  "skill": "edit-with-video-use",
+  "tools": [
+    "Python 3.11",
+    "FFmpeg",
+    "ffprobe",
+    "video-use native helpers",
+    "NumPy",
+    "librosa",
+    "matplotlib",
+    "Pillow",
+    "Video App generation MCP"
+  ],
+  "outputs": [
+    "edit/project.md",
+    "edit/edl.json",
+    "edit/final.mp4"
+  ],
+  "resources": {
+    "cpus": 4,
+    "memoryMB": 4096,
+    "network": "bridge"
+  },
+  "optionalComponents": [],
+  "skillFiles": [
+    "SKILL.md",
+    "agents/openai.yaml",
+    "references/generation-services.md"
+  ],
+  "upstream": "upstream.json"
+}

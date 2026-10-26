@@ -1,0 +1,4 @@
+interface:
+  display_name: "HyperFrames · Video App"
+  short_description: "Use upstream HyperFrames with Video App generation tools"
+  default_prompt: "Use $rundesk-hyperframes to create a video with upstream HyperFrames and Video App generated media."
