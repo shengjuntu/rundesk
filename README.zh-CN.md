@@ -32,13 +32,21 @@ RunDesk 把用户请求、模型交互、工具调用、审批、异常和制品
 
 Harness 开发者和研究者需要试验执行策略，观察改动带来的影响，并用记录下来的证据比较结果。
 
-RunDesk 通过 Kun 集成提供模块状态检查、执行循环策略选择、离线记录实验、Hybrid/Live 分叉、固定任务集和对照评测。经过验证的轨迹可以进一步形成可复用 Skill 候选，用于研究任务质量、执行成本和复用效果。当前实验控制主要由 Kun 提供，尚未开放任意 Harness 模块的动态加载 SDK。
+RunDesk 通过 Kun 集成提供模块状态检查和执行循环策略选择。研究 API 保留离线记录实验、Hybrid/Live 分叉、固定任务集和对照评测；经过验证的轨迹可以进一步形成参数化工具流程候选。这些能力主要面向 Kun 研究，业务效果仍需任务验证；尚未开放任意 Harness 模块的动态加载 SDK。
 
-入口：[Harness 实验](docs/KUN-HARNESS.md)、[运行时分叉](docs/KUN-FORKS.md)、[重复采样对照](docs/KUN-BENCHMARKS.md)。
+入口：[Harness 控制](docs/KUN-HARNESS.md)。[运行时分叉](docs/KUN-FORKS.md)与[重复采样对照](docs/KUN-BENCHMARKS.md)介绍保留的研究 API 和历史操作流程，不再对应当前主界面的导航入口。
+
+## 以实例为中心使用
+
+**实例**是日常操作的中心：选择一个 Codex 或 Kun 实例，检查模型和能力，选择工作区，再执行任务、查看制品与运行轨迹。构建中心从构建预设生成镜像，一个镜像可以用于创建多个独立实例。应用注册是另一个接入步骤，管理实例无需先注册应用。
+
+0.54.0 将 Kun 分叉、评测任务集、K4 Skill 工作台和离线实验的启动入口撤出日常导航。对应 API、保存的数据和已有分支的固定预览查看继续保留。K4 的参数化工具流程与普通 `SKILL.md` 管理是不同能力。
+
+本版调整 WebUI，**尚未实现实例配置跨工作区自动同步**；Docker 配置仍保存在各自的实例/工作区运行环境中。自动收集能力到统一资源库、不同 Agent 配置格式转换，也仍待实现。具体行为与边界见 [WebUI](docs/WEBUI.md)。
 
 ## 当前源码版本
 
-**RunDesk 0.53.0 · 外部 Kun 0.17.0 · worker 协议 16**
+**RunDesk 0.54.0 · 外部 Kun 0.17.0 · worker 协议 16**
 
 本源码包含运行与资源契约、统一观测模型、对话式轨迹阅读器、构建中心，以及共享同一任务核心的两个 API 入口：
 
@@ -47,7 +55,7 @@ RunDesk 通过 Kun 集成提供模块状态检查、执行循环策略选择、�
 | **RDCA v1** — `/api/v1` | RunDesk 自有的应用与管理 API；机器契约位于 `/api/v1/openapi.json` |
 | **UHP** — `/v1` | 面向协议 `2026-10-19` 的附加服务入口；已实现并有[明确限制](docs/UHP.md)，不声明完整规范兼容 |
 
-0.53.0 增加持久任务截止时间、进度与审批交接、明确的执行能力声明，以及 [Python UHP 客户端](examples/uhp_client.py)。不支持的步数与输出 Token 预算会明确披露，应用可在提交时要求必需能力。
+0.54.0 整理实例导航与配置上下文，不改变存储和 API schema。继续保留 0.53.0 引入的持久任务截止时间、进度与审批交接、明确的执行能力声明和 [Python UHP 客户端](examples/uhp_client.py)。不支持的步数与输出 Token 预算仍明确披露，应用可在提交时要求必需能力。
 
 RunDesk 独立运行，不依赖 HarnessRouter 服务。详见[当前状态](docs/STATUS.md)、[系统架构](docs/ARCHITECTURE.md)和[验证范围](docs/VALIDATION.md)。视频和研究应用是第二个使命的接入示例，各自配套版本放在[示例文档](examples/README.md)中维护。
 
@@ -82,7 +90,7 @@ Kun 连接支持工具调用的 Chat Completions 服务；Codex 使用原生模�
 | --- | --- |
 | 企业 Agent 落地开发者 | [调试](docs/DEBUG.md) · [观测与采集](docs/UNIFIED_DEBUGGING.md) · [只读调试 API/MCP](docs/DEBUG-SERVICE.md) |
 | 应用开发者 | [应用注册](docs/APPLICATION-CONNECT.md) · [API](docs/API-V1.md) · [运行预设](docs/APPLICATION-RUNTIME-PRESETS.md) · [Python 示例](examples/application_quickstart.py) |
-| Harness 开发者与研究者 | [Kun 接入](docs/KUN.md) · [Harness 控制](docs/KUN-HARNESS.md) · [实验](docs/KUN-EXPERIMENTS.md) · [评测](docs/KUN-EVALUATION.md) |
+| Harness 开发者与研究者 | [Kun 接入](docs/KUN.md) · [Harness 控制](docs/KUN-HARNESS.md) · [研究 API 与历史资料](docs/README.md#3-harness-开发与研究--harness-research) |
 | 维护者与部署者 | [架构](docs/ARCHITECTURE.md) · [构建中心](docs/BUILD-CENTER.md) · [升级](docs/UPGRADING.md) · [安全](SECURITY.md) |
 
 本地开发可用 `make test` 运行宿主与 SDK 测试；`make check` 增加 race 检查及 `go vet`。部分集成测试需要独立 Kun 可执行文件。复验方法与历史结果分别见[验证说明](docs/VALIDATION.md)。

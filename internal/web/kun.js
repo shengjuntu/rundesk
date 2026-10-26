@@ -208,7 +208,6 @@ window.RunDeskKun={
     recoveryStatus.textContent=recoveryCheck.eligible?"可提交恢复：检查点 #"+recoveryCheck.selection.sequence+" · 待执行工具 "+recoveryCheck.pending+" · 已用工具调用 "+recoveryCheck.budget.toolCalls+"。保留既有工具结果，旧的一次性审批不复用。":"不能恢复："+(recoveryReasons[recoveryCheck.reason]||(recoveryCheck.reason.startsWith("budget_")?"执行预算已用尽："+recoveryCheck.reason.slice(7):recoveryCheck.reason));
    }catch(e){recoveryStatus.textContent=e.message;}
   }),recoverButton,recoveryStatus));
-  controls.append(button("预览运行时分叉",()=>window.RunDeskKunForks.open({sessionId:sid})));
   const steerButton=button("提交补充指令",()=>{if(!steer.value.trim()){feedback.textContent="请输入补充指令。";return;}return sendControl("steer",steer.value);});
   controlButtons.set("steer",steerButton);controls.append(steer,steerButton);
   dialog.append(el("p",{class:"help"},"历史检查沿用工作台的轮次与固定范围。Sources 控制操作始终校验当前运行和状态版本。"),summary,tabs,button("刷新当前状态",refresh),button("检查当前控制状态",()=>{selected=null;live=true;panel="sources";redraw();}),controls,consoleView.node,feedback,diffView.node,el("div",{class:"kun-inspector"},list,detail));

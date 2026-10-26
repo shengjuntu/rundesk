@@ -77,4 +77,3 @@ window.RunDeskExperiments=(()=>{
  }
  return {open};
 })();
-document.addEventListener('DOMContentLoaded',()=>{const anchor=document.querySelector('#debug-button');if(anchor){const b=button('离线实验',()=>RunDeskExperiments.open());b.id='experiments-open';b.className='quiet';anchor.after(b);}});

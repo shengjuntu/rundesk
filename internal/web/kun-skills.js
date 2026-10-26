@@ -32,4 +32,3 @@ window.RunDeskKunSkills=(()=>{
  function open(options={}){let closed=false;const d=el('dialog',{class:'debug-inspector experiment-workbench'});d.append(el('div',{class:'dialog-head'},el('h2',{},'K4 Skill 工作台'),button('关闭',()=>d.close(),'quiet')),create({...options,isActive:()=>!closed}).node);d.onclose=()=>{closed=true;d.remove()};document.body.append(d);d.showModal();return d}
  return {create,open};
 })();
-document.addEventListener('DOMContentLoaded',()=>{const anchor=document.querySelector('#debug-button');if(anchor)anchor.after(button('K4 Skill',()=>window.RunDeskKunSkills.open(),'quiet'))});

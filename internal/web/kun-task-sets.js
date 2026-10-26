@@ -122,4 +122,3 @@ window.RunDeskKunTaskSets=(()=>{
  function open(){let closed=false;const d=el('dialog',{id:'kun-task-sets-workbench',class:'debug-inspector experiment-workbench'});d.append(el('div',{class:'dialog-head'},el('h2',{},'评测任务集'),button('关闭',()=>d.close(),'quiet')),create({isActive:()=>!closed}).node);d.onclose=()=>{closed=true;d.remove();};document.body.append(d);d.showModal();return d;}
  return {create,open};
 })();
-document.addEventListener('DOMContentLoaded',()=>{const anchor=document.querySelector('#debug-button');if(anchor){const b=button('评测任务集',()=>window.RunDeskKunTaskSets.open());b.id='kun-task-sets-open';b.className='quiet';anchor.after(b);}});

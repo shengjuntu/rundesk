@@ -32,13 +32,21 @@ Start with the [application API](docs/API-V1.md), [runtime presets](docs/APPLICA
 
 Harness developers and researchers need a place to test execution strategies, inspect their effects, and compare results against recorded evidence.
 
-RunDesk's Kun integration supports module-state inspection, loop-policy selection, offline record experiments, Hybrid/Live forks, fixed task sets, and comparative evaluation. Validated traces can become candidate reusable Skills. This makes it possible to explore new ideas and measure their effects on task quality and execution cost. The current experimental controls are primarily Kun-specific; RunDesk does not yet expose a dynamically loadable SDK for arbitrary Harness modules.
+RunDesk's Kun integration supports module-state inspection and loop-policy selection. Research APIs retain offline record experiments, Hybrid/Live forks, fixed task sets, and comparative evaluation; validated traces can become candidate reusable tool flows. These remain primarily Kun-specific research capabilities, with business effects still requiring validation. RunDesk does not yet expose a dynamically loadable SDK for arbitrary Harness modules.
 
-Start with [Harness experiments](docs/KUN-HARNESS.md), [runtime forks](docs/KUN-FORKS.md), and [repeated comparisons](docs/KUN-BENCHMARKS.md).
+Start with [Harness controls](docs/KUN-HARNESS.md). The [runtime fork](docs/KUN-FORKS.md) and [repeated comparison](docs/KUN-BENCHMARKS.md) documents describe retained research APIs and historical workflows, not current navigation entries.
+
+## Work with instances
+
+An **instance** is the main object for daily work: choose a Codex or Kun instance, inspect its model and capabilities, select a workspace, then run tasks and inspect artifacts and traces. The build center turns a build preset into an image; an image can support multiple independent instances. Application registration remains a separate integration step and is not required to manage an instance.
+
+Version 0.54.0 removes the Kun forks, evaluation task sets, K4 Skill workbench, and offline experiment launchers from everyday navigation. Their APIs and stored data remain, as does inspection of existing fork previews. K4's parameterized tool flows are distinct from ordinary `SKILL.md` management.
+
+This release reorganizes the WebUI; it does **not** yet synchronize instance configuration across workspaces. Docker configuration still lives in separate instance/workspace environments. Automatic collection into a shared capability catalog and translation between Agent configuration formats are also pending. See [WebUI behavior and limits](docs/WEBUI.md).
 
 ## Current source version
 
-**RunDesk 0.53.0 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.54.0 source · external Kun 0.17.0 · worker protocol 16**
 
 This source includes runtime/resource contracts, a unified observation model, the conversation trace reader, the build center, and two API entry points over the same task core:
 
@@ -47,7 +55,7 @@ This source includes runtime/resource contracts, a unified observation model, th
 | **RDCA v1** — `/api/v1` | RunDesk's application and management API; machine-readable contract at `/api/v1/openapi.json` |
 | **UHP** — `/v1` | An additional service interface targeting protocol `2026-10-19`; implemented with [documented limits](docs/UHP.md), without a full conformance claim |
 
-Version 0.53.0 adds persistent task deadlines, progress and approval handoff, explicit execution capabilities, and a [Python UHP client](examples/uhp_client.py). Unsupported step/token budgets are disclosed; applications can require supported capabilities before submission.
+Version 0.54.0 focuses on instance navigation and configuration context without changing the storage or API schemas. It retains the persistent deadlines, progress and approval handoff, explicit capabilities, and [Python UHP client](examples/uhp_client.py) introduced in 0.53.0. Unsupported step/token budgets remain disclosed; applications can require supported capabilities before submission.
 
 RunDesk runs independently of HarnessRouter. See [current status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and [validation scope](docs/VALIDATION.md). Video and research integrations are examples of the application mission; their component versions belong in the [profile documentation](examples/README.md).
 
@@ -82,7 +90,7 @@ Kun uses a tool-capable Chat Completions service; Codex uses its native provider
 | --- | --- |
 | Agent deployment engineers | [Debugging](docs/DEBUG.md) · [Observation and capture](docs/UNIFIED_DEBUGGING.md) · [Read-only debug API/MCP](docs/DEBUG-SERVICE.md) |
 | Application developers | [Connect an application](docs/APPLICATION-CONNECT.md) · [API](docs/API-V1.md) · [Presets](docs/APPLICATION-RUNTIME-PRESETS.md) · [Python example](examples/application_quickstart.py) |
-| Harness developers and researchers | [Kun integration](docs/KUN.md) · [Harness controls](docs/KUN-HARNESS.md) · [Experiments](docs/KUN-EXPERIMENTS.md) · [Evaluation](docs/KUN-EVALUATION.md) |
+| Harness developers and researchers | [Kun integration](docs/KUN.md) · [Harness controls](docs/KUN-HARNESS.md) · [Research APIs and historical workflows](docs/README.md#3-harness-开发与研究--harness-research) |
 | Maintainers and operators | [Architecture](docs/ARCHITECTURE.md) · [Build center](docs/BUILD-CENTER.md) · [Upgrading](docs/UPGRADING.md) · [Security](SECURITY.md) |
 
 For local development, `make test` runs the host and SDK tests; `make check` adds race checks and `go vet`. Some integration checks require an independent Kun executable. Reproduction instructions and historical results are separated in [validation](docs/VALIDATION.md).

@@ -81,4 +81,3 @@ window.RunDeskKunForks=(()=>{
  }
  return {open};
 })();
-document.addEventListener('DOMContentLoaded',()=>{const anchor=document.querySelector('#debug-button');if(anchor){const b=button('Kun 分叉',()=>RunDeskKunForks.open({sessionId:state.session?.runtimeKind==='kun'&&!state.session.traceOrigin&&!state.session.kunFork?state.session.id:''}));b.id='kun-forks-open';b.className='quiet';anchor.after(b);}});

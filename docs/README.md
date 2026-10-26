@@ -4,7 +4,7 @@
 
 RunDesk 的三个使命：为 Agent 落地提供调试工作台、连接领域应用与 Agent Harness、为 Harness 研究提供实验场。下面按使用者的任务导航，专题文档描述当前行为；旧版本经过与测试证据单独归档。
 
-当前源码：**RunDesk 0.53.0 / 独立 Kun 0.17.0 / worker 协议 16**。
+当前源码：**RunDesk 0.54.0 / 独立 Kun 0.17.0 / worker 协议 16**。日常界面从[实例管理与 WebUI](WEBUI.md)开始；构建中心准备运行基础，应用接入管理外部调用。
 
 ## 1. Agent 落地与调试 / Agent debugging
 
@@ -31,6 +31,8 @@ RDCA 的 `/api/v1/openapi.json` 包含应用与管理 API；按权限标记选�
 
 ## 3. Harness 开发与研究 / Harness research
 
+以下包含保留的研究 API 与历史资料。0.54.0 已撤下 Kun 分叉、评测任务集、K4 Skill 工作台和离线实验的日常启动入口；旧专题中的顶部按钮与创建流程不再代表当前 WebUI 导航。API 和保存的研究记录继续保留，当前界面边界见 [WebUI](WEBUI.md)。
+
 | 任务 | 文档 |
 | --- | --- |
 | 理解 Kun 与宿主边界 | [Kun 导航](KUN.md)、[独立工程与 SDK](KUN-SEPARATION.md)、[核心编程工具](KUN-PIG-CORE.md) |
@@ -43,7 +45,7 @@ RDCA 的 `/api/v1/openapi.json` 包含应用与管理 API；按权限标记选�
 
 - [启动与部署](SETUP.md)、[升级](UPGRADING.md)、[当前能力与缺口](STATUS.md)。
 - [系统架构](ARCHITECTURE.md)、[后端能力](BACKENDS.md)、[资源契约](RESOURCE-CONTRACTS.md)、[任务资源视图](TASK-RESOURCES.md)。
-- [对话界面](CONVERSATION.md)、[协作预览](COLLABORATION.md)。
+- [实例与 WebUI](WEBUI.md)、[对话界面](CONVERSATION.md)、[协作预览](COLLABORATION.md)。
 - [验证与复验](VALIDATION.md)、[版本变更](../CHANGELOG.md)、[上游来源](UPSTREAM.md)、[安全](../SECURITY.md)。
 
-文档维护以当前行为为准，版本沿革写入 CHANGELOG，历史证据进入 [验证归档](validation/archive/README.md)。本次清理范围见 [整理记录](DOCUMENTATION-CLEANUP.md)。
+文档维护以当前行为为准，版本沿革写入 CHANGELOG，历史证据进入 [验证归档](validation/archive/README.md)。0.52.0 的文档清理范围见[整理记录](DOCUMENTATION-CLEANUP.md)，本轮界面调整见 [WebUI](WEBUI.md)。

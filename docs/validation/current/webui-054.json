@@ -1,0 +1,155 @@
+{
+  "version": "0.54.0",
+  "date": "2026-10-26",
+  "scope": "Instance-centered WebUI and research navigation cleanup; native runtime storage and public API schema unchanged.",
+  "go": {
+    "command": "go test -json ./...",
+    "module": "RunDesk main module",
+    "passed": 652,
+    "skipped": 14,
+    "failed": 0,
+    "countsIncludeSubtests": true,
+    "skipTests": [
+      "TestDiagnosticReviewLifecycle",
+      "TestKunCheckpointAfterWorkerKillAndHostRestart",
+      "TestKunDebugReadScopesAndControlProjection",
+      "TestKunDiagnosticSourceRemainsPausedAndFrozen",
+      "TestHybridHostLifecycle",
+      "TestKunRuntimeHarnessHTTPAuthorizationAndRecovery",
+      "TestKunPlanActProcessAndConfigHTTP",
+      "TestKunHypothesisHostWorkerLifecycle",
+      "TestLiveHostConfirmationExecutionAndCredentialDrift",
+      "TestKunMCPWorkerApprovalScopesAndFrozenConfig",
+      "TestKunSkillEndToEndIndependentGateAndApplicationScope",
+      "TestKunProcessConversationAndDebugHTTP",
+      "TestSetupKunIndependentAndAtomic",
+      "TestSetupKunMissingCredentialAndDraft"
+    ],
+    "skippedReason": "External Kun worker/runtime dependencies are not available; these are not passes.",
+    "vetPassed": true
+  },
+  "javascript": {
+    "syntaxFilesChecked": 55,
+    "syntaxPassed": true,
+    "instances": {
+      "passed": true,
+      "checks": [
+        "all local, Docker and Kun identities appear without application registration or runtime writes",
+        "multiple workspaces retain exact instance/workspace through Skills, MCP and back navigation",
+        "workspace memory belongs to its instance rather than the last global selection",
+        "new chat, settings and actual session POST keep the chosen nondefault instance",
+        "preset session carries exact app and preset source; disabled or mismatched contexts fail without mutations",
+        "instance, conversation and capability deep links restore explicit workspace context",
+        "legacy/build launch instance navigation enters the instance page",
+        "invalid workspace clears the previous context and cannot submit a task against it",
+        "late Skills configuration resolution cannot combine identities from two selected contexts",
+        "late inventory responses cannot steal navigation"
+      ],
+      "scope": "Shipped JavaScript in JSDOM with fixture API; streaming message rendering, Docker and live models are not exercised."
+    },
+    "instanceTasks": {
+      "passed": true,
+      "checks": [
+        "all instances in task creation and concurrency",
+        "independent Codex and Kun human tasks",
+        "preset identity, disabled and missing history",
+        "reserved workspace rejection",
+        "actual task POST retains chosen target",
+        "queue labels and unrelated limits"
+      ],
+      "scope": "shipped JavaScript in JSDOM with API fixtures; no browser, model or Docker"
+    },
+    "existingRuntimePresets": {
+      "passed": true,
+      "checks": [
+        "preset navigation and disabled history",
+        "environment scoped to fixed binding",
+        "lost POST and PUT responses reuse identities across dialog reopen",
+        "rename/disable does not mutate runtime",
+        "task source.presetId and exact workspace",
+        "explicit key presetIds and frozen bindings",
+        "member grants preserve exact preset identity in POST and PUT, including disabled history"
+      ],
+      "scope": "real shipped JavaScript, JSDOM and mocked authenticated API; browser layout and Docker not exercised"
+    },
+    "existingBuildCenter": {
+      "passed": true,
+      "result": "build center / native plugin shipped JS behavior: passed"
+    }
+  },
+  "browser": {
+    "passed": true,
+    "checks": [
+      "real login opens the instance catalog; independent instances are visible and research launchers are absent",
+      "Skills and MCP operate on the chosen instance/workspace; deep-link reload and back preserve context",
+      "an actual demo turn completes on a nondefault instance; New conversation and Settings retain its identity",
+      "instance catalog and detail fit a 390px mobile viewport",
+      "creating an instance leads to the existing embedded build presets",
+      "English mode translates the new instance controls"
+    ],
+    "pageErrors": [],
+    "scope": "Chromium + actual RunDesk demo server, authenticated API, disposable data; no Docker daemon, external provider or real model."
+  },
+  "visualReview": {
+    "desktop": "1440 x 1000",
+    "mobile": "390 x 844",
+    "languages": [
+      "zh-CN",
+      "en"
+    ],
+    "reviewed": [
+      "instance catalog",
+      "instance detail",
+      "MCP page",
+      "mobile catalog and detail",
+      "English navigation and cards"
+    ],
+    "fixedDuringReview": [
+      "Removed a literal null text node in an instance without an application association",
+      "Shortened English navigation and card controls to fit"
+    ]
+  },
+  "build": {
+    "linuxAmd64Passed": true,
+    "sha256": "aa791fff9241c0be63437e0e734be036a268d73c9fd483ffb8f1cdc2e1be9215"
+  },
+  "compatibility": {
+    "openapiSchemaUnchangedExceptVersion": true,
+    "backendStorageMigration": false,
+    "researchDataDeleted": false,
+    "existingApiRetained": true
+  },
+  "regressionsFixed": [
+    "New conversation and settings no longer jump from a nondefault instance to default",
+    "Build Center continuation opens the exact created instance and workspace",
+    "Slow Skills configuration reads cannot combine an old instance ID with a newly selected workspace",
+    "MCP and model configuration discard stale context responses",
+    "Invalid workspace selection cannot reuse the previous instance",
+    "Manual instance routes respond to hash navigation"
+  ],
+  "notVerified": [
+    "Real Codex or Kun provider/model calls",
+    "Docker daemon image creation and container execution",
+    "External Kun research worker browser flows",
+    "Production load and domain task quality"
+  ],
+  "notImplemented": [
+    "Instance configuration synchronization across workspaces",
+    "Automatic shared capability catalog collection",
+    "Cross-agent format translation",
+    "Native plugin install/uninstall lifecycle",
+    "Kun Docker hosting"
+  ],
+  "documentation": {
+    "passed": true,
+    "documents": 87,
+    "openapiPaths": 218,
+    "checks": [
+      "local links",
+      "version",
+      "startup admin scope",
+      "install idempotency",
+      "no historical release duplicates"
+    ]
+  }
+}

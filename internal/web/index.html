@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/trace.css" />
     <link rel="stylesheet" href="/conversation.css" />
     <link rel="stylesheet" href="/product.css" />
+    <link rel="stylesheet" href="/instances.css" />
     <link rel="stylesheet" href="/environments.css" />
     <link rel="stylesheet" href="/images.css" />
     <link rel="stylesheet" href="/builds.css" />
@@ -32,6 +33,7 @@
     <script defer src="/reliability.js"></script>
     <script defer src="/configuration.js"></script>
     <script defer src="/applications.js"></script>
+    <script defer src="/instances.js"></script>
     <script defer src="/environments.js"></script>
     <script defer src="/images.js"></script>
     <script defer src="/builds.js"></script>
@@ -77,10 +79,12 @@
     </div>
     <div class="shell" id="shell">
       <aside class="global-rail" aria-label="主要功能"><a class="rail-brand" href="/" title="RunDesk"><span class="brandmark">r.</span></a>        <nav class="primary-nav" aria-label="主要功能">
+          <button id="nav-instances" title="实例" aria-label="实例"><span class="nav-symbol" aria-hidden="true">◈</span><span class="rail-label">实例</span></button>
           <button id="nav-assistant" title="对话" aria-label="对话" class="selected" aria-current="page"><span class="nav-symbol"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M21 11a8 8 0 0 1-8 8H5l-3 3V11a9 9 0 0 1 19 0Z"/></svg></span><span class="rail-label">对话</span></button>
           <button id="nav-tasks" title="任务" aria-label="任务"><span class="nav-symbol"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></svg></span><span class="rail-label">任务</span></button>
-          <button id="nav-applications" title="应用" aria-label="应用"><span class="nav-symbol"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="rail-label">应用</span><span id="application-count" class="nav-count"></span></button>
           <button id="nav-build-center" title="构建中心" aria-label="构建中心"><span class="nav-symbol" aria-hidden="true">▣</span><span class="rail-label">构建中心</span></button>
+          <span class="nav-section">管理</span>
+          <button id="nav-applications" title="应用接入" aria-label="应用接入"><span class="nav-symbol"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="rail-label">应用接入</span><span id="application-count" class="nav-count"></span></button>
           <a href="/collaboration.html" title="协作" aria-label="协作" class="nav-item"><span class="nav-symbol"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><path d="m10 8-4 8m8-8 4 8M8 19h8"/></svg></span><span class="rail-label">协作</span></a>
           <button id="nav-library" title="我的文件" aria-label="我的文件" type="button" class="nav-item"><span class="nav-symbol"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 7h7l2-3h9v16H3Z"/><path d="M7 12h10M7 16h7"/></svg></span><span class="rail-label">我的文件</span></button>
 <button id="nav-users" title="用户与授权" aria-label="用户与授权"><span class="nav-symbol"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 6"/></svg></span><span class="rail-label">用户与授权</span></button>
@@ -89,10 +93,10 @@
         <button id="sidebar-close" class="quiet sidebar-close" aria-label="关闭会话列表">关闭</button>
 <div class="history-heading"><strong>会话</strong><button id="history-collapse" class="quiet" title="收起会话列表" aria-label="收起会话列表">◧</button></div>
 
-        <div class="hidden" aria-hidden="true"><select id="instance" tabindex="-1"></select><button id="manage-instances" tabindex="-1">高级配置</button></div>
+        <div class="instance-context"><label for="instance">当前实例</label><select id="instance"></select></div><button id="manage-instances" class="hidden" tabindex="-1">高级配置</button>
         <p id="history-label" class="sidebar-label">通用助手</p>
         <div class="workspace">
-          <label for="workspace">当前项目</label>
+          <label for="workspace">工作区</label>
           <div class="row">
             <select id="workspace"></select
             ><button id="add-workspace" class="icon" title="添加项目">
@@ -118,7 +122,7 @@
           </div>
         </div>
         <nav id="session-list" aria-label="会话记录"></nav><div id="history-resize" role="separator" tabindex="0" aria-label="调整会话列表宽度" aria-orientation="vertical"></div>
-        <button id="assistant-settings" class="sidebar-settings">助手设置<span>模型 · 技能 · 工具</span></button>
+        <button id="assistant-settings" class="sidebar-settings">实例设置<span>模型 · 技能 · 工具</span></button>
         <div class="sidebar-bottom">
           <span class="status-dot"></span
           ><span id="connection">本地运行后台</span
@@ -130,7 +134,7 @@
         <header>
           <button id="sidebar-toggle" class="reply-action sidebar-toggle" title="会话列表" aria-label="会话列表" aria-controls="history-sidebar" aria-expanded="false"></button>
           <div class="breadcrumb">
-            <button id="back-applications" class="quiet hidden" aria-label="返回应用">应用 /</button>
+            <button id="back-applications" class="quiet hidden" aria-label="返回实例">实例 /</button>
             <span id="page-label">通用助手</span><span class="breadcrumb-divider">/</span>
             <strong id="workspace-name">默认工作区</strong>
           </div>
@@ -147,6 +151,7 @@
           演示模式 · 使用协议模拟器，不调用真实模型。真实运行请去掉 --demo。
         </div>
         <section id="tasks-page" class="tasks-page hidden" aria-label="任务队列"><div class="page-intro"><div><p class="eyebrow">BACKGROUND TASKS</p><h1>任务</h1><p id="queue-summary"></p></div><button id="new-task" class="primary">新建任务</button></div><div class="task-toolbar"><select id="task-filter" aria-label="任务状态"><option value="">所有状态</option><option value="queued">排队中</option><option value="running">运行中</option><option value="waiting">等待审批</option><option value="canceled">已取消</option><option value="interrupted">已停止</option><option value="completed">已完成</option><option value="failed">失败</option><option value="unconfirmed">待核对</option></select><button id="queue-toggle">暂停调度</button><button id="processes-open">运行进程</button><button id="usage-open">用量统计</button><button id="queue-settings">并发设置</button><button id="tasks-refresh">刷新</button></div><p id="tasks-error" class="tasks-error" role="status"></p><div id="task-list"></div><button id="tasks-more" class="hidden">加载更多</button><div id="schedule-list" class="schedule-list"></div></section>
+        <section id="instances-page" class="applications-page instances-page hidden" aria-label="实例管理"></section>
         <section id="applications-page" class="applications-page hidden" aria-label="应用管理"></section>
         <section id="build-center-page" class="applications-page hidden" aria-label="构建中心"></section>
         <section id="capability-page" class="capability-page hidden" aria-label="能力管理"></section>

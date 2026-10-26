@@ -1,6 +1,6 @@
 # 启动与部署
 
-当前组合：RunDesk 0.53.0、独立 Kun 0.17.0、worker 协议 16。两者分别构建与发布，接口和旧版本兼容规则见 [Kun 拆分](KUN-SEPARATION.md)。
+当前组合：RunDesk 0.54.0、独立 Kun 0.17.0、worker 协议 16。两者分别构建与发布，接口和旧版本兼容规则见 [Kun 拆分](KUN-SEPARATION.md)。
 
 ## 构建
 

@@ -10,7 +10,7 @@ function renderCapabilityStrip() {
   box.replaceChildren(el("span",{class:"capability-instance"},contextTitle()),el("span",{class:"capability-model",title:model},model),open);
   if(session?.source?.kind==="application") box.append(el("span",{class:"capability-source",title:session.source.taskId||""},rdText("来自 ")+session.source.appId));
 }
-function scopeLabel(scope) { return {instance:rdText("当前助手／应用"),project:rdText("项目"),other:rdText("其他来源")}[scope]||scope; }
+function scopeLabel(scope) { return {instance:rdText("当前实例"),project:rdText("项目"),other:rdText("其他来源")}[scope]||scope; }
 function capabilityInventory(data) {
   const result=el("div",{class:"capability-inventory"});
   for(const [kind,message] of Object.entries(data.errors||{})) result.append(el("p",{class:"error"},kind+"："+message));

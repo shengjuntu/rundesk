@@ -318,11 +318,13 @@ function renderDebug() {
 }
 
 async function renderSkills(target) {
-  const current = (await RunDeskEnvironments.effective()).instance,
-    work = ws(),
-    cp = configPath(work.id, current.id);
+  const requested = instance(), work = ws(), selection = state.selection;
+  const valid = () => target.isConnected && selection === state.selection && instance()?.id === requested.id && ws()?.id === work.id && state.settingsTab === "skills";
+  const current = (await RunDeskEnvironments.effective(requested, work)).instance;
+  if (!valid()) return;
+  const cp = configPath(work.id, current.id);
   const raw = await api(cp("/skills"));
-  if (state.settingsTab !== "skills") return;
+  if (!valid()) return;
   state.skills = (raw.data || []).flatMap((d) => d.skills || []);
   const errors = (raw.data || []).flatMap((d) => d.errors || []);
   const scope = el(
@@ -344,11 +346,11 @@ async function renderSkills(target) {
   const list = el(
     "div",
     { class: "card" },
-    el("h3", {}, rdText("Codex 发现的 Skills")),
+    el("h3", {}, rdText("当前实例发现的 Skills")),
     el(
       "p",
       {},
-      current.execution?.mode==="docker"?rdText("当前应用、当前项目的独立技能目录。镜像中的标准技能首次初始化时补充，不覆盖已有文件。"):rdText("专用技能随助手或应用使用；项目技能在共享项目中可见。"),
+      current.execution?.mode==="docker"?rdText("当前实例在所选工作区的技能。镜像内置、环境追加和项目技能可能共同生效。"):rdText("实例技能供当前 Agent 使用；项目技能在所属工作区中可见。"),
     ),
   );
   for (const sk of state.skills) {
@@ -528,10 +530,10 @@ async function renderSkills(target) {
 }
 
 async function renderMCP(target) {
-  const current = instance(),
-    cp = configPath(ws().id, current.id);
+  const current = instance(), work = ws(), selection = state.selection,
+    cp = configPath(work.id, current.id);
   const info = await api(cp("/mcp"));
-  if (state.settingsTab !== "mcp") return;
+  if (!target.isConnected || selection !== state.selection || instance()?.id !== current.id || ws()?.id !== work.id || state.settingsTab !== "mcp") return;
   state.mcp = info;
   const name = el("input", {
     type: "text",
@@ -1063,7 +1065,7 @@ async function switchInstance() {
   else if(currentApplication())await showApplication(currentApplication().appId,currentApplicationBinding()?.presetId||"");
   else await showLegacyApplication(instance().id);
 }
-$("#instance").onchange = () => safe(switchInstance);
+$("#instance").onchange = () => safe(()=>RunDeskInstances.conversation($("#instance").value));
 $("#manage-instances").onclick = () => safe(() => openSettings("overview"));
 
 async function renderInstances(target) {
