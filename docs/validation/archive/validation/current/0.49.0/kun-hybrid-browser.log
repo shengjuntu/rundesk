@@ -1,0 +1,15 @@
+{
+  "version": "0.35.0",
+  "scope": "real host and worker, local model fixture; browser separately reported",
+  "modelCalls": 7,
+  "checks": [
+    "real HTTP preview/start/retry; 2 replayed tools, source file/revision unchanged, 2 new model calls",
+    "browser preview requires explicit start; fork banner and single-run composer",
+    "saved preview reload, inherited/new usage, mobile layout",
+    "mismatch stops without live dispatch"
+  ],
+  "pageErrors": [],
+  "passed": true,
+  "browserStatus": "passed"
+}
+

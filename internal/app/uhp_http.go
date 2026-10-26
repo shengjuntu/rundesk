@@ -296,8 +296,8 @@ func (u *uhpService) create(w http.ResponseWriter, r *http.Request) {
 		uhpWriteError(w, e)
 		return
 	}
-	if req.MaxStep != nil && h.Base != "kun" {
-		uhpFail(w, 422, "rundesk_budget_unsupported", "This harness cannot enforce a native tool-round budget.")
+	if e = uhpCheckRequiredCapabilities(req, h); e != nil {
+		uhpWriteError(w, e)
 		return
 	}
 	model, e := u.server.uhpSelectModel(h, req.Model)
@@ -374,17 +374,20 @@ func (u *uhpService) create(w http.ResponseWriter, r *http.Request) {
 		previous = &req.PreviousResponseID
 	}
 	response := uhpResponse{ID: rid, Object: "response", CreatedAt: now, Status: "in_progress", Model: model, Output: []map[string]any{}, Metadata: uhpSortedMetadata(req.Metadata, req.IgnoredFields, h.ID, ss.ID), PreviousResponseID: previous, Store: kept}
-	delete(response.Metadata, "rundesk_instruction_mode")
+	response.Metadata["rundesk_execution"] = uhpExecutionSemantics()
+	response.Metadata["rundesk_capabilities"] = uhpExecutionCapabilities(h.Base)
+	response.Metadata["rundesk_progress"] = map[string]any{"state": "queued"}
 	if req.InstructionMode != "" {
 		response.Metadata["rundesk_instruction_mode"] = req.InstructionMode
+		response.Metadata["rundesk_instruction_retention"] = "session_history"
 	}
 	record := uhpRecord{Owner: uhpOwner(r), Harness: h, SessionID: ss.ID, ContainerID: ss.ContainerID, Projection: newUHPProjection(response), Input: req.Input}
+	timeoutSeconds := uhpDefaultTimeoutSeconds
 	if req.TimeoutSeconds != nil {
-		record.Deadline = time.Now().Add(time.Duration(*req.TimeoutSeconds) * time.Second).UnixNano()
+		timeoutSeconds = *req.TimeoutSeconds
 	}
-	if req.MaxStep != nil {
-		record.MaxStep = *req.MaxStep
-	}
+	record.Deadline = time.Now().Add(time.Duration(timeoutSeconds) * time.Second).UnixNano()
+	record.Projection.Response.Metadata["rundesk_deadline"] = time.Unix(0, record.Deadline).UTC().Format(time.RFC3339Nano)
 	if ss.HostSessionID != "" {
 		artifacts, err := (&uhpFiles{Manager: m}).DiscoverArtifacts(ss.Owner, ss.ID, ss.HostSessionID, ss.ContainerID)
 		if err != nil {
@@ -396,13 +399,14 @@ func (u *uhpService) create(w http.ResponseWriter, r *http.Request) {
 			record.BeforeFiles = append(record.BeforeFiles, f.ID)
 		}
 	}
-	submission := TaskSubmission{Spec: spec}
+	submission := TaskSubmission{Spec: spec, Deadline: record.Deadline}
 	if prev.TaskID != "" {
 		submission.SessionID = ss.HostSessionID
 	}
 	submission.Records = func(t Task, host Session) ([]store.Record, error) {
 		record.TaskID = t.ID
 		record.HostSessionID = host.ID
+		record.Projection = newUHPProjection(record.Projection.Response)
 		ss.HostSessionID = host.ID
 		ss.ResponseIDs = append(ss.ResponseIDs, rid)
 		records := []store.Record{{Kind: "uhp-response", ID: rid, Value: record}, {Kind: "uhp-session", ID: ss.ID, Value: ss}}

@@ -37,7 +37,7 @@ type uhpRecord struct {
 	Deleted       bool
 	CancelReason  string
 	Deadline      int64
-	MaxStep       int
+	MaxStep       int // Legacy records only; never treat model steps as UHP tool rounds.
 	CompletedAt   int64
 }
 type uhpSessionRecord struct {
@@ -83,7 +83,7 @@ func uhpWriteError(w http.ResponseWriter, err error) {
 		// Native errors can include host paths/credentials. Only stable boundary
 		// descriptions are exposed; detailed causes stay in the RDCA diagnostic log.
 		code := a.Code
-		messages := map[string]string{"invalid_input": "The request input is invalid.", "harness_not_found": "Harness not found.", "response_not_found": "Response not found.", "session_not_found": "Session not found.", "file_not_found": "File not found.", "session_expired": "The session has expired.", "harness_mismatch": "The configured harness differs from the continued session.", "session_busy": "The session already has a task in progress.", "model_unavailable": "The model is unavailable for this harness.", "file_too_large": "The file exceeds the size limit.", "insufficient_scope": "The credential does not permit this operation.", "preview_unavailable": "This server does not render file previews.", "missing_credential": "A bearer credential is required.", "invalid_credential": "The bearer credential is invalid."}
+		messages := map[string]string{"invalid_input": "The request input is invalid.", "harness_not_found": "Harness not found.", "response_not_found": "Response not found.", "session_not_found": "Session not found.", "file_not_found": "File not found.", "session_expired": "The session has expired.", "harness_mismatch": "The configured harness differs from the continued session.", "session_busy": "The session already has a task in progress.", "model_unavailable": "The model is unavailable for this harness.", "file_too_large": "The file exceeds the size limit.", "insufficient_scope": "The credential does not permit this operation.", "preview_unavailable": "This server does not render file previews.", "missing_credential": "A bearer credential is required.", "rundesk_capability_unsupported": "A required execution capability is unavailable for this harness.", "task_deadline_exceeded": "The task deadline expired before admission.", "invalid_credential": "The bearer credential is invalid."}
 		message, ok := messages[code]
 		if !ok {
 			if !strings.HasPrefix(code, "rundesk_") {
@@ -195,7 +195,7 @@ func (s *Server) uhpBoundary(next http.Handler) http.Handler {
 	})
 }
 func (u *uhpService) discovery(w http.ResponseWriter, r *http.Request) {
-	writeUHPJSON(w, 200, map[string]any{"object": "uhp.discovery", "protocol": "uhp", "versions": []string{UHPVersion}, "default_version": UHPVersion, "conformance_class": "core", "capabilities": map[string]bool{"streaming": true, "sessions": true, "cancellation": true, "files_input": true, "files_output": true, "session_listing": true, "harness_management": false, "harness_retirement": false, "input_history": false, "session_sharing": false, "idempotency": true, "plugins": false, "environments": false, "memories": false}, "implementation": map[string]string{"name": "RunDesk", "version": Version, "limitations": "Native tool-round budgets require Kun; images require a supporting Codex model; task instructions use text guidance."}})
+	writeUHPJSON(w, 200, map[string]any{"object": "uhp.discovery", "protocol": "uhp", "versions": []string{UHPVersion}, "default_version": UHPVersion, "conformance_class": "core", "capabilities": map[string]bool{"streaming": true, "sessions": true, "cancellation": true, "files_input": true, "files_output": true, "session_listing": true, "harness_management": false, "harness_retirement": false, "input_history": false, "session_sharing": false, "idempotency": true, "plugins": false, "environments": false, "memories": false}, "rundesk_execution": uhpExecutionSemantics(), "rundesk_extensions": map[string]any{"required_capabilities": "metadata.rundesk_require", "progress": "response.metadata.rundesk_progress"}, "implementation": map[string]string{"name": "RunDesk", "version": Version, "limitations": "Tool-round and output-token request budgets are unsupported; use required capabilities for strict admission. Images require a supporting Codex model. Instructions are retained task text."}})
 }
 func (u *uhpService) loadResponse(r *http.Request, id string, allowDeleted bool) (uhpRecord, error) {
 	var v uhpRecord
@@ -267,16 +267,24 @@ func (u *uhpService) refresh(v *uhpRecord) error {
 	if ss, e := m.Session(t.SessionID); e == nil && t.RunID != "" && ss.RunID == t.RunID && !active(ss.Status) && t.Status != "queued" {
 		t.Status = ss.Status
 	}
+	if _, err = u.updateProgress(v, t); err != nil {
+		return err
+	}
 	if err = u.drainNative(v, t); err != nil {
 		return err
 	}
 	pending := taskPending(t.Status)
+	if t.StopReason == "timeout" {
+		v.CancelReason = "timeout"
+	}
 	if pending && v.CancelReason == "" {
 		if v.Deadline > 0 && time.Now().UnixNano() >= v.Deadline {
 			v.CancelReason = "timeout"
 		}
-		if v.MaxStep > 0 && v.Projection.Steps >= v.MaxStep {
-			v.CancelReason = "max_step"
+		if v.MaxStep > 0 {
+			// A pre-upgrade record accepted a model-step approximation. Stop it
+			// explicitly rather than silently removing its promised constraint.
+			v.CancelReason = "legacy_step_budget_unsupported"
 		}
 	}
 	if pending && v.CancelReason != "" {
@@ -311,7 +319,7 @@ func (u *uhpService) refresh(v *uhpRecord) error {
 		if v.CancelReason == "cancelled" {
 			status = "cancelled"
 		}
-		if v.CancelReason == "timeout" || v.CancelReason == "max_step" {
+		if v.CancelReason == "timeout" || v.CancelReason == "max_step" || v.CancelReason == "legacy_step_budget_unsupported" {
 			status = "incomplete"
 			v.Projection.Response.IncompleteDetails = map[string]any{"reason": v.CancelReason}
 		}
@@ -337,8 +345,17 @@ func (u *uhpService) refresh(v *uhpRecord) error {
 		if len(annotations) > 0 {
 			v.Projection.AddAnnotations(annotations)
 		}
+		previousStatus := v.Projection.Response.Status
+		v.Projection.Response.Status = status
+		_, err = u.updateProgress(v, t)
+		v.Projection.Response.Status = previousStatus
+		if err != nil {
+			return err
+		}
 		v.Projection.Finish(status, terminalError)
 		v.CompletedAt = time.Now().Unix()
+	} else if _, err = u.updateProgress(v, t); err != nil {
+		return err
 	}
 	return m.Store.Put("uhp-response", v.Projection.Response.ID, v)
 }
@@ -379,6 +396,9 @@ func (u *uhpService) wait(r *http.Request, id string) (uhpRecord, error) {
 func uhpSortedMetadata(in map[string]any, ignored []string, harness, session string) map[string]any {
 	out := map[string]any{}
 	for k, v := range in {
+		if strings.HasPrefix(k, "rundesk_") {
+			continue // Server-owned metadata cannot be forged by a caller.
+		}
 		out[k] = v
 	}
 	delete(out, "ignored_fields")

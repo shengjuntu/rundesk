@@ -1,0 +1,14 @@
+{
+  "version": "0.48.0",
+  "passed": true,
+  "scope": "real setup JS in Node DOM fixture; browser layout not tested",
+  "checks": [
+    "startup prerequisite probe without installation/model calls",
+    "Kun selection hides optional Codex install",
+    "saved configuration preserves advanced Kun settings and carries both revisions",
+    "unchecked installation is inert",
+    "save blocked during install",
+    "installed executable requires explicit save",
+    "dismissal respected"
+  ]
+}

@@ -19,6 +19,9 @@ type TaskSubmission struct {
 	Spec          TaskSpec
 	SessionID     string
 	ExpectedRunID string
+	// Deadline is an absolute Unix-nanosecond host deadline, including queue time.
+	// Zero keeps the existing unbounded-by-task admission behavior.
+	Deadline int64
 	// Records binds facade metadata (for example a response or retry receipt)
 	// atomically to the accepted task. It runs before persistence, under admission
 	// locks, and must only construct records: it must not call Manager methods or

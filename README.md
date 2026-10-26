@@ -2,60 +2,100 @@
 
 [简体中文](README.zh-CN.md) · [Documentation](docs/README.md)
 
-RunDesk is an Agent execution platform for applications: one API connects Kun and Codex and manages tasks, sessions, tool approvals, and artifacts. The independent Kun engine makes execution traces debuggable through step controls, breakpoints, replay, and comparative evaluation. Independently validated successful traces can become reusable Skills, carrying debugging results into real application workflows.
+**A debugging workbench, application connector, and research environment for Agent Harnesses.**
 
-Video build integration: Video App 0.23 uses an original Codex-directed HyperFrames workflow. The built-in video-build 1.4.0 profile provides HyperFrames 0.8.87, GSAP 3.15.0, FFmpeg and fonts by default; pinned MIT video-use and adapter contract 2 remain optional for existing EDL workflows. The main path saves and renders through App MCP without a shared production directory. Rebuild the tool image, select it and explicitly update the application execution environment while retaining its workspace and model credentials. See [video-build](examples/video-build/README.md).
+RunDesk makes agent execution observable and usable by applications. It connects to Codex and the independently developed Kun engine, providing a web workbench and APIs for tasks, progress, approvals, execution traces, and artifacts.
 
-## Current release
+An **Agent Harness** is the runtime around a model: it manages context, the execution loop, tools, and runtime state. RunDesk connects applications and developers to that runtime. Skills, plugins, MCP services, and execution environments can be combined for each use case without imposing a fixed workflow.
 
-**RunDesk 0.52.0 · external Kun 0.17.0 · worker protocol 16**. The permanent [build center](docs/BUILD-CENTER.md) manages reusable Docker recipes, builds, images, environments and offline checks across applications. A native Codex build-tools plugin provides the `add-app-docker-image` Skill and a task-scoped build MCP. [Plugin inspection](docs/NATIVE-PLUGINS.md) shows configured plugins and observed Skill/MCP origins without calling unstable native install APIs. Tasks freely combine these resources; no workflow hierarchy is required. Kun remains an independent executable connected through its lightweight JSONL SDK; see [compatibility](docs/KUN-SEPARATION.md).
+## Three missions
 
-- Prepare and reuse an application’s configured Docker environment before work, without changing its image or disconnecting active sessions.
-- Integrate applications with scoped credentials, durable queues, sessions, streaming events, files, and idempotency receipts.
-- Inspect recorded traces and model exchanges from one debugging workbench. Kun additionally exposes internal state, step controls, conditional breakpoints, snapshots, diagnostic sessions, and Hybrid/Live forks.
-- Evaluate fixed cases and artifacts, validate parameterized Skills independently, and compare repeated runs with explicit missing evidence.
-- Check local prerequisites on opening the workbench. Configure Kun without Codex, or optionally install a pinned Codex release into the data directory.
+### 1. Debug agents being deployed in real applications
 
+This is RunDesk's starting point. Engineers bringing agents into enterprise applications need to see what their agents actually did, where a task stalled, and why it failed.
 
-Independent video environments: keep our own `examples/video-build`, and add separate `examples/hyperframes`, `examples/video-use`, and `examples/openmontage` profiles for the native upstream workflows. They use Video App 0.26.0 generation MCP for speech, images and video assets. See [independent video environments](docs/UPSTREAM-VIDEO-ENVIRONMENTS.md).
+RunDesk brings user requests, model interactions, tool calls, approvals, errors, and artifacts into one debugging workbench. Developers can inspect recorded behavior and execution traces, follow the evidence, and diagnose problems. Both Codex and Kun have trace inspection; Kun additionally exposes internal state, stepping, breakpoints, checkpoints, and runtime forks. Capabilities remain explicit for each backend.
+
+Start with [trace debugging](docs/DEBUG.md), the [trace reader](docs/TRACE-READER.md), and [backend capabilities](docs/BACKENDS.md).
+
+### 2. Connect focused applications to Agent Harnesses
+
+Application developers should be able to concentrate on their own domain—news research, media production, people search, or another focused product—while RunDesk handles the connection to the agent runtime.
+
+The intended application contract is simple: **submit a task → track its progress → retrieve its artifacts**. RunDesk supplies scoped application credentials, sessions, a durable queue, events, approvals, cancellation, and artifact access. Applications still own their business data, domain services, user experience, and acceptance of results.
+
+**Runtime Presets** lower the setup burden by giving an application a prepared, reusable runtime binding. The goal is to assemble the needed Skills, plugins, MCP services, and tools in advance. In this version, named presets bind administrator-approved Codex Docker instances and workspaces; build recipes and configuration prepare the tools, Skills, and MCP integrations. Native plugin support currently covers inspection and observed component origins; stable native install/uninstall is not implemented. Registering a preset alone does not build an image, install a plugin, or authenticate a model account.
+
+Start with the [application API](docs/API-V1.md), [runtime presets](docs/APPLICATION-RUNTIME-PRESETS.md), [example profiles](examples/README.md), and [build center](docs/BUILD-CENTER.md).
+
+### 3. Provide an experimental environment for Harness researchers
+
+Harness developers and researchers need a place to test execution strategies, inspect their effects, and compare results against recorded evidence.
+
+RunDesk's Kun integration supports module-state inspection, loop-policy selection, offline record experiments, Hybrid/Live forks, fixed task sets, and comparative evaluation. Validated traces can become candidate reusable Skills. This makes it possible to explore new ideas and measure their effects on task quality and execution cost. The current experimental controls are primarily Kun-specific; RunDesk does not yet expose a dynamically loadable SDK for arbitrary Harness modules.
+
+Start with [Harness experiments](docs/KUN-HARNESS.md), [runtime forks](docs/KUN-FORKS.md), and [repeated comparisons](docs/KUN-BENCHMARKS.md).
+
+## Current source version
+
+**RunDesk 0.53.0 source · external Kun 0.17.0 · worker protocol 16**
+
+This source includes runtime/resource contracts, a unified observation model, the conversation trace reader, the build center, and two API entry points over the same task core:
+
+| Entry point | Purpose |
+| --- | --- |
+| **RDCA v1** — `/api/v1` | RunDesk's application and management API; machine-readable contract at `/api/v1/openapi.json` |
+| **UHP** — `/v1` | An additional service interface targeting protocol `2026-10-19`; implemented with [documented limits](docs/UHP.md), without a full conformance claim |
+
+Version 0.53.0 adds persistent task deadlines, progress and approval handoff, explicit execution capabilities, and a [Python UHP client](examples/uhp_client.py). Unsupported step/token budgets are disclosed; applications can require supported capabilities before submission.
+
+RunDesk runs independently of HarnessRouter. See [current status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and [validation scope](docs/VALIDATION.md). Video and research integrations are examples of the application mission; their component versions belong in the [profile documentation](examples/README.md).
 
 ## Quick start
 
-This v0.52.0-based refactor introduces independent runtime modules with explicit host services, shared resource references and permission contracts, task resource inspection, and reference-first personal artifacts with explicit snapshots. Existing stored copies remain readable. See [resource contracts](docs/RESOURCE-CONTRACTS.md) and [task resource views](docs/TASK-RESOURCES.md). The additional [UHP facade](docs/UHP.md) serves `/v1` against the same task kernel, with its fixed protocol version and implementation limits documented separately.
-
-The [unified observation model v1](docs/OBSERVATION-MODEL.md) reads Codex App Server, Kun SDK and retained proxy evidence through one versioned event/activity contract. It shares the existing journal, fixed history cursors and read-only debug permissions. The current trace UI remains compatible.
-
-Use Go 1.25.12 or a compatible newer toolchain. The WebUI is embedded; no frontend build is required.
+Use **Go 1.25.12** or a compatible newer toolchain. The WebUI is embedded; no frontend build is required.
 
 ```bash
 make build
+./bin/rundesk --data ./data
+```
+
+Open <http://127.0.0.1:3210> and configure Codex or Kun in the setup wizard. To explore the interface without real model calls:
+
+```bash
+./bin/rundesk --data ./demo-data --demo
+```
+
+For Kun, build the independent Kun project, then pass its executable:
+
+```bash
 ./bin/rundesk --data ./data --kun /absolute/path/to/kun/bin/kun
 ```
 
-Open http://127.0.0.1:3210 and choose Kun or Codex in the setup wizard. Kun uses a tool-capable Chat Completions service; Codex uses its native provider and authentication configuration. Different instances can use different backends; existing sessions retain their backend. `--demo` explores the interface without real model calls or software installation.
+This package builds RunDesk only. The lightweight SDK in `third_party/kun-sdk` allows the host to build without Kun engine sources. The `your-org` module paths are unpublished placeholders resolved locally by `go.mod`. Missing or incompatible Kun is reported explicitly.
 
-HTTP observation stays off until enabled for a Codex session. `--observe-http=true` changes the default for newly created Codex sessions; saved settings of existing sessions are retained. When off, no observation proxy starts and no endpoint discovery is performed for that session. See [capture settings](docs/UNIFIED_DEBUGGING.md).
+Kun uses a tool-capable Chat Completions service; Codex uses its native provider and authentication configuration. Instances may use different backends, while existing sessions retain their original backend. See [setup and deployment](docs/SETUP.md) for Windows, Docker, and optional Codex installation.
 
-This source distribution builds RunDesk only. Build Kun separately in its own project with `go build -o bin/kun ./cmd/kun`, then pass its absolute path with `--kun`, or place it beside RunDesk. Missing or incompatible Kun is an explicit error, with no fallback to Codex. The SDK snapshot under `third_party/kun-sdk` permits a standalone host build without Kun engine sources. Module paths using `your-org` remain unpublished placeholders resolved locally by `go.mod`. See [setup and deployment](docs/SETUP.md) for Windows and optional Codex installation.
+## Choose your path
 
-## Documentation
+| Audience | Documentation |
+| --- | --- |
+| Agent deployment engineers | [Debugging](docs/DEBUG.md) · [Observation and capture](docs/UNIFIED_DEBUGGING.md) · [Read-only debug API/MCP](docs/DEBUG-SERVICE.md) |
+| Application developers | [Connect an application](docs/APPLICATION-CONNECT.md) · [API](docs/API-V1.md) · [Presets](docs/APPLICATION-RUNTIME-PRESETS.md) · [Python example](examples/application_quickstart.py) |
+| Harness developers and researchers | [Kun integration](docs/KUN.md) · [Harness controls](docs/KUN-HARNESS.md) · [Experiments](docs/KUN-EXPERIMENTS.md) · [Evaluation](docs/KUN-EVALUATION.md) |
+| Maintainers and operators | [Architecture](docs/ARCHITECTURE.md) · [Build center](docs/BUILD-CENTER.md) · [Upgrading](docs/UPGRADING.md) · [Security](SECURITY.md) |
 
-[Application API v1](docs/API-V1.md) · [Architecture](docs/ARCHITECTURE.md) · [Backend capabilities](docs/BACKENDS.md) · [Unified debugging and capture](docs/UNIFIED_DEBUGGING.md) · [Trace debugging](docs/DEBUG.md) · [Current status](docs/STATUS.md) · [Validation](docs/VALIDATION.md) · [Upgrading](docs/UPGRADING.md)
-
-RunDesk's own contract is named **RunDesk Control API (RDCA)**; v1 stays at `/api/v1`, with its machine-readable contract at `/api/v1/openapi.json`. [Python client](examples/application_client.py) and [minimal application example](examples/application_quickstart.py) use the same contract. RunDesk remains independent of HarnessRouter. The additional `/v1` UHP interface shares RunDesk's task and trace core. It targets UHP `2026-10-19` and supports task execution, continuation, cancellation, streaming, files and session inspection. Native backend limits and the distinction between fixture validation and a full conformance claim are recorded in [UHP service](docs/UHP.md). See [API strategy and compatibility plan](docs/API-STRATEGY.md).
+For local development, `make test` runs the host and SDK tests; `make check` adds race checks and `go vet`. Some integration checks require an independent Kun executable. Reproduction instructions and historical results are separated in [validation](docs/VALIDATION.md).
 
 ## Execution boundaries
 
-Kun Bash is opt-in host execution, not an OS sandbox. Managed Docker environments currently support Codex; Kun container hosting remains pending. Codex does not expose Kun's internal step controls or full context snapshots. An accepted task, a completed tool call, and a successful business outcome are distinct; uncertain side effects are not silently replayed.
+- Codex HTTP observation is off by default and enabled per session. `--observe-http=true` changes the default for new Codex sessions; it does not overwrite saved settings. Capture covers only traffic routed through the configured proxy and reports incomplete evidence explicitly.
+- Managed Docker environments currently support Codex. Kun Bash is opt-in host execution; file-tool path limits are not an OS sandbox. Kun container hosting remains pending.
+- A completed task, a successful tool call, and an accepted business outcome are separate facts. Unknown side effects are not silently replayed. Recorded evidence does not reveal unexposed model reasoning.
+- Native plugin installation, arbitrary backend modules, and full UHP conformance are not implied by the three missions. See [status](docs/STATUS.md) for implemented capabilities and remaining work.
 
-## Acknowledgements
+## Acknowledgements and license
 
-Thanks to [MichaelKinsy/PiG](https://github.com/MichaelKinsy/PiG), Michael Kinsy and its contributors, Mario Zechner / Pi, and [HarnessRouter](https://github.com/HarnessRouter/harnessrouter). The independent Kun project retains the selectively incorporated PiG SSE code and its original MIT notices; HarnessRouter/UHP informs the application/backend boundary. [UPSTREAM](docs/UPSTREAM.md) distinguishes incorporated code from design references and preserves the original [notices](LICENSES). No complete PiG or UHP compatibility is claimed.
+Thanks to [MichaelKinsy/PiG](https://github.com/MichaelKinsy/PiG), Michael Kinsy and contributors, Mario Zechner / Pi, and [HarnessRouter](https://github.com/HarnessRouter/harnessrouter). The independent Kun project retains selectively incorporated PiG SSE code and its original MIT notices; HarnessRouter/UHP informs the application/backend boundary. [Upstream provenance](docs/UPSTREAM.md) distinguishes incorporated code from design references.
 
-[License](LICENSE)
-
-## Runtime profiles
-
-See [examples](examples/README.md) for news2douyin, people-search and video-build. The shared CLI inspects, validates, prepares, packages and builds standalone Docker contexts. Research profiles use Exa and include a pinned Agent-Reach toolchain by default; the setup wizard can prepare them before application registration.
-
-Video App 0.23 deployment: [VIDEO-APP](docs/VIDEO-APP.md). The renderer/App image remains separate from the managed Codex tool image. HyperFrames is the default video toolchain; video-use is an explicit compatibility option. Installation and media smoke checks do not establish real model production quality or visual understanding.
+[License](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md) · [License texts](LICENSES)

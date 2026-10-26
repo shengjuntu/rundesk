@@ -1,0 +1,12 @@
+test_three_independent_native_contexts_and_runtime_only_mcp (__main__.ActualRecipeTest.test_three_independent_native_contexts_and_runtime_only_mcp) ... ok
+test_archive_path_and_link_escape_rejected (__main__.SourceBoundaryTest.test_archive_path_and_link_escape_rejected) ... ok
+test_declared_build_inputs_cannot_traverse_or_follow_symlinks (__main__.SourceBoundaryTest.test_declared_build_inputs_cannot_traverse_or_follow_symlinks) ... ok
+test_environment_rejects_credentials_expansion_and_newlines (__main__.SourceBoundaryTest.test_environment_rejects_credentials_expansion_and_newlines) ... ok
+test_exact_archive_identity_and_native_entry (__main__.SourceBoundaryTest.test_exact_archive_identity_and_native_entry) ... ok
+test_malformed_archive_is_a_structured_validation_error (__main__.SourceBoundaryTest.test_malformed_archive_is_a_structured_validation_error) ... ok
+test_remote_source_is_exact_codeload_commit (__main__.SourceBoundaryTest.test_remote_source_is_exact_codeload_commit) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.263s
+
+OK

@@ -124,9 +124,21 @@ func TestHTTPPreservesBodyEncodedPathQueryAndHeaders(t *testing.T) {
 func TestSSEDeliveredBeforeUpstreamCompletes(t *testing.T) {
 	release := make(chan struct{})
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := http.NewResponseController(w).EnableFullDuplex(); err != nil {
+			t.Error(err)
+			return
+		}
 		w.Header().Set("Content-Type", "text/event-stream")
 		_, _ = io.WriteString(w, "event: response.output_text.delta\ndata: {\"delta\":\"first\"}\n\n")
 		w.(http.Flusher).Flush()
+		// Respond before reading the upload, but consume it before completing
+		// the exchange: a server that ignores it may legitimately finish before
+		// the transport sends any body bytes, leaving an incomplete capture.
+		body, err := io.ReadAll(r.Body)
+		if err != nil || string(body) != "{}" {
+			t.Errorf("upstream request body: %q %v", body, err)
+			return
+		}
 		select {
 		case <-release:
 			_, _ = io.WriteString(w, "data: [DONE]\n\n")

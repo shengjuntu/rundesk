@@ -14,6 +14,10 @@ PiG browser assets, Node extensions and full runtime are not included. Thanks to
 
 HarnessRouter/UHP informed the application-to-backend abstraction and capability documentation. No source, schemas or assets from that project are distributed here. See [UPSTREAM](docs/UPSTREAM.md) for the scope of the reference and acknowledgements.
 
-## Optional runtime profile dependencies
+## Runtime profile dependencies
 
-The example Docker recipes can install Agent-Reach from the user-selected MIT fork at a fixed commit, or Wigolo 0.2.1 under AGPL-3.0-only. These are optional external tools, not incorporated RunDesk source. Built images must retain each component's notices and applicable corresponding-source provisions. Exa/Jina are hosted services. See the [profile dependency notices](examples/_shared/THIRD_PARTY.md) and [Wigolo assessment](examples/news2douyin/WIGOLO.md).
+The news and people-search recipes install Agent-Reach from a pinned MIT fork. The original video-build recipe prepares HyperFrames/GSAP and can optionally include the pinned video-use source. These tools are separate from RunDesk's host code; built images must retain their component notices. Exa/Jina are external hosted services. The [shared dependency notices](examples/_shared/THIRD_PARTY.md) describe these original profiles.
+
+The independent [HyperFrames](examples/hyperframes/README.md), [video-use](examples/video-use/README.md), and [OpenMontage](examples/openmontage/README.md) profiles have their own pinned sources and licensing records. The OpenMontage recipe includes its [AGPL license text](examples/openmontage/LICENSE-AGPL-3.0.txt) and fetches the pinned implementation at image build time; it is separate from the original video-build profile. See [upstream environments](docs/UPSTREAM-VIDEO-ENVIRONMENTS.md) for provenance and redistribution boundaries.
+
+Wigolo was evaluated in earlier versions and is no longer included in the current recipes. Its removed integration guide is not a current setup dependency.

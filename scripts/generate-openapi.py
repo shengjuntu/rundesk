@@ -46,7 +46,7 @@ schemas={
 }
 schemas.update({
  'TaskSpec':obj({'title':st(maxLength=120),'workspaceId':st(),'instanceId':st(),'model':st(),'source':ref('Source'),'input':ref('Input'),'notBefore':st(format='date-time')},['workspaceId','input']),
- 'Task':obj({k:st() for k in ['id','sessionId','runId','status','reason','created','updated','startedAt','finishedAt','scheduleId','scheduledFor','fileOwner','submittingKeyId']}|{'spec':ref('TaskSpec'),'cancelRequested':bool_},['id','sessionId','status','spec']),
+ 'Task':obj({k:st() for k in ['id','sessionId','runId','status','reason','created','updated','startedAt','finishedAt','scheduleId','scheduledFor','fileOwner','submittingKeyId']}|{'spec':ref('TaskSpec'),'cancelRequested':bool_,'deadline':{'type':'integer','format':'int64','minimum':0,'description':'可选的持久执行截止时间，Unix 纳秒；0 或缺省表示无截止时间。由内部任务准入设置。'},'stopReason':st(description='持久停止原因；timeout 表示截止时间到期。')},['id','sessionId','status','spec']),
  'QueueSettings':obj({'revision':integer,'paused':bool_,'maxConcurrent':{'type':'integer','minimum':1,'maximum':16},'perInstance':{'type':'object','additionalProperties':{'type':'integer','minimum':1,'maximum':16}}},['revision','paused','maxConcurrent','perInstance']),
  'TaskPage':obj({'items':arr(ref('Task')),'nextCursor':st()},['items','nextCursor'])
 })
@@ -488,7 +488,7 @@ for path,method,response in [('/kun-task-sets','post',ref('KunTaskSet')),('/kun-
  for code,desc in [('400','字段、案例、规则、总量或查询参数无效；缺少幂等 Key。'),('403','应用与成员不得访问任务集。'),('404','任务集不存在。'),('409','持久化内容校验失败或幂等 Key 用于不同请求。')]:op['responses'][code]={'description':desc}
 
 # Unified read-only debug facade. Existing Kun aliases retain their response shape.
-debug_kinds=['overview','run','events','event','context','tools','budget','modules','breakpoints','actions','snapshot','evidence','diff','runs','steps','step','issues','statistics','llm_requests','llm_request']
+debug_kinds=['overview','run','events','event','context','tools','budget','modules','breakpoints','actions','snapshot','evidence','diff','runs','steps','step','issues','statistics','llm_requests','llm_request','observations','activity','transcript']
 schemas['DebugCapability']=obj({'supported':bool_,'available':bool_,'reason':st()},['supported','available'])
 schemas['DebugCapabilities']=obj({'sessionId':st(),'backend':st(enum=['codex','kun']),'readOnly':{'const':True},'queries':{'type':'object','additionalProperties':ref('DebugCapability')},'hostEventCursor':st(),'workerSequence':st()},['sessionId','backend','readOnly','queries','hostEventCursor','workerSequence'])
 schemas['DebugEventMeta']=obj({'id':integer,'time':st(),'direction':st(),'method':st(),'bytes':integer},['id','time','direction','method','bytes'])
@@ -496,7 +496,7 @@ schemas['DebugEventPage']=obj({'events':arr(ref('DebugEventMeta')),'through':int
 schemas['DebugEventChunk']=obj({'eventId':integer,'text':st(),'offset':integer,'nextOffset':integer,'totalCharacters':integer,'hasMore':bool_,'encoding':st()},['eventId','text','offset','nextOffset','totalCharacters','hasMore','encoding'])
 schemas['DebugRun']=obj({'id':st(),'question':st(),'status':st(),'start':st(),'end':st(),'inputEventId':integer,'association':st(enum=['observed','reconstructed','inferred','missing']),'eventIds':arr(integer)},['id','question','status','start','inputEventId','association','eventIds'])
 schemas['DebugStep']=obj({'id':st(),'runId':st(),'type':st(),'title':st(),'status':st(),'start':st(),'end':st(),'durationMs':integer,'reportedDurationMs':integer,'point':bool_,'eventIds':arr(integer),'preview':obj(extra=True),'previewOnly':bool_,'clock':st(),'association':st(enum=['observed','reconstructed','inferred','missing']),'startObserved':bool_,'endObserved':bool_,'missing':arr(st()),'issues':arr(st()),'previewTruncated':bool_,'evidenceTruncated':bool_,'workerSequences':arr(integer)},['id','runId','type','title','status','point','eventIds','preview','previewOnly','clock','association','startObserved','endObserved','missing','issues','previewTruncated','evidenceTruncated'])
-schemas['DebugResult']=obj({'sessionId':st(),'backend':st(enum=['codex','kun']),'source':st(enum=['host_session','host_journal','host_projection','http_observation','kun_worker']),'kind':st(enum=debug_kinds),'through':integer,'runId':st(),'revision':integer,'sequence':integer,'data':{}},['sessionId','backend','source','kind','data'])
+schemas['DebugResult']=obj({'sessionId':st(),'backend':st(enum=['codex','kun']),'source':st(enum=['host_session','host_journal','host_projection','http_observation','kun_worker','unified_observation']),'kind':st(enum=debug_kinds),'through':integer,'runId':st(),'revision':integer,'sequence':integer,'data':{'description':'observations 时为 UnifiedObservationPage；activity 时为 UnifiedActivityPage；transcript 时为 TranscriptPage；其余 kind 沿既有查询结构。'}},['sessionId','backend','source','kind','data'])
 for suffix,response in [('capabilities','DebugCapabilities'),('query','DebugResult')]:
  op=paths['/sessions/{sid}/debug/'+suffix]['get']
  op['summary']='Unified read-only debug '+suffix
@@ -961,6 +961,102 @@ op['requestBody']={'required':True,'content':{'multipart/form-data':{'schema':ob
 for action in ['install','uninstall']:
  op=build_op('/instances/{iid}/plugins/'+action,'post',ref('Error'),status='501',description='原生插件生命周期尚无稳定驱动，明确拒绝且不变更')
 
-spec={'openapi':'3.1.0','info':{'title':'RunDesk Control API (RDCA)','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter，当前未实现或声明 UHP 兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。当前应用接入、错误、幂等及示例见 docs/API-V1.md。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'},'BuildTaskCapability':{'type':'http','scheme':'bearer','description':'仅构建助手MCP接受的短期任务能力，不是管理员或应用令牌。'}},'schemas':schemas}}
+# Read-only observation and transcript contracts. Keep these declarations in the
+# generator: internal/observation/model.go owns the metadata model, while
+# internal/tracequery/{unified,transcript}.go own projection limits and selectors.
+observation_sources=['host','codex_app_server','kun_sdk','observeproxy']
+observation_kinds=['run','model','tool','mcp','approval','message','reasoning','context','usage','transport','error','event']
+int64={'type':'integer','format':'int64'}
+int32={'type':'integer','format':'int32'}
+def observation_obj(props,required=(),description=None):
+ schema={'type':'object','properties':props,'additionalProperties':False}
+ if required:schema['required']=list(required)
+ if description:schema['description']=description
+ return schema
+
+schemas['ObservationNativeIDs']=observation_obj({
+ 'rpcId':st(),'threadId':st(),'turnId':st(),'itemId':st(),'itemType':st(),'callId':st(),
+ 'step':int64,'purpose':st(),'workerSequence':int64,'workerRevision':int64,
+ 'mcpServer':st(),'mcpExchangeId':st(),'captureId':st(),'transportId':st(),
+})
+schemas['ObservationEvidence']=observation_obj({
+ 'eventId':int64,'readWith':st(enum=['event','llm_request']),'workerSequence':int64,
+},['eventId','readWith'])
+schemas['ObservationUsage']=observation_obj({
+ 'scope':st(),'aggregation':st(),'evidence':arr(ref('ObservationEvidence')),
+},['scope','aggregation','evidence'],'用量证据语义，不是结算账单。累计thread与逐调用用量不可直接求和或跨来源重复统计；原始计数通过evidence读取。')
+schemas['ObservationTransport']=observation_obj({
+ 'method':st(),'statusCode':int64,'websocket':bool_,'requestBytes':int64,'responseBytes':int64,
+ 'incomplete':bool_,'truncated':bool_,'captureLoss':bool_,'headersRedacted':bool_,'complete':bool_,
+},['websocket','requestBytes','responseBytes','incomplete','truncated','captureLoss','headersRedacted','complete'])
+schemas['UnifiedObservationEvent']=observation_obj({
+ 'id':st(),'eventId':int64,'sessionId':st(),'taskId':st(),'runId':st(),
+ 'source':st(enum=observation_sources),'sourceBasis':st(),'kind':st(enum=observation_kinds),
+ 'method':st(),'direction':st(),'time':st(),'clock':st(),'phase':st(),'status':st(),
+ 'association':st(),'associationBasis':st(),'native':ref('ObservationNativeIDs'),
+ 'evidence':arr(ref('ObservationEvidence')),'issues':arr(st()),
+ 'usage':ref('ObservationUsage'),'transport':ref('ObservationTransport'),
+},['id','eventId','sessionId','source','sourceBasis','kind','method','direction','time','clock','phase','status','association','associationBasis','native','evidence','issues'],
+ '仅白名单元数据，原始payload留在现有事件日志。sourceBasis/associationBasis说明来源和轮次判断依据。')
+schemas['UnifiedObservationActivity']=observation_obj({
+ 'id':st(),'sessionId':st(),'taskId':st(),'runId':st(),'source':st(enum=observation_sources),
+ 'sourceBasis':st(),'kind':st(enum=observation_kinds),'type':st(),'title':st(),'status':st(),
+ 'start':st(),'end':st(),'clock':st(),'durationMs':int64,'reportedDurationMs':int64,
+ 'point':bool_,'startObserved':bool_,'endObserved':bool_,'association':st(),'associationBasis':st(),
+ 'native':ref('ObservationNativeIDs'),'evidence':arr(ref('ObservationEvidence')),
+ 'evidenceTruncated':bool_,'missing':arr(st()),'issues':arr(st()),
+ 'usage':ref('ObservationUsage'),'transport':ref('ObservationTransport'),
+},['id','sessionId','source','sourceBasis','kind','type','title','status','clock','point','startObserved','endObserved','association','associationBasis','native','evidence','evidenceTruncated','missing','issues'],
+ '宿主run、生命周期步骤或独立transport活动；同run不代表同次模型调用。缺失和截断保留，历史task身份只从固定范围内日志补充。')
+schemas['UnifiedObservationPage']=observation_obj({
+ 'schemaVersion':dict(int32,enum=[1]),'sessionId':st(),'snapshotThrough':int64,
+ 'observations':arr(ref('UnifiedObservationEvent')),'nextAfter':int64,'hasMore':bool_,'coverage':st(),
+},['schemaVersion','sessionId','snapshotThrough','observations','nextAfter','hasMore','coverage'])
+schemas['UnifiedActivityPage']=observation_obj({
+ 'schemaVersion':dict(int32,enum=[1]),'sessionId':st(),'snapshotThrough':int64,
+ 'activity':arr(ref('UnifiedObservationActivity')),'total':int32,'offset':int32,'nextOffset':int32,
+ 'hasMore':bool_,'coverage':st(),
+},['schemaVersion','sessionId','snapshotThrough','activity','total','offset','nextOffset','hasMore','coverage'])
+schemas['TranscriptBlock']=obj({
+ 'kind':st(enum=['text','code','json','diff','file']),'text':st(),'label':st(),'language':st(),'path':st(),
+},['kind','text'])
+schemas['TranscriptEntry']=obj({
+ 'id':st(description='与 activity.id 相同的稳定标识。'),'activity':ref('UnifiedObservationActivity'),
+ 'role':st(enum=['user','assistant','tool','reasoning','system']),'title':st(),
+ 'blocks':{'type':'array','maxItems':32,'items':ref('TranscriptBlock')},
+ 'contentTruncated':bool_,'contentUnavailable':bool_,
+ 'contentPartial':{'type':'boolean','description':'消息尚未结束；可见增量不能作为完成证据。'},
+},['id','activity','role','title','blocks','contentTruncated','contentUnavailable','contentPartial'])
+schemas['TranscriptPage']=obj({
+ 'schemaVersion':{'type':'integer','enum':[1]},'sessionId':st(),
+ 'snapshotThrough':{'type':'integer','minimum':0},
+ 'entries':{'type':'array','maxItems':50,'items':ref('TranscriptEntry')},
+ 'total':{'type':'integer','minimum':0},'offset':{'type':'integer','minimum':0},
+ 'nextOffset':{'type':'integer','minimum':0},'hasMore':bool_,'coverage':st(),
+},['schemaVersion','sessionId','snapshotThrough','entries','total','offset','nextOffset','hasMore','coverage'])
+
+unified_query_description=' observations/activity 是 schemaVersion=1 的统一只读观测投影，source=unified_observation；前者按 after/limit 读取元数据事件，后者按 offset/limit 读取运行时步骤及传输活动。原始证据引用既有 event 或 llm_request，不复制正文。所有筛选和身份补充限于固定 through；Kun sequence/revision 独立保留，WebSocket 连接不能据建立时标签强归整个轮次。'
+transcript_query_description=' transcript 为统一观测模型的会话阅读投影，source=unified_observation，返回 TranscriptPage；仅接受 through/runId/offset/limit，默认 20、最大 50 条。原始正文仍留在事件日志。单条最多 12000 个 Unicode 字符/32 个内容块，每页原始内容读取预算 16 MiB；超出时 contentTruncated/contentUnavailable 明示，使用 activity.evidence 读取来源。开放中的 Codex 消息可包含按原生 turnId/itemId 唯一对应的保留增量，并标记 contentPartial；不表示调用完成。HTTP 正文不进入会话内容，传输活动独立展示。'
+unified_parameter_notes={
+ 'after':' observations 使用返回的 nextAfter 继续按事件编号分页。',
+ 'through':' observations/activity 同样固定此宿主上界；显式 0 始终为空快照。 transcript 同样适用。',
+ 'offset':' activity 为统一活动的记录偏移。 transcript 同样适用。',
+ 'limit':' observations/activity 默认 50、最大 200。 transcript 同样适用。 transcript 默认 20、最大 50。',
+ 'runId':' observations/activity 按明确或有证据重建的轮次筛选，不按时间强行归并跨来源请求。 transcript 同样适用。',
+}
+# Apply to both routes after the member projection, whose description replaces
+# the base route's authorization text but shares these projection semantics.
+for path in ['/sessions/{sid}/debug/query','/member/{grantId}/sessions/{sid}/debug/query']:
+ op=paths[path]['get']
+ op['description']+=unified_query_description+transcript_query_description
+ for parameter in op['parameters']:
+  if parameter['name'] in unified_parameter_notes:
+   parameter['description']+=unified_parameter_notes[parameter['name']]
+ op['parameters'] += [
+  {'name':'source','in':'query','required':False,'schema':st(enum=observation_sources),'description':'仅 observations/activity：记录来源。外层响应 source=unified_observation；单条记录保留来源判定依据。'},
+  {'name':'recordKind','in':'query','required':False,'schema':st(maxLength=256,enum=observation_kinds),'description':'仅 observations/activity：规范化记录类别的精确匹配；未知原生方法保留为 event，不丢弃证据。'},
+ ]
+
+spec={'openapi':'3.1.0','info':{'title':'RunDesk Control API (RDCA)','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter；附加 UHP /v1 入口共用任务核心，具体范围与限制见 docs/UHP.md，不声明完整规范兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。当前应用接入、错误、幂等及示例见 docs/API-V1.md。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'},'BuildTaskCapability':{'type':'http','scheme':'bearer','description':'仅构建助手MCP接受的短期任务能力，不是管理员或应用令牌。'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

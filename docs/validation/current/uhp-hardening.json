@@ -1,0 +1,883 @@
+{
+  "schemaVersion": 1,
+  "version": "0.53.0",
+  "generatedAt": "2026-10-25T14:23:59.460285+00:00",
+  "scope": "UHP application integration hardening, durable task deadlines and progress, bilingual mission documentation; HTTP/1 proxy defect discovered during regression and repaired.",
+  "toolchain": "Go 1.25.12 linux/amd64; Python 3.12.14 testing a Python 3.10+ standard library client; independent Kun SDK 0.17.0, worker protocol 16",
+  "baseline": {
+    "sourceCommit": "b1d970a92f86e6aff35b09725acb774f2692cabe",
+    "fullGo": {
+      "pass": 605,
+      "skip": 14
+    },
+    "notes": "Local baseline is the previous documentation-cleaned 0.52.0 source, not an upstream release tag."
+  },
+  "changes": [
+    "Adapter capabilities and execution semantics are server-owned; metadata.rundesk_require rejects unsupported requirements before task/attachment admission.",
+    "Both adapters disclose max_step and max_output_tokens as ignored. Existing active legacy step budgets fail safe; completed records stay frozen.",
+    "instructions are task text retained in native session history, not native-priority or one-task-only instructions.",
+    "UHP deadlines default to 3600 seconds and include queue time; persisted cancellation uses original task/run identity and survives paused queue/restart.",
+    "Metadata polling distinguishes running, approval, pause, cancellation and terminal states; approval handoff links the authorized workbench without approving tools.",
+    "Late asynchronous run admission cannot execute old input or release a new run process reservation.",
+    "Stdlib Python client and reproducible isolated demo HTTP integration test.",
+    "OpenAPI generator retains all previous observation/transcript definitions, while Task adds optional deadline/stopReason.",
+    "HTTP/1 observation proxy permits full-duplex transfer to preserve request bodies when upstream streams an early response."
+  ],
+  "hostValidation": {
+    "ordinaryFullRunBeforeProxyFix": {
+      "toolchain": "go1.25.12 linux/amd64",
+      "command": "go test -json ./... -count=1 -timeout=300s",
+      "exitCode": 1,
+      "testsIncludingSubtests": {
+        "pass": 650,
+        "fail": 1,
+        "skip": 14
+      },
+      "topLevelTests": {
+        "pass": 446,
+        "fail": 1,
+        "skip": 14
+      },
+      "allStartedPackagesTerminated": true,
+      "packages": {
+        "github.com/shengjuntu/rundesk/examples/docker": {
+          "status": "skip",
+          "elapsedSeconds": 0
+        },
+        "github.com/shengjuntu/rundesk/examples/profiletemplates": {
+          "status": "skip",
+          "elapsedSeconds": 0
+        },
+        "github.com/shengjuntu/rundesk/cmd/rundesk": {
+          "status": "pass",
+          "elapsedSeconds": 0.01
+        },
+        "github.com/shengjuntu/rundesk/internal/observation": {
+          "status": "skip",
+          "elapsedSeconds": 0
+        },
+        "github.com/shengjuntu/rundesk/internal/debugapi": {
+          "status": "pass",
+          "elapsedSeconds": 0.005
+        },
+        "github.com/shengjuntu/rundesk/internal/experiment": {
+          "status": "pass",
+          "elapsedSeconds": 0.009
+        },
+        "github.com/shengjuntu/rundesk/internal/mcptest": {
+          "status": "pass",
+          "elapsedSeconds": 0.044
+        },
+        "github.com/shengjuntu/rundesk/internal/debugmcp": {
+          "status": "pass",
+          "elapsedSeconds": 0.111
+        },
+        "github.com/shengjuntu/rundesk/internal/mcp": {
+          "status": "pass",
+          "elapsedSeconds": 0.119
+        },
+        "github.com/shengjuntu/rundesk/internal/redaction": {
+          "status": "skip",
+          "elapsedSeconds": 0
+        },
+        "github.com/shengjuntu/rundesk/internal/resource": {
+          "status": "pass",
+          "elapsedSeconds": 0.003
+        },
+        "github.com/shengjuntu/rundesk/internal/servicelock": {
+          "status": "pass",
+          "elapsedSeconds": 0.009
+        },
+        "github.com/shengjuntu/rundesk/internal/containerruntime": {
+          "status": "pass",
+          "elapsedSeconds": 0.525
+        },
+        "github.com/shengjuntu/rundesk/plugins/rundesk-build-tools": {
+          "status": "skip",
+          "elapsedSeconds": 0
+        },
+        "github.com/shengjuntu/rundesk/internal/web": {
+          "status": "pass",
+          "elapsedSeconds": 0.005
+        },
+        "github.com/shengjuntu/rundesk/internal/rpc": {
+          "status": "pass",
+          "elapsedSeconds": 0.485
+        },
+        "github.com/shengjuntu/rundesk/internal/store": {
+          "status": "pass",
+          "elapsedSeconds": 0.748
+        },
+        "github.com/shengjuntu/rundesk/internal/observeproxy": {
+          "status": "fail",
+          "elapsedSeconds": 2.08
+        },
+        "github.com/shengjuntu/rundesk/internal/tracequery": {
+          "status": "pass",
+          "elapsedSeconds": 4.305
+        },
+        "github.com/shengjuntu/rundesk/internal/app": {
+          "status": "pass",
+          "elapsedSeconds": 124.179
+        }
+      },
+      "skippedTests": [
+        {
+          "package": "github.com/shengjuntu/rundesk/internal/app",
+          "test": "TestDiagnosticReviewLifecycle",
+          "output": [
+            "diagnostic_review_test.go:27: external Kun integration requires RUNDESK_TEST_KUN=/absolute/path/to/kun"
+          ]
+        },
+        {
+          "package": "github.com/shengjuntu/rundesk/internal/app",
+          "test": "TestKunCheckpointAfterWorkerKillAndHostRestart",
+          "output": [
+            "kun_checkpoint_test.go:21: external Kun integration requires RUNDESK_TEST_KUN=/absolute/path/to/kun"
+          ]
+        },
+        {
+          "package": "github.com/shengjuntu/rundesk/internal/app",
+          "test": "TestKunDebugReadScopesAndControlProjection",
+          "output": [
+            "kun_debug_test.go:16: external Kun integration requires RUNDESK_TEST_KUN=/absolute/path/to/kun"
+          ]
+        },
+        {
+          "package": "github.com/shengjuntu/rundesk/internal/app",
+          "test": "TestKunDiagnosticSourceRemainsPausedAndFrozen",
+          "output": [
+            "kun_diagnostic_test.go:24: external Kun integration requires RUNDESK_TEST_KUN=/absolute/path/to/kun"
+          ]
+        },
+        {
+          "package": "github.com/shengjuntu/rundesk/internal/app",
+          "test": "TestHybridHostLifecycle",
+          "output": [
+            "kun_fork_test.go:20: external Kun integration requires RUNDESK_TEST_KUN=/absolute/path/to/kun"
+          ]
+        },
+        {
+          "package": "github.com/shengjuntu/rundesk/internal/app",
+          "test": "TestKunRuntimeHarnessHTTPAuthorizationAndRecovery",
+          "output": [
+            "kun_harness_control_test.go:17: external Kun integration requires RUNDESK_TEST_KUN=/absolute/path/to/kun"
+          ]
+        },
+        {
+          "package": "github.com/shengjuntu/rundesk/internal/app",
+          "test": "TestKunPlanActProcessAndConfigHTTP",
+          "output": [
+            "kun_harness_test.go:20: external Kun integration requires RUNDESK_TEST_KUN=/absolute/path/to/kun"
+          ]
+        },
+        {
+          "package": "github.com/shengjuntu/rundesk/internal/app",
+          "test": "TestKunHypothesisHostWorkerLifecycle",
+          "output": [
+            "kun_hypothesis_test.go:136: external Kun integration requires RUNDESK_TEST_KUN=/absolute/path/to/kun"
+          ]
+        },
+        {
+          "package": "github.com/shengjuntu/rundesk/internal/app",
+          "test": "TestLiveHostConfirmationExecutionAndCredentialDrift",
+          "output": [
+            "kun_live_test.go:18: external Kun integration requires RUNDESK_TEST_KUN=/absolute/path/to/kun"
+          ]
+        },
+        {
+          "package": "github.com/shengjuntu/rundesk/internal/app",
+          "test": "TestKunMCPWorkerApprovalScopesAndFrozenConfig",
+          "output": [
+            "kun_mcp_test.go:90: external Kun integration requires RUNDESK_TEST_KUN=/absolute/path/to/kun"
+          ]
+        },
+        {
+          "package": "github.com/shengjuntu/rundesk/internal/app",
+          "test": "TestKunSkillEndToEndIndependentGateAndApplicationScope",
+          "output": [
+            "kun_skills_test.go:19: external Kun integration requires RUNDESK_TEST_KUN=/absolute/path/to/kun"
+          ]
+        },
+        {
+          "package": "github.com/shengjuntu/rundesk/internal/app",
+          "test": "TestKunProcessConversationAndDebugHTTP",
+          "output": [
+            "kun_test.go:61: external Kun integration requires RUNDESK_TEST_KUN=/absolute/path/to/kun"
+          ]
+        },
+        {
+          "package": "github.com/shengjuntu/rundesk/internal/app",
+          "test": "TestSetupKunIndependentAndAtomic",
+          "output": [
+            "setup_runtime_test.go:20: external Kun integration requires RUNDESK_TEST_KUN=/absolute/path/to/kun"
+          ]
+        },
+        {
+          "package": "github.com/shengjuntu/rundesk/internal/app",
+          "test": "TestSetupKunMissingCredentialAndDraft",
+          "output": [
+            "setup_runtime_test.go:73: external Kun integration requires RUNDESK_TEST_KUN=/absolute/path/to/kun"
+          ]
+        }
+      ],
+      "failedTests": [
+        {
+          "package": "github.com/shengjuntu/rundesk/internal/observeproxy",
+          "test": "TestSSEDeliveredBeforeUpstreamCompletes",
+          "output": [
+            "proxy_test.go:155: stream end changed: \"data: {\\\"delta\\\":\\\"first\\\"}\\n\\n\" unexpected EOF"
+          ]
+        }
+      ],
+      "stderrBytes": 0,
+      "scope": "Final-source first attempt; SSE unexpected EOF and runtime guard test helper under review; external Kun unavailable"
+    },
+    "fullRaceBeforeProxyFix": {
+      "command": "go test -race -json ./... -count=1 -timeout=300s",
+      "exitCode": 0,
+      "testsIncludingSubtests": {
+        "pass": 651,
+        "skip": 14
+      },
+      "topLevelTests": {
+        "pass": 447,
+        "skip": 14
+      },
+      "allStartedPackagesTerminated": true,
+      "packages": {
+        "github.com/shengjuntu/rundesk/examples/docker": {
+          "status": "skip",
+          "elapsedSeconds": 0
+        },
+        "github.com/shengjuntu/rundesk/examples/profiletemplates": {
+          "status": "skip",
+          "elapsedSeconds": 0.005
+        },
+        "github.com/shengjuntu/rundesk/cmd/rundesk": {
+          "status": "pass",
+          "elapsedSeconds": 1.027
+        },
+        "github.com/shengjuntu/rundesk/internal/observation": {
+          "status": "skip",
+          "elapsedSeconds": 0
+        },
+        "github.com/shengjuntu/rundesk/internal/debugapi": {
+          "status": "pass",
+          "elapsedSeconds": 1.013
+        },
+        "github.com/shengjuntu/rundesk/internal/redaction": {
+          "status": "skip",
+          "elapsedSeconds": 0
+        },
+        "github.com/shengjuntu/rundesk/internal/experiment": {
+          "status": "pass",
+          "elapsedSeconds": 1.019
+        },
+        "github.com/shengjuntu/rundesk/internal/mcptest": {
+          "status": "pass",
+          "elapsedSeconds": 1.084
+        },
+        "github.com/shengjuntu/rundesk/internal/mcp": {
+          "status": "pass",
+          "elapsedSeconds": 1.124
+        },
+        "github.com/shengjuntu/rundesk/internal/debugmcp": {
+          "status": "pass",
+          "elapsedSeconds": 1.214
+        },
+        "github.com/shengjuntu/rundesk/internal/containerruntime": {
+          "status": "pass",
+          "elapsedSeconds": 1.552
+        },
+        "github.com/shengjuntu/rundesk/internal/resource": {
+          "status": "pass",
+          "elapsedSeconds": 1.012
+        },
+        "github.com/shengjuntu/rundesk/internal/servicelock": {
+          "status": "pass",
+          "elapsedSeconds": 1.022
+        },
+        "github.com/shengjuntu/rundesk/plugins/rundesk-build-tools": {
+          "status": "skip",
+          "elapsedSeconds": 0
+        },
+        "github.com/shengjuntu/rundesk/internal/web": {
+          "status": "pass",
+          "elapsedSeconds": 1.023
+        },
+        "github.com/shengjuntu/rundesk/internal/observeproxy": {
+          "status": "pass",
+          "elapsedSeconds": 3.307
+        },
+        "github.com/shengjuntu/rundesk/internal/rpc": {
+          "status": "pass",
+          "elapsedSeconds": 2.71
+        },
+        "github.com/shengjuntu/rundesk/internal/store": {
+          "status": "pass",
+          "elapsedSeconds": 4.782
+        },
+        "github.com/shengjuntu/rundesk/internal/tracequery": {
+          "status": "pass",
+          "elapsedSeconds": 22.638
+        },
+        "github.com/shengjuntu/rundesk/internal/app": {
+          "status": "pass",
+          "elapsedSeconds": 171.927
+        }
+      },
+      "stderrBytes": 0
+    },
+    "finalChangedPackageOrdinary": {
+      "toolchain": "go1.25.12 linux/amd64",
+      "command": "go test -json ./internal/observeproxy -count=1 -timeout=300s",
+      "exitCode": 0,
+      "testsIncludingSubtests": {
+        "pass": 33
+      },
+      "topLevelTests": {
+        "pass": 21
+      },
+      "allStartedPackagesTerminated": true,
+      "packages": {
+        "github.com/shengjuntu/rundesk/internal/observeproxy": {
+          "status": "pass",
+          "elapsedSeconds": 2.077
+        }
+      },
+      "skippedTests": [],
+      "failedTests": [],
+      "stderrBytes": 0,
+      "scope": "Final observeproxy package after HTTP/1 full-duplex fix"
+    },
+    "finalChangedPackageRace": {
+      "toolchain": "go1.25.12 linux/amd64",
+      "command": "go test -race -json ./internal/observeproxy -count=1 -timeout=300s",
+      "exitCode": 0,
+      "testsIncludingSubtests": {
+        "pass": 33
+      },
+      "topLevelTests": {
+        "pass": 21
+      },
+      "allStartedPackagesTerminated": true,
+      "packages": {
+        "github.com/shengjuntu/rundesk/internal/observeproxy": {
+          "status": "pass",
+          "elapsedSeconds": 3.351
+        }
+      },
+      "skippedTests": [],
+      "failedTests": [],
+      "stderrBytes": 0,
+      "scope": "Final observeproxy package race after HTTP/1 full-duplex fix"
+    },
+    "interpretation": "The ordinary full run had one real pre-existing proxy failure. The full race run passed before the isolated proxy repair. After that repair the entire changed proxy package was rerun normally and with race detection, plus repeated deterministic SSE regressions; untouched packages retain their full-run results. These are staged results, not a new all-green single full-suite invocation after the final patch.",
+    "deadlineRace": {
+      "command": "go test -race -json ./internal/app -run ^TestTaskDeadline -count=1 -timeout=120s",
+      "exit_code": 0,
+      "elapsed_seconds": 19.443,
+      "passed": [
+        "TestTaskDeadlineRejectsBeforeAtomicAdmission",
+        "TestTaskDeadlineExpiresPausedScheduledQueueWithoutExecution",
+        "TestTaskDeadlineRejectsExpiredDispatchClaimAtFinalAdmission",
+        "TestTaskDeadlineStopsRunningTaskWithQueuePaused",
+        "TestTaskDeadlineSurvivesRestartForQueuedTask",
+        "TestTaskDeadlineOldTurnCannotStopContinuation",
+        "TestTaskDeadlineDoesNotRelabelEarlierUserCancellation",
+        "TestTaskDeadlineDispatchingClaimPreservesCompletedNativeRun"
+      ],
+      "failed": [],
+      "skipped": [],
+      "package_finished": true,
+      "source_sha256": {
+        "internal/app/task_deadline.go": "3ede4b91bef5a0f1ab0f25d9542fbf3689969670697f62552ac7b6a6a3db7dd6",
+        "internal/app/task_deadline_test.go": "d186eb18e3d5adf2b14d55c025c9cab4548b8f42df24a401d2345a876dbcefe4",
+        "internal/app/task_control.go": "77a9a52c08a37e2a306d8c03fa23b34e958943e23b5567639ce027e9a62a8ea3",
+        "internal/app/task_submission.go": "5cf96063f318db469c6af53a7e8f1e05db4ae7c94698220dfbfec56043eaa97a",
+        "internal/app/queue.go": "2c6a686e89690aa441046252700cfe892b560c21e97dc4ef917ba4e26a4dd0fd",
+        "internal/app/manager.go": "50c1d8bb5252f3f6d9211295efc203ad9c0f6e86076dd561a71a0ac5db64c79d"
+      }
+    },
+    "proxyDiagnosisAndRepair": {
+      "go_version": "go1.25.12 linux/amd64",
+      "original_full_suite_failure": "/workspace/scratch/725a395bb84b/checks/final-go-first-attempt.jsonl",
+      "classification": "Pre-existing production HTTP/1 early-response race, plus an overstrict completion assumption in the original SSE fixture; not a UHP regression.",
+      "baseline_comparison": "Before the fix, git diff --no-index baseline-test/internal/observeproxy work/rundesk-v0.52.0/internal/observeproxy exited 0 with no diff. Original SSE test failed in both trees at count=200; baseline also failed under -race at count=20.",
+      "root_cause": "The upstream can respond before Transport starts reading the incoming request body. Without EnableFullDuplex, the Go HTTP/1 server drains and closes its original reqBody when the first response is flushed, bypassing the capture wrapper and competing with Transport. A subsequent request-body read error closes the upstream connection, truncating SSE.",
+      "fix": "Enable http.NewResponseController(w).EnableFullDuplex() after route validation in Proxy.serveHTTP. No buffering or replay is introduced.",
+      "precise_regression": "headerGateConn writes upstream headers but blocks Write returning until the downstream receives the first SSE line. Thus Transport cannot start reading request body before the response is flushed. Upstream responds first, then consumes and verifies the request body before emitting DONE. Before fix: 3/3 fail; final state: 200 normal + 200 race passes.",
+      "fixture_correction": "Original SSE fixture now reads and validates request body AFTER the first Flush, before finishing. A server that never reads the body may validly finish its response before Transport sends the body; incomplete request capture in that case is truthful. This is not a pre-read that hides the production race.",
+      "final_validation": "Two SSE tests each pass 200 normal and 200 race repetitions (800 final targeted invocations). All 20 observeproxy top-level tests pass under race count=5. The original full-suite failure is preserved; this summary does not claim a fresh full normal suite passed.",
+      "changed_files": [
+        {
+          "path": "/workspace/scratch/725a395bb84b/work/rundesk-v0.52.0/internal/observeproxy/proxy.go",
+          "sha256": "a13091e74cc43f9f371efa93a50ecb2a573e1ae661cfb297ba0fc00729661faa"
+        },
+        {
+          "path": "/workspace/scratch/725a395bb84b/work/rundesk-v0.52.0/internal/observeproxy/proxy_test.go",
+          "sha256": "4f22e97dce853241745bbc11e81e9b6247aa3f7053d4611b063127e06b632520"
+        },
+        {
+          "path": "/workspace/scratch/725a395bb84b/work/rundesk-v0.52.0/internal/observeproxy/full_duplex_test.go",
+          "sha256": "dbb34ea6e59c1d102f295a8a5b2aa9ebcbf8dda4d4a5388822fc121a7d3e017d"
+        }
+      ],
+      "runs": [
+        {
+          "log": "/workspace/scratch/725a395bb84b/checks/observeproxy-current-count20.log",
+          "cwd": "/workspace/scratch/725a395bb84b/work/rundesk-v0.52.0",
+          "command": [
+            "/workspace/scratch/725a395bb84b/tools/go/bin/go",
+            "test",
+            "./internal/observeproxy",
+            "-run",
+            "^TestSSEDeliveredBeforeUpstreamCompletes$",
+            "-count=20",
+            "-timeout=90s"
+          ],
+          "env": {
+            "GOTOOLCHAIN": "local",
+            "GOMODCACHE": "/workspace/scratch/725a395bb84b/tools/gomodcache",
+            "GOCACHE": "/workspace/scratch/725a395bb84b/tools/gocache"
+          },
+          "phase": "before_production_fix",
+          "expected_exit_code": 1,
+          "repetitions": 20,
+          "selected_top_level_tests": 1,
+          "failing_test_invocations": 1,
+          "missing_done_unexpected_eof": 1,
+          "incomplete_capture_assertions": 0,
+          "sha256": "4e1f74c9ad207e27438560da5eba629e9d2fe62025213b0fc1a06ee8f89a9561"
+        },
+        {
+          "log": "/workspace/scratch/725a395bb84b/checks/observeproxy-baseline-count20.log",
+          "cwd": "/workspace/scratch/725a395bb84b/baseline-test",
+          "command": [
+            "/workspace/scratch/725a395bb84b/tools/go/bin/go",
+            "test",
+            "./internal/observeproxy",
+            "-run",
+            "^TestSSEDeliveredBeforeUpstreamCompletes$",
+            "-count=20",
+            "-timeout=90s"
+          ],
+          "env": {
+            "GOTOOLCHAIN": "local",
+            "GOMODCACHE": "/workspace/scratch/725a395bb84b/tools/gomodcache",
+            "GOCACHE": "/workspace/scratch/725a395bb84b/tools/gocache"
+          },
+          "phase": "baseline",
+          "expected_exit_code": 0,
+          "repetitions": 20,
+          "selected_top_level_tests": 1,
+          "failing_test_invocations": 0,
+          "missing_done_unexpected_eof": 0,
+          "incomplete_capture_assertions": 0,
+          "sha256": "5f14c7b11b433d8af43616ecef05cb8559d06665df4562e3e10835a630e249a1"
+        },
+        {
+          "log": "/workspace/scratch/725a395bb84b/checks/observeproxy-current-count200.log",
+          "cwd": "/workspace/scratch/725a395bb84b/work/rundesk-v0.52.0",
+          "command": [
+            "/workspace/scratch/725a395bb84b/tools/go/bin/go",
+            "test",
+            "./internal/observeproxy",
+            "-run",
+            "^TestSSEDeliveredBeforeUpstreamCompletes$",
+            "-count=200",
+            "-timeout=90s"
+          ],
+          "env": {
+            "GOTOOLCHAIN": "local",
+            "GOMODCACHE": "/workspace/scratch/725a395bb84b/tools/gomodcache",
+            "GOCACHE": "/workspace/scratch/725a395bb84b/tools/gocache"
+          },
+          "phase": "before_production_fix",
+          "expected_exit_code": 1,
+          "repetitions": 200,
+          "selected_top_level_tests": 1,
+          "failing_test_invocations": 4,
+          "missing_done_unexpected_eof": 2,
+          "incomplete_capture_assertions": 2,
+          "sha256": "c455a6e71f6e615f7eec61f80085e355df93e6a8be5203c3ae66e7467120e444"
+        },
+        {
+          "log": "/workspace/scratch/725a395bb84b/checks/observeproxy-baseline-count200.log",
+          "cwd": "/workspace/scratch/725a395bb84b/baseline-test",
+          "command": [
+            "/workspace/scratch/725a395bb84b/tools/go/bin/go",
+            "test",
+            "./internal/observeproxy",
+            "-run",
+            "^TestSSEDeliveredBeforeUpstreamCompletes$",
+            "-count=200",
+            "-timeout=90s"
+          ],
+          "env": {
+            "GOTOOLCHAIN": "local",
+            "GOMODCACHE": "/workspace/scratch/725a395bb84b/tools/gomodcache",
+            "GOCACHE": "/workspace/scratch/725a395bb84b/tools/gocache"
+          },
+          "phase": "baseline",
+          "expected_exit_code": 1,
+          "repetitions": 200,
+          "selected_top_level_tests": 1,
+          "failing_test_invocations": 8,
+          "missing_done_unexpected_eof": 6,
+          "incomplete_capture_assertions": 2,
+          "sha256": "b719a78b49c97eaa72077553a2541062477320414f1f5f425f7a362874760b3d"
+        },
+        {
+          "log": "/workspace/scratch/725a395bb84b/checks/observeproxy-baseline-race-count20.log",
+          "cwd": "/workspace/scratch/725a395bb84b/baseline-test",
+          "command": [
+            "/workspace/scratch/725a395bb84b/tools/go/bin/go",
+            "test",
+            "-race",
+            "./internal/observeproxy",
+            "-run",
+            "^TestSSEDeliveredBeforeUpstreamCompletes$",
+            "-count=20",
+            "-timeout=90s"
+          ],
+          "env": {
+            "GOTOOLCHAIN": "local",
+            "GOMODCACHE": "/workspace/scratch/725a395bb84b/tools/gomodcache",
+            "GOCACHE": "/workspace/scratch/725a395bb84b/tools/gocache"
+          },
+          "phase": "baseline",
+          "expected_exit_code": 1,
+          "repetitions": 20,
+          "selected_top_level_tests": 1,
+          "failing_test_invocations": 1,
+          "missing_done_unexpected_eof": 1,
+          "incomplete_capture_assertions": 0,
+          "sha256": "d5432044775cacad7cb9a2136f3d6ca9a1beba9febb4072f3db930e25cf05d32"
+        },
+        {
+          "log": "/workspace/scratch/725a395bb84b/checks/observeproxy-deterministic-before.log",
+          "cwd": "/workspace/scratch/725a395bb84b/work/rundesk-v0.52.0",
+          "command": [
+            "/workspace/scratch/725a395bb84b/tools/go/bin/go",
+            "test",
+            "./internal/observeproxy",
+            "-run",
+            "^TestSSEEarlyResponsePreservesPendingRequestBody$",
+            "-count=3",
+            "-timeout=30s"
+          ],
+          "env": {
+            "GOTOOLCHAIN": "local",
+            "GOMODCACHE": "/workspace/scratch/725a395bb84b/tools/gomodcache",
+            "GOCACHE": "/workspace/scratch/725a395bb84b/tools/gocache"
+          },
+          "phase": "new_regression_before_production_fix",
+          "expected_exit_code": 1,
+          "repetitions": 3,
+          "selected_top_level_tests": 1,
+          "failing_test_invocations": 3,
+          "missing_done_unexpected_eof": 0,
+          "incomplete_capture_assertions": 0,
+          "sha256": "567d87035c5a4704c215e4e4acab1ddb99361fea67a812f08b2cc63d6e79c883"
+        },
+        {
+          "log": "/workspace/scratch/725a395bb84b/checks/observeproxy-fixed-count200.log",
+          "cwd": "/workspace/scratch/725a395bb84b/work/rundesk-v0.52.0",
+          "command": [
+            "/workspace/scratch/725a395bb84b/tools/go/bin/go",
+            "test",
+            "./internal/observeproxy",
+            "-run",
+            "^TestSSE(DeliveredBeforeUpstreamCompletes|EarlyResponsePreservesPendingRequestBody)$",
+            "-count=200",
+            "-timeout=90s"
+          ],
+          "env": {
+            "GOTOOLCHAIN": "local",
+            "GOMODCACHE": "/workspace/scratch/725a395bb84b/tools/gomodcache",
+            "GOCACHE": "/workspace/scratch/725a395bb84b/tools/gocache"
+          },
+          "phase": "production_fix_with_original_fixture",
+          "expected_exit_code": 1,
+          "repetitions": 200,
+          "selected_top_level_tests": 2,
+          "failing_test_invocations": 1,
+          "missing_done_unexpected_eof": 0,
+          "incomplete_capture_assertions": 1,
+          "sha256": "c91c9f32ef7d2426e6bf3c62859827d53a613e9a158ed7064da9961057d61235"
+        },
+        {
+          "log": "/workspace/scratch/725a395bb84b/checks/observeproxy-fixed-race-count200.log",
+          "cwd": "/workspace/scratch/725a395bb84b/work/rundesk-v0.52.0",
+          "command": [
+            "/workspace/scratch/725a395bb84b/tools/go/bin/go",
+            "test",
+            "-race",
+            "./internal/observeproxy",
+            "-run",
+            "^TestSSE(DeliveredBeforeUpstreamCompletes|EarlyResponsePreservesPendingRequestBody)$",
+            "-count=200",
+            "-timeout=90s"
+          ],
+          "env": {
+            "GOTOOLCHAIN": "local",
+            "GOMODCACHE": "/workspace/scratch/725a395bb84b/tools/gomodcache",
+            "GOCACHE": "/workspace/scratch/725a395bb84b/tools/gocache"
+          },
+          "phase": "production_fix_with_original_fixture",
+          "expected_exit_code": 0,
+          "repetitions": 200,
+          "selected_top_level_tests": 2,
+          "failing_test_invocations": 0,
+          "missing_done_unexpected_eof": 0,
+          "incomplete_capture_assertions": 0,
+          "sha256": "7198bc358d0898614547772ed6e89ce77cc279a4bf3d9c0564ce12734fe081db"
+        },
+        {
+          "log": "/workspace/scratch/725a395bb84b/checks/observeproxy-fixed-fixture-count200.log",
+          "cwd": "/workspace/scratch/725a395bb84b/work/rundesk-v0.52.0",
+          "command": [
+            "/workspace/scratch/725a395bb84b/tools/go/bin/go",
+            "test",
+            "./internal/observeproxy",
+            "-run",
+            "^TestSSE(DeliveredBeforeUpstreamCompletes|EarlyResponsePreservesPendingRequestBody)$",
+            "-count=200",
+            "-timeout=90s"
+          ],
+          "env": {
+            "GOTOOLCHAIN": "local",
+            "GOMODCACHE": "/workspace/scratch/725a395bb84b/tools/gomodcache",
+            "GOCACHE": "/workspace/scratch/725a395bb84b/tools/gocache"
+          },
+          "phase": "final_production_fix_and_fixture",
+          "expected_exit_code": 0,
+          "repetitions": 200,
+          "selected_top_level_tests": 2,
+          "failing_test_invocations": 0,
+          "missing_done_unexpected_eof": 0,
+          "incomplete_capture_assertions": 0,
+          "sha256": "c6877f50683b19e655b275a059420809f87b80d38f7f4ff1fd51afb9d46d36da"
+        },
+        {
+          "log": "/workspace/scratch/725a395bb84b/checks/observeproxy-fixed-fixture-race-count200.log",
+          "cwd": "/workspace/scratch/725a395bb84b/work/rundesk-v0.52.0",
+          "command": [
+            "/workspace/scratch/725a395bb84b/tools/go/bin/go",
+            "test",
+            "-race",
+            "./internal/observeproxy",
+            "-run",
+            "^TestSSE(DeliveredBeforeUpstreamCompletes|EarlyResponsePreservesPendingRequestBody)$",
+            "-count=200",
+            "-timeout=90s"
+          ],
+          "env": {
+            "GOTOOLCHAIN": "local",
+            "GOMODCACHE": "/workspace/scratch/725a395bb84b/tools/gomodcache",
+            "GOCACHE": "/workspace/scratch/725a395bb84b/tools/gocache"
+          },
+          "phase": "final_production_fix_and_fixture",
+          "expected_exit_code": 0,
+          "repetitions": 200,
+          "selected_top_level_tests": 2,
+          "failing_test_invocations": 0,
+          "missing_done_unexpected_eof": 0,
+          "incomplete_capture_assertions": 0,
+          "sha256": "783992ff2050f06d0244c14ab290f855e81a48315bff3dc3073981573d5f2f6e"
+        },
+        {
+          "log": "/workspace/scratch/725a395bb84b/checks/observeproxy-fixed-package-race-count5.log",
+          "cwd": "/workspace/scratch/725a395bb84b/work/rundesk-v0.52.0",
+          "command": [
+            "/workspace/scratch/725a395bb84b/tools/go/bin/go",
+            "test",
+            "-race",
+            "./internal/observeproxy",
+            "-count=5",
+            "-timeout=120s"
+          ],
+          "env": {
+            "GOTOOLCHAIN": "local",
+            "GOMODCACHE": "/workspace/scratch/725a395bb84b/tools/gomodcache",
+            "GOCACHE": "/workspace/scratch/725a395bb84b/tools/gocache"
+          },
+          "phase": "final_production_fix_and_fixture",
+          "expected_exit_code": 0,
+          "repetitions": 5,
+          "selected_top_level_tests": 20,
+          "failing_test_invocations": 0,
+          "missing_done_unexpected_eof": 0,
+          "incomplete_capture_assertions": 0,
+          "sha256": "7a6d10924685108a82c61c7b5c59eeaf2aa963afacbc7c8b385a10ff1974aa4e"
+        }
+      ]
+    },
+    "skips": "All 14 skipped tests require an independent Kun executable; names and reasons are retained above."
+  },
+  "sdkValidation": {
+    "race": {
+      "command": "go test -race -json ./... -count=1 -timeout=120s",
+      "exitCode": 0,
+      "testsIncludingSubtests": {
+        "pass": 43
+      },
+      "topLevelTests": {
+        "pass": 20
+      },
+      "allStartedPackagesTerminated": true,
+      "packages": {
+        "github.com/your-org/kun/sdk/protocol": {
+          "status": "pass",
+          "elapsedSeconds": 1.069
+        },
+        "github.com/your-org/kun/sdk/validation": {
+          "status": "pass",
+          "elapsedSeconds": 1.1179999999999999
+        },
+        "github.com/your-org/kun/sdk/client": {
+          "status": "pass",
+          "elapsedSeconds": 14.174
+        }
+      },
+      "stderrBytes": 0
+    },
+    "vet": {
+      "command": "cd third_party/kun-sdk && go vet ./...",
+      "exitCode": 0
+    }
+  },
+  "builds": {
+    "checkedAt": "2026-10-25T14:22:22.223623+00:00",
+    "toolchain": "go1.25.12 linux/amd64",
+    "version": "RunDesk 0.53.0",
+    "scope": "Final production source including Manager.run stale dispatch guard and observeproxy HTTP/1 full-duplex fix",
+    "vet": {
+      "command": "go vet ./...",
+      "exitCode": 0,
+      "log": "final-vet.log"
+    },
+    "linuxBuild": {
+      "command": "CGO_ENABLED=0 go build -buildvcs=false -trimpath -o checks/bin/rundesk-linux-amd64 ./cmd/rundesk",
+      "exitCode": 0,
+      "bytes": 36245108,
+      "sha256": "18e2084748ef42e305ac847d160c03ee879a05a1ee73511be5c112f2af0465ef",
+      "log": "final-build-linux.log"
+    },
+    "windowsBuild": {
+      "command": "CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -buildvcs=false -trimpath -o checks/bin/rundesk-windows-amd64.exe ./cmd/rundesk",
+      "exitCode": 0,
+      "bytes": 36570624,
+      "sha256": "7f9826af6bf69645acfa44f6189334e2c9ce4dd972f4dbe5f6eb30236914ca5d",
+      "log": "final-build-windows.log",
+      "runtimeTested": false
+    }
+  },
+  "officialUHP": {
+    "protocol": "2026-10-19",
+    "suiteVersion": "2026.10.19.post3",
+    "suiteCommit": "038d4d27afed078db339b107f8bf6031ebb37872",
+    "suiteUnmodified": true,
+    "class": "extended",
+    "result": {
+      "pass": 50,
+      "fail": 0,
+      "skip": 0,
+      "error": 0,
+      "total": 50
+    },
+    "coverage": {
+      "complete": true,
+      "required": 50,
+      "reported": 50,
+      "not_run": [],
+      "duplicate_or_unknown": []
+    },
+    "binarySHA256": "18e2084748ef42e305ac847d160c03ee879a05a1ee73511be5c112f2af0465ef",
+    "report": "uhp-hardening-conformance.json",
+    "limits": [
+      "Explicit demo native-protocol simulator only; zero provider calls.",
+      "The automated conformant flag is limited to these suite checks, not full specification semantics.",
+      "T-12 is Full and requires createHarness, which this service does not expose; no hard step-budget claim.",
+      "Official C-03 completed before cancellation. The separate client test cancels an actual waiting demo task.",
+      "Attachment acceptance does not prove semantic model consumption."
+    ]
+  },
+  "pythonClient": {
+    "httpFixtures": {
+      "command": "python3 scripts/test_uhp_client.py",
+      "tests": 14,
+      "failures": 0,
+      "elapsedSeconds": 7.076
+    },
+    "actualDemoService": {
+      "command": "python3 scripts/test_uhp_client_integration.py --binary /path/to/rundesk --output-dir /path/to/checks",
+      "tests": 15,
+      "passed": true,
+      "report": "uhp-hardening-client.json",
+      "binarySHA256": "18e2084748ef42e305ac847d160c03ee879a05a1ee73511be5c112f2af0465ef",
+      "limits": [
+        "The native backend is RunDesk explicit demo protocol simulation; no live provider or real Codex/Kun model calls.",
+        "No Docker, real model authentication, visual quality or business task acceptance.",
+        "Uploaded bytes were admitted/materialized; the simulator does not semantically read the attachment.",
+        "The generated artifact is a deterministic simulator file, not an actual model-created report.",
+        "Approval was observed then cancelled; no operation was automatically approved."
+      ]
+    }
+  },
+  "openAPI": {
+    "paths": 218,
+    "operations": 257,
+    "schemas": 209,
+    "generationDeterministic": true,
+    "existingContractPreserved": true,
+    "expectedChanges": [
+      "info.version",
+      "info.description",
+      "Task.deadline",
+      "Task.stopReason"
+    ],
+    "sha256": "0f10cd01cbc5c65f51f771f6ed8d81bf3cb58205d00865c3a6b58dff5e955de7"
+  },
+  "notValidated": [
+    "Live Codex or Kun model/provider execution and real authentication.",
+    "Docker runtime, image builds, deployment load and Windows runtime execution.",
+    "Business artifact quality, actual multimodal interpretation or native tool-round/token budget enforcement.",
+    "No new browser/UI acceptance was run; no UI source was changed."
+  ],
+  "changedCodeSHA256": {
+    "examples/uhp_client.py": "f1dc7192534b2b2a46d2b4c320110aedc527a2626b8c69f5d0904a349e80b751",
+    "internal/app/api_v1.go": "a7da22548d09db86c566b0a78d9bf2b22743fe8b9d38d9aa38581357a3beb242",
+    "internal/app/manager.go": "50c1d8bb5252f3f6d9211295efc203ad9c0f6e86076dd561a71a0ac5db64c79d",
+    "internal/app/queue.go": "2c6a686e89690aa441046252700cfe892b560c21e97dc4ef917ba4e26a4dd0fd",
+    "internal/app/runtime_run_guard_test.go": "55646786c4e44a27454ac1cac9c37f02308e689616eb07d6af59e6db521e0533",
+    "internal/app/task_control.go": "77a9a52c08a37e2a306d8c03fa23b34e958943e23b5567639ce027e9a62a8ea3",
+    "internal/app/task_deadline.go": "3ede4b91bef5a0f1ab0f25d9542fbf3689969670697f62552ac7b6a6a3db7dd6",
+    "internal/app/task_deadline_test.go": "d186eb18e3d5adf2b14d55c025c9cab4548b8f42df24a401d2345a876dbcefe4",
+    "internal/app/task_submission.go": "5cf96063f318db469c6af53a7e8f1e05db4ae7c94698220dfbfec56043eaa97a",
+    "internal/app/uhp.go": "9edd8b5cbfd7c1f8f9f259c33afc70c0bca07261bffb15e16593729a2832e307",
+    "internal/app/uhp_execution.go": "f49c4b29b0c2c12207ecc21a16cef11322a58d4847ecd98874d97eab11075ec6",
+    "internal/app/uhp_execution_test.go": "11c68701487d84cbc19c4009d8887c9af01cc4fbfd1a4457183cd1d780ca324a",
+    "internal/app/uhp_harnesses.go": "db9a756a5b4e9614e55513ebdb885f4fdb31c719845301d5d5091a81b28144ea",
+    "internal/app/uhp_http.go": "f45482913a6f4834f7d7bab6b1b417d915abccfc22375d9ed34e899b8a3fd6f2",
+    "internal/app/uhp_input.go": "7496611094d40a326022d91c2e7ca1a15e463874be86256a178f43d220ebc810",
+    "internal/app/uhp_progress.go": "53e314555302ded99673193830f8b6a9025d829624f907d42850243468885c1c",
+    "internal/app/uhp_progress_test.go": "fc7860b8dd84c67ef9c89dc51f8abeb39648f2ba419dd15e06bf2a89c03f6b1c",
+    "internal/observeproxy/full_duplex_test.go": "dbb34ea6e59c1d102f295a8a5b2aa9ebcbf8dda4d4a5388822fc121a7d3e017d",
+    "internal/observeproxy/proxy.go": "a13091e74cc43f9f371efa93a50ecb2a573e1ae661cfb297ba0fc00729661faa",
+    "internal/observeproxy/proxy_test.go": "4f22e97dce853241745bbc11e81e9b6247aa3f7053d4611b063127e06b632520",
+    "scripts/generate-openapi.py": "5c494c67498e7841e0750c966b843497ee089ee9c725bc695cbc2844cd68d662",
+    "scripts/test-uhp-conformance.sh": "2af3b4728d4a10d54dc0db1692fc686eb5336bda2270698e197da63887acae6a",
+    "scripts/test_uhp_client.py": "e3a7bdafe6fcf34e12fbaad8d3708059781a656deceaa014bf736544f5578f92",
+    "scripts/test_uhp_client_integration.py": "2affca226f17e5d39b2e11fdd95f8f7345bcebe3cae3d9c3652e65abc98e16cd"
+  },
+  "evidenceNote": "This report retains raw command outcomes and failure history. Scratch log paths describe the verification session; reproducible source tests and official/client JSON reports are included in this source package.",
+  "documentation": {
+    "markdownFiles": 93,
+    "localLinks": 495,
+    "anchors": 5,
+    "errors": []
+  }
+}

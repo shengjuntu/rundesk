@@ -1,0 +1,37 @@
+{
+  "baseline": "rundesk-v0.49.2-video-build-source.zip",
+  "added": [
+    "docs/tests-0.49.3.jsonl",
+    "docs/validation-0.49.3.json",
+    "internal/app/application_runtime_diagnostics.go",
+    "internal/app/application_runtime_diagnostics_test.go",
+    "internal/app/application_runtime_probe.py"
+  ],
+  "modified": [
+    "CHANGELOG.md",
+    "README.md",
+    "README.zh-CN.md",
+    "docs/API-V1.md",
+    "docs/APPLICATION-CONNECT.md",
+    "examples/_shared/profile_doctor.py",
+    "examples/_shared/video_use_adapter.py",
+    "examples/_shared/video_use_smoke.py",
+    "examples/profiles.py",
+    "examples/profiletemplates/news2douyin.zip",
+    "examples/profiletemplates/people-search.zip",
+    "examples/profiletemplates/video-build.zip",
+    "examples/video-build/README.md",
+    "examples/video-build/profile.json",
+    "examples/video-build/skills/build-video-artifacts/SKILL.md",
+    "internal/app/api_v1.go",
+    "internal/app/application_gate.go",
+    "internal/app/application_runtime.go",
+    "internal/app/http.go",
+    "internal/app/openapi.json",
+    "internal/app/setup_images.go",
+    "scripts/generate-openapi.py",
+    "scripts/test_profiles.py",
+    "scripts/test_video_use_adapter.py"
+  ],
+  "deleted": []
+}

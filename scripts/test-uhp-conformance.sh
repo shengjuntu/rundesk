@@ -4,7 +4,7 @@
 # server startup, credential provisioning, or provider call occurs implicitly.
 set -eu
 
-pin=caa3c0a109fffd84ef245dcdad23f2cdfeff7153
+pin=038d4d27afed078db339b107f8bf6031ebb37872
 if [ -z "${UHP_SUITE_CHECKOUT:-}" ]; then
   echo "Set UHP_SUITE_CHECKOUT to a HarnessRouter checkout at $pin." >&2
   echo "Usage: UHP_API_KEY=... UHP_SUITE_CHECKOUT=... $0 --base-url URL --class core|extended --json REPORT --plain" >&2

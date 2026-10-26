@@ -900,6 +900,9 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 		if !ok || t.SessionID != id || t.Status != "dispatching" || t.CancelRequested {
 			return s, failure(409, "task_canceled", "任务已经取消")
 		}
+		if e = m.checkTaskDeadlineLocked(t); e != nil {
+			return s, e
+		}
 		// Serialize the final admission decision with credential revocation.
 		// Once accepted, stopping a running task remains an explicit action.
 		m.keyMu.Lock()
@@ -991,13 +994,79 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 		})
 		return s, &apiError{Status: 503, Code: "journal_unavailable", Message: "任务输入无法写入事件记录，未发送给 Codex；请检查数据目录和数据库状态", Cause: e}
 	}
+	// The journal/artefact admission writes above can block. Check again at the
+	// last host dispatch boundary, before any native runtime is started.
+	if taskID != "" {
+		if deadlineErr := m.checkTaskDeadlineLocked(m.tasks[taskID]); deadlineErr != nil {
+			if e = m.update(id, func(v *Session) {
+				v.Status = "interrupted"
+				v.Error = "任务截止时间已到，未启动执行"
+			}); e != nil {
+				return s, e
+			}
+			return s, deadlineErr
+		}
+	}
 	m.wg.Add(1)
 	accepted = true
 	go func() { defer m.wg.Done(); h.op.Lock(); defer h.op.Unlock(); m.run(s, w, h, in, recovery) }()
 	return s, nil
 }
 func (m *Manager) run(s Session, w Workspace, h *handle, in Input, recovery *RecoveryPlan) {
+	// start releases h.op before this goroutine can acquire it. A stop may
+	// settle that run, and another admission may even replace it in between.
+	// Revalidate the captured identity before opening any native connection.
+	// The caller holds h.op; use the normal admission -> queue -> session order.
+	h.admission.Lock()
+	current, err := m.Session(s.ID)
+	if err != nil {
+		h.admission.Unlock()
+		m.unreserveProcess(s.ID)
+		return
+	}
+	if current.RunID != s.RunID {
+		// The reservation is keyed by session and may now belong to its new run.
+		h.admission.Unlock()
+		return
+	}
 	defer m.unreserveProcess(s.ID)
+	if !active(current.Status) {
+		h.admission.Unlock()
+		return
+	}
+	h.mu.Lock()
+	canceled := h.canceled
+	h.mu.Unlock()
+	canceled = canceled || current.Status == "stopping" || m.ctx.Err() != nil
+	reason := ""
+	m.queueMu.Lock()
+	if task, ok := m.tasks[current.TaskID]; ok && task.SessionID == s.ID && task.RunID == s.RunID {
+		canceled = canceled || task.CancelRequested || !taskPending(task.Status)
+		if !canceled {
+			if deadlineErr := m.checkTaskDeadlineLocked(task); deadlineErr != nil {
+				canceled = true
+				reason = "任务截止时间已到，未启动执行"
+				var api *apiError
+				if !errors.As(deadlineErr, &api) || api.Code != "task_deadline_exceeded" {
+					m.cancel()
+					reason = "任务截止状态无法确认，未启动执行"
+				}
+			}
+		}
+	}
+	m.queueMu.Unlock()
+	if canceled {
+		h.mu.Lock()
+		h.canceled = true
+		h.mu.Unlock()
+	}
+	h.admission.Unlock()
+	if canceled {
+		// h.op still excludes a replacement admission. Stale/terminal runs
+		// returned above without touching the newer or already settled state.
+		m.finish(s.ID, "interrupted", reason)
+		return
+	}
 	backend, err := m.runtimeBackend(s.RuntimeKind)
 	if err != nil {
 		m.finish(s.ID, "failed", err.Error())

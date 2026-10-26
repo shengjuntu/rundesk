@@ -1,0 +1,20 @@
+test_agent_reach_runtime_config_is_per_home_and_preserves_existing (__main__.ProfilesTest.test_agent_reach_runtime_config_is_per_home_and_preserves_existing) ... ok
+test_all_context_variants_and_toml (__main__.ProfilesTest.test_all_context_variants_and_toml) ... ok
+test_catalog_and_uniform_wrappers (__main__.ProfilesTest.test_catalog_and_uniform_wrappers) ... ok
+test_declared_skill_rejects_traversal_and_nested_symlink (__main__.ProfilesTest.test_declared_skill_rejects_traversal_and_nested_symlink) ... ok
+test_default_includes_complete_reach_tools_and_codex_layer_is_last (__main__.ProfilesTest.test_default_includes_complete_reach_tools_and_codex_layer_is_last) ... ok
+test_doctor_no_docker_and_wrong_image_fail_closed (__main__.ProfilesTest.test_doctor_no_docker_and_wrong_image_fail_closed) ... ok
+test_hyperframes_rejects_tampered_dependency_lock (__main__.ProfilesTest.test_hyperframes_rejects_tampered_dependency_lock) ... ok
+test_invalid_manifest_types_are_structured_errors (__main__.ProfilesTest.test_invalid_manifest_types_are_structured_errors) ... ok
+test_invalid_versions_backends_and_injection (__main__.ProfilesTest.test_invalid_versions_backends_and_injection) ... ok
+test_only_declared_skill_files_and_symlink_rejection (__main__.ProfilesTest.test_only_declared_skill_files_and_symlink_rejection) ... ok
+test_probe_cleanup_after_client_failure (__main__.ProfilesTest.test_probe_cleanup_after_client_failure) ... ok
+test_reproducible_zip_and_no_existing_output_overwrite (__main__.ProfilesTest.test_reproducible_zip_and_no_existing_output_overwrite) ... ok
+test_video_build_defaults_to_pinned_hyperframes_without_video_use (__main__.ProfilesTest.test_video_build_defaults_to_pinned_hyperframes_without_video_use) ... ok
+test_video_use_is_explicit_compatibility_component (__main__.ProfilesTest.test_video_use_is_explicit_compatibility_component) ... ok
+test_web_evidence_success_failure_and_no_overwrite (__main__.ProfilesTest.test_web_evidence_success_failure_and_no_overwrite) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 1.009s
+
+OK

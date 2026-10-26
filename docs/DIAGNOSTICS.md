@@ -39,6 +39,6 @@
 
 API panic 在尚未发送响应时转换为 JSON 500，浏览器获得 requestId，堆栈只写入服务日志；已经发送内容的 SSE/文件流保持中断语义，不往流里追加 JSON。不提供任意服务器文件或日志读取接口。
 
-## 0.8.3 连接与运行故障修复
+## 连接与运行故障分类
 
-v1 现在区分上游 RPC 502、连接/记录不可用 503 与超时 504，保留原始错误。`details.origin=codex_transport` 表示本地 App Server 连接故障；`transportOperation` 给出发生阶段。内部异常和技能自动恢复失败仍为 500。已有幂等回执保留原状态，未加入自动重发。详见 [代码排查清单](STATUS.md)。
+v1 区分上游 RPC 502、连接/记录不可用 503 与超时 504，保留原始错误。`details.origin=codex_transport` 表示本地 App Server 连接故障；`transportOperation` 给出发生阶段。内部异常和技能自动恢复失败仍为 500。已有幂等回执保留原状态，未加入自动重发。另见 [后端能力与边界](BACKENDS.md)。

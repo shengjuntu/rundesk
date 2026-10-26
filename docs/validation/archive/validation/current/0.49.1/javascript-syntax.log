@@ -1,0 +1,2 @@
+$ node --check <each shipped internal/web JavaScript and scripts JavaScript file>
+{"passed": true, "files": 91, "seconds": 5.024}

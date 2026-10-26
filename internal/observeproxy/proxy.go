@@ -181,6 +181,11 @@ func (p *Proxy) serveHTTP(w http.ResponseWriter, req *http.Request) {
 		http.NotFound(w, req)
 		return
 	}
+	// Upstream may respond before the transport finishes reading the request.
+	// Keep the HTTP/1 server from draining and closing that body when the first
+	// response chunk is flushed; the transport must remain its only reader.
+	// HTTP/2 already permits concurrent request reads and response writes.
+	_ = http.NewResponseController(w).EnableFullDuplex()
 	p.active.Add(1)
 	defer p.active.Add(-1)
 	started := time.Now()

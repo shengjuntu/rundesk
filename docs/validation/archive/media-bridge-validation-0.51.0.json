@@ -1,0 +1,19 @@
+{
+  "command": "python3 scripts/test_video_app_media.py",
+  "passed": 9,
+  "scope": "standard-library HTTP MCP client and real subprocess stdio/CLI against local deterministic HTTP fixtures",
+  "actualModelTested": false,
+  "realDockerTested": false,
+  "covered": [
+    "generation/download/original-request retry",
+    "independent literal-text TTS",
+    "tools/schema/project/type allowlist",
+    "same-origin and no redirects",
+    "size/hash/workspace/symlink/overwrite checks",
+    "lost acknowledgement and pending resume without duplicate create or cancel",
+    "protocol/tool errors and token redaction",
+    "named Codex MCP env-only config fallback",
+    "stdio preserves image evidence"
+  ],
+  "testSource": "../scripts/test_video_app_media.py"
+}

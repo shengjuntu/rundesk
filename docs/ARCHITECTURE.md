@@ -2,7 +2,17 @@
 
 RunDesk 向应用提供持久任务与可检查的 Agent 执行过程。外部独立项目 Kun 和 Codex 是两个后端；模型 Provider、Kun 内部循环策略和操作系统执行环境分别建模。
 
-平台保持独立，自身接口命名为 **RunDesk Control API（RDCA）**，现有入口为 `/api/v1`。后续 UHP 服务入口与 RDCA 复用同一运行和调试核心，供原接其他 UHP 服务的应用切换到 RunDesk；不以 HarnessRouter 为依赖。该入口尚未实现，见 [API 定位与兼容计划](API-STRATEGY.md)。
+平台保持独立，自身接口命名为 **RunDesk Control API（RDCA）**，入口为 `/api/v1`。本源码包也提供固定 UHP `2026-10-19` 的 `/v1` 入口，与 RDCA 复用任务、资源、权限和调试核心，不依赖 HarnessRouter。已实现的入口不等于完整协议兼容；具体覆盖与后端限制见 [UHP 服务](UHP.md) 和 [API 定位与兼容计划](API-STRATEGY.md)。
+
+## 三个使命与职责
+
+| 面向人群 | RunDesk 的职责 | 保留在外部的职责 |
+| --- | --- | --- |
+| 企业 Agent 落地团队 | 观测运行轨迹、模型交互、工具调用和失败，提供调试工作台 | Harness 执行模型与工具循环；业务方验收任务效果 |
+| 应用开发者 | 连接 APP 与 Harness，集中准备资源和运行环境，提供任务、进度与产物接口 | APP 实现领域功能、业务工具与专业结果审阅 |
+| Harness 开发者与研究者 | 基于可检查证据进行调试、回放、分叉和对照实验 | 引擎实现实验能力；不支持的能力明确缺失 |
+
+这里的 Harness 指承载 Agent 模型与工具循环的运行系统，当前接入 Codex 与独立 Kun。运行预设绑定经过配置的环境；Skills、MCP、插件和镜像按实际后端能力组合。原生插件在本版只支持检查与来源识别，不承诺自动安装，见 [运行预设](APPLICATION-RUNTIME-PRESETS.md) 和 [插件边界](NATIVE-PLUGINS.md)。
 
 ## 当前分层
 
@@ -22,7 +32,7 @@ flowchart TD
 
 | 层 | 主要职责 | 代码入口 |
 | --- | --- | --- |
-| 应用契约 | `/api/v1`、认证/归属、幂等、结构化错误 | `internal/app/api_v1.go`、`application_keys.go`、`http.go` |
+| 应用契约 | RDCA `/api/v1` 与 UHP `/v1`、认证/归属、幂等、结构化错误 | `internal/app/api_v1.go`、`uhp_http.go`、`application_keys.go` |
 | 平台服务 | 应用/实例、任务队列、会话、审批入口、文件、事件投影 | `internal/app`、`internal/store` |
 | 任务契约 | 提交、查询、取消；队列管理与资源检查独立接口 | `internal/app/task_control.go` |
 | 资源契约 | 身份、版本、归属、绑定、路径解析、权限声明 | `internal/resource`、`internal/app/resources.go` |
@@ -39,9 +49,9 @@ flowchart TD
 
 - **Application** 表达业务接入身份，绑定专用 Instance；应用凭据同时约束实例、项目和 scopes。
 - **Instance** 保存后端、模型默认值、权限、Skills/MCP 和执行环境配置。可同时存在 Kun 与 Codex 实例。
-- **Session** 保存后端归属与对话历史，含多个 Run。一个排队 Task 关联独立 Session；更换实例后端不会迁移历史 Session，也不自动重发历史任务。
+- **Session** 保存后端归属与对话历史，含多个 Run。Task 关联一次运行及其 Session；普通新任务创建会话，支持续接的入口可在原会话提交新 Task。更换实例后端不会迁移历史 Session，也不自动重发历史任务。
 
-任务接收、运行状态与业务评测是三个不同事实。队列接受返回 202；完成看任务/会话终态，质量看明确规则及证据。幂等键绑定调用身份与请求内容，业务 taskId 只是标签。
+任务接收、运行状态与业务评测是三个不同事实。RDCA 队列接收返回 202；完成看任务/会话终态，质量看明确规则及证据。幂等规则按协议入口区分：RDCA 核对规范化请求，UHP 按调用身份与 Key 查回原提交；两者不共享幂等命名空间。业务 taskId 只是标签。
 
 ## 后端契约与扩展边界
 
@@ -77,4 +87,4 @@ Go 主服务嵌入 WebUI，SQLite 保存平台对象与事件。每个加载的 
 
 ## 参考项目
 
-[HarnessRouter](https://github.com/HarnessRouter/harnessrouter) / [UHP](https://unifiedharnessprotocol.org/) 提供应用驱动完整 Agent 运行时、可复用后端配置和契约测试的参考。RunDesk 保持独立 Go 平台，Kun 是外部独立引擎；当前没有引入其源码，也没有实现或声明 UHP 兼容入口。后续兼容的是 RunDesk 对外提供服务的协议，不是向下依赖 HarnessRouter。采用的设计参考与 PiG 来源统一登记在 [UPSTREAM](UPSTREAM.md)。
+[HarnessRouter](https://github.com/HarnessRouter/harnessrouter) / [UHP](https://unifiedharnessprotocol.org/) 提供应用驱动完整 Agent 运行时、可复用后端配置和契约测试的参考。RunDesk 保持独立 Go 平台，Kun 是外部独立引擎；本包不包含 HarnessRouter 实现。UHP 适配的是 RunDesk 对外提供服务的协议，当前 `/v1` 入口有明确覆盖范围，不向下依赖 HarnessRouter，也不声明完整一致性。采用的设计参考与 PiG 来源统一登记在 [UPSTREAM](UPSTREAM.md)。

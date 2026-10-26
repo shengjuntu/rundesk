@@ -52,4 +52,4 @@ VIDEO_APP_PROJECT_ID = "运行时填写指定 App 项目 ID"
 
 每个目录记录独立上游来源、精确提交、依赖和源码摘要。原生 Skill 与必要来源文件保留在镜像中；接入层另行维护。OpenMontage 的完整固定源码在构建时按指定摘要取得，源码和对应接入模块保留其许可。不要把这些源码当成自研 Video Builder 的同名实现。
 
-离线 doctor 检查工具、版本、源码、Skill 和原生工具启动，不运行完整渲染、模型或真实生成服务。实际宿主渲染测试另列在对应 validation 中。实际验证范围见 [validation-0.51.0.json](validation-0.51.0.json)。构建配方或本地测试通过不代表 Docker 镜像、Codex 认证、GPU 服务和完整上游制作任务已经实机验收。
+离线 doctor 检查工具、版本、源码、Skill 和原生工具启动，不运行完整渲染、模型或真实生成服务。实际宿主渲染测试另列在对应 validation 中。实际验证范围见 [validation-0.51.0.json](validation/archive/validation-0.51.0.json)。构建配方或本地测试通过不代表 Docker 镜像、Codex 认证、GPU 服务和完整上游制作任务已经实机验收。

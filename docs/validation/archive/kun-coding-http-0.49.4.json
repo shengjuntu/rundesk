@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "scope": "Linux real host and Kun worker, local model fixture and installed Python3; no OS sandbox, remote provider or Windows runtime claim",
+  "modelCalls": 7,
+  "checks": [
+    "seven real coding tools: write/edit/find/grep/list/bash/read; Python execution yields 6; no execution before approval",
+    "rejected Bash leaves no file",
+    "timeout has durable structured result and null exit code",
+    "cancellation cleans an ordinary child process before delayed file write",
+    "fixture evaluation rejects host Bash",
+    "completed tool and approval evidence survives host restart without reexecution"
+  ],
+  "suiteBaselineVersion": "0.45.0",
+  "testedRunDeskVersion": "0.49.4",
+  "testedKunVersion": "0.17.0",
+  "protocolVersion": 16,
+  "executables": {
+    "rundesk": "b68a762a097f5e8f3926ba177041ab0b51b8c69875039b896bc27b5ee2a075fc",
+    "kun": "62b688135919659403c817d8edcc6d596581b0249880e3577764d004a9aa98fc"
+  }
+}

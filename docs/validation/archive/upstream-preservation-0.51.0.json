@@ -1,0 +1,40 @@
+{
+  "oldContexts": {
+    "news2douyin": {
+      "unchanged": true,
+      "sha256": "9e5043241bfb406301bee2de5d0700c9dea71dff0fec22632f2fda7ed951fa5a"
+    },
+    "people-search": {
+      "unchanged": true,
+      "sha256": "03a92d7ae9c3d9b07937efb64d8baaabb4a54c1dcc274c79cc213de6e122eac9"
+    },
+    "video-build": {
+      "unchanged": true,
+      "sha256": "4d1ff5cc7a0ebb4618b262ce7a2cd1a2319cc8eb0d04139f855511841ea583b2"
+    }
+  },
+  "newContexts": {
+    "hyperframes": {
+      "bytes": 11256430,
+      "sha256": "0673f51da7d7204aebe2e358809d845befa3a5bce19d47a0063f178b5959cabe",
+      "verifiedContextFiles": 18,
+      "sourceCommit": "82ae73a03156f782e48d631907db08232aeed817",
+      "sourceSHA256": "492a80be9507b50abae44b6f10df4f5107feeab71d1dccfacd81c7f371c87fc2"
+    },
+    "video-use": {
+      "bytes": 595016,
+      "sha256": "056cda772c5bfb4c57344a5165ab6335df6a013534fa0f37188a5046ab2cf77a",
+      "verifiedContextFiles": 16,
+      "sourceCommit": "43cfc566833548093455c9d4a46bd69913b7e552",
+      "sourceSHA256": "b7c181c855265f5e88a2bacde46959b3a07034ee7dce00aed1f4b00bce6a3367"
+    },
+    "openmontage": {
+      "bytes": 57137,
+      "sha256": "58c343cac8e4b3aa099e9fa9fce4a9e3e3c38ff620443f941ce449081fe0e749",
+      "verifiedContextFiles": 25,
+      "sourceCommit": "c8066452325cb57c8fc1ba8c2a71b6e8842e6b65",
+      "sourceSHA256": "dff7cd1cdf2cb0522398e00b3f0b75f32336b695a8be34ac8e6b6913055aab25"
+    }
+  },
+  "videoBuildDirectoryUnchanged": true
+}

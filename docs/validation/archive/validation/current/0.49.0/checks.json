@@ -1,0 +1,113 @@
+{
+  "version": "0.49.0",
+  "checks": [
+    {
+      "name": "go-test",
+      "passed": true,
+      "exitCode": 0,
+      "durationSeconds": 82.239,
+      "command": [
+        "go",
+        "test",
+        "./...",
+        "-count=1",
+        "-timeout=300s"
+      ],
+      "environment": {}
+    },
+    {
+      "name": "go-vet",
+      "passed": true,
+      "exitCode": 0,
+      "durationSeconds": 2.116,
+      "command": [
+        "go",
+        "vet",
+        "./..."
+      ],
+      "environment": {}
+    },
+    {
+      "name": "go-race-capture",
+      "passed": true,
+      "exitCode": 0,
+      "durationSeconds": 30.375,
+      "command": [
+        "go",
+        "test",
+        "-race",
+        "./internal/observeproxy",
+        "./internal/tracequery",
+        "./internal/rpc",
+        "./internal/store",
+        "./internal/debugapi",
+        "./internal/debugmcp",
+        "-count=1",
+        "-timeout=120s"
+      ],
+      "environment": {}
+    },
+    {
+      "name": "go-race-observation-app",
+      "passed": true,
+      "exitCode": 0,
+      "durationSeconds": 8.573,
+      "command": [
+        "go",
+        "test",
+        "-race",
+        "./internal/app",
+        "-run",
+        "Test.*(Observation|CaptureRedaction|DebugScope|DebugMember)",
+        "-count=1",
+        "-timeout=120s"
+      ],
+      "environment": {}
+    },
+    {
+      "name": "build-rundesk",
+      "passed": true,
+      "exitCode": 0,
+      "durationSeconds": 2.826,
+      "command": [
+        "go",
+        "build",
+        "-buildvcs=false",
+        "-trimpath",
+        "-o",
+        "bin/rundesk",
+        "./cmd/rundesk"
+      ],
+      "environment": {
+        "CGO_ENABLED": "0"
+      }
+    },
+    {
+      "name": "build-kun",
+      "passed": true,
+      "exitCode": 0,
+      "durationSeconds": 0.516,
+      "command": [
+        "go",
+        "build",
+        "-buildvcs=false",
+        "-trimpath",
+        "-o",
+        "bin/kun",
+        "./cmd/kun"
+      ],
+      "environment": {
+        "CGO_ENABLED": "0"
+      }
+    }
+  ],
+  "passed": true,
+  "date": "2026-10-17",
+  "versions": {
+    "rundesk": "RunDesk 0.49.0",
+    "kun": "Kun 0.16.0",
+    "go": "go1.25.12",
+    "node": "v24.19.0",
+    "chromium": "155.0.8059.84"
+  }
+}

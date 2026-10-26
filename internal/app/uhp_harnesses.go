@@ -26,7 +26,8 @@ func (h uhpHarness) Wire() map[string]any {
 		"id": h.ID, "object": "harness", "name": h.Name, "base": h.Base,
 		"baseLabel": h.Base, "defaultModel": h.DefaultModel, "createdAt": h.CreatedAt,
 		// Image input is a native capability, not something the facade invents.
-		"rundesk_capabilities": map[string]bool{"input_text": true, "input_file": true, "input_image": h.Base == "codex"},
+		"rundesk_capabilities": uhpExecutionCapabilities(h.Base),
+		"rundesk_execution":    uhpExecutionSemantics(),
 	}
 }
 

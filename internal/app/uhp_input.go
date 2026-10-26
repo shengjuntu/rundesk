@@ -13,19 +13,20 @@ import (
 const uhpRequestLimit = 8 << 20
 
 type uhpRequest struct {
-	Input              json.RawMessage `json:"input"`
-	Metadata           map[string]any  `json:"metadata"`
-	Model              string          `json:"model"`
-	PreviousResponseID string          `json:"previous_response_id"`
-	Instructions       string          `json:"instructions"`
-	Stream             bool            `json:"stream"`
-	Background         bool            `json:"background"`
-	Store              *bool           `json:"store"`
-	MaxStep            *int            `json:"max_step"`
-	TimeoutSeconds     *int            `json:"timeout_seconds"`
-	MaxOutputTokens    *int            `json:"max_output_tokens"`
-	IgnoredFields      []string        `json:"-"`
-	InstructionMode    string          `json:"-"`
+	Input                json.RawMessage `json:"input"`
+	Metadata             map[string]any  `json:"metadata"`
+	Model                string          `json:"model"`
+	PreviousResponseID   string          `json:"previous_response_id"`
+	Instructions         string          `json:"instructions"`
+	Stream               bool            `json:"stream"`
+	Background           bool            `json:"background"`
+	Store                *bool           `json:"store"`
+	MaxStep              *int            `json:"max_step"`
+	TimeoutSeconds       *int            `json:"timeout_seconds"`
+	MaxOutputTokens      *int            `json:"max_output_tokens"`
+	IgnoredFields        []string        `json:"-"`
+	InstructionMode      string          `json:"-"`
+	RequiredCapabilities []string        `json:"-"`
 }
 
 func parseUHPRequest(reader io.Reader) (uhpRequest, error) {
@@ -53,7 +54,11 @@ func parseUHPRequest(reader io.Reader) (uhpRequest, error) {
 			if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
 				return out, failure(400, "invalid_input", "A required field value cannot be null.")
 			}
-		case "previous_response_id", "max_step", "timeout_seconds":
+		case "previous_response_id", "timeout_seconds":
+		case "max_step":
+			if out.MaxStep != nil {
+				out.IgnoredFields = append(out.IgnoredFields, name)
+			}
 		case "max_output_tokens":
 			out.IgnoredFields = append(out.IgnoredFields, name)
 		case "tools":
@@ -88,12 +93,30 @@ func parseUHPRequest(reader io.Reader) (uhpRequest, error) {
 			return out, failure(400, "invalid_input", "metadata.harness_id must be a string.")
 		}
 	}
+	if raw, exists := out.Metadata["rundesk_require"]; exists {
+		values, ok := raw.([]any)
+		if !ok || len(values) > 16 {
+			return out, failure(400, "invalid_input", "metadata.rundesk_require must be an array of at most 16 capability names.")
+		}
+		seen := map[string]bool{}
+		for _, value := range values {
+			name, ok := value.(string)
+			if !ok || name == "" || len(name) > 64 {
+				return out, failure(400, "invalid_input", "Required capability names must be non-empty strings of at most 64 bytes.")
+			}
+			if !seen[name] {
+				out.RequiredCapabilities = append(out.RequiredCapabilities, name)
+				seen[name] = true
+			}
+		}
+		sort.Strings(out.RequiredCapabilities)
+	}
 	for _, budget := range []*int{out.MaxStep, out.TimeoutSeconds, out.MaxOutputTokens} {
 		if budget != nil && *budget < 1 {
 			return out, failure(400, "invalid_input", "Budgets must be positive integers.")
 		}
 	}
-	if out.TimeoutSeconds != nil && *out.TimeoutSeconds > 86400 {
+	if out.TimeoutSeconds != nil && *out.TimeoutSeconds > uhpMaximumTimeoutSeconds {
 		return out, failure(400, "invalid_input", "timeout_seconds must not exceed 86400.")
 	}
 	if len(out.Model) > 160 || len(out.PreviousResponseID) > 160 || len(out.Instructions) > 64<<10 {

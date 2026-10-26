@@ -14,6 +14,9 @@ func (m *Manager) SubmitTask(sub TaskSubmission) (Task, error) {
 	var t Task
 	var s Session
 	var err error
+	if err = validateTaskDeadline(sub.Deadline); err != nil {
+		return t, err
+	}
 	if sub.SessionID == "" {
 		if sub.ExpectedRunID != "" {
 			return t, failure(400, "invalid_task", "新会话不能指定先前运行")
@@ -41,6 +44,7 @@ func (m *Manager) SubmitTask(sub TaskSubmission) (Task, error) {
 	if err != nil {
 		return t, err
 	}
+	t.Deadline = sub.Deadline
 	// Match start's ordering: session operation -> application -> queue -> key.
 	// Preparation (which may inspect runtime configuration) happens before these
 	// global locks, while final authority is rechecked immediately before commit.
@@ -89,6 +93,11 @@ func (m *Manager) SubmitTask(sub TaskSubmission) (Task, error) {
 		}
 		records = append(records, extra...)
 	}
+	// Preparation and protocol record construction may have taken time. Do not
+	// persist a new task/receipt whose deadline already expired during admission.
+	if err = validateTaskDeadline(t.Deadline); err != nil {
+		return t, err
+	}
 	if err = m.Store.PutMany(records...); err != nil {
 		return t, err
 	}
@@ -96,6 +105,7 @@ func (m *Manager) SubmitTask(sub TaskSubmission) (Task, error) {
 	m.mu.Lock()
 	m.sessions[s.ID] = &s
 	m.mu.Unlock()
+	m.watchTaskDeadline(t)
 	return t, nil
 }
 

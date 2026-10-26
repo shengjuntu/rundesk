@@ -1,6 +1,6 @@
 # Kun 独立工程与 RunDesk 接口
 
-当前配套版本为 **RunDesk 0.49.4、Kun 0.17.0、轻量 SDK 0.17.0、JSONL 协议 16**。本次先固定项目和进程边界，不引入新的 PiG 模块或模型能力。
+当前配套版本为 **RunDesk 0.53.0、Kun 0.17.0、轻量 SDK 0.17.0、JSONL 协议 16**。Kun 自 0.49.4 起拆分为独立项目；本源码只分发 RunDesk 宿主和轻量 SDK。
 
 ## 职责与依赖
 
@@ -26,7 +26,7 @@ make build
 ./bin/rundesk --data ./data --kun /absolute/path/to/kun/bin/kun
 ```
 
-两个 `make build` 各自产出自己的程序。RunDesk 默认仍可查找其可执行文件旁的 Kun；建议部署时显式指定绝对路径。缺失、启动失败或协议不兼容会明确报错，不回退 Codex。宿主实际连接时读取 `hello`，校验协议和所需能力；静态能力目录不能代替当前引擎的握手结果。
+以上命令分别构建两个项目自己的程序。RunDesk 默认仍可查找其可执行文件旁的 Kun；建议部署时显式指定绝对路径。缺失、启动失败或协议不兼容会明确报错，不回退 Codex。宿主实际连接时读取 `hello`，校验协议和所需能力；静态能力目录不能代替当前引擎的握手结果。
 
 仅运行 Codex 的部署无需安装 Kun。只构建 RunDesk 也无需 Kun 的源码。Kun 可单独通过 JSONL 使用，不依赖 RunDesk、Node.js 或 Codex。
 
@@ -34,9 +34,9 @@ make build
 
 | 组合或数据 | 规则 |
 | --- | --- |
-| RunDesk 0.49.4 + Kun 0.17.0 | 本次配套组合；诊断使用宿主只读证据桥 |
+| 本源码 RunDesk 0.53.0 + Kun 0.17.0 | 当前配套组合；诊断使用宿主只读证据桥 |
 | RunDesk 0.49.3 + Kun 0.17.0 | 协议 16 的普通核心方法可兼容；旧宿主的 snapshot-path 诊断需要升级宿主 |
-| RunDesk 0.49.4 + 旧协议 16 worker | 以实际握手能力决定是否可用；缺少新诊断 provider 能力时不得启动新诊断 |
+| RunDesk 0.49.4 及后续宿主 + 旧协议 16 worker | 以实际握手能力决定是否可用；缺少新诊断 provider 能力时不得启动新诊断 |
 | Kun 0.16.0 执行目录、检查点与分叉清单 | 0.17.0 显式兼容既有格式，并继续执行结构、哈希与状态校验 |
 | 其他历史引擎、手工改过的清单 | 不自动声明兼容，不通过改版本号绕过校验 |
 
@@ -64,20 +64,18 @@ python3 scripts/validate-kun.py --kun /absolute/path/to/kun/bin/kun
 
 ## 上游来源
 
-感谢 MichaelKinsy/PiG、Michael Kinsy 与 PiG 贡献者，以及 Mario Zechner / Pi。独立 Kun 保留既有 SSE 代码与选取测试的原文 MIT 许可、版权和逐文件来源。本次没有增加 PiG 代码。宿主和引擎各自列明所含部分，不把整个 Kun 称为 PiG 派生实现；见 [UPSTREAM](UPSTREAM.md)。
+感谢 MichaelKinsy/PiG、Michael Kinsy 与 PiG 贡献者，以及 Mario Zechner / Pi。独立 Kun 保留既有 SSE 代码与选取测试的原文 MIT 许可、版权和逐文件来源。本源码包不包含 Kun 引擎实现。宿主和引擎各自列明所含部分，不把整个 Kun 称为 PiG 派生实现；见 [UPSTREAM](UPSTREAM.md)。
 
-## 后续多引擎与公共资源方向
+## 平台接口与公共资源
 
-本轮完成 Kun 拆分。RunDesk 保持独立，不依赖 HarnessRouter；向下继续使用原生 Codex App Server、原生 Kun JSONL，并自行适配后续引擎。自身 API 定名为 RunDesk Control API（RDCA），保持 `/api/v1` 契约。UHP 是后续面向应用的独立兼容入口，而非必须调用的第三个执行后端；目标是让原接 HarnessRouter 的业务客户端可改接 RunDesk，并使用其调试工作台。当前未实现或声明 UHP 兼容，实施前需固定规范、Schema 和测试版本。完整范围与迁移边界见 [API 定位与兼容计划](API-STRATEGY.md)。
+RunDesk 保持独立，不依赖 HarnessRouter；向下使用原生 Codex App Server 和 Kun JSONL。自身 RunDesk Control API（RDCA）继续使用 `/api/v1`；本源码另有固定 UHP `2026-10-19` 的 `/v1` 服务入口，复用任务核心。该入口不替换 Kun 的内部协议，也不声明完整 UHP 一致性。覆盖范围与迁移边界见 [UHP 服务](UHP.md)和 [API 定位](API-STRATEGY.md)。
 
 当前 Kun 仍拥有模型与工具循环、执行日志、检查点和分叉。进一步把 Kun 变成决策内核属于后续单独设计，不是本次拆分或 UHP 兼容已完成的能力。
 
-Skills、MCP 和插件配置应由公共 ResourceCatalog 管理，按应用、实例和项目建立有范围的绑定，在每次运行前生成实际生效的冻结清单。各适配器把同一清单转换成引擎原生配置，并保留来源、版本、摘要与不支持项；不得静默丢弃配置。Skill 的公共资源对象需保留完整目录，包括 references、scripts、assets，不能只传 SKILL.md。插件作为带版本的资源包管理；其 Skills、MCP 和文件保持可追溯的组合关系。密钥使用受作用域约束的引用，冻结清单不复制明文密钥。现有 Kun `Start` 中的 Skills/MCP 公共类型继续使用，本次不为未来讨论修改协议 16。
+资源目录、绑定、解析和策略服务已经接入任务准入与独立后端模块，记录 Skills、MCP、插件等声明的来源、版本和作用域。任务记录的是资源元数据；原生目录仍可能由外部工具修改，不能把声明清单当成已加载证明、内容快照或配置备份。完整资源写入管理、内容冻结和所有后端插件装载仍待扩展。Kun 的 `Start` Skills/MCP 公共类型继续使用；接口和边界见 [资源契约](RESOURCE-CONTRACTS.md)。
 
 公共调试层统一事件、证据查询和请求/响应查看，同时保留原始后端载荷及实际能力。单步、内部快照、检查点和分叉只对提供这些能力的引擎开放，不为其他引擎伪造内部状态。现有模型 HTTP 直通观测继续保留原协议和字节证据，不变成统一模型网关。
 
-## 本版验证记录
+## 验证范围
 
-配套独立 Kun 和 SDK 已通过完整 race 检查，Linux 程序实际运行、Windows amd64 交叉编译通过。宿主使用两个分别构建的真实程序执行集成检查，具体结果见发布时附带的 `validation-0.49.4.json`、`kun-coding-http-0.49.4.json` 和 `kun-k4-http-0.49.4.json`；本地模型夹具不代表真实供应商、部署或图形浏览器已验收。
-
-本次宿主普通 Go 回归 411 项通过；独立 Kun、SDK 完整 race 与新增宿主边界 race 检查通过。两次完整宿主 race 的测试超时/生命周期夹具问题及针对性复核均如实记录在 validation-0.49.4.json，不将其描述为完整 race 全通过。
+Kun 跨进程测试需要外部可执行文件；仅编译宿主或 SDK 不能证明该链路通过。验证记录按原执行版本和环境区分，最新重构记录中缺少外部 Kun 的用例明确跳过。历史本地模型夹具、交叉编译和真实供应商验收互不替代，结果与复验入口统一见 [验证记录](VALIDATION.md)。

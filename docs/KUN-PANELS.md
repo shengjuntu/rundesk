@@ -1,7 +1,7 @@
 # RunDesk Kun 结构化检查面板
 
 
-本版在既有 Network、Elements、Console 和快照差异上补 Sources、Performance、Application、Layers。各面板以当前 worker 能力和固定快照为依据；循环策略切换见 [Harness](KUN-HARNESS.md)。
+Kun 结构化面板包括 Network、Elements、Console、Sources、Performance、Application 和 Layers，并支持快照差异。各面板以当前 worker 能力和固定快照为依据；循环策略切换见 [Harness](KUN-HARNESS.md)。
 
 ## Sources：当前运行控制
 
@@ -39,7 +39,7 @@ Sources 以当前在线状态为目标，即使其他面板固定在历史快照
 | 模块 | 当前显示依据 |
 | --- | --- |
 | Memory | 消息数、请求 JSON 字节数、压缩/截断标记；对应 context.built |
-| Planning | 未请求独立规划及记录的原因；对应 context.built |
+| Planning | Tool Loop 的未请求原因，或 Plan-Act 的规划状态、步骤与显式计划；关联 context.built 或 purpose=plan 的 model.completed |
 | Action | 调用 ID、工具、结果和 Schema 哈希；对应 tool.validated 或 tool.completed |
 | Capability | 工具数、Schema 方言与 format 处理方式；对应 capability.ready |
 

@@ -1,6 +1,6 @@
 # 启动与部署
 
-当前组合：RunDesk 0.49.4、独立 Kun 0.17.0、worker 协议 16。两者分别构建与发布，接口和旧版本兼容规则见 [Kun 拆分](KUN-SEPARATION.md)。
+当前组合：RunDesk 0.53.0、独立 Kun 0.17.0、worker 协议 16。两者分别构建与发布，接口和旧版本兼容规则见 [Kun 拆分](KUN-SEPARATION.md)。
 
 ## 构建
 
@@ -75,8 +75,10 @@ export RUNDESK_TOKEN='替换为足够长的随机密钥'
 
 运行后端可选“仅使用 Docker 应用”，完成设置不再要求宿主机安装 Codex；通用助手的后端设置保留，后续若要使用本机助手再配置。
 
-展开“应用 Docker 环境”，选择 news2douyin、people-search 或 video-build，输入 Codex 精确版本和镜像地址。支持后台构建、从真实仓库拉取、检查本地镜像。主机只需要 Linux 本机 Docker Engine，内置配方不依赖主机 Python/npm。首次安装 Docker 仍由部署者完成。
+展开“应用 Docker 环境”，选择 news2douyin、people-search、video-build、hyperframes、video-use 或 openmontage，输入 Codex 精确版本和镜像地址。支持后台构建、从真实仓库拉取、检查本地镜像。主机只需要 Linux 本机 Docker Engine，内置配方不依赖主机 Python/npm。首次安装 Docker 仍由部署者完成。
 
 任务提交后立即返回，关闭向导不停止；再次打开可以继续查看进度和日志。相同在途配置不会重复入队，冲突的同名镜像准备会拒绝。构建按依赖层缓存；相同配方和相同已验收 image ID 会跳过构建，重新做离线工具检查。成功只意味着工具环境检查通过，仍需应用级模型认证、MCP 连通性和真实研究验收。
 
-此入口可在 news2douyin 注册之前使用，产出镜像是全局可复用资源，不会更改通用助手或任何已有应用的镜像绑定。配套新闻应用选择该镜像后，创建项目环境并写入自己的业务配置。详见 [典型配置](../examples/README.md)。
+此入口可在应用注册之前使用，产出镜像是全局可复用资源，不会更改通用助手或任何已有应用的镜像绑定。日常配方、构建、镜像和检查也可在常驻 [构建中心](BUILD-CENTER.md) 管理。
+
+镜像配方与应用运行预设是两种资源。管理员先完成镜像、模型认证和 Skills/MCP 配置，再登记专用实例/工作区及应用预设，签发对应凭据；应用随后选择预设、提交任务、跟踪进度并获取产物。登记预设本身不构建镜像，原生插件检查也不等于安装。详见 [典型配置](../examples/README.md)、[应用连接](APPLICATION-CONNECT.md)、[运行预设](APPLICATION-RUNTIME-PRESETS.md) 和 [插件支持](NATIVE-PLUGINS.md)。

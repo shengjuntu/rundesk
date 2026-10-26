@@ -1,0 +1,18 @@
+{
+  "version": "0.47.1",
+  "kunVersion": "0.16.0",
+  "workerProtocol": 16,
+  "passed": true,
+  "checks": [
+    "go test ./...",
+    "targeted MCP approval/application runtime race",
+    "MCP approval UI handlers",
+    "Linux static RunDesk and Kun builds",
+    "OpenAPI and docs links",
+    "real HTTP migration/credential/scope integration"
+  ],
+  "limits": [
+    "Docker CLI, Codex and search are fixtures in HTTP integration",
+    "No actual Docker Engine, live model or browser layout acceptance"
+  ]
+}

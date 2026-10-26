@@ -1,0 +1,41 @@
+{
+  "version": "0.49.3",
+  "checkedAt": "2026-10-17T23:19:39.664340+00:00",
+  "goTests": {
+    "passed": 557,
+    "skipped": 0,
+    "failures": []
+  },
+  "targetedDiagnosticRacePassed": true,
+  "pythonAdapterTestsPassed": 15,
+  "pythonProfileTestsPassed": 12,
+  "goVet": true,
+  "docsCheckPassed": true,
+  "builtInTemplatesMatch": true,
+  "builds": {
+    "rundeskLinuxAmd64": true,
+    "kunLinuxAmd64": true
+  },
+  "profile": "video-build1.3.0",
+  "adapterContractVersion": 2,
+  "videoUseCommit": "43cfc566833548093455c9d4a46bd69913b7e552",
+  "dockerBuildTested": false,
+  "realCodexModelTested": false,
+  "diagnosticProtocolTests": [
+    "actual embedded fixed Python to real HTTP MCP PNG response; Docker and account RPC are fixtures",
+    "challenge ownership and two-way file verification",
+    "bad nonce, bytes, redirects, PNG, links and request mutation rejected",
+    "profile/source pin/adapter and exact 36 Python dependency versions",
+    "configured client never created by read-only diagnostics; busy client and binding changes rejected"
+  ],
+  "dependencyLock": {
+    "packages": 36,
+    "target": "CPython3.11 Linux x86_64",
+    "changedFrom0.49.2": false,
+    "runtimeInstallTested": false
+  },
+  "limits": [
+    "image transport does not prove model visual understanding",
+    "first script-media adapter supports sequential cuts and cover/contain; advanced native effects remain in native backend"
+  ]
+}

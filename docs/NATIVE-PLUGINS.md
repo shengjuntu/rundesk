@@ -28,6 +28,6 @@ RunDesk 0.52.0 提前建立 Codex 原生插件边界，保留独立 Skill、手�
 - `POST /api/v1/plugins/inspect`：multipart `file`，只读包检查。
 - 安装、卸载、清单和版本化驱动边界已预留；未实现的原生生命周期操作返回明确 unsupported/501，不显示成功。
 
-截至本次核对，官方 [App Server 文档](https://developers.openai.com/codex/app-server)仍将 `plugin/list`、`plugin/read`、`plugin/install`、`plugin/uninstall` 标为开发中，并要求生产客户端暂不调用。本版默认不调用这些接口。以后按后端、精确版本和已验证 API 能力接入 NativePluginDriver，再开放管理按钮；不能因 CLI schema 中有方法名就认定可用于生产。
+本源码版不调用 `plugin/list`、`plugin/read`、`plugin/install`、`plugin/uninstall`，只使用上述配置、Skill 与 MCP 读取接口。以后接入生命周期管理时，需按实际 Codex 版本核对 [App Server 文档](https://developers.openai.com/codex/app-server)，通过已验证的 NativePluginDriver 再开放管理按钮；不能因 CLI schema 中有方法名就认定当前客户端已经支持。
 
 包结构依据官方[插件打包文档](https://developers.openai.com/plugins/build/plugins)。hooks、marketplace 和认证能力依实际 Codex 运行端而异，不据此承诺 Kun、Docker 和所有 Codex 界面等价支持。

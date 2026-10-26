@@ -1,0 +1,14 @@
+{
+  "source": "docs/validation/current/0.52.0/build-plugin-race.jsonl",
+  "passed": true,
+  "tests": {
+    "pass": 58
+  },
+  "topLevelTests": 42,
+  "packages": {
+    "github.com/shengjuntu/rundesk/internal/app": "pass"
+  },
+  "completePackageTerminals": true,
+  "packageSkipMeansNoTestFiles": true,
+  "testSkips": []
+}

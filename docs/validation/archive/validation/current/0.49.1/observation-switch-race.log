@@ -1,0 +1,4 @@
+$ /workspace/scratch/80b35bf25fcc/toolchain/go/bin/go test -race ./internal/app -run 'TestObservation(Switch|Manager)' -count=1
+ok  	github.com/shengjuntu/rundesk/internal/app	1.922s
+
+exit_code=0

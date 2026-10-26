@@ -1,6 +1,32 @@
 # 升级到当前版本
 
-当前版本 RunDesk 0.52.0，配套独立 Kun 0.17.0、worker 协议 16、fork schema 3；视频工具 profile 为 video-build 1.4.0。
+## 0.53.0：UHP 应用接入加固
+
+升级前停止相关执行并备份数据目录。RunDesk 版本更新为 0.53.0；独立 Kun 0.17.0、轻量 SDK、worker 协议 16 和 UHP `2026-10-19` 不变。RDCA v1 与 UHP 的路径及已有对象归属保持原契约。
+
+- **硬预算边界改为显式能力**：Codex/Kun 均不提供 UHP 工具轮次或输出 token 硬限制。合法 `max_step`、`max_output_tokens` 默认列入 `metadata.ignored_fields`；Codex 不再仅因合法 `max_step` 而拒绝请求，Kun 也不再用模型完成次数近似工具轮次。依赖硬限制的客户端须提交 `metadata.rundesk_require`，目前要求这些能力会返回 `422 rundesk_capability_unsupported`，不创建任务或物化本次附件。要求格式非法返回 400。
+- **默认任务时限**：新 UHP 任务省略 `timeout_seconds` 时为 3600 秒，显式范围 1–86400 秒，包含排队时间；0 不是关闭时限。绝对截止时间随公共任务持久保存，并由队列、派发检查和 Manager 计时器执行，重启后恢复。到期最终映射为 `incomplete` / `timeout`，协作取消不回滚外部动作。APP 应读取 `metadata.rundesk_deadline`，按业务时长设置预算。
+- **旧活动步数记录**：旧 UHP 记录保存了正数 `MaxStep` 且任务仍活动时，会停止执行并最终返回 `incomplete`，原因 `legacy_step_budget_unsupported`，避免继续假设旧步数承诺有效。旧终态记录保留原结果，不重新解释或执行。旧任务没有新的公共 deadline 字段时，不会凭空增加一小时预算；已有 UHP 截止时间仍由原响应刷新路径检查。
+- **指令与进度**：额外指令继续以 `task_text` 进入 `session_history`，不提供原生优先级或单次任务后的自动清除；要求 `native_instructions` 会被拒绝。新增 `metadata.rundesk_progress` 供轮询，待审批时返回工作台相对地址；沿用已有访问控制，不提供审批令牌或新控制接口。标准 SSE 不增加私有进度事件，初始与最终快照包含进度元数据。
+- **客户端恢复**：保留原凭据、operation key 和确切请求，未知提交结果用原身份/键重试。已有幂等回执仍指向首次执行，不因升级或修改请求体而创建新任务；不能为了刷新能力或预算而换键重试未知结果。示例见 [UHP 客户端](../examples/uhp_client.py)。
+- **验证基线**：官方套件更新至 `2026.10.19.post3`，固定提交 `038d4d27afed078db339b107f8bf6031ebb37872`；旧 post2 报告保持历史身份。Extended 与应用内预算专项分别报告，不能当作 Full 的 T-12 已通过。真实 Kun、Docker 和模型链路仍需目标环境验收，见 [UHP](UHP.md) 与 [验证范围](VALIDATION.md)。
+
+能力声明依据是 RunDesk 适配器契约，不代替模型模态、账号或供应商就绪检查。以上为新提交与明确说明的旧活动记录处理变化，不自动修改应用预设、Skills、插件、MCP 或模型配置。
+
+## 0.52.0：重构源码与文档整理（历史）
+
+上一阶段在 0.52.0 基础上加入资源/运行模块重构、UHP 服务、统一观测模型及轨迹阅读器，当时运行版本号保持 0.52.0。其配套为独立 Kun 0.17.0 和 worker 协议 16。
+
+- 新个人产物默认登记原件引用，需要保留独立版本时显式保存快照；旧托管副本仍可读。见[资源契约](RESOURCE-CONTRACTS.md)与[文件库](PERSONAL-FILES.md)。
+- RDCA 继续使用 `/api/v1`，新增 UHP `/v1` 不迁移其他服务的历史身份或会话。见 [UHP](UHP.md)。
+- 统一观测和轨迹阅读器复用已有事件记录；历史范围显式刷新，未采集内容不能补回。见[观测模型](OBSERVATION-MODEL.md)与[阅读器](TRACE-READER.md)。
+- 2026-10-25 的文档整理阶段仅修改文档、证据目录与包校验清单，不引入数据迁移或新的运行行为；它早于本页上方的 0.53.0 功能加固，检查报告保留原范围。
+
+## 通用升级步骤
+
+以下通用步骤适用于当前源码；后续版本专题保留各自配套应用与环境说明。
+
+当前版本 RunDesk 0.53.0，配套独立 Kun 0.17.0、worker 协议 16、fork schema 3；视频工具 profile 为 video-build 1.4.0。
 
 1. 等待活动任务结束，停止原服务，备份数据目录、工作区、Codex HOME/配置、独立 Kun 执行日志及服务环境设置。
 2. 在 RunDesk 源码执行 `make build`，本包只构建宿主；Kun 在其独立源码目录执行 `go build -o bin/kun ./cmd/kun`。将 Kun 放在 RunDesk 可执行文件旁，或通过 `--kun /absolute/path/to/kun` 指定。RunDesk 使用轻量 SDK 快照构建，不再包含 `cmd/kun` 或引擎源码。
@@ -33,7 +59,7 @@
 
 配套 Video App 0.25.0 可用 --production-profile 或 VIDEO_PRODUCTION_PROFILE 指定新项目默认预设，项目会保存选择与会话绑定；改变启动默认不迁移旧项目。App 自身渲染容器、IndexTTS与ComfyUI独立运行。预设名称不自动安装OpenMontage/video-use或转换既有剪辑工程；管理员需提供实际可用镜像和适配工具。
 
-具体配置、禁用规则和权限见 [多运行环境预设](APPLICATION-RUNTIME-PRESETS.md)。本轮具体验证见 validation-0.50.0.json，旧日志保留原版本边界。
+具体配置、禁用规则和权限见 [多运行环境预设](APPLICATION-RUNTIME-PRESETS.md)。该版本验证见 [0.50.0 报告](validation/archive/validation-0.50.0.json)，旧日志保留原版本边界。
 
 ## 0.49.5：HyperFrames 自主导演工具镜像
 

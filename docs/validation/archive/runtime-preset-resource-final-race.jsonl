@@ -1,0 +1,8 @@
+{"Time":"2026-10-19T01:52:55.491238497+11:00","Action":"start","Package":"github.com/shengjuntu/rundesk/internal/app"}
+{"Time":"2026-10-19T01:52:55.523605022+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/app","Test":"TestRuntimePresetRejectsPreparedForeignSessionAndReplacedDirectory"}
+{"Time":"2026-10-19T01:52:55.523668657+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/app","Test":"TestRuntimePresetRejectsPreparedForeignSessionAndReplacedDirectory","Output":"=== RUN   TestRuntimePresetRejectsPreparedForeignSessionAndReplacedDirectory\n"}
+{"Time":"2026-10-19T01:52:55.62413889+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/app","Test":"TestRuntimePresetRejectsPreparedForeignSessionAndReplacedDirectory","Output":"--- PASS: TestRuntimePresetRejectsPreparedForeignSessionAndReplacedDirectory (0.08s)\n"}
+{"Time":"2026-10-19T01:52:55.624184576+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/app","Test":"TestRuntimePresetRejectsPreparedForeignSessionAndReplacedDirectory","Elapsed":0.08}
+{"Time":"2026-10-19T01:52:55.62422299+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/app","Output":"PASS\n"}
+{"Time":"2026-10-19T01:52:56.604671264+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/app","Output":"ok  \tgithub.com/shengjuntu/rundesk/internal/app\t1.113s\n"}
+{"Time":"2026-10-19T01:52:56.604777926+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/app","Elapsed":1.114}

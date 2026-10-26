@@ -1,0 +1,155 @@
+{
+  "version": "0.50.0",
+  "checkedAt": "2026-10-18T14:58:26.102934+00:00",
+  "kunVersion": "0.17.0 (independent external binary, unchanged)",
+  "workerProtocol": 16,
+  "videoAppVersion": "0.25.0",
+  "goVersion": "go1.25.12 linux/amd64",
+  "goTests": {
+    "exitCode": 0,
+    "elapsedSeconds": 90.14,
+    "passed": 454,
+    "topLevelPassed": 318,
+    "skippedTests": [],
+    "failures": [],
+    "packageTerminals": {
+      "github.com/shengjuntu/rundesk/examples/docker": "skip",
+      "github.com/shengjuntu/rundesk/examples/profiletemplates": "skip",
+      "github.com/shengjuntu/rundesk/cmd/rundesk": "pass",
+      "github.com/shengjuntu/rundesk/internal/debugapi": "pass",
+      "github.com/shengjuntu/rundesk/internal/experiment": "pass",
+      "github.com/shengjuntu/rundesk/internal/debugmcp": "pass",
+      "github.com/shengjuntu/rundesk/internal/redaction": "skip",
+      "github.com/shengjuntu/rundesk/internal/mcptest": "pass",
+      "github.com/shengjuntu/rundesk/internal/mcp": "pass",
+      "github.com/shengjuntu/rundesk/internal/servicelock": "pass",
+      "github.com/shengjuntu/rundesk/internal/containerruntime": "pass",
+      "github.com/shengjuntu/rundesk/internal/web": "pass",
+      "github.com/shengjuntu/rundesk/internal/rpc": "pass",
+      "github.com/shengjuntu/rundesk/internal/store": "pass",
+      "github.com/shengjuntu/rundesk/internal/tracequery": "pass",
+      "github.com/shengjuntu/rundesk/internal/observeproxy": "pass",
+      "github.com/shengjuntu/rundesk/internal/app": "pass"
+    },
+    "missingPackages": [],
+    "command": [
+      "/workspace/scratch/62bf478f3a8e/toolchain/go/bin/go",
+      "test",
+      "./...",
+      "-count=1",
+      "-json",
+      "-timeout",
+      "5m"
+    ]
+  },
+  "targetedChecks": {
+    "runtime-preset-core-final-race.jsonl": {
+      "passed": 117,
+      "topLevelPassed": 66,
+      "skipped": 0,
+      "failures": [],
+      "evidence": "runtime-preset-core-final-race.jsonl"
+    },
+    "runtime-preset-resource-final-race.jsonl": {
+      "passed": 1,
+      "topLevelPassed": 1,
+      "skipped": 0,
+      "failures": [],
+      "evidence": "runtime-preset-resource-final-race.jsonl"
+    },
+    "runtime-preset-user-file-final-tests.jsonl": {
+      "passed": 34,
+      "topLevelPassed": 16,
+      "skipped": 0,
+      "failures": [],
+      "evidence": "runtime-preset-user-file-final-tests.jsonl"
+    },
+    "runtime-preset-user-file-final-race.jsonl": {
+      "passed": 34,
+      "topLevelPassed": 16,
+      "skipped": 0,
+      "failures": [],
+      "evidence": "runtime-preset-user-file-final-race.jsonl"
+    }
+  },
+  "raceScope": "Changed runtime/preset/admission/ownership/member/file boundaries; not a full-host race run. Some targeted tests overlap.",
+  "goVet": "passed",
+  "nestedKunSDK": "All three SDK packages passed uncached ordinary tests.",
+  "ui": {
+    "passed": true,
+    "checks": 7,
+    "scope": "shipped JavaScript + JSDOM + authenticated API fixtures, no browser layout or real Docker",
+    "covered": [
+      "preset navigation and disabled history",
+      "fixed environment scope",
+      "lost POST/PUT retry identity across dialog reopen",
+      "rename/disable preserves runtime",
+      "exact task source and workspace",
+      "explicit key presetIds and frozen bindings",
+      "exact member grants preserve disabled history in POST/PUT"
+    ]
+  },
+  "twoServiceIntegration": {
+    "passed": 10,
+    "checks": [
+      "idempotent_application_registration_and_session",
+      "empty_local_session_switches_to_docker_without_overwriting_history",
+      "docker_prepare_reuses_environment_and_real_mcp_http_callback",
+      "business_mcp_project_read",
+      "new_message_preflight_and_duplicate_request_reuse",
+      "explicit_new_conversation_is_fenced_and_retry_safe",
+      "sigkill_restart_releases_data_lock_and_preserves_state",
+      "one_container_create_start_and_no_build_on_registration_or_message",
+      "two_named_profiles_use_distinct_instances_workspaces_images_and_preserve_legacy_default",
+      "preset_only_application_key_runs_owned_project_with_scoped_skills_and_rejects_other_preset_and_full_configuration"
+    ],
+    "mode": "real RunDesk and Video App HTTP; Docker CLI/Codex discovery fixtures",
+    "realDockerTested": false,
+    "modelTested": false,
+    "renderTested": false
+  },
+  "integrationEvidence": "runtime-presets-http-0.50.0.json",
+  "openAPI": {
+    "paths": 191,
+    "operations": 227,
+    "version": "0.50.0",
+    "generatorAndDocsCheck": "passed"
+  },
+  "javascriptSyntax": "all six modified JavaScript files passed",
+  "builds": [
+    {
+      "path": "bin/rundesk",
+      "bytes": 22954252,
+      "sha256": "4ea186e5a4ade97e73b500ebd61bb3d5e1982a1ec1e4c4706f1928be977f59a0",
+      "target": "linux/amd64",
+      "runtimeExecuted": true
+    },
+    {
+      "path": "bin/rundesk-windows-amd64.exe",
+      "bytes": 23187456,
+      "sha256": "1985fc23f1eb941e7d035d54f74afc559929f00310336385a4c4120e030f5692",
+      "target": "windows/amd64",
+      "runtimeExecuted": false
+    }
+  ],
+  "initialFailure": {
+    "record": "tests-0.50.0-first-failure.jsonl",
+    "summary": "tests-0.50.0-first-failure-summary.json",
+    "status": "not counted as a passing full regression",
+    "test": "TestOwnedGroupCleanupAndFinalFrames/invalid",
+    "assertion": "unrelated process affected",
+    "observation": "Occurred once under concurrent build/test load. Isolated original case passed three times. Existing fixture could read a truncated heartbeat or miss a fixed 100ms scheduling window. Only the test fixture was changed to atomic writes and bounded progress checks after cleanup; production RPC was not modified.",
+    "fixedRepetitions": [
+      "rpc-owned-cleanup-fixed-1.jsonl",
+      "rpc-owned-cleanup-fixed-2.jsonl",
+      "rpc-owned-cleanup-fixed-3.jsonl"
+    ],
+    "finalFullRerun": "454 test passes, 318 top-level passes; zero failures/test skips; every package terminal verified."
+  },
+  "limitations": [
+    "Actual Docker Engine, production images and live Codex accounts were not used; Docker CLI and Codex discovery fixtures were used with real HTTP services.",
+    "No GPU model inference or new production video render was run for this change. Historical render evidence keeps its original version.",
+    "Windows build was cross-compiled only.",
+    "OpenMontage/video-use upstream images/workflows are not bundled, installed or validated just by registering a preset."
+  ]
+}

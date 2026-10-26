@@ -1,0 +1,99 @@
+{
+  "scope": "Python UHP client against an actual compiled RunDesk HTTP service, SQLite and subprocess native demo JSONL simulator",
+  "startedAt": "2026-10-25T14:22:31Z",
+  "binarySHA256": "18e2084748ef42e305ac847d160c03ee879a05a1ee73511be5c112f2af0465ef",
+  "clientSHA256": "f1dc7192534b2b2a46d2b4c320110aedc527a2626b8c69f5d0904a349e80b751",
+  "testSHA256": "2affca226f17e5d39b2e11fdd95f8f7345bcebe3cae3d9c3652e65abc98e16cd",
+  "checks": [
+    {
+      "name": "authenticated discovery and fixed UHP protocol",
+      "result": "passed",
+      "version": "2026-10-19"
+    },
+    {
+      "name": "configured harness capabilities and native demo model discovery",
+      "result": "passed",
+      "harness": "chrn_6100b1b95d5dbf27aa976993b912aa15"
+    },
+    {
+      "name": "server rejects unsupported strict capability before creating tasks",
+      "result": "passed"
+    },
+    {
+      "name": "multipart file upload through actual HTTP",
+      "result": "passed",
+      "bytes": 50,
+      "file_id": "file_4314e14def7468e5576a17b6"
+    },
+    {
+      "name": "background submission preserves required capability and execution metadata",
+      "result": "passed",
+      "response_id": "resp_c4fc710bf46cdceba73d4185"
+    },
+    {
+      "name": "early SSE disconnect leaves task running",
+      "result": "passed",
+      "early_event_ids": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4"
+      ]
+    },
+    {
+      "name": "SSE Last-Event-ID resume is gapless and reaches the same terminal response",
+      "result": "passed",
+      "events": 157
+    },
+    {
+      "name": "idempotent submission replay preserves response identity and completed result",
+      "result": "passed"
+    },
+    {
+      "name": "actual session artifact discovery and exact-byte download",
+      "result": "passed",
+      "bytes": 97,
+      "sha256": "ac2fe2e6dc8146f1037f57c78396b1765230bca8fa6589b7dd1548366e4ecf00"
+    },
+    {
+      "name": "continuation uses the same session and a distinct task; prior progress remains frozen",
+      "result": "passed"
+    },
+    {
+      "name": "polling observes real stored approval and returns a workbench handoff",
+      "result": "passed",
+      "action": {
+        "type": "approval",
+        "workbench_url": "/?session=c1cd0fb021ef276e597dd712"
+      }
+    },
+    {
+      "name": "explicit cancellation stops the waiting task and clears its required action",
+      "result": "passed"
+    },
+    {
+      "name": "task deadline expires across approval wait and reports incomplete",
+      "result": "passed"
+    },
+    {
+      "name": "unsupported budgets are explicitly disclosed rather than claimed as enforced",
+      "result": "passed"
+    },
+    {
+      "name": "CLI reaches the actual service without revealing token",
+      "result": "passed"
+    }
+  ],
+  "passed": true,
+  "limits": [
+    "The native backend is RunDesk explicit demo protocol simulation; no live provider or real Codex/Kun model calls.",
+    "No Docker, real model authentication, visual quality or business task acceptance.",
+    "Uploaded bytes were admitted/materialized; the simulator does not semantically read the attachment.",
+    "The generated artifact is a deterministic simulator file, not an actual model-created report.",
+    "Approval was observed then cancelled; no operation was automatically approved."
+  ],
+  "serverVersion": "0.53.0",
+  "finishedAt": "2026-10-25T14:22:39Z",
+  "checksPassed": 15
+}

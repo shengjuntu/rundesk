@@ -1,6 +1,6 @@
 # Video App 与 RunDesk：自主导演和部署
 
-配套版本：RunDesk 0.50.0、Video App 0.25.0、video-build 1.4.0；Kun 独立版本 0.17.0、worker 协议 16。RunDesk 保持独立的控制平台与 RDCA，Video App 提供制作工具和专业审阅，Codex 自主分镜、选材、生成、动画和检查。OpenMontage 只作设计参考，没有引入其代码、Schema 或 Skill。
+本文描述自研 Video Builder 的接入与部署，原配套基线为 RunDesk 0.50.0、Video App 0.25.0、video-build 1.4.0；Kun 独立版本 0.17.0、worker 协议 16。当前源码保留该路径，新增的三套上游环境及 Video App 0.26.0 生成服务见 [独立视频环境](UPSTREAM-VIDEO-ENVIRONMENTS.md)。RunDesk 保持独立的控制平台与 RDCA，Video App 提供制作工具和专业审阅，Codex 自主分镜、选材、生成、动画和检查。自研 `video-build` 路径只参考 OpenMontage 设计，不打包其代码、Schema 或 Skill；独立 `openmontage` 配方使用上游源码，两者分开维护。
 
 | 组件 | 职责与持久数据 |
 | --- | --- |
@@ -24,8 +24,8 @@ App 保存主播正文、素材与要求，一键提交原有 RunDesk 专用会�
 ## 升级与运行
 
 1. 备份并保留两边 data、App access-token、RunDesk 身份/会话、Codex HOME/认证与服务配置，等待活动任务结束。
-2. 更新 RunDesk 0.50.0。准备 video-build 1.4.0，填写 Codex 精确版本，构建或选择真实已有镜像。需要并行保留不同制作环境时，分别登记专用命名预设，再显式配置或更新对应环境；不会在任务开始时自动构建。
-3. 更新 Video App 0.25.0 或重建其独立镜像，旧 docker/.env 显式更新 App 镜像标签；保持已有数据挂载。按需要设置新项目的默认制作预设，旧项目保持其原绑定。
+2. 部署当前 RunDesk 源码版，保留上述接入契约。准备 video-build 1.4.0，填写 Codex 精确版本，构建或选择真实已有镜像。需要并行保留不同制作环境时，分别登记专用命名预设，再显式配置或更新对应环境；不会在任务开始时自动构建。
+3. 部署与所用制作路径匹配的 Video App 版本或重建其独立镜像，旧 docker/.env 显式更新 App 镜像标签；保持已有数据挂载。按需要设置新项目的默认制作预设，旧项目保持其原绑定。
 4. 使用管理员凭据完成所选预设的首次 App 连接与工具初配，再签发准确的 `presetIds` 应用凭据；应用凭据不会替管理员更改配置。在 App 连接/更新本版工具，核对选中环境实际启用的版本化 Skill、video_project MCP 和模型认证。MCP 地址为可达的 App /api/mcp，Authorization Header 使用 App Token，凭据不写入工程。
 5. 用短稿与已有图片做完整制作和局部修改，查看真实工具轨迹、revision、输出和审阅记录。依赖诊断、图片传输和离线烟测分别证明自己的检查范围，不证明模型已理解图像或完成自主制作。
 
@@ -39,4 +39,4 @@ App 保存主播正文、素材与要求，一键提交原有 RunDesk 专用会�
 
 video-build 的离线 doctor/smoke 可以验证本地依赖与真实短动画渲染；不调用模型。App check 是冻结源工程后的浏览器校验，完整渲染再验证实际媒体。多轨是同一工程/输出的审阅，HyperFrames 时间线为作者声明，并非解析动画或实测音频。实际质量仍需播放、抽帧及人审，最终记录绑定具体完整输出。
 
-本轮检查范围见 [0.50.0 验证记录](validation-0.50.0.json)。模拟 Docker、协议与 UI 测试不替代真实镜像、远端生成、Codex 认证、模型理解和自主制作验收；本轮未完成这些真实部署验收。历史验证和技术说明继续按对应版本保留。
+本轮检查范围见 [0.50.0 验证记录](validation/archive/validation-0.50.0.json)。模拟 Docker、协议与 UI 测试不替代真实镜像、远端生成、Codex 认证、模型理解和自主制作验收；本轮未完成这些真实部署验收。历史验证和技术说明继续按对应版本保留。

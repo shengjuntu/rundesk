@@ -1,0 +1,31 @@
+{
+  "sdkVersion": "0.17.0",
+  "protocolVersion": 16,
+  "checkedDependencyBoundaries": [
+    {
+      "target": "./cmd/rundesk",
+      "project": "RunDesk",
+      "kunDependencies": [
+        "github.com/your-org/kun/sdk/protocol",
+        "github.com/your-org/kun/sdk/client",
+        "github.com/your-org/kun/sdk/validation"
+      ],
+      "passed": true
+    },
+    {
+      "target": "./cmd/kun",
+      "project": "Kun",
+      "kunDependencies": [
+        "github.com/your-org/kun/internal/mcp",
+        "github.com/your-org/kun/internal/redaction",
+        "github.com/your-org/kun/sdk/protocol",
+        "github.com/your-org/kun/sdk/validation",
+        "github.com/your-org/kun/internal/engine",
+        "github.com/your-org/kun/internal/servicelock",
+        "github.com/your-org/kun/cmd/kun"
+      ],
+      "passed": true
+    }
+  ],
+  "sdkManifestVerified": true
+}

@@ -1,98 +1,66 @@
-# v0.52.0 重构：统一观测模型 v1
+# 验证范围与复验
 
-新增 `observations` / `activity` 只读查询、共同数据模型及 HTTP/MCP 接入。全量 Go 回归 594 项通过，14 项依赖独立 Kun 的测试因当前环境未提供运行时而跳过。最终核心包 race 73 项通过；应用观测/调试/诊断 race 80 项通过，4 项外部 Kun 测试跳过。Go vet、Linux amd64 构建与 Windows amd64 交叉编译通过。
+本页区分 0.53.0 UHP 加固、此前 0.52.0 文档整理与功能验证，以及更早的发布记录。测试替身通过不等于真实模型、Docker 或业务制品已验收。
 
-验证覆盖历史 task/run、迟到事件、零 through、三路独立身份、失败与审批/回放语义、WebSocket 跨轮次、>8 MiB 正文元数据隔离、固定分页、应用/成员授权及旧查询兼容。元数据查询采用逐记录单次 JSONB 解析，已解决 race 下大正文重复解析超时。最后补充的回放/采集丢失修正由完整 tracequery race 和应用定向 race 覆盖。
+## 0.53.0 UHP 加固
 
-本轮没有真实供应商调用、真实 Codex/Kun 模型联调或新的浏览器视觉验收。保持现有工作台，Kun HTTP 路由与集中密钥/结算尚未新增。命令、结果与跳过清单见 [本轮验证记录](validation/current/unified-observation.json)。以下内容保留各原版本验证范围，不当作本轮实机验收。
+本轮结果以 [uhp-hardening.json](validation/current/uhp-hardening.json) 中实际完成的检查为准。验证分别记录公共任务 deadline、UHP 能力披露与严格准入、预算忽略和旧活动记录处理、指令历史语义、进度/审批只读投影、客户端 HTTP fixture，以及官方套件；不能用其中一类结果替代另一类。
 
----
+官方套件基线为 `2026.10.19.post3`，固定提交 `038d4d27afed078db339b107f8bf6031ebb37872`，线协议仍为 `2026-10-19`。Extended 的 50 项与新增 Full T-12 的覆盖不同：T-12 依赖 `createHarness`，本服务不提供该写入接口，不能直接用它验收。本版对硬工具轮次预算的承诺是明确不支持及严格拒绝，专用测试验证这一边界，不宣称通过 T-12 或完整 Full。
 
-# 0.52.0 验证记录
+Go 专项使用原生协议模拟器和已提交事件覆盖运行身份、到期/取消竞争、队列暂停、重启和审批识别；Python 客户端分别通过 HTTP fixture 和已编译 RunDesk 的隔离 demo 服务复验。真实 Kun、Docker 和模型凭据链路在本环境不可用，仍待目标部署环境完成 APP–Harness 任务、审批、取消与产物闭环验收。具体 pass、skip 和构建结果只以本轮报告为准，不继承下方旧报告的数字。
 
-本轮实现公共构建中心、动态冻结配方、镜像操作、构建助手和 Codex 原生插件只读识别。完整 Go 回归 **516 项含子测试 / 361 项顶层通过，0 失败、0 测试跳过**，逐包终止结果完整，使用独立 Kun 0.17.0 与新编译 RunDesk host。新增能力定向 race 58 项通过；镜像来源归档补丁及旧上传、执行、日志、取消和重启另有 10 项 race 回归。首轮 511 项通过后完成收尾，随后对最终冻结源码重新执行完整回归，原日志独立保留。Go vet、轻量 SDK 测试、Linux/Windows amd64 构建及文档/OpenAPI 检查通过，Windows 仅交叉编译。命令、统计和证据见 [validation-0.52.0.json](validation-0.52.0.json)。
+回归中发现并修复了原版 HTTP/1 观测代理的提前响应竞争；报告保留普通全量首轮失败、基线复现和修复后分包复验，区分全量与增量结果。
 
-已发布 JavaScript 的 JSDOM 测试覆盖构建中心与原有运行预设，包括上传/响应丢失重试、启动部分失败保留身份、镜像删除与历史区分、检查失败状态、助手任务链接、插件来源及只读包检查；47 个脚本语法通过。没有运行真实浏览器布局验收。
+## 0.52.0 文档整理（历史）
 
-真实 Codex **0.163.0** 在临时 HOME、合成令牌和本地 MCP fixture 上验证了线程配置注入、initialize、tools/list、connected 状态与纯 POST 传输，**0 模型请求、0 plugin RPC**。该结果验证原生连接格式，不代表实际 RunDesk capability→Docker→模型完整任务通过。原生插件包检查与独立 Skill bootstrap 均不等于安装；稳定生命周期接口保持明确拒绝。
+2026-10-25 的修改仅涉及文档、历史证据目录、已合入的补丁文件和发行包 `SHA256SUMS`。检查包括中英文使命与能力边界复核、Markdown 本地链接及围栏、原始源码逐文件比对、归档证据完整性，以及重新打包后的文件校验。
 
-自研 video-build 21 个文件和三套旧内置 ZIP 共 24 项逐字节保持。Docker 构建/删除/启动、真实容器回调、模型认证、GPU 与新闻成片质量仍待部署机验收。历史结果保留原版本范围。
+该文档整理阶段未重跑 Go 功能回归、浏览器、Docker 或真实模型测试，不把下面的既有结果计作该阶段新测试。机器检查结果见 [documentation-cleanup.json](validation/current/documentation-cleanup.json)，具体清理范围见[整理记录](DOCUMENTATION-CLEANUP.md)。这些记录不回写为 0.53.0 的检查结果。
 
----
+## 0.52.0 既有功能证据
 
-# 0.51.0 验证记录
+`validation/current/` 保留构成本源码基础的资源重构、UHP、观测模型和阅读器各阶段报告。它们按实际先后解释，较早报告描述的是当时实现，不能覆盖后续阶段。
 
-新增独立 HyperFrames、video-use、OpenMontage 环境，共享生成 MCP 和配套 App 0.26.0 独立文本 TTS。自研 video-build 目录保持原样。完整 Go 回归 **458 项含子测试 / 319 项顶层通过，0 失败、0 测试跳过**；逐包终止结果完整，使用独立 Kun 0.17.0 与新编译 RunDesk host。Go vet、Linux/Windows amd64 构建和生成模板一致性检查通过，Windows 仅交叉编译。配套 App 完整 race 444 项通过，真实 App HTTP/MCP 生成联测 6 项通过。具体命令、计数和原始日志见 [validation-0.51.0.json](validation-0.51.0.json)。
+| 阶段 | 随包记录及范围 |
+| --- | --- |
+| 0.52.0 轨迹阅读器 | [报告](validation/current/trace-reader.json)：完整 Go 套件记录 604 项通过、14 项外部 Kun 测试跳过；核心 race 40 项通过，应用定向 race 62 项通过、4 项跳过；vet 与 Linux/Windows 构建通过。JSDOM 和实际 Chromium 配合明确服务/原生协议测试替身检查阅读、固定历史、证据分页与窄屏布局。 |
+| 统一观测模型 | [报告](validation/current/unified-observation.json)：记录 594 项通过、14 项跳过；核心 race 73 项通过，应用定向 race 80 项通过、4 项跳过。验证多源身份、迟到事件、完整性、固定分页和权限；当时未做新的浏览器验收。 |
+| UHP 服务 | [实现报告](validation/current/uhp-implementation.json)、[套件报告](validation/current/uhp-conformance-demo.json)：当时固定 post2 套件在原生 Codex 协议模拟后端上 50/50 通过；不代表真实后端或全部规范语义已符合，差异见 [UHP](UHP.md)。 |
+| 资源与运行模块重构 | [报告](validation/current/resource-refactor.json)：记录宿主/SDK 回归、定向 race、vet、构建和资源边界检查。该阶段早于 UHP 实现，其中“UHP 未实现”是当时状态。 |
 
-验证分别记录源码/依赖/构建上下文、原生工具、受限生成桥、实际 App HTTP/MCP、宿主媒体处理与完整 Go 回归。推理使用本地测试服务；没有运行 Docker Engine、真实 Codex 认证或 GPU 模型，不能将目录/镜像配方准备成功表述为三个上游完整制作流程实机验收。HyperFrames 本轮无新的 Chromium 渲染；video-use 有独立标注的实际宿主剪辑小样，OpenMontage 接入以原生 registry/selector 和可写工作区等接口回归为准。
+这些功能阶段没有真实供应商模型调用，部分 Kun 集成依赖缺失；Windows 为交叉编译。Docker、原生后端实际认证、生产负载和领域结果质量仍需在目标部署环境验收。不能用早期版本的外部 Kun 通过结果抵消后续报告中的跳过项。
 
-以下保留历史验证。
+## 本地复验
 
----
-
-# 0.50.0 验证记录
-
-本轮验证 RunDesk **0.50.0**，使用独立 Kun **0.17.0**、worker 协议 **16** 和 Video App **0.25.0**。新增应用命名运行预设、精确绑定授权、成员授权、只读技能查询与多环境管理界面。详细命令和原始证据见 [validation-0.50.0.json](validation-0.50.0.json)。
-
-- 全量 Go 回归 **454 项含子测试 / 318 项顶层通过，0 失败、0 测试跳过**，使用单独编译的 RunDesk host 和外部 Kun；逐包核对终止结果。预设、成员及文件访问的定向 race 回归通过，完整宿主 race 未运行。
-- 两端实际 HTTP 服务的 10 项集成检查通过，覆盖两个命名预设、不同实例/工作区/镜像、保留旧默认、限定预设凭据与只读技能访问。Docker CLI 和 Codex 工具发现使用协议测试替身，不代表实际 Docker 或模型验收。
-- RunDesk 已发布 JavaScript 的 JSDOM 行为检查通过，包括配置重试、预设停用历史、精确 key/member grants。Video App 的简洁工作台 24 项 HTTP/DOM 检查另见 App 仓库。
-- Go vet、OpenAPI/文档一致性、修改的 JavaScript 语法及 Linux/Windows amd64 构建通过。Windows 仅交叉编译，未运行。
-
-首轮完整回归发现旧 RPC 测试夹具 `TestOwnedGroupCleanupAndFinalFrames/invalid` 的 `unrelated process affected` 失败。检查发现该夹具在固定等待期间读取非原子心跳，可能把空文件或调度延迟误判为进程终止；原用例独立重跑三次未复现。仅测试夹具改为原子写入，并从清理后的基线等待有界进展；生产 RPC 未修改。修前窄用例三次通过，修后 close/exit/invalid 整组连续三次通过，再重跑完整回归。首轮失败日志完整保留，不计为成功回归。
-
-没有运行生产 Docker Engine、真实 Codex 认证、GPU 模型或新的媒体成片验收；未构建 OpenMontage/video-use 上游镜像，也未自动转换其工程。已有 0.49.x 媒体及协议证据保留原版本标识。
-
-以下保留历史验证记录。
-
----
-
-# 0.49.1 验证记录
-
-本轮验证日期：2026-10-17。RunDesk **0.49.1** / Kun **0.16.0** / worker 协议 **16**。环境为 Go 1.25.12、Node 24.19.0、Linux amd64 和 Chromium 155.0.8059.84。交付为源码，未发布容器镜像。
-
-## 代码与构建
-
-- 最终 `go test ./... -count=1 -timeout=300s` 全部通过。
-- `go vet ./...` 通过。
-- `go test -race ./internal/observeproxy -count=1 -timeout=300s` 通过。
-- `go test -race ./internal/app -run 'TestObservation(Switch|Manager)' -count=1` 通过。
-- `CGO_ENABLED=0` 构建 `rundesk` 与 `kun` 通过，版本分别为 0.49.1 和 0.16.0。
-- 91 个 JavaScript 文件语法检查通过；文档链接、OpenAPI 版本与既有权限契约检查通过。
-
-命令、时长与结果见 [checks.json](validation/current/0.49.1/checks.json)、[完整 Go 测试](validation/current/0.49.1/go-test.log)、[代理 race](validation/current/0.49.1/go-race-proxy.log)、[会话开关 race](validation/current/0.49.1/observation-switch-race.log)。
-
-## 会话采集开关
-
-本轮测试确认：默认关闭；CLI 只影响以后创建的 Codex 会话；开关持久保存，重启不覆盖已有值；缺少新字段的旧会话按关闭加载；关闭时不读取采集配置、不启动代理监听器、不改原生线程参数。Kun 不接受开启，应用只读凭据与跨应用凭据不能修改开关。
-
-子进程 App Server 测试替身贯通真实 Manager、HTTP 代理和 SQLite，覆盖运行中保存偏好不取消当前请求、下一轮重连恢复原 thread、开启和关闭的双向切换、状态与记录更新。旧连接延迟结束的记录仍保存，但只有匹配当前 `captureId` 的记录才可将新连接标记为 `observed`。
-
-测试中的 App Server 是明确的协议替身；真实 HTTP 网络、保存与读取路径由本机实现执行。此结果不替代真实 Codex 跨进程恢复验证。
-
-## 浏览器
-
-- [采集设置](validation/current/0.49.1/capture-settings-browser.log)：实际 Chromium + HTTP 会话 API 测试替身。覆盖菜单入口、默认关闭、保存偏好与当前代理状态分离、刷新读取、失败回滚、错误会话响应拒绝、响应丢失后的 GET 核对、切换会话后的迟到响应、Kun 限制与移动布局。
-- [统一工作台回归](validation/current/0.49.1/unified-browser.log)：实际 Chromium + DebugService 测试替身。覆盖全部来源事件、精确整数与 Unicode 分页、HTTP/SSE 字节重组、WebSocket 可读消息与压缩标记、共享固定范围、单个 Kun 面板、历史控制保护与只读检查。
-
-两组浏览器检查均通过，无页面异常。桌面与移动端界面已检查；测试没有调用线上模型。
-
-## 真实 Codex 与恢复边界
-
-本轮执行：
+构建工具链与依赖见 [SETUP](SETUP.md)。从源码根目录执行：
 
 ```bash
-python3 scripts/codex-observation-smoke.py \
-  --codex /opt/codex/versions/0.158.0/bin/codex \
-  --include-openai --persistent
+make build
+make test
+make check
 ```
 
-Codex **0.158.0** 使用临时隔离配置、合成 API Key 和本地上游。持久 `thread/start` 使用 `environments: []`；自定义 provider 的 HTTP 基线/地址覆盖，以及内置 provider 的原生 WebSocket 基线/地址覆盖四项均通过。核对模型、instructions、input、六项工具 schema、stream 与认证头保持，见 [持久线程 CLI 日志](validation/current/0.49.1/codex-observation-persistent-smoke.log)。0.49.0 的持久线程创建超时已定位到测试请求漏传 `environments: []`，该历史限制已由本轮测试更正。
+`make test` 包含 RunDesk 和轻量 Kun SDK；`make check` 包含 race 和 `go vet`。外部 Kun 集成测试需显式提供独立 Kun 与新编译宿主的绝对路径，例如：
 
-**真实新进程 `thread/resume` 在当前环境仍超时，动态恢复验证尚未完成。** 对精确 `rust-v0.158.0` 官方源码的核实显示：冷恢复[重新加载当前配置](https://github.com/openai/codex/blob/rust-v0.158.0/codex-rs/app-server/src/request_processors/thread_processor.rs#L3895-L3934)，[持久化模型字段合并](https://github.com/openai/codex/blob/rust-v0.158.0/codex-rs/app-server/src/request_processors/thread_processor.rs#L228-L245)不包含端点 URL，配置构建[合并本进程 CLI 与本次请求覆盖](https://github.com/openai/codex/blob/rust-v0.158.0/codex-rs/app-server/src/config_manager.rs#L429-L463)。由此确认新进程不会从旧线程恢复代理地址。同进程已加载线程会忽略配置覆盖，因此实现通过重连 App Server 应用开关。源码依据和 Manager 集成测试不能替代真实 CLI 冷恢复验收。
+```bash
+RUNDESK_TEST_KUN=/absolute/path/to/kun/bin/kun \
+RUNDESK_TEST_HOST=/absolute/path/to/rundesk/bin/rundesk \
+go test ./... -count=1 -timeout=300s
+```
 
-## 历史结果与目标环境验收
+未提供外部依赖时，应保留实际 skip 清单，不能只统计 pass。前端及协议专项脚本的依赖、测试替身和复验范围分别见[轨迹阅读器](TRACE-READER.md#validation)、[统一调试](UNIFIED_DEBUGGING.md)和 [UHP](UHP.md#验证与复现)。
 
-[0.49.0 验证记录](validation/current/0.49.0/VALIDATION.md)保留当时的完整采集、查询、RPC、Kun 浏览器与临时线程 CLI 结果；本轮没有重跑所有历史浏览器场景，也没有将旧日志改标为 0.49.1。
+UHP 应用接入和公共任务时限定向复验：
 
-没有使用真实 ChatGPT/OpenAI 账户或真实模型凭据；未完成 news2douyin 真实研究、Docker 到宿主的观测链路、托管工作区路由、生产负载或真实搜索质量验收。正文与队列上限、连接结束后入库、压缩帧及认证路由边界见 [统一调试与采集](UNIFIED_DEBUGGING.md)。部署后需用目标 Codex 版本和认证核对开关前后的连接恢复、请求正文与逐条完整性，再确认业务侧回执和报告。
+```bash
+go test ./internal/app -run 'TestUHP|TestTaskDeadline' -count=1 -timeout=300s
+python3 scripts/test_uhp_client.py
+python3 scripts/test_uhp_client_integration.py --binary ./bin/rundesk --output-dir ./build/uhp-client-checks
+```
+
+这些命令不是完整 Go 回归或真实环境验收。官方套件还需外部固定 checkout 和已启动服务，命令及报告范围见 [UHP 验证](UHP.md#验证与复现)。
+
+## 历史发布证据
+
+旧版本报告、原始日志、首次失败、重试及摘要集中在[验证归档](validation/archive/README.md)，原始 JSON/JSONL/日志保持字节不变。原长篇发布验证说明保存在[历史记录](validation/archive/RELEASES.md)，不再与当前入口混排。

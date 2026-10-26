@@ -30,6 +30,8 @@ type Task struct {
 	Status          string   `json:"status"`
 	Reason          string   `json:"reason,omitempty"`
 	CancelRequested bool     `json:"cancelRequested"`
+	Deadline        int64    `json:"deadline,omitempty"`
+	StopReason      string   `json:"stopReason,omitempty"`
 	Created         string   `json:"created"`
 	Updated         string   `json:"updated"`
 	StartedAt       string   `json:"startedAt,omitempty"`
@@ -70,6 +72,13 @@ func (m *Manager) loadQueue() error {
 			}
 		}
 	}
+	// Past deadlines may fire immediately. Hold the queue lock while starting
+	// timers so they cannot mutate the map during this initialization traversal.
+	m.queueMu.Lock()
+	for _, t := range m.tasks {
+		m.watchTaskDeadline(t)
+	}
+	m.queueMu.Unlock()
 	return nil
 }
 func (m *Manager) prepareTask(spec TaskSpec, validate bool) (Task, Session, error) {
@@ -300,6 +309,15 @@ func (m *Manager) queueTick() {
 		}
 		if t.Status != "queued" {
 			m.queueMu.Unlock()
+			continue
+		}
+		if deadlineErr := m.checkTaskDeadlineLocked(t); deadlineErr != nil {
+			m.queueMu.Unlock()
+			var api *apiError
+			if !errors.As(deadlineErr, &api) || api.Code != "task_deadline_exceeded" {
+				m.cancel()
+				return
+			}
 			continue
 		}
 		if authErr := m.checkTaskAuthorization(t.SubmittingKeyID, t.Spec, t.ScheduleID != ""); authErr != nil {

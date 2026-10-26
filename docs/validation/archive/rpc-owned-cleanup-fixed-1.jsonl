@@ -1,0 +1,20 @@
+{"Time":"2026-10-19T01:56:13.44578886+11:00","Action":"start","Package":"github.com/shengjuntu/rundesk/internal/rpc"}
+{"Time":"2026-10-19T01:56:13.448369761+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames"}
+{"Time":"2026-10-19T01:56:13.448412706+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames","Output":"=== RUN   TestOwnedGroupCleanupAndFinalFrames\n"}
+{"Time":"2026-10-19T01:56:13.448439972+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/close"}
+{"Time":"2026-10-19T01:56:13.448443275+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/close","Output":"=== RUN   TestOwnedGroupCleanupAndFinalFrames/close\n"}
+{"Time":"2026-10-19T01:56:13.56090629+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/close","Output":"--- PASS: TestOwnedGroupCleanupAndFinalFrames/close (0.11s)\n"}
+{"Time":"2026-10-19T01:56:13.560949476+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/close","Elapsed":0.11}
+{"Time":"2026-10-19T01:56:13.56095674+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/exit"}
+{"Time":"2026-10-19T01:56:13.560959499+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/exit","Output":"=== RUN   TestOwnedGroupCleanupAndFinalFrames/exit\n"}
+{"Time":"2026-10-19T01:56:13.674025791+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/exit","Output":"--- PASS: TestOwnedGroupCleanupAndFinalFrames/exit (0.11s)\n"}
+{"Time":"2026-10-19T01:56:13.674089926+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/exit","Elapsed":0.11}
+{"Time":"2026-10-19T01:56:13.674098323+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/invalid"}
+{"Time":"2026-10-19T01:56:13.674102066+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/invalid","Output":"=== RUN   TestOwnedGroupCleanupAndFinalFrames/invalid\n"}
+{"Time":"2026-10-19T01:56:13.785690884+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/invalid","Output":"--- PASS: TestOwnedGroupCleanupAndFinalFrames/invalid (0.11s)\n"}
+{"Time":"2026-10-19T01:56:13.785730563+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/invalid","Elapsed":0.11}
+{"Time":"2026-10-19T01:56:13.785738197+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames","Output":"--- PASS: TestOwnedGroupCleanupAndFinalFrames (0.34s)\n"}
+{"Time":"2026-10-19T01:56:13.785745561+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames","Elapsed":0.34}
+{"Time":"2026-10-19T01:56:13.785748845+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Output":"PASS\n"}
+{"Time":"2026-10-19T01:56:13.787432524+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Output":"ok  \tgithub.com/shengjuntu/rundesk/internal/rpc\t0.341s\n"}
+{"Time":"2026-10-19T01:56:13.787467097+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Elapsed":0.342}

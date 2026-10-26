@@ -6,9 +6,9 @@ Kun 提供暂停/单步、控制回执、安全检查点、四个安全边界的
 
 配置 → Agent 引擎 → 条件断点：设置新运行的默认规则。默认规则为空，不会额外暂停，也不增加模型或工具调用。
 
-正在运行的会话：Kun DevTools → Sources → **读取当前断点**，编辑后点击 **应用断点到当前运行**。建议先暂停再编辑，否则运行推进可能使读到的状态版本过期。临时修改只影响当前 run 和它的检查点续跑，不改实例默认配置。界面自动刷新不会覆盖正在编辑的草稿。
+正在运行的会话：轨迹 → Kun 高级调试 → Sources → **读取当前断点**，编辑后点击 **应用断点到当前运行**。建议先暂停再编辑，否则运行推进可能使读到的状态版本过期。临时修改只影响当前 run 和它的检查点续跑，不改实例默认配置。界面自动刷新不会覆盖正在编辑的草稿。
 
-每次规则替换都有原有控制协议的幂等回执和状态 revision 校验，规则版本加一，命中计数归零。相同 requestId 重试返回原回执；不同内容复用 ID、过期状态和非活跃运行均拒绝。删除所有规则可关闭后续条件断点；关闭 DevTools 窗口不会删除规则。已有暂停仍需明确点击继续，原有“每次模型请求前暂停”开关独立保留。
+每次规则替换都有原有控制协议的幂等回执和状态 revision 校验，规则版本加一，命中计数归零。相同 requestId 重试返回原回执；不同内容复用 ID、过期状态和非活跃运行均拒绝。删除所有规则可关闭后续条件断点；关闭调试工作台不会删除规则。已有暂停仍需明确点击继续，原有“每次模型请求前暂停”开关独立保留。
 
 | 条件 | 语义 |
 | --- | --- |
@@ -71,7 +71,7 @@ Console 与其余面板共用“固定快照 / 跟随现场”的选择。查询
 }
 ```
 
-Worker 协议 v16 曾扩展 `query` 的 evidence/diff 与 fromSequence；保留 v5 的 set_breakpoints。hello 声明 conditionalBreakpoints/debugQueries/snapshotDiff/eventEvidence。RunDesk 和 Kun 必须同步升级。状态 schema 仍为 1，新增字段可选；旧快照可查，但旧引擎版本的检查点不跨版本恢复。
+Worker 协议 v16 曾扩展 `query` 的 evidence/diff 与 fromSequence；保留 v5 的 set_breakpoints。hello 声明 conditionalBreakpoints/debugQueries/snapshotDiff/eventEvidence。RunDesk 和 Kun 必须同步升级。状态 schema 仍为 1，新增字段可选；旧快照可查，执行恢复须通过引擎和格式守卫；兼容范围见 [Kun 接口](KUN-SEPARATION.md)。
 
 ## 仍待完成
 

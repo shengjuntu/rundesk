@@ -1,0 +1,103 @@
+{
+  "baseline": "9712d4fa92b74d0721b2039de0784bbbc26eff65",
+  "unchanged": true,
+  "fileCount": 24,
+  "files": [
+    {
+      "path": "examples/profiletemplates/news2douyin.zip",
+      "sha256": "9e5043241bfb406301bee2de5d0700c9dea71dff0fec22632f2fda7ed951fa5a"
+    },
+    {
+      "path": "examples/profiletemplates/people-search.zip",
+      "sha256": "03a92d7ae9c3d9b07937efb64d8baaabb4a54c1dcc274c79cc213de6e122eac9"
+    },
+    {
+      "path": "examples/profiletemplates/video-build.zip",
+      "sha256": "4d1ff5cc7a0ebb4618b262ce7a2cd1a2319cc8eb0d04139f855511841ea583b2"
+    },
+    {
+      "path": "examples/video-build/README.md",
+      "sha256": "c6052dd523e7bc79cd428255e94d0ddfe6b2483c67a510bfc63f56528594f7b0"
+    },
+    {
+      "path": "examples/video-build/VIDEO-USE-COMPAT.md",
+      "sha256": "046e1497625c7b48849c1fd35b5fbea01e7c8a684e144d81f99bf3eccbf224ee"
+    },
+    {
+      "path": "examples/video-build/dependency-validation-video-use-1.3.0.json",
+      "sha256": "bae96fffb481db13444d38f6ecbc5253e828ee265773056fad1ee1414ef38a19"
+    },
+    {
+      "path": "examples/video-build/dependency-validation.json",
+      "sha256": "75a2832b44e3ef03f8d68f3c6587bfff8e13d431e76936124bc7098f897aa466"
+    },
+    {
+      "path": "examples/video-build/profile.json",
+      "sha256": "396b883a1b634976a1497b3270ba6eb48a52624cd9a7d126c9c8a355296f16de"
+    },
+    {
+      "path": "examples/video-build/run-app.sh",
+      "sha256": "da7ffbb77383ace48b78846a9f3b4e5c3ef20a190f248e3c7146296e4c196946"
+    },
+    {
+      "path": "examples/video-build/run.py",
+      "sha256": "9d825c2e57597807cb4b902f0d167faa52a77cda249faaaccd6d747bba2e9fd7"
+    },
+    {
+      "path": "examples/video-build/skills/build-video-artifacts/SKILL.md",
+      "sha256": "9a90fce5880b108d177b19a4161e6217f0f0f30f04417cf76b1f140ead6bdd99"
+    },
+    {
+      "path": "examples/video-build/skills/build-video-artifacts/WORKFLOW-DESIGN.md",
+      "sha256": "868513496a35cd4405ede63b6329c8bb1b38489123077d68289449564f2d1cf4"
+    },
+    {
+      "path": "examples/video-build/skills/build-video-artifacts/agents/openai.yaml",
+      "sha256": "51c41a85aa8104a6560d2ffb8665e5885ea46e91b97e52a791fe1d53bc0b57c6"
+    },
+    {
+      "path": "examples/video-build/skills/build-video-artifacts/references/backend-compatibility.md",
+      "sha256": "76d94279ee8cfea22fa6fda5f26ae8ded3e93c5da3d7a0de05574cf977e2d1fe"
+    },
+    {
+      "path": "examples/video-build/skills/build-video-artifacts/references/hyperframes-authoring.md",
+      "sha256": "d48b5c2ae3ccf6f14f7c777cdc0069a0bdfa8e27c80b1e4b149d971491d2674e"
+    },
+    {
+      "path": "examples/video-build/validation/ffmpeg-probe.json",
+      "sha256": "3d1c35663fd082f61a8ae622cd3e68c302f357087c851c8625bf839b7c422f2d"
+    },
+    {
+      "path": "examples/video-build/validation/ffmpeg-render.json",
+      "sha256": "8dd9955ce53deb858556d10359a98d7958c66ec7a4e4a3e29404291ee529c84b"
+    },
+    {
+      "path": "examples/video-build/validation/hyperframes-animation.mp4",
+      "sha256": "890f6bb5d66b85e70cc039dff583a68a06bf60f3beda98d964872db854d50bbc"
+    },
+    {
+      "path": "examples/video-build/validation/hyperframes-probe.json",
+      "sha256": "e1c6f4fa264d8beae9304d5eb439079a111c39db59cfff5634063648a874cc05"
+    },
+    {
+      "path": "examples/video-build/validation/hyperframes-render.json",
+      "sha256": "81eb2a1d28cae45aa5eb28f79b6fe46d664f2c7166decbce0d3116507c0933c4"
+    },
+    {
+      "path": "examples/video-build/validation/profile-contract-tests.log",
+      "sha256": "513343e162692d8c5136774b526a022d63f1c96d39feaeb362589288def686c3"
+    },
+    {
+      "path": "examples/video-build/validation/runtime-diagnostics-tests.log",
+      "sha256": "717c707f725f8c1aad3c9550510a3963956b8ba6eb3c2d1ca34fd713df5813e3"
+    },
+    {
+      "path": "examples/video-build/vendor/video-use-43cfc566833548093455c9d4a46bd69913b7e552.tar.gz",
+      "sha256": "b7c181c855265f5e88a2bacde46959b3a07034ee7dce00aed1f4b00bce6a3367"
+    },
+    {
+      "path": "examples/video-build/video-use-requirements.txt",
+      "sha256": "7523bd37ce256469fa2d52fff4687e591528c463f15dc462acc19bffcd1b8ae6"
+    }
+  ]
+}

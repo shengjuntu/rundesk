@@ -1,0 +1,3 @@
+$ CGO_ENABLED=0 go build -buildvcs=false -trimpath -o bin/rundesk ./cmd/rundesk
+$ bin/rundesk --version
+RunDesk 0.49.1
