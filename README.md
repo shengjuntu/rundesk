@@ -8,7 +8,7 @@ Video build integration: Video App 0.23 uses an original Codex-directed HyperFra
 
 ## Current release
 
-**RunDesk 0.49.5 · external Kun 0.17.0 · worker protocol 16**. Kun now builds and ships as an independent project. RunDesk links only a lightweight SDK snapshot and connects to the selected executable through JSONL; the engine owns its execution journal, while RunDesk owns platform data and the debugging workbench. This release updates video-build to 1.4.0 while retaining the independent Kun boundary and default-off Codex HTTP observation. See [Kun separation and compatibility](docs/KUN-SEPARATION.md).
+**RunDesk 0.50.0 · external Kun 0.17.0 · worker protocol 16**. Kun now builds and ships as an independent project. RunDesk links only a lightweight SDK snapshot and connects to the selected executable through JSONL; the engine owns its execution journal, while RunDesk owns platform data and the debugging workbench. This release adds administrator-approved application runtime presets, each bound to its own Codex Docker instance and workspace. Existing default bindings, independent Kun and default-off Codex HTTP observation remain unchanged. See [runtime presets](docs/APPLICATION-RUNTIME-PRESETS.md). See [Kun separation and compatibility](docs/KUN-SEPARATION.md).
 
 - Prepare and reuse an application’s configured Docker environment before work, without changing its image or disconnecting active sessions.
 - Integrate applications with scoped credentials, durable queues, sessions, streaming events, files, and idempotency receipts.

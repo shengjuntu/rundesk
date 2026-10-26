@@ -1,3 +1,20 @@
+# 0.50.0 验证记录
+
+本轮验证 RunDesk **0.50.0**，使用独立 Kun **0.17.0**、worker 协议 **16** 和 Video App **0.25.0**。新增应用命名运行预设、精确绑定授权、成员授权、只读技能查询与多环境管理界面。详细命令和原始证据见 [validation-0.50.0.json](validation-0.50.0.json)。
+
+- 全量 Go 回归 **454 项含子测试 / 318 项顶层通过，0 失败、0 测试跳过**，使用单独编译的 RunDesk host 和外部 Kun；逐包核对终止结果。预设、成员及文件访问的定向 race 回归通过，完整宿主 race 未运行。
+- 两端实际 HTTP 服务的 10 项集成检查通过，覆盖两个命名预设、不同实例/工作区/镜像、保留旧默认、限定预设凭据与只读技能访问。Docker CLI 和 Codex 工具发现使用协议测试替身，不代表实际 Docker 或模型验收。
+- RunDesk 已发布 JavaScript 的 JSDOM 行为检查通过，包括配置重试、预设停用历史、精确 key/member grants。Video App 的简洁工作台 24 项 HTTP/DOM 检查另见 App 仓库。
+- Go vet、OpenAPI/文档一致性、修改的 JavaScript 语法及 Linux/Windows amd64 构建通过。Windows 仅交叉编译，未运行。
+
+首轮完整回归发现旧 RPC 测试夹具 `TestOwnedGroupCleanupAndFinalFrames/invalid` 的 `unrelated process affected` 失败。检查发现该夹具在固定等待期间读取非原子心跳，可能把空文件或调度延迟误判为进程终止；原用例独立重跑三次未复现。仅测试夹具改为原子写入，并从清理后的基线等待有界进展；生产 RPC 未修改。修前窄用例三次通过，修后 close/exit/invalid 整组连续三次通过，再重跑完整回归。首轮失败日志完整保留，不计为成功回归。
+
+没有运行生产 Docker Engine、真实 Codex 认证、GPU 模型或新的媒体成片验收；未构建 OpenMontage/video-use 上游镜像，也未自动转换其工程。已有 0.49.x 媒体及协议证据保留原版本标识。
+
+以下保留历史验证记录。
+
+---
+
 # 0.49.1 验证记录
 
 本轮验证日期：2026-10-17。RunDesk **0.49.1** / Kun **0.16.0** / worker 协议 **16**。环境为 Go 1.25.12、Node 24.19.0、Linux amd64 和 Chromium 155.0.8059.84。交付为源码，未发布容器镜像。

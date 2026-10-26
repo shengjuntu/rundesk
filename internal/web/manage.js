@@ -1057,7 +1057,7 @@ async function switchInstance() {
   updateWorkspaceLabel();
   renderSessions();
   if(instance().id==="default")await enterAssistant();
-  else if(currentApplication())await showApplication(currentApplication().appId);
+  else if(currentApplication())await showApplication(currentApplication().appId,currentApplicationBinding()?.presetId||"");
   else await showLegacyApplication(instance().id);
 }
 $("#instance").onchange = () => safe(switchInstance);

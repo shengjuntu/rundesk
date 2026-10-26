@@ -280,3 +280,170 @@ func TestUserRevocationClosesSSE(t *testing.T) {
 		t.Fatal("revoked user stream did not close", e)
 	}
 }
+
+func memberPresetFixture(t *testing.T, m *Manager, appID string) (ApplicationRuntimePreset, Session) {
+	t.Helper()
+	i, err := m.CreateInstance(InstancePatch{Name: "Animation runtime"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, err = m.SetExecution(i.ID, i.Revision, ExecutionSpec{Mode: "docker", Image: "video-animation:test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ws, err := m.CreateWorkspace("Animation project", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.EnsureApplicationEnvironment(i.ID, ws.ID); err != nil {
+		t.Fatal(err)
+	}
+	preset, err := m.PutApplicationRuntimePreset(appID, "animated", ApplicationRuntimePresetInput{Name: "Animated", InstanceID: i.ID, WorkspaceID: ws.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	session, err := m.CreateSessionWithSource(ws.ID, "Animation history", "", i.ID, SessionSource{Kind: "application", AppID: appID, PresetID: preset.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return preset, session
+}
+
+func TestMemberPresetGrantIsExplicitAndKeepsLegacyProjectScope(t *testing.T) {
+	m, legacy, legacyCode, _, _, base, _ := userFixture(t)
+	preset, animated := memberPresetFixture(t, m, base.Source.AppID)
+	if legacy.Grants[0].ID != keyHash(legacy.Grants[0].AppID + "/" + legacy.Grants[0].WorkspaceID)[:24] {
+		t.Fatal("legacy grant URL changed")
+	}
+	grant := UserGrant{AppID: base.Source.AppID, PresetID: preset.ID, WorkspaceID: preset.WorkspaceID, Role: "runner"}
+	u, code, err := m.CreateUser(UserInput{Name: "Animation editor", Grants: []UserGrant{grant}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := NewHandler(m, userTestAdmin, true)
+	root := "/api/v1/member/" + u.Grants[0].ID
+	legacyRoot := "/api/v1/member/" + legacy.Grants[0].ID
+	for _, tc := range []struct {
+		path, token, own, foreign string
+	}{{root, code, animated.ID, base.ID}, {legacyRoot, legacyCode, base.ID, animated.ID}} {
+		r := appRequest(h, "GET", tc.path+"/sessions", "", tc.token, "")
+		if r.Code != 200 || !strings.Contains(r.Body.String(), tc.own) || strings.Contains(r.Body.String(), tc.foreign) {
+			t.Fatal("preset session scope leaked", r.Code, r.Body.String())
+		}
+		r = appRequest(h, "GET", tc.path+"/sessions/"+tc.foreign+"/trace", "", tc.token, "")
+		if r.Code != 403 {
+			t.Fatal("foreign runtime trace readable", r.Code, r.Body.String())
+		}
+	}
+	// Existing member clients only send workspaceId; the sole explicit preset
+	// grant must resolve to its frozen pair without falling back to the default.
+	body := `{"workspaceId":"` + preset.WorkspaceID + `","title":"member animation"}`
+	r := appRequest(h, "POST", root+"/sessions", body, code, "member-animation-create-001")
+	if r.Code != 200 {
+		t.Fatal(r.Code, r.Body.String())
+	}
+	created, err := m.Session(object(t, r)["id"].(string))
+	if err != nil || created.InstanceID != preset.InstanceID || created.WorkspaceID != preset.WorkspaceID || created.Source.AppID != grant.AppID || created.Source.PresetID != preset.ID {
+		t.Fatal("member preset pair was not frozen", created, err)
+	}
+	for _, body := range []string{
+		`{"workspaceId":"` + base.WorkspaceID + `"}`,
+		`{"workspaceId":"` + preset.WorkspaceID + `","instanceId":"` + base.InstanceID + `"}`,
+	} {
+		r = appRequest(h, "POST", root+"/sessions", body, code, "")
+		if r.Code != 403 {
+			t.Fatal("preset/default cross-product admitted", r.Code, r.Body.String())
+		}
+	}
+	for _, bad := range []UserGrant{
+		{AppID: grant.AppID, PresetID: preset.ID, WorkspaceID: base.WorkspaceID, Role: "runner"},
+		{AppID: grant.AppID, WorkspaceID: preset.WorkspaceID, Role: "runner"},
+		{AppID: grant.AppID, PresetID: "unregistered", WorkspaceID: preset.WorkspaceID, Role: "runner"},
+	} {
+		if _, _, err := m.CreateUser(UserInput{Name: "Invalid grant", Grants: []UserGrant{bad}}); err == nil {
+			t.Fatal("invalid preset grant accepted", bad)
+		}
+	}
+	// A preset grant does not expose administrator-only routes through the proxy.
+	for _, path := range []string{"/applications/" + grant.AppID + "/runtime", "/instances", "/tasks", "/environments"} {
+		if r := appRequest(h, "GET", root+path, "", code, ""); r.Code != 403 {
+			t.Fatal("member preset widened route allowlist", path, r.Code)
+		}
+	}
+	// Docker admission follows this grant's selected runtime, not the default
+	// application runtime. A later local-mode change cannot grant host execution.
+	baseInstance, err := m.Instance(base.InstanceID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.SetExecution(baseInstance.ID, baseInstance.Revision, ExecutionSpec{Mode: "local"}); err != nil {
+		t.Fatal(err)
+	}
+	r = appRequest(h, "POST", root+"/sessions", body, code, "member-animation-create-002")
+	if r.Code != 200 {
+		t.Fatal("default runtime mode affected the granted preset", r.Code, r.Body.String())
+	}
+	presetInstance, err := m.Instance(preset.InstanceID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.SetExecution(presetInstance.ID, presetInstance.Revision, ExecutionSpec{Mode: "local"}); err != nil {
+		t.Fatal(err)
+	}
+	if r := appRequest(h, "POST", root+"/sessions", body, code, "member-animation-create-003"); r.Code != 403 {
+		t.Fatal("preset grant admitted execution on the host", r.Code, r.Body.String())
+	}
+}
+
+func TestDisabledMemberPresetRetainsHistoryAndBlocksNewExecution(t *testing.T) {
+	m, _, _, _, _, base, _ := userFixture(t)
+	preset, animated := memberPresetFixture(t, m, base.Source.AppID)
+	u, code, err := m.CreateUser(UserInput{Name: "Animation editor", Grants: []UserGrant{{AppID: base.Source.AppID, PresetID: preset.ID, WorkspaceID: preset.WorkspaceID, Role: "runner"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	disabled := false
+	_, err = m.PutApplicationRuntimePreset(preset.AppID, preset.ID, ApplicationRuntimePresetInput{Name: preset.Name, InstanceID: preset.InstanceID, WorkspaceID: preset.WorkspaceID, Enabled: &disabled, Revision: &preset.Revision})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := NewHandler(m, userTestAdmin, true)
+	root := "/api/v1/member/" + u.Grants[0].ID
+	if r := appRequest(h, "GET", root+"/sessions/"+animated.ID, "", code, ""); r.Code != 200 {
+		t.Fatal("disabled preset hid its history", r.Code, r.Body.String())
+	}
+	for _, path := range []string{"/sessions", "/sessions/" + animated.ID + "/turns", "/sessions/" + animated.ID + "/steer", "/sessions/" + animated.ID + "/recover"} {
+		body := `{"workspaceId":"` + preset.WorkspaceID + `","text":"continue"}`
+		if r := appRequest(h, "POST", root+path, body, code, ""); r.Code != 403 {
+			t.Fatal("disabled preset admitted new execution", path, r.Code, r.Body.String())
+		}
+	}
+	catalog, err := m.memberCatalog(u)
+	if err != nil || len(catalog) != 1 || catalog[0]["canRun"] != false {
+		t.Fatal("disabled preset still advertised runnable", catalog, err)
+	}
+	// The member proxy must still pass explicit stop requests to the normal
+	// authorization gate rather than strand an already running task.
+	p, err := m.authenticateUser(code)
+	if err != nil {
+		t.Fatal(err)
+	}
+	called := false
+	srv := &Server{Manager: m}
+	gate := srv.userGate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		k := principal(r)
+		if k == nil || !k.owns(animated.InstanceID, animated.WorkspaceID, animated.Source) || !k.scope("run") {
+			t.Error("stop lost the selected preset grant")
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	req := withHuman(httptest.NewRequest("POST", root+"/sessions/"+animated.ID+"/stop", nil), p)
+	// userGate receives the unversioned path after apiBoundary.
+	req.URL.Path = strings.Replace(req.URL.Path, "/api/v1/", "/api/", 1)
+	rec := httptest.NewRecorder()
+	gate.ServeHTTP(rec, req)
+	if !called || rec.Code != http.StatusNoContent {
+		t.Fatal("disabled preset prevented stopping old execution", rec.Code)
+	}
+}

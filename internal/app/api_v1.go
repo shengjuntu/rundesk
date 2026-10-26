@@ -17,7 +17,7 @@ import (
 	"github.com/shengjuntu/rundesk/internal/store"
 )
 
-const Version = "0.49.5"
+const Version = "0.50.0"
 
 type apiError struct {
 	Status        int
@@ -108,9 +108,10 @@ func (s *Server) apiBoundary(next http.Handler) http.Handler {
 }
 
 type SessionSource struct {
-	Kind   string `json:"kind,omitempty"`
-	AppID  string `json:"appId,omitempty"`
-	TaskID string `json:"taskId,omitempty"`
+	PresetID string `json:"presetId,omitempty"`
+	Kind     string `json:"kind,omitempty"`
+	AppID    string `json:"appId,omitempty"`
+	TaskID   string `json:"taskId,omitempty"`
 }
 
 func (v *SessionSource) validate() error {
@@ -119,6 +120,9 @@ func (v *SessionSource) validate() error {
 		if v.AppID != "" {
 			v.Kind = "application"
 		}
+	}
+	if v.PresetID != "" && (v.Kind != "application" || !applicationPresetID.MatchString(v.PresetID)) {
+		return failure(400, "invalid_source", "presetId仅用于有效的应用运行环境预设")
 	}
 	if (v.Kind != "human" && v.Kind != "application") || len(v.AppID) > 80 || len(v.TaskID) > 200 || strings.ContainsAny(v.AppID+v.TaskID, "\r\n\x00") || (v.Kind == "application" && strings.TrimSpace(v.AppID) == "") || (v.Kind == "human" && (v.AppID != "" || v.TaskID != "")) {
 		return failure(400, "invalid_source", "source 必须是 human，或带 appId 的 application；taskId 为可选业务编号")

@@ -1,3 +1,13 @@
+# 0.50.0
+
+- Add administrator-approved named runtime presets for one application. Each preset binds a dedicated Codex Docker instance and workspace; names and enabled state may change, while the execution identity remains fixed. Registration does not start containers, install tools or replace the application's default image.
+- Extend connect, runtime preparation, diagnostics, sessions, queued tasks and schedules with explicit preset selection. Disabled presets retain history and reject new execution; cancellation and uncertain submissions keep their original session, binding and receipt.
+- Freeze application-key preset bindings and match member grants by application, optional preset and workspace. New presets never expand old credentials; legacy default-workspace grants do not authorize dedicated preset workspaces.
+- Add management cards for creating/binding presets, scoped configuration and task history. Creation retries reuse accepted resources; renaming or disabling a preset does not interrupt running environments.
+- Pair with Video App 0.25.0: project creation freezes the selected production profile, and connection records the exact runtime binding. Changing the App startup default does not migrate existing projects or sessions; tool profiles and rendering backends remain separate.
+- Keep Kun as independent 0.17.0, worker protocol 16, RDCA `/api/v1`, native Codex and default-off HTTP observation. Historical release validation remains intact; real Docker, model authentication and autonomous production remain deployment acceptance work.
+- See [application runtime presets](docs/APPLICATION-RUNTIME-PRESETS.md) and [0.50.0 validation scope](docs/validation-0.50.0.json).
+
 # 0.49.5
 
 - Update video-build to 1.4.0: HyperFrames 0.8.87, GSAP 3.15.0, Node.js, FFmpeg and fonts are the default animation toolchain. Pinned MIT video-use and adapter contract 2 remain an explicit optional compatibility path.

@@ -1,6 +1,6 @@
 # 升级到当前版本
 
-当前版本 RunDesk 0.49.5，配套独立 Kun 0.17.0、worker 协议 16、fork schema 3；视频工具 profile 为 video-build 1.4.0。
+当前版本 RunDesk 0.50.0，配套独立 Kun 0.17.0、worker 协议 16、fork schema 3；视频工具 profile 为 video-build 1.4.0。
 
 1. 等待活动任务结束，停止原服务，备份数据目录、工作区、Codex HOME/配置、独立 Kun 执行日志及服务环境设置。
 2. 在 RunDesk 源码执行 `make build`，本包只构建宿主；Kun 在其独立源码目录执行 `go build -o bin/kun ./cmd/kun`。将 Kun 放在 RunDesk 可执行文件旁，或通过 `--kun /absolute/path/to/kun` 指定。RunDesk 使用轻量 SDK 快照构建，不再包含 `cmd/kun` 或引擎源码。
@@ -12,6 +12,14 @@
 重启不会重放已开始或结果未确认的任务；排队任务保留。先检查原回执、任务状态与副作用证据再决定后续操作。一个可靠本地文件系统的数据目录只运行一个 RunDesk；不要删除运行中的 server.lock 来并行启动服务。
 
 验证记录按实际版本与执行范围保存；0.49.4 的普通全量测试和局部 race 结果不是 0.49.5 全量 race 验收。当前能力与本版实际测试见 [STATUS](STATUS.md) 和 [VALIDATION](VALIDATION.md)。
+
+## 0.50.0：应用多运行环境预设
+
+原应用的默认实例/工作区、会话、HOME、认证和凭据保持原绑定，不自动创建或迁移预设。管理员在应用配置内登记命名预设，为每个预设配置独立 Codex Docker 实例和工作区。省略 presetId 的客户端保持原行为；旧应用凭据不会自动获得新预设权限，需要重新签发包含 presetIds 的凭据。
+
+配套 Video App 0.25.0 可用 --production-profile 或 VIDEO_PRODUCTION_PROFILE 指定新项目默认预设，项目会保存选择与会话绑定；改变启动默认不迁移旧项目。App 自身渲染容器、IndexTTS与ComfyUI独立运行。预设名称不自动安装OpenMontage/video-use或转换既有剪辑工程；管理员需提供实际可用镜像和适配工具。
+
+具体配置、禁用规则和权限见 [多运行环境预设](APPLICATION-RUNTIME-PRESETS.md)。本轮具体验证见 validation-0.50.0.json，旧日志保留原版本边界。
 
 ## 0.49.5：HyperFrames 自主导演工具镜像
 

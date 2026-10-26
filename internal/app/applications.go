@@ -13,18 +13,22 @@ import (
 // Product metadata maps each app to an existing configuration identity.
 // Execution, sessions, credentials and workspace ownership remain unchanged.
 type Application struct {
-	AppID        string `json:"appId"`
-	Name         string `json:"name"`
-	Description  string `json:"description"`
-	InstanceID   string `json:"instanceId"`
-	WorkspaceID  string `json:"workspaceId,omitempty"`
-	EntryURL     string `json:"entryUrl,omitempty"`
-	Origin       string `json:"origin"`
-	Revision     int    `json:"revision"`
-	Created      string `json:"created"`
-	SessionCount int    `json:"sessionCount"`
-	ActiveCount  int    `json:"activeCount"`
-	LastActivity string `json:"lastActivity,omitempty"`
+	PresetRevision int                        `json:"presetRevision,omitempty"`
+	PresetEnabled  *bool                      `json:"presetEnabled,omitempty"`
+	PresetID       string                     `json:"presetId,omitempty"`
+	RuntimePresets []ApplicationRuntimePreset `json:"runtimePresets,omitempty"`
+	AppID          string                     `json:"appId"`
+	Name           string                     `json:"name"`
+	Description    string                     `json:"description"`
+	InstanceID     string                     `json:"instanceId"`
+	WorkspaceID    string                     `json:"workspaceId,omitempty"`
+	EntryURL       string                     `json:"entryUrl,omitempty"`
+	Origin         string                     `json:"origin"`
+	Revision       int                        `json:"revision"`
+	Created        string                     `json:"created"`
+	SessionCount   int                        `json:"sessionCount"`
+	ActiveCount    int                        `json:"activeCount"`
+	LastActivity   string                     `json:"lastActivity,omitempty"`
 }
 type ApplicationInput struct {
 	Name        string `json:"name"`
@@ -60,8 +64,17 @@ func (m *Manager) Applications() ([]Application, error) {
 		return nil, e
 	}
 	for n := range rows {
+		presets, err := m.ApplicationRuntimePresets(rows[n].AppID)
+		if err != nil {
+			return nil, err
+		}
+		rows[n].RuntimePresets = presets
+		ownedInstances := map[string]bool{rows[n].InstanceID: true}
+		for _, p := range presets {
+			ownedInstances[p.InstanceID] = true
+		}
 		for _, s := range m.Sessions() {
-			if s.InstanceID != rows[n].InstanceID {
+			if !ownedInstances[s.InstanceID] {
 				continue
 			}
 			rows[n].SessionCount++
@@ -114,6 +127,15 @@ func (m *Manager) registerApplication(id string, p ApplicationInput, origin stri
 	if e != nil {
 		return Application{}, e
 	}
+	presets, e := m.allApplicationPresets()
+	if e != nil {
+		return Application{}, e
+	}
+	for _, preset := range presets {
+		if preset.InstanceID == p.InstanceID || preset.WorkspaceID == p.WorkspaceID && p.WorkspaceID != "" {
+			return Application{}, failure(409, "application_binding_conflict", "此实例或工作区已属于运行环境预设")
+		}
+	}
 	var prev *Application
 	for _, a := range rows {
 		if a.AppID == id {
@@ -146,13 +168,25 @@ func (m *Manager) registerApplication(id string, p ApplicationInput, origin stri
 }
 func (m *Manager) bindApplicationSource(source SessionSource, i Instance, wid string) error {
 	if source.Kind != "application" {
-		return nil
+		return m.checkApplicationPresetExecution(source, i.ID, wid)
 	}
 	m.applicationMu.Lock()
 	defer m.applicationMu.Unlock()
 	rows, e := m.applicationRecords()
 	if e != nil {
 		return e
+	}
+	if source.PresetID != "" {
+		return m.checkApplicationPresetExecution(source, i.ID, wid)
+	}
+	presets, e := m.allApplicationPresets()
+	if e != nil {
+		return e
+	}
+	for _, p := range presets {
+		if p.InstanceID == i.ID || p.WorkspaceID == wid {
+			return failure(409, "application_binding_conflict", "运行环境预设需要准确的应用来源和presetId")
+		}
 	}
 	for _, a := range rows {
 		if a.AppID == source.AppID {
@@ -240,6 +274,7 @@ func (m *Manager) migrateApplications() error {
 	return nil
 }
 func (s *Server) applicationRoutes(mux *http.ServeMux) {
+	s.applicationRuntimePresetRoutes(mux)
 	s.applicationConnectRoutes(mux)
 	s.applicationRuntimeRoutes(mux)
 	s.applicationCapabilityRoutes(mux)

@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"mime/multipart"
 	"net/http"
@@ -144,5 +145,69 @@ func TestMemberFileDownloadUsesApplicationGrant(t *testing.T) {
 				t.Fatal(tc.sid, r.Code, r.Body.String())
 			}
 		}
+	}
+}
+
+func TestPresetUploadsKeepTheirExactApplicationInstanceWorkspaceBinding(t *testing.T) {
+	m := testManager(t)
+	base := m.Workspaces()[0]
+	preset, err := m.CreateWorkspace("preset-upload-project", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	key := ApplicationKey{ID: "uploader", AppID: "video-app", InstanceID: "base-instance", WorkspaceIDs: []string{base.ID}, Scopes: []string{"read", "files"}, PresetBindings: []ApplicationPresetBinding{{PresetID: "animated", InstanceID: "animation-instance", WorkspaceID: preset.ID}}}
+	srv := &Server{Manager: m}
+	requestFor := func(k ApplicationKey) *http.Request {
+		return httptest.NewRequest("GET", "/", nil).WithContext(context.WithValue(context.Background(), applicationPrincipal{}, &k))
+	}
+	path := "uploads/reference.txt"
+	for _, ws := range []Workspace{base, preset} {
+		if err := os.MkdirAll(filepath.Join(ws.Path, "uploads"), 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(ws.Path, path), []byte(ws.ID), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if err := srv.recordUploadAccess(requestFor(key), ws.ID, path); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var actual uploadAccess
+	if err := m.Store.Get("upload-access", libraryLinkID(preset.ID, path), &actual); err != nil || actual.InstanceID != "animation-instance" || actual.AppID != key.AppID || actual.WorkspaceID != preset.ID {
+		t.Fatal("preset upload attributed to the wrong runtime", actual, err)
+	}
+	if err := srv.checkFileAccess(requestFor(key), preset.ID, path); err != nil {
+		t.Fatal("explicit preset grant cannot read its upload", err)
+	}
+	replacement := key
+	replacement.ID = "rotated-key"
+	if err := srv.checkFileAccess(requestFor(replacement), preset.ID, path); err != nil {
+		t.Fatal("rotation orphaned the preset upload", err)
+	}
+	legacy := key
+	legacy.PresetBindings = nil
+	if err := srv.checkFileAccess(requestFor(legacy), preset.ID, path); err == nil {
+		t.Fatal("legacy grant inherited a new runtime upload")
+	}
+	// Knowing the workspace alone never turns the default instance grant into
+	// authorization for another instance's upload.
+	legacy.WorkspaceIDs = []string{preset.ID}
+	if err := srv.checkFileAccess(requestFor(legacy), preset.ID, path); err == nil {
+		t.Fatal("default instance/workspace cross-product exposed preset upload")
+	}
+	ambiguous := key
+	ambiguous.WorkspaceIDs = []string{preset.ID}
+	if err := srv.recordUploadAccess(requestFor(ambiguous), preset.ID, path); err == nil {
+		t.Fatal("ambiguous workspace binding rewrote upload ownership")
+	}
+	foreign := key
+	foreign.AppID = "another-app"
+	if err := srv.checkFileAccess(requestFor(foreign), preset.ID, path); err == nil {
+		t.Fatal("upload crossed application ownership")
+	}
+	readOnly := key
+	readOnly.Scopes = []string{"read"}
+	if err := srv.recordUploadAccess(requestFor(readOnly), preset.ID, "uploads/ungranted.txt"); err == nil {
+		t.Fatal("missing files scope admitted an upload grant")
 	}
 }

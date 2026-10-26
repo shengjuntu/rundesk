@@ -1,6 +1,6 @@
 # RunDesk Control API（RDCA）v1
 
-RunDesk 自身 API 的名称为 **RunDesk Control API（RDCA）**。当前契约随 RunDesk 0.49.4 发布。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
+RunDesk 自身 API 的名称为 **RunDesk Control API（RDCA）**。当前契约随 RunDesk 0.50.0 发布。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
 
 RunDesk 不依赖 HarnessRouter。UHP 是后续独立兼容入口的目标，未来与 RDCA 共用任务、权限和轨迹核心；当前未实现或声明 UHP 兼容。本次命名不改变既有请求、响应和行为，详见 [API 定位与兼容计划](API-STRATEGY.md)。
 
@@ -36,6 +36,8 @@ Content-Type: application/json
 [注册与集中配置](APPLICATION-CONNECT.md) · [凭据生命周期和范围](APPLICATION-CREDENTIALS.md)
 
 ## 应用 Docker 环境
+
+0.50.0 增加 application-runtime-presets 能力。同一应用可登记多个独立 Codex Docker 实例/工作区，应用以 presetId 选择，旧默认绑定保持不变。新session/task/schedule保存source.presetId；凭据以presetBindings冻结精确tuple，旧key不自动扩权。管理员配置和完整新增字段见 [运行环境预设](APPLICATION-RUNTIME-PRESETS.md)。下列旧环境接口增加可选presetId，省略仍为原语义。
 
 读取 `/meta` 的 `application-runtime` 能力后，可使用：
 

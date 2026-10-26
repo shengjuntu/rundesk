@@ -6,7 +6,7 @@ RunDesk 是面向应用的 Agent 执行平台，通过一套 API 接入 Kun 与 
 
 ## 当前版本
 
-**RunDesk 0.49.5 · 外部 Kun 0.17.0 · worker 协议 16**。Kun 已拆为独立工程、独立构建；RunDesk 只链接轻量 SDK 快照，通过 JSONL 连接所选可执行文件。Kun 管执行日志，RunDesk 管平台数据和统一调试工作台。本版将 video-build 更新为 1.4.0，保留独立 Kun 边界及 Codex HTTP 采集默认关闭的行为。见 [拆分与兼容说明](docs/KUN-SEPARATION.md)。
+**RunDesk 0.50.0 · 外部 Kun 0.17.0 · worker 协议 16**。Kun 已拆为独立工程、独立构建；RunDesk 只链接轻量 SDK 快照，通过 JSONL 连接所选可执行文件。Kun 管执行日志，RunDesk 管平台数据和统一调试工作台。本版支持同一应用选择多个管理员批准的运行预设，每个预设绑定独立 Codex Docker 实例和工作区。旧默认绑定、独立 Kun 边界及 Codex HTTP 采集默认关闭行为保留。见 [多运行环境预设](docs/APPLICATION-RUNTIME-PRESETS.md)。见 [拆分与兼容说明](docs/KUN-SEPARATION.md)。
 
 - 应用环境：按绑定启动/复用容器，检查认证和工具；开始研究不改镜像，不断开现有活动会话。
 - 应用接入：独立凭据、项目与操作范围、持久任务队列、会话、事件订阅、文件与幂等回执。

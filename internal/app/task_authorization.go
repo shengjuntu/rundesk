@@ -17,6 +17,9 @@ func submittingKey(r *http.Request) string {
 // Empty means a trusted internal/admin submission or a legacy record. We do not
 // invent provenance for old jobs. Caller holds keyMu when admitting execution.
 func (m *Manager) checkTaskAuthorization(keyID string, spec TaskSpec, scheduled bool) error {
+	if e := m.checkApplicationPresetExecution(spec.Source, spec.InstanceID, spec.WorkspaceID); e != nil {
+		return e
+	}
 	if keyID == "" {
 		return nil
 	}

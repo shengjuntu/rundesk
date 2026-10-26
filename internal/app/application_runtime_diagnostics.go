@@ -26,6 +26,7 @@ type ApplicationDiagnosticChallenge struct {
 }
 
 type ApplicationRuntimeDiagnosticsInput struct {
+	PresetID       string                          `json:"presetId,omitempty"`
 	InstanceID     string                          `json:"instanceId"`
 	WorkspaceID    string                          `json:"workspaceId"`
 	Nonce          string                          `json:"nonce"`
@@ -255,7 +256,7 @@ func (m *Manager) DiagnoseApplicationRuntime(parent context.Context, id string, 
 	if !diagnosticNonce.MatchString(in.Nonce) || in.MCPImageServer != "" && !slug.MatchString(in.MCPImageServer) {
 		return nil, failure(400, "invalid_diagnostic_request", "诊断需要 24 位小写十六进制 nonce 与有效服务名称")
 	}
-	a, i, e := m.applicationRuntimeBinding(id)
+	a, i, e := m.applicationPresetBinding(id, in.PresetID)
 	if e != nil {
 		return nil, e
 	}
@@ -275,7 +276,7 @@ func (m *Manager) DiagnoseApplicationRuntime(parent context.Context, id string, 
 			return nil, failure(400, "invalid_diagnostic_challenge", "挑战路径或 nonce 无效")
 		}
 		session, err := m.Session(match[1])
-		if err != nil || session.InstanceID != i.ID || session.WorkspaceID != w.ID || session.Source.Kind != "application" || session.Source.AppID != a.AppID {
+		if err != nil || session.InstanceID != i.ID || session.WorkspaceID != w.ID || session.Source.Kind != "application" || session.Source.AppID != a.AppID || session.Source.PresetID != in.PresetID {
 			return nil, forbidden()
 		}
 	}
@@ -320,12 +321,12 @@ func (m *Manager) DiagnoseApplicationRuntime(parent context.Context, id string, 
 		return nil, failure(502, "diagnostic_invalid_response", "固定诊断返回格式无效")
 	}
 	// Never bless a changed application, workspace, container or effective MCP config.
-	after, next, e := m.applicationRuntimeBinding(id)
+	after, next, e := m.applicationPresetBinding(id, in.PresetID)
 	if e != nil {
 		return nil, e
 	}
 	afterWorkspace, e := m.Workspace(w.ID)
-	if e != nil || after.Revision != a.Revision || after.InstanceID != a.InstanceID || after.WorkspaceID != a.WorkspaceID || next.Revision != i.Revision || afterWorkspace.Revision != w.Revision || afterWorkspace.Path != w.Path {
+	if e != nil || after.Revision != a.Revision || after.PresetRevision != a.PresetRevision || after.InstanceID != a.InstanceID || after.WorkspaceID != a.WorkspaceID || next.Revision != i.Revision || afterWorkspace.Revision != w.Revision || afterWorkspace.Path != w.Path {
 		return nil, failure(409, "application_binding_changed", "诊断期间应用配置已变化，请重试")
 	}
 	m.environmentMu.Lock()
@@ -348,6 +349,11 @@ func (m *Manager) DiagnoseApplicationRuntime(parent context.Context, id string, 
 		"instanceRevision": i.Revision, "executionMode": "docker", "checkedAt": store.Now(),
 		"modelTested": false, "modelVisionVerified": false, "runtime": result.Runtime,
 		"probed": metadata.Probed, "accountReady": metadata.AccountReady, "servers": metadata.Servers, "errors": metadata.Errors}
+	if a.PresetID != "" {
+		view["presetId"] = a.PresetID
+		view["presetRevision"] = a.PresetRevision
+		view["presetEnabled"] = a.PresetEnabled
+	}
 	if in.Challenge != nil {
 		if result.Challenge == nil || result.Challenge.Path != in.Challenge.Path || result.Challenge.Nonce != in.Nonce || result.Challenge.ResponsePath != strings.TrimSuffix(in.Challenge.Path, "request.json")+"response.json" {
 			return nil, failure(502, "diagnostic_invalid_response", "挑战诊断返回无效")

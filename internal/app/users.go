@@ -20,6 +20,7 @@ import (
 type UserGrant struct {
 	ID          string `json:"id"`
 	AppID       string `json:"appId"`
+	PresetID    string `json:"presetId,omitempty"`
 	WorkspaceID string `json:"workspaceId"`
 	Role        string `json:"role"`
 }
@@ -90,7 +91,13 @@ func (m *Manager) validateUser(in *UserInput) error {
 	seen := map[string]bool{}
 	for n := range in.Grants {
 		g := &in.Grants[n]
-		g.ID = keyHash(g.AppID + "/" + g.WorkspaceID)[:24]
+		// Preserve existing member URLs. A preset grant is a separate, explicit
+		// authorization and must never be inferred from an application grant.
+		identity := g.AppID + "/" + g.WorkspaceID
+		if g.PresetID != "" {
+			identity = g.AppID + "/" + g.PresetID + "/" + g.WorkspaceID
+		}
+		g.ID = keyHash(identity)[:24]
 		if seen[g.ID] || g.Role != "viewer" && g.Role != "runner" {
 			return failure(400, "invalid_grant", "同一应用项目不能重复授权；角色只能为 viewer 或 runner")
 		}
@@ -98,6 +105,23 @@ func (m *Manager) validateUser(in *UserInput) error {
 		var a Application
 		if e := m.Store.Get("application", g.AppID, &a); e != nil {
 			return failure(400, "invalid_grant", "授权的应用不存在")
+		}
+		if g.PresetID != "" {
+			var e error
+			a, _, e = m.applicationPresetBinding(g.AppID, g.PresetID)
+			if e != nil || g.WorkspaceID != a.WorkspaceID {
+				return failure(400, "invalid_grant", "授权的运行预设与项目不匹配")
+			}
+		} else {
+			presets, e := m.allApplicationPresets()
+			if e != nil {
+				return e
+			}
+			for _, preset := range presets {
+				if preset.WorkspaceID == g.WorkspaceID {
+					return failure(400, "invalid_grant", "专用预设工作区需要明确的 presetId 授权")
+				}
+			}
 		}
 		i, e := m.Instance(a.InstanceID)
 		if e != nil {
@@ -129,6 +153,10 @@ func newUserSecret(prefix, id string) (string, error) {
 func (m *Manager) CreateUser(in UserInput) (User, string, error) {
 	m.userMu.Lock()
 	defer m.userMu.Unlock()
+	// Serialize validation and persistence with runtime preset registration:
+	// neither operation may claim a workspace after the other's preflight.
+	m.applicationMu.Lock()
+	defer m.applicationMu.Unlock()
 	if e := m.validateUser(&in); e != nil {
 		return User{}, "", e
 	}
@@ -152,6 +180,8 @@ func (m *Manager) CreateUser(in UserInput) (User, string, error) {
 func (m *Manager) UpdateUser(id string, in UserInput) (User, error) {
 	m.userMu.Lock()
 	defer m.userMu.Unlock()
+	m.applicationMu.Lock()
+	defer m.applicationMu.Unlock()
 	var rec userRecord
 	e := m.Store.Get("user", id, &rec)
 	if errors.Is(e, sql.ErrNoRows) {
@@ -314,6 +344,19 @@ func (m *Manager) memberCatalog(u User) ([]map[string]any, error) {
 		if e := m.Store.Get("application", g.AppID, &a); e != nil {
 			continue
 		}
+		presetEnabled := true
+		if g.PresetID != "" {
+			var e error
+			a, _, e = m.applicationPresetBinding(g.AppID, g.PresetID)
+			if e != nil || g.WorkspaceID != a.WorkspaceID {
+				continue
+			}
+			preset, e := m.applicationPreset(g.AppID, g.PresetID)
+			if e != nil {
+				continue
+			}
+			presetEnabled = preset.Enabled
+		}
 		w, e := m.Workspace(g.WorkspaceID)
 		if e != nil {
 			continue
@@ -322,7 +365,7 @@ func (m *Manager) memberCatalog(u User) ([]map[string]any, error) {
 		if e != nil {
 			continue
 		}
-		out = append(out, map[string]any{"grant": g, "applicationName": a.Name, "projectName": w.Name, "canRun": g.Role == "runner" && i.Execution.Mode == "docker"})
+		out = append(out, map[string]any{"grant": g, "applicationName": a.Name, "projectName": w.Name, "canRun": g.Role == "runner" && i.Execution.Mode == "docker" && presetEnabled})
 	}
 	return out, nil
 }
@@ -424,6 +467,22 @@ func (s *Server) userGate(next http.Handler) http.Handler {
 			deny()
 			return
 		}
+		defaultInstanceID := a.InstanceID
+		presetEnabled := true
+		if grant.PresetID != "" {
+			var e error
+			a, _, e = s.Manager.applicationPresetBinding(grant.AppID, grant.PresetID)
+			if e != nil || a.WorkspaceID != grant.WorkspaceID {
+				deny()
+				return
+			}
+			preset, e := s.Manager.applicationPreset(grant.AppID, grant.PresetID)
+			if e != nil {
+				deny()
+				return
+			}
+			presetEnabled = preset.Enabled
+		}
 		i, e := s.Manager.Instance(a.InstanceID)
 		if e != nil {
 			deny()
@@ -442,7 +501,21 @@ func (s *Server) userGate(next http.Handler) http.Handler {
 			deny()
 			return
 		}
-		key := ApplicationKey{ID: "user-" + p.User.ID + "-" + grant.ID + "-" + strconv.Itoa(p.User.Revision), AppID: a.AppID, InstanceID: a.InstanceID, WorkspaceIDs: []string{grant.WorkspaceID}, Scopes: scopes}
+		// Disabled presets retain history and stop/approval access, while no new
+		// execution can be admitted through the member proxy.
+		if !presetEnabled && r.Method == "POST" && parts[2] == "sessions" {
+			newExecution := len(parts) == 3 || len(parts) == 5 && (parts[4] == "turns" || parts[4] == "steer" || parts[4] == "recover") || len(parts) == 6 && parts[4] == "kun" && parts[5] == "resume"
+			if newExecution {
+				deny()
+				return
+			}
+		}
+		key := ApplicationKey{ID: "user-" + p.User.ID + "-" + grant.ID + "-" + strconv.Itoa(p.User.Revision), AppID: a.AppID, InstanceID: defaultInstanceID, Scopes: scopes}
+		if grant.PresetID == "" {
+			key.WorkspaceIDs = []string{grant.WorkspaceID}
+		} else {
+			key.PresetBindings = []ApplicationPresetBinding{{PresetID: grant.PresetID, InstanceID: a.InstanceID, WorkspaceID: grant.WorkspaceID}}
+		}
 		r = r.Clone(context.WithValue(r.Context(), applicationPrincipal{}, &key))
 		u := *r.URL
 		r.URL = &u

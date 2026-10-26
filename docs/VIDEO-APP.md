@@ -1,6 +1,6 @@
 # Video App 与 RunDesk：自主导演和部署
 
-配套版本：RunDesk 0.49.5、Video App 0.23.0、video-build 1.4.0。RunDesk 保持独立的控制平台与 RDCA，Video App 提供制作工具和专业审阅，Codex 自主分镜、选材、生成、动画和检查。OpenMontage 只作设计参考，没有引入其代码、Schema 或 Skill。
+配套版本：RunDesk 0.50.0、Video App 0.25.0、video-build 1.4.0；Kun 独立版本 0.17.0、worker 协议 16。RunDesk 保持独立的控制平台与 RDCA，Video App 提供制作工具和专业审阅，Codex 自主分镜、选材、生成、动画和检查。OpenMontage 只作设计参考，没有引入其代码、Schema 或 Skill。
 
 | 组件 | 职责与持久数据 |
 | --- | --- |
@@ -8,6 +8,10 @@
 | video-build 工具容器 | Codex、HyperFrames/GSAP、FFmpeg、Pillow、字体与原创 Skill；工作区及 Codex home |
 | Video App | HTTP MCP、素材/工程/输出、HyperFrames 渲染与多轨审阅；独立 App data |
 | 可选生成服务 | IndexTTS、图像/视频生成；独立配置、模型和凭据 |
+
+RunDesk 可为同一应用登记多个有名称、经管理员批准的制作环境预设，每个预设固定使用专用 Codex Docker 实例、工作区及环境 HOME。预设的实例与目录不能互换，应用凭据和成员授权精确匹配 appId、presetId 与工作区；禁用保留历史，不自动中断已有任务。默认应用绑定继续兼容旧客户端。完整配置、权限和接口见 [应用运行预设](APPLICATION-RUNTIME-PRESETS.md)。
+
+Video App 0.25.0 可通过 `--production-profile` 或 `VIDEO_PRODUCTION_PROFILE` 设置新项目默认预设，创建项目的 `productionProfile` 可覆盖该值；显式空字符串选择旧默认环境。项目创建后保留这次选择，首次连接再保存具体实例/工作区。修改 App 启动默认不会迁移旧项目、会话或未确认的提交回执。预设名称不证明镜像、工具或模型已就绪，选择工具环境也不等于切换 App 渲染后端。
 
 ## 主制作路径
 
@@ -20,9 +24,9 @@ App 保存主播正文、素材与要求，一键提交原有 RunDesk 专用会�
 ## 升级与运行
 
 1. 备份并保留两边 data、App access-token、RunDesk 身份/会话、Codex HOME/认证与服务配置，等待活动任务结束。
-2. 更新 RunDesk 0.49.5。准备 video-build 1.4.0，填写 Codex 精确版本，构建或选择真实已有镜像，再明确更新运行环境；不会在任务开始时自动构建。
-3. 更新 Video App 0.23.0 或重建其独立镜像，旧 docker/.env 显式更新 App 镜像标签；保持已有数据挂载。
-4. 在 App 连接/更新本版工具，核对当前运行环境实际启用的版本化 Skill、video_project MCP 和模型认证。MCP 地址为可达的 App /api/mcp，Authorization Header 使用 App Token，凭据不写入工程。
+2. 更新 RunDesk 0.50.0。准备 video-build 1.4.0，填写 Codex 精确版本，构建或选择真实已有镜像。需要并行保留不同制作环境时，分别登记专用命名预设，再显式配置或更新对应环境；不会在任务开始时自动构建。
+3. 更新 Video App 0.25.0 或重建其独立镜像，旧 docker/.env 显式更新 App 镜像标签；保持已有数据挂载。按需要设置新项目的默认制作预设，旧项目保持其原绑定。
+4. 使用管理员凭据完成所选预设的首次 App 连接与工具初配，再签发准确的 `presetIds` 应用凭据；应用凭据不会替管理员更改配置。在 App 连接/更新本版工具，核对选中环境实际启用的版本化 Skill、video_project MCP 和模型认证。MCP 地址为可达的 App /api/mcp，Authorization Header 使用 App Token，凭据不写入工程。
 5. 用短稿与已有图片做完整制作和局部修改，查看真实工具轨迹、revision、输出和审阅记录。依赖诊断、图片传输和离线烟测分别证明自己的检查范围，不证明模型已理解图像或完成自主制作。
 
 工具镜像默认 HyperFrames 0.8.87、GSAP 3.15.0，不内置图像/视频/TTS 模型或密钥。App 渲染镜像与 Codex 工具镜像分别更新，仅替换源码包或标签不会更换运行中的容器。Profile 使用与本地离线检查见 [video-build](../examples/video-build/README.md)。
@@ -35,4 +39,4 @@ App 保存主播正文、素材与要求，一键提交原有 RunDesk 专用会�
 
 video-build 的离线 doctor/smoke 可以验证本地依赖与真实短动画渲染；不调用模型。App check 是冻结源工程后的浏览器校验，完整渲染再验证实际媒体。多轨是同一工程/输出的审阅，HyperFrames 时间线为作者声明，并非解析动画或实测音频。实际质量仍需播放、抽帧及人审，最终记录绑定具体完整输出。
 
-本次实际执行过的检查见发布验证记录，未执行的 Docker、远端生成和真实模型验收不得由文档推定通过。历史版本技术说明见 Video App 对应版本文档。
+本轮检查范围见 [0.50.0 验证记录](validation-0.50.0.json)。模拟 Docker、协议与 UI 测试不替代真实镜像、远端生成、Codex 认证、模型理解和自主制作验收；本轮未完成这些真实部署验收。历史验证和技术说明继续按对应版本保留。

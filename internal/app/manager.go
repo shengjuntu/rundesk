@@ -323,6 +323,11 @@ func (m *Manager) CreateWorkspace(name, path string) (Workspace, error) {
 	if e != nil {
 		return Workspace{}, e
 	}
+	m.applicationMu.Lock()
+	defer m.applicationMu.Unlock()
+	if e = m.checkPresetWorkspacePath(path); e != nil {
+		return Workspace{}, e
+	}
 	w := Workspace{ID: id, Name: name, Path: path}
 	if e = m.Store.Put("workspace", id, w); e != nil {
 		return w, e
@@ -501,7 +506,9 @@ func (m *Manager) connect(id string, w Workspace, h *handle, ids ...string) (*rp
 	m.executionMu.RLock()
 	defer m.executionMu.RUnlock()
 	if s, e := m.Session(id); e == nil {
-		if e = m.checkSessionExecution(s); e != nil {
+		// Only accepted runs call connect with a real session ID. Disabling a
+		// preset stops later admission, without canceling its accepted work.
+		if e = m.checkSessionRuntimeBinding(s, false); e != nil {
 			return nil, e
 		}
 	}
@@ -819,7 +826,7 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 	if e != nil {
 		return s, e
 	}
-	if e = m.validateInput(w, in, s.InstanceID); e != nil {
+	if e = m.validateSessionInput(s, w, in); e != nil {
 		return s, e
 	}
 	h, e := m.getHandle(id)
@@ -834,6 +841,14 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 		return s, failure(503, "runtime_unavailable", "后台正在停止或事件记录已失效，任务未提交")
 	}
 	s, _ = m.Session(id)
+	// The reservation guard applies even to sessions prepared before a preset
+	// was registered. Disabling and final admission share one lock.
+	m.applicationMu.Lock()
+	defer m.applicationMu.Unlock()
+	if e = m.checkApplicationPresetExecution(s.Source, s.InstanceID, s.WorkspaceID); e != nil {
+		return s, e
+	}
+
 	if s.Archived {
 		return s, failure(409, "session_archived", "请先恢复已归档会话，再提交任务")
 	}

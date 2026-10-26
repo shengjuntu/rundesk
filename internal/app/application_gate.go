@@ -28,16 +28,34 @@ func forbidden() error {
 	return failure(403, "application_forbidden", "此应用凭据不允许访问该资源或执行此操作")
 }
 func normalizeTask(k *ApplicationKey, t *TaskSpec) error {
-	if t.InstanceID != "" && t.InstanceID != k.InstanceID {
-		return forbidden()
-	}
-	if !k.workspace(t.WorkspaceID) {
-		return forbidden()
-	}
 	if t.Source.Kind != "" && t.Source.Kind != "application" || t.Source.AppID != "" && t.Source.AppID != k.AppID {
 		return forbidden()
 	}
-	t.InstanceID = k.InstanceID
+	presetID := t.Source.PresetID
+	if presetID == "" && !k.legacyWorkspace(t.WorkspaceID) {
+		for _, p := range k.PresetBindings {
+			if p.WorkspaceID == t.WorkspaceID && (t.InstanceID == "" || t.InstanceID == p.InstanceID) {
+				if presetID != "" {
+					return forbidden()
+				}
+				presetID = p.PresetID
+			}
+		}
+	}
+	if presetID != "" {
+		p, ok := k.preset(presetID)
+		if !ok || (t.InstanceID != "" && t.InstanceID != p.InstanceID) || (t.WorkspaceID != "" && t.WorkspaceID != p.WorkspaceID) {
+			return forbidden()
+		}
+		t.InstanceID = p.InstanceID
+		t.WorkspaceID = p.WorkspaceID
+		t.Source.PresetID = p.PresetID
+	} else {
+		if t.InstanceID != "" && t.InstanceID != k.InstanceID || !k.legacyWorkspace(t.WorkspaceID) {
+			return forbidden()
+		}
+		t.InstanceID = k.InstanceID
+	}
 	t.Source.Kind = "application"
 	t.Source.AppID = k.AppID
 	return nil
@@ -107,7 +125,11 @@ func (s *Server) checkApplication(r *http.Request, k *ApplicationKey) error {
 					if e := normalizeTask(k, &t); e != nil {
 						return e
 					}
+					if e := m.checkApplicationPresetExecution(t.Source, t.InstanceID, t.WorkspaceID); e != nil {
+						return e
+					}
 					v.InstanceID = t.InstanceID
+					v.WorkspaceID = t.WorkspaceID
 					v.Source = t.Source
 					return nil
 				})
@@ -122,10 +144,70 @@ func (s *Server) checkApplication(r *http.Request, k *ApplicationKey) error {
 	}
 	switch p[0] {
 	case "applications":
-		if ((len(p) == 3 && p[2] == "runtime" && method == "GET" && k.scope("read")) || (len(p) == 4 && p[2] == "runtime" && (p[3] == "prepare" || p[3] == "diagnostics") && method == "POST" && k.scope("run"))) && p[1] == k.AppID {
-			a, _, e := m.applicationRuntimeBinding(p[1])
-			if e == nil && a.InstanceID == k.InstanceID && k.workspace(a.WorkspaceID) {
+		if len(p) < 3 || p[1] != k.AppID {
+			return forbidden()
+		}
+		if len(p) == 3 && p[2] == "runtime-presets" && method == "GET" && k.scope("read") {
+			return nil
+		}
+		if len(p) == 3 && p[2] == "connect" && method == "POST" && k.scope("read") {
+			// Preserve default-connect denial before decoding privileged defaults.
+			b, err := io.ReadAll(io.LimitReader(r.Body, (1<<20)+1))
+			var selector struct {
+				PresetID string `json:"presetId"`
+			}
+			if err != nil || len(b) > 1<<20 || json.Unmarshal(b, &selector) != nil || selector.PresetID == "" {
+				return forbidden()
+			}
+			r.Body = io.NopCloser(bytes.NewReader(b))
+			var in ApplicationConnect
+			return rewriteBody(r, &in, func() error {
+				if in.PresetID == "" {
+					return forbidden()
+				}
+				a, _, e := m.applicationPresetBinding(k.AppID, in.PresetID)
+				if e != nil {
+					return forbidden()
+				}
+				if !k.owns(a.InstanceID, a.WorkspaceID, SessionSource{Kind: "application", AppID: k.AppID, PresetID: in.PresetID}) {
+					return forbidden()
+				}
 				return nil
+			})
+		}
+		if (len(p) == 3 && p[2] == "runtime" || len(p) == 4 && p[2] == "runtime" && p[3] == "skills") && method == "GET" && k.scope("read") {
+			a, _, e := m.applicationPresetBinding(k.AppID, r.URL.Query().Get("presetId"))
+			if e == nil && k.owns(a.InstanceID, a.WorkspaceID, SessionSource{Kind: "application", AppID: k.AppID, PresetID: a.PresetID}) {
+				return nil
+			}
+			return forbidden()
+		}
+		if len(p) == 4 && p[2] == "runtime" && method == "POST" && k.scope("run") {
+			if p[3] == "prepare" {
+				var in ApplicationRuntimeInput
+				return rewriteBody(r, &in, func() error {
+					a, _, e := m.applicationPresetBinding(k.AppID, in.PresetID)
+					if e != nil || !k.owns(a.InstanceID, a.WorkspaceID, SessionSource{Kind: "application", AppID: k.AppID, PresetID: in.PresetID}) {
+						return forbidden()
+					}
+					if in.PresetID != "" && ((in.InstanceID != "" && in.InstanceID != a.InstanceID) || (in.WorkspaceID != "" && in.WorkspaceID != a.WorkspaceID)) {
+						return forbidden()
+					}
+					return nil
+				})
+			}
+			if p[3] == "diagnostics" {
+				var in ApplicationRuntimeDiagnosticsInput
+				return rewriteBody(r, &in, func() error {
+					a, _, e := m.applicationPresetBinding(k.AppID, in.PresetID)
+					if e != nil || !k.owns(a.InstanceID, a.WorkspaceID, SessionSource{Kind: "application", AppID: k.AppID, PresetID: in.PresetID}) {
+						return forbidden()
+					}
+					if in.PresetID != "" && (in.InstanceID != a.InstanceID || in.WorkspaceID != a.WorkspaceID) {
+						return forbidden()
+					}
+					return nil
+				})
 			}
 		}
 	case "a2a":
@@ -134,7 +216,7 @@ func (s *Server) checkApplication(r *http.Request, k *ApplicationKey) error {
 			if e != nil {
 				return forbidden()
 			}
-			if a.InstanceID == k.InstanceID && k.workspace(a.WorkspaceID) {
+			if a.InstanceID == k.InstanceID && k.legacyWorkspace(a.WorkspaceID) {
 				return nil
 			}
 		}
@@ -244,6 +326,11 @@ func (s *Server) checkApplication(r *http.Request, k *ApplicationKey) error {
 			}
 		}
 		if method == "POST" && k.scope("run") {
+			if (len(p) == 3 && (p[2] == "turns" || p[2] == "steer" || p[2] == "recover")) || (len(p) == 4 && p[2] == "recovery" && p[3] == "check") {
+				if e := m.checkApplicationPresetExecution(item.Source, item.InstanceID, item.WorkspaceID); e != nil {
+					return e
+				}
+			}
 			if len(p) == 3 {
 				switch p[2] {
 				case "turns":

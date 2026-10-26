@@ -118,6 +118,12 @@ func (m *Manager) SetExecution(iid string, revision int, spec ExecutionSpec) (In
 	return next, nil
 }
 func (m *Manager) checkSessionExecution(s Session) error {
+	return m.checkSessionRuntimeBinding(s, true)
+}
+func (m *Manager) checkSessionRuntimeBinding(s Session, enforceEnabled bool) error {
+	if e := m.checkApplicationPresetSource(s.Source, s.InstanceID, s.WorkspaceID, enforceEnabled); e != nil {
+		return e
+	}
 	i, e := m.Instance(s.InstanceID)
 	if e != nil {
 		return e

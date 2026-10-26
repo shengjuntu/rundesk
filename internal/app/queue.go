@@ -92,7 +92,7 @@ func (m *Manager) prepareTask(spec TaskSpec, validate bool) (Task, Session, erro
 	}
 	if validate {
 		w, _ := m.Workspace(s.WorkspaceID)
-		if e = m.validateInput(w, spec.Input, s.InstanceID); e != nil {
+		if e = m.validateSessionInput(s, w, spec.Input); e != nil {
 			return Task{}, s, e
 		}
 	}

@@ -18,6 +18,7 @@ type ApplicationDefaults struct {
 	Model  string                       `json:"model,omitempty"`
 }
 type ApplicationConnect struct {
+	PresetID       string              `json:"presetId,omitempty"`
 	Name           string              `json:"name"`
 	Description    string              `json:"description"`
 	EntryURL       string              `json:"entryUrl"`
@@ -33,6 +34,7 @@ type applicationConnection struct {
 	Initialized    bool   `json:"initialized"`
 }
 type ApplicationConnectionResult struct {
+	PresetID       string      `json:"presetId,omitempty"`
 	Application    Application `json:"application"`
 	Status         string      `json:"status"`
 	Message        string      `json:"message"`
@@ -43,6 +45,9 @@ func (m *Manager) ConnectApplication(id string, in ApplicationConnect) (Applicat
 	m.registrationMu.Lock()
 	defer m.registrationMu.Unlock()
 	out := ApplicationConnectionResult{ManagementPath: "/#application/" + id}
+	if in.PresetID != "" {
+		return m.connectApplicationPreset(id, in, false)
+	}
 	if in.InstanceID == DefaultInstance {
 		return out, failure(409, "assistant_reserved", "应用不能接管通用助手")
 	}
@@ -235,7 +240,15 @@ func (s *Server) applicationConnectRoutes(mux *http.ServeMux) {
 		if !decode(w, r, &in) {
 			return
 		}
-		v, e := s.Manager.ConnectApplication(r.PathValue("appId"), in)
+		var v ApplicationConnectionResult
+		var e error
+		if principal(r) != nil && in.PresetID != "" {
+			s.Manager.registrationMu.Lock()
+			v, e = s.Manager.connectApplicationPreset(r.PathValue("appId"), in, true)
+			s.Manager.registrationMu.Unlock()
+		} else {
+			v, e = s.Manager.ConnectApplication(r.PathValue("appId"), in)
+		}
 		respond(w, v, e)
 	})
 }

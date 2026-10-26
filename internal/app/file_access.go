@@ -19,7 +19,11 @@ func (s *Server) recordUploadAccess(r *http.Request, wid, path string) error {
 	if k == nil {
 		return nil
 	}
-	return s.Manager.Store.Put("upload-access", libraryLinkID(wid, path), uploadAccess{k.AppID, k.InstanceID, wid})
+	iid, ok := k.workspaceInstance(wid)
+	if !ok || !k.scope("files") || !safePath(path) {
+		return forbidden()
+	}
+	return s.Manager.Store.Put("upload-access", libraryLinkID(wid, path), uploadAccess{k.AppID, iid, wid})
 }
 
 func (s *Server) checkFileAccess(r *http.Request, wid, path string) error {
@@ -39,7 +43,8 @@ func (s *Server) checkFileAccess(r *http.Request, wid, path string) error {
 	}
 	if len(parts) == 2 && parts[0] == "uploads" {
 		var access uploadAccess
-		if s.Manager.Store.Get("upload-access", libraryLinkID(wid, path), &access) == nil && access.WorkspaceID == wid && access.AppID == k.AppID && access.InstanceID == k.InstanceID {
+		iid, ok := k.workspaceInstance(wid)
+		if ok && s.Manager.Store.Get("upload-access", libraryLinkID(wid, path), &access) == nil && access.WorkspaceID == wid && access.AppID == k.AppID && access.InstanceID == iid {
 			return s.checkFilePath(wid, path)
 		}
 	}

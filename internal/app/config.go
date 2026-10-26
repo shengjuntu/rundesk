@@ -17,6 +17,17 @@ import (
 var slug = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,64}$`)
 var configMu sync.Mutex
 
+// Skill validation may open a configuration process. Treat it as execution
+// admission, then check once more after acquiring the session operation lock.
+func (m *Manager) validateSessionInput(s Session, w Workspace, in Input) error {
+	m.applicationMu.Lock()
+	defer m.applicationMu.Unlock()
+	if err := m.checkApplicationPresetExecution(s.Source, s.InstanceID, s.WorkspaceID); err != nil {
+		return err
+	}
+	return m.validateInput(w, in, s.InstanceID)
+}
+
 func (m *Manager) validateInput(w Workspace, in Input, ids ...string) error {
 	root, e := os.OpenRoot(w.Path)
 	if e != nil {

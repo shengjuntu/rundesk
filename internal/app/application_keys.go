@@ -16,17 +16,19 @@ import (
 )
 
 type ApplicationKey struct {
-	ID           string   `json:"id"`
-	AppID        string   `json:"appId"`
-	InstanceID   string   `json:"instanceId"`
-	Name         string   `json:"name"`
-	WorkspaceIDs []string `json:"workspaceIds"`
-	Scopes       []string `json:"scopes"`
-	Created      string   `json:"created"`
-	ExpiresAt    string   `json:"expiresAt,omitempty"`
-	RevokedAt    string   `json:"revokedAt,omitempty"`
+	PresetBindings []ApplicationPresetBinding `json:"presetBindings,omitempty"`
+	ID             string                     `json:"id"`
+	AppID          string                     `json:"appId"`
+	InstanceID     string                     `json:"instanceId"`
+	Name           string                     `json:"name"`
+	WorkspaceIDs   []string                   `json:"workspaceIds"`
+	Scopes         []string                   `json:"scopes"`
+	Created        string                     `json:"created"`
+	ExpiresAt      string                     `json:"expiresAt,omitempty"`
+	RevokedAt      string                     `json:"revokedAt,omitempty"`
 }
 type KeyInput struct {
+	PresetIDs    []string `json:"presetIds,omitempty"`
 	Name         string   `json:"name"`
 	WorkspaceIDs []string `json:"workspaceIds"`
 	Scopes       []string `json:"scopes"`
@@ -59,7 +61,7 @@ func (k ApplicationKey) scope(s string) bool {
 	}
 	return false
 }
-func (k ApplicationKey) workspace(id string) bool {
+func (k ApplicationKey) legacyWorkspace(id string) bool {
 	for _, v := range k.WorkspaceIDs {
 		if v == id {
 			return true
@@ -67,8 +69,40 @@ func (k ApplicationKey) workspace(id string) bool {
 	}
 	return false
 }
+func (k ApplicationKey) workspace(id string) bool { _, ok := k.workspaceInstance(id); return ok }
+func (k ApplicationKey) workspaceInstance(id string) (string, bool) {
+	result := ""
+	if k.legacyWorkspace(id) {
+		result = k.InstanceID
+	}
+	for _, p := range k.PresetBindings {
+		if p.WorkspaceID != id {
+			continue
+		}
+		if result != "" && result != p.InstanceID {
+			return "", false
+		}
+		result = p.InstanceID
+	}
+	return result, result != ""
+}
+func (k ApplicationKey) preset(id string) (ApplicationPresetBinding, bool) {
+	for _, p := range k.PresetBindings {
+		if p.PresetID == id {
+			return p, true
+		}
+	}
+	return ApplicationPresetBinding{}, false
+}
 func (k ApplicationKey) owns(iid, wid string, source SessionSource) bool {
-	return k.InstanceID == iid && k.workspace(wid) && source.Kind == "application" && source.AppID == k.AppID
+	if source.Kind != "application" || source.AppID != k.AppID {
+		return false
+	}
+	if source.PresetID == "" {
+		return k.InstanceID == iid && k.legacyWorkspace(wid)
+	}
+	p, ok := k.preset(source.PresetID)
+	return ok && p.InstanceID == iid && p.WorkspaceID == wid
 }
 func (m *Manager) ApplicationKeys(appID string) ([]ApplicationKey, error) {
 	rows, e := m.Store.List("application-key")
@@ -88,6 +122,8 @@ func (m *Manager) ApplicationKeys(appID string) ([]ApplicationKey, error) {
 	return out, nil
 }
 func (m *Manager) CreateApplicationKey(appID string, in KeyInput) (ApplicationKey, string, error) {
+	m.applicationMu.Lock()
+	defer m.applicationMu.Unlock()
 	var a Application
 	if e := m.Store.Get("application", appID, &a); e != nil {
 		if errors.Is(e, sql.ErrNoRows) {
@@ -96,7 +132,7 @@ func (m *Manager) CreateApplicationKey(appID string, in KeyInput) (ApplicationKe
 		return ApplicationKey{}, "", e
 	}
 	in.Name = strings.TrimSpace(in.Name)
-	if in.Name == "" || len([]rune(in.Name)) > 120 || len(in.WorkspaceIDs) < 1 || len(in.WorkspaceIDs) > 100 {
+	if in.Name == "" || len([]rune(in.Name)) > 120 || len(in.WorkspaceIDs)+len(in.PresetIDs) < 1 || len(in.WorkspaceIDs) > 100 || len(in.PresetIDs) > 100 {
 		return ApplicationKey{}, "", failure(400, "invalid_key", "请填写名称（最多 120 字符），选择 1–100 个项目")
 	}
 	seen := map[string]bool{}
@@ -107,6 +143,35 @@ func (m *Manager) CreateApplicationKey(appID string, in KeyInput) (ApplicationKe
 		seen[id] = true
 		if _, e := m.Workspace(id); e != nil {
 			return ApplicationKey{}, "", e
+		}
+	}
+	bindings := []ApplicationPresetBinding{}
+	presetSeen := map[string]bool{}
+	for _, id := range in.PresetIDs {
+		if presetSeen[id] {
+			return ApplicationKey{}, "", failure(400, "invalid_key", "运行环境预设重复")
+		}
+		presetSeen[id] = true
+		p, err := m.applicationPreset(appID, id)
+		if err != nil {
+			return ApplicationKey{}, "", err
+		}
+		bindings = append(bindings, ApplicationPresetBinding{PresetID: p.ID, InstanceID: p.InstanceID, WorkspaceID: p.WorkspaceID})
+	}
+	for _, wid := range in.WorkspaceIDs {
+		for _, p := range bindings {
+			if p.WorkspaceID == wid {
+				return ApplicationKey{}, "", failure(400, "invalid_key", "预设工作区不能同时作为默认环境授权")
+			}
+		}
+		all, err := m.allApplicationPresets()
+		if err != nil {
+			return ApplicationKey{}, "", err
+		}
+		for _, p := range all {
+			if p.WorkspaceID == wid {
+				return ApplicationKey{}, "", failure(400, "invalid_key", "预设工作区必须通过presetIds显式授权")
+			}
 		}
 	}
 	scopes := map[string]bool{}
@@ -144,7 +209,7 @@ func (m *Manager) CreateApplicationKey(appID string, in KeyInput) (ApplicationKe
 	if count >= 100 {
 		return ApplicationKey{}, "", failure(429, "key_limit", "每个应用最多 100 个有效凭据")
 	}
-	k := ApplicationKey{ID: store.ID(), AppID: appID, InstanceID: a.InstanceID, Name: in.Name, WorkspaceIDs: in.WorkspaceIDs, Scopes: in.Scopes, Created: store.Now(), ExpiresAt: in.ExpiresAt}
+	k := ApplicationKey{PresetBindings: bindings, ID: store.ID(), AppID: appID, InstanceID: a.InstanceID, Name: in.Name, WorkspaceIDs: in.WorkspaceIDs, Scopes: in.Scopes, Created: store.Now(), ExpiresAt: in.ExpiresAt}
 	secretBytes := make([]byte, 32)
 	if _, e = rand.Read(secretBytes); e != nil {
 		return k, "", e

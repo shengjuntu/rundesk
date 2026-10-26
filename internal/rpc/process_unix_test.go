@@ -21,7 +21,13 @@ func TestTreeFixture(t *testing.T) {
 	path := os.Getenv("RUNDESK_TREE_HEART")
 	if mode == "heartbeat" {
 		for {
-			_ = os.WriteFile(path, []byte(fmt.Sprint(time.Now().UnixNano())), 0600)
+			// Readers must see a complete heartbeat, never WriteFile's truncate window.
+			if err := os.WriteFile(path+".tmp", []byte(fmt.Sprint(time.Now().UnixNano())), 0600); err != nil {
+				os.Exit(8)
+			}
+			if err := os.Rename(path+".tmp", path); err != nil {
+				os.Exit(9)
+			}
 			time.Sleep(15 * time.Millisecond)
 		}
 	}
@@ -100,20 +106,42 @@ func TestOwnedGroupCleanupAndFinalFrames(t *testing.T) {
 			if mode == "exit" && finals != 100 {
 				t.Fatalf("lost buffered final frames: %d", finals)
 			}
-			before, _ := os.ReadFile(heart)
-			foreignBefore, _ := os.ReadFile(otherHeart)
+			before, err := os.ReadFile(heart)
+			if err != nil || len(before) == 0 {
+				t.Fatalf("owned heartbeat missing after cleanup: %q, %v", before, err)
+			}
+			// Establish the foreign baseline only after cleanup, so an unrelated
+			// process killed by cleanup cannot pass by having ticked beforehand.
+			foreignBefore := awaitTreeHeartbeat(t, otherHeart, nil)
 			time.Sleep(100 * time.Millisecond)
-			after, _ := os.ReadFile(heart)
-			foreignAfter, _ := os.ReadFile(otherHeart)
-			if len(before) == 0 || string(before) != string(after) {
-				t.Fatal("owned descendant kept running")
+			after, err := os.ReadFile(heart)
+			if err != nil || string(before) != string(after) {
+				t.Fatalf("owned descendant kept running: before=%q after=%q error=%v", before, after, err)
 			}
-			if len(foreignAfter) == 0 || string(foreignBefore) == string(foreignAfter) {
-				t.Fatal("unrelated process affected")
-			}
+			// A scheduling delay is not evidence that the process was killed. Require
+			// actual progress within a bounded interval, retaining the isolation check.
+			awaitTreeHeartbeat(t, otherHeart, foreignBefore)
 			if c.ProcessInfo().CleanupMode != "process-group" || !c.ProcessInfo().Exited {
 				t.Fatal(c.ProcessInfo())
 			}
 		})
 	}
+}
+
+// Await a complete tick that differs from a post-cleanup baseline. If the
+// foreign process was killed, no new value can appear and this still fails.
+func awaitTreeHeartbeat(t *testing.T, path string, before []byte) []byte {
+	t.Helper()
+	deadline := time.Now().Add(3 * time.Second)
+	var last []byte
+	var err error
+	for time.Now().Before(deadline) {
+		last, err = os.ReadFile(path)
+		if err == nil && len(last) > 0 && string(last) != string(before) {
+			return last
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("unrelated process stopped advancing: before=%q after=%q error=%v", before, last, err)
+	return nil
 }

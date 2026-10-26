@@ -187,6 +187,8 @@ func (m *Manager) PrepareRecovery(id, expected string) (RecoveryPlan, error) {
 		return p, failure(409, "session_busy", "会话正在处理操作，请稍后核对")
 	}
 	defer h.op.Unlock()
+	m.applicationMu.Lock()
+	defer m.applicationMu.Unlock()
 	s, err := m.Session(id)
 	if err != nil {
 		return p, err

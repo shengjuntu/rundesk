@@ -813,6 +813,62 @@ paths['/applications/{appId}/runtime/diagnostics'] = {'post': {'operationId': 'p
           'requestBody': {'required': True,
                           'content': {'application/json': {'schema': {'$ref': '#/components/schemas/ApplicationRuntimeDiagnosticsInput'}}}}}}
 
+# Application runtime presets select administrator-approved, isolated bindings.
+# Separate from /setup/runtime-profiles (image build recipes).
+preset_id=st(pattern=r'^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$',maxLength=128)
+schemas['ApplicationRuntimePreset']=obj({
+ 'id':preset_id,'appId':st(),'name':st(),'description':st(),'instanceId':st(),
+ 'workspaceId':st(),'enabled':bool_,'revision':integer,'created':st()
+},['id','appId','name','instanceId','workspaceId','enabled','revision','created'])
+schemas['ApplicationRuntimePresetInput']=obj({
+ 'name':st(minLength=1,maxLength=160),'description':st(maxLength=4096),
+ 'instanceId':st(),'workspaceId':st(),'enabled':bool_,'revision':integer
+},['name','instanceId','workspaceId'])
+schemas['ApplicationPresetBinding']=obj({'presetId':preset_id,'instanceId':st(),'workspaceId':st()},['presetId','instanceId','workspaceId'])
+schemas['Application']['properties'].update({'runtimePresets':arr(ref('ApplicationRuntimePreset')),'presetId':st(),'presetRevision':integer,'presetEnabled':bool_})
+schemas['UserGrant']['properties']['presetId']=preset_id
+schemas['ApplicationConnect']['properties']['presetId']={'anyOf':[{'const':''},preset_id],'description':'选择管理员已登记的运行预设；省略或空值沿用原默认绑定，不接收任意镜像。'}
+schemas['ApplicationConnectionResult']['properties']['presetId']=st()
+schemas['Source']['properties']['presetId']=st(maxLength=128,description='应用运行预设；与冻结的实例/工作区精确匹配，省略保留旧默认语义。')
+schemas['KeyInput']['properties']['presetIds']=dict(type='array',items=preset_id,maxItems=100,uniqueItems=True)
+schemas['KeyInput']['properties']['workspaceIds'].update(maxItems=100,uniqueItems=True)
+schemas['KeyInput']['required']=['name','scopes']
+schemas['KeyInput']['anyOf']=[{'required':['workspaceIds'],'properties':{'workspaceIds':{'minItems':1}}},{'required':['presetIds'],'properties':{'presetIds':{'minItems':1}}}]
+schemas['ApplicationKey']['properties']['presetBindings']=arr(ref('ApplicationPresetBinding'))
+schemas['ApplicationRuntimeInput']['properties']['presetId']=st(maxLength=128)
+schemas['ApplicationRuntime']['properties']['presetId']=st(maxLength=128)
+schemas['ApplicationRuntimeDiagnosticsInput']['properties']['presetId']=st(maxLength=128)
+schemas['ApplicationRuntimeDiagnostics']['properties']['presetId']=st(maxLength=128)
+for method,path in [('get','/applications/{appId}/runtime-presets'),('put','/applications/{appId}/runtime-presets/{presetId}')]:
+ op=paths.setdefault(path,{}).setdefault(method,{'operationId':method+'_'+re.sub(r'[^A-Za-z0-9]+','_',path).strip('_'),'parameters':[],'responses':{}})
+ for name in re.findall(r'\{([^}]+)\}',path):
+  if not any(p.get('name')==name and p.get('in')=='path' for p in op['parameters']):op['parameters'].append({'name':name,'in':'path','required':True,'schema':preset_id if name=='presetId' else st()})
+ op['x-administrator-only']=method=='put'
+ if method=='get':op['x-application-scopes']=['read']
+ op['summary']='读取应用批准的运行预设' if method=='get' else '管理员登记或启停应用运行预设'
+ op['description']='预设绑定独立 Codex Docker 实例及工作区；创建后归属不可改。禁用保留历史并阻止新执行，已经接收的执行继续。应用凭据仅访问明确授权的精确预设绑定，不因新增预设自动扩权。镜像配置、凭据和工作区创建属于管理员；此接口不构建或运行模型。'
+ response=arr(ref('ApplicationRuntimePreset')) if method=='get' else ref('ApplicationRuntimePreset')
+ op['responses']['200']={'description':'成功','content':{'application/json':{'schema':response}}}
+ op['responses']['default']={'description':'归属、修订或权限错误','content':{'application/json':{'schema':ref('Error')}}}
+ if method=='put':op['requestBody']={'required':True,'content':{'application/json':{'schema':ref('ApplicationRuntimePresetInput')}}}
+paths['/applications/{appId}/runtime']['get']['parameters'].append({'name':'presetId','in':'query','schema':st(maxLength=128)})
+for path,method in [('/applications/{appId}/runtime','get'),('/applications/{appId}/runtime/prepare','post'),('/applications/{appId}/runtime/diagnostics','post')]:
+ paths[path][method]['description']+=' 可选 presetId 选择已批准且获授权的精确绑定；省略保持原默认绑定。禁用预设仍可读取历史，不能开始新的执行。'
+op=paths['/applications/{appId}/connect']['post']
+op['x-administrator-only']=False
+op['x-application-scopes']=['read']
+op['description']='默认连接与初始 Skills/MCP 种子配置由管理员执行。presetId 非空时选择已登记的精确绑定；应用凭据只能只读确认已由管理员初始化的预设连接，不应用 defaults。重复连接不覆盖管理员配置或切换原默认绑定。'
+
+
+
+schemas['ApplicationRuntimeSkills']=obj({'appId':st(),'presetId':st(),'instanceId':st(),'workspaceId':st(),'skills':arr(obj({'name':st(),'path':st(),'enabled':bool_},['name','path','enabled']))},['appId','instanceId','workspaceId','skills'])
+path='/applications/{appId}/runtime/skills'
+op=paths.setdefault(path,{}).setdefault('get',{'operationId':'get_application_runtime_skills','parameters':[{'name':'appId','in':'path','required':True,'schema':st()}],'responses':{}})
+op.update({'summary':'读取所选绑定的技能资源引用','x-administrator-only':False,'x-application-scopes':['read'],'description':'仅返回精确应用/预设绑定的实际技能name/path/enabled，不返回模型、MCP原始配置或凭据。复用已准备的连接，不因只读请求启动环境；未准备时明确报错。path是Codex技能调用必需的资源引用。'})
+op['parameters'].append({'name':'presetId','in':'query','schema':st(maxLength=128)})
+op['responses']['200']={'description':'成功','content':{'application/json':{'schema':ref('ApplicationRuntimeSkills')}}}
+op['responses']['default']={'description':'归属、权限或环境未准备错误','content':{'application/json':{'schema':ref('Error')}}}
+
 spec={'openapi':'3.1.0','info':{'title':'RunDesk Control API (RDCA)','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter，当前未实现或声明 UHP 兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。当前应用接入、错误、幂等及示例见 docs/API-V1.md。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

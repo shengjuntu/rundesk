@@ -50,7 +50,7 @@ func (m *Manager) Steer(id string, in SteerInput) (SteerReceipt, error) {
 	if err != nil {
 		return receipt, err
 	}
-	if err = m.validateInput(w, in.Input, s.InstanceID); err != nil {
+	if err = m.validateSessionInput(s, w, in.Input); err != nil {
 		return receipt, err
 	}
 	h, err := m.getHandle(id)
@@ -59,6 +59,11 @@ func (m *Manager) Steer(id string, in SteerInput) (SteerReceipt, error) {
 	}
 	h.op.Lock()
 	defer h.op.Unlock()
+	m.applicationMu.Lock()
+	defer m.applicationMu.Unlock()
+	if err = m.checkApplicationPresetExecution(s.Source, s.InstanceID, s.WorkspaceID); err != nil {
+		return receipt, err
+	}
 	encoded, _ := json.Marshal(in)
 	fingerprint := fmt.Sprintf("%x", sha256.Sum256(encoded))
 	key := id + ":" + in.RequestID

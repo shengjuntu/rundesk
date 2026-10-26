@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Control API (RDCA)",
-    "version": "0.49.5",
+    "version": "0.50.0",
     "description": "RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter，当前未实现或声明 UHP 兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。当前应用接入、错误、幂等及示例见 docs/API-V1.md。"
   },
   "servers": [
@@ -590,7 +590,11 @@
             }
           }
         },
-        "x-administrator-only": true
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "默认连接与初始 Skills/MCP 种子配置由管理员执行。presetId 非空时选择已登记的精确绑定；应用凭据只能只读确认已由管理员初始化的预设连接，不应用 defaults。重复连接不覆盖管理员配置或切换原默认绑定。"
       }
     },
     "/whoami": {
@@ -978,6 +982,14 @@
               "type": "string"
             },
             "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "presetId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
           }
         ],
         "responses": {
@@ -1031,7 +1043,7 @@
         "x-application-scopes": [
           "read"
         ],
-        "description": "仅应用绑定的实例和工作区。GET 不启动容器，状态为最近观察值。POST 需显式传入匹配的 instanceId/workspaceId，可安全重试；不选择镜像、不部署待更新版本、不关闭已有会话、不调用模型。probe=true 检查认证状态与 MCP 工具发现，返回名称而不返回密钥、URL 或宿主路径；探测成功不代表模型或业务质量通过。镜像构建、选择、认证与配置仍需管理员。"
+        "description": "仅应用绑定的实例和工作区。GET 不启动容器，状态为最近观察值。POST 需显式传入匹配的 instanceId/workspaceId，可安全重试；不选择镜像、不部署待更新版本、不关闭已有会话、不调用模型。probe=true 检查认证状态与 MCP 工具发现，返回名称而不返回密钥、URL 或宿主路径；探测成功不代表模型或业务质量通过。镜像构建、选择、认证与配置仍需管理员。 可选 presetId 选择已批准且获授权的精确绑定；省略保持原默认绑定。禁用预设仍可读取历史，不能开始新的执行。"
       }
     },
     "/applications/{appId}/runtime/prepare": {
@@ -1108,7 +1120,7 @@
           "read",
           "run"
         ],
-        "description": "仅应用绑定的实例和工作区。GET 不启动容器，状态为最近观察值。POST 需显式传入匹配的 instanceId/workspaceId，可安全重试；不选择镜像、不部署待更新版本、不关闭已有会话、不调用模型。probe=true 检查认证状态与 MCP 工具发现，返回名称而不返回密钥、URL 或宿主路径；探测成功不代表模型或业务质量通过。镜像构建、选择、认证与配置仍需管理员。",
+        "description": "仅应用绑定的实例和工作区。GET 不启动容器，状态为最近观察值。POST 需显式传入匹配的 instanceId/workspaceId，可安全重试；不选择镜像、不部署待更新版本、不关闭已有会话、不调用模型。probe=true 检查认证状态与 MCP 工具发现，返回名称而不返回密钥、URL 或宿主路径；探测成功不代表模型或业务质量通过。镜像构建、选择、认证与配置仍需管理员。 可选 presetId 选择已批准且获授权的精确绑定；省略保持原默认绑定。禁用预设仍可读取历史，不能开始新的执行。",
         "requestBody": {
           "required": true,
           "content": {
@@ -1195,7 +1207,7 @@
           "read",
           "run"
         ],
-        "description": "需要 application-runtime-diagnostics 能力。只在已运行且绑定一致的 Codex Docker 容器执行固定隔离 Python；不会启动、选择、重建环境或回退宿主机，不调用模型。nonce 必须为24位小写十六进制。可选 challenge 路径必须属于本应用现有会话，challenge.nonce 等于顶层 nonce；请求文件为 {schemaVersion:1,nonce}，返回同目录原子创建 response.json 的路径及原始请求 SHA-256。可选 mcpImageServer 只能选择有效配置的服务，调用固定只读工具 rundesk_diagnostic_image({nonce})；支持 HTTP JSON，SSE/stdio 明确返回 unsupported。凭据只经容器 stdin/环境传递，返回图片摘要而非原图、URL、密钥或宿主路径。调用方须验证共享响应与预期图片摘要；modelVisionVerified 始终 false。诊断前后重新检查绑定、配置和容器。",
+        "description": "需要 application-runtime-diagnostics 能力。只在已运行且绑定一致的 Codex Docker 容器执行固定隔离 Python；不会启动、选择、重建环境或回退宿主机，不调用模型。nonce 必须为24位小写十六进制。可选 challenge 路径必须属于本应用现有会话，challenge.nonce 等于顶层 nonce；请求文件为 {schemaVersion:1,nonce}，返回同目录原子创建 response.json 的路径及原始请求 SHA-256。可选 mcpImageServer 只能选择有效配置的服务，调用固定只读工具 rundesk_diagnostic_image({nonce})；支持 HTTP JSON，SSE/stdio 明确返回 unsupported。凭据只经容器 stdin/环境传递，返回图片摘要而非原图、URL、密钥或宿主路径。调用方须验证共享响应与预期图片摘要；modelVisionVerified 始终 false。诊断前后重新检查绑定、配置和容器。 可选 presetId 选择已批准且获授权的精确绑定；省略保持原默认绑定。禁用预设仍可读取历史，不能开始新的执行。",
         "requestBody": {
           "required": true,
           "content": {
@@ -1206,6 +1218,185 @@
             }
           }
         }
+      }
+    },
+    "/applications/{appId}/runtime-presets": {
+      "get": {
+        "operationId": "get_applications_appId_runtime_presets",
+        "summary": "读取应用批准的运行预设",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationRuntimePreset"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "归属、修订或权限错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "预设绑定独立 Codex Docker 实例及工作区；创建后归属不可改。禁用保留历史并阻止新执行，已经接收的执行继续。应用凭据仅访问明确授权的精确预设绑定，不因新增预设自动扩权。镜像配置、凭据和工作区创建属于管理员；此接口不构建或运行模型。"
+      }
+    },
+    "/applications/{appId}/runtime-presets/{presetId}": {
+      "put": {
+        "operationId": "put_applications_appId_runtime_presets_presetId",
+        "summary": "管理员登记或启停应用运行预设",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "presetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationRuntimePreset"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "归属、修订或权限错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "预设绑定独立 Codex Docker 实例及工作区；创建后归属不可改。禁用保留历史并阻止新执行，已经接收的执行继续。应用凭据仅访问明确授权的精确预设绑定，不因新增预设自动扩权。镜像配置、凭据和工作区创建属于管理员；此接口不构建或运行模型。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationRuntimePresetInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/applications/{appId}/runtime/skills": {
+      "get": {
+        "operationId": "get_applications_appId_runtime_skills",
+        "summary": "读取所选绑定的技能资源引用",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "presetId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationRuntimeSkills"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "归属、权限或环境未准备错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "仅返回精确应用/预设绑定的实际技能name/path/enabled，不返回模型、MCP原始配置或凭据。复用已准备的连接，不因只读请求启动环境；未准备时明确报错。path是Codex技能调用必需的资源引用。"
       }
     },
     "/applications": {
@@ -20370,6 +20561,19 @@
             },
             "required": [],
             "additionalProperties": false
+          },
+          "presetId": {
+            "anyOf": [
+              {
+                "const": ""
+              },
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+                "maxLength": 128
+              }
+            ],
+            "description": "选择管理员已登记的运行预设；省略或空值沿用原默认绑定，不接收任意镜像。"
           }
         },
         "required": [
@@ -20395,6 +20599,9 @@
             "type": "string"
           },
           "managementPath": {
+            "type": "string"
+          },
+          "presetId": {
             "type": "string"
           }
         },
@@ -20476,6 +20683,21 @@
           },
           "lastActivity": {
             "type": "string"
+          },
+          "runtimePresets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApplicationRuntimePreset"
+            }
+          },
+          "presetId": {
+            "type": "string"
+          },
+          "presetRevision": {
+            "type": "integer"
+          },
+          "presetEnabled": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -20923,6 +21145,11 @@
           "taskId": {
             "type": "string",
             "maxLength": 200
+          },
+          "presetId": {
+            "type": "string",
+            "maxLength": 128,
+            "description": "应用运行预设；与冻结的实例/工作区精确匹配，省略保留旧默认语义。"
           }
         },
         "required": [],
@@ -21779,6 +22006,12 @@
                 "approvals"
               ]
             }
+          },
+          "presetBindings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApplicationPresetBinding"
+            }
           }
         },
         "required": [
@@ -21804,7 +22037,9 @@
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "maxItems": 100,
+            "uniqueItems": true
           },
           "scopes": {
             "type": "array",
@@ -21822,14 +22057,45 @@
           "expiresAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "presetIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+              "maxLength": 128
+            },
+            "maxItems": 100,
+            "uniqueItems": true
           }
         },
         "required": [
           "name",
-          "workspaceIds",
           "scopes"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "workspaceIds"
+            ],
+            "properties": {
+              "workspaceIds": {
+                "minItems": 1
+              }
+            }
+          },
+          {
+            "required": [
+              "presetIds"
+            ],
+            "properties": {
+              "presetIds": {
+                "minItems": 1
+              }
+            }
+          }
+        ]
       },
       "WorkspaceSummary": {
         "type": "object",
@@ -22167,6 +22433,11 @@
               "viewer",
               "runner"
             ]
+          },
+          "presetId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+            "maxLength": 128
           }
         },
         "required": [
@@ -27146,6 +27417,10 @@
           },
           "probe": {
             "type": "boolean"
+          },
+          "presetId": {
+            "type": "string",
+            "maxLength": 128
           }
         },
         "required": [
@@ -27232,6 +27507,10 @@
               "pendingUpdate"
             ],
             "additionalProperties": false
+          },
+          "presetId": {
+            "type": "string",
+            "maxLength": 128
           }
         },
         "required": [
@@ -27284,6 +27563,10 @@
           "mcpImageServer": {
             "type": "string",
             "pattern": "^[a-zA-Z0-9_-]{1,64}$"
+          },
+          "presetId": {
+            "type": "string",
+            "maxLength": 128
           }
         }
       },
@@ -27461,8 +27744,158 @@
                 "type": "string"
               }
             }
+          },
+          "presetId": {
+            "type": "string",
+            "maxLength": 128
           }
         }
+      },
+      "ApplicationRuntimePreset": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+            "maxLength": 128
+          },
+          "appId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "created": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "appId",
+          "name",
+          "instanceId",
+          "workspaceId",
+          "enabled",
+          "revision",
+          "created"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationRuntimePresetInput": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "revision": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "instanceId",
+          "workspaceId"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationPresetBinding": {
+        "type": "object",
+        "properties": {
+          "presetId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+            "maxLength": 128
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "presetId",
+          "instanceId",
+          "workspaceId"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationRuntimeSkills": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string"
+          },
+          "presetId": {
+            "type": "string"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "name",
+                "path",
+                "enabled"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "appId",
+          "instanceId",
+          "workspaceId",
+          "skills"
+        ],
+        "additionalProperties": false
       }
     }
   }
