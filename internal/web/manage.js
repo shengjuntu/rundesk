@@ -355,6 +355,7 @@ async function renderSkills(target) {
     const toggle = el("input", {
       type: "checkbox",
       checked: sk.enabled !== false,
+      disabled: !!sk.pluginId,
       "aria-label": rdText("启用 ") + sk.name,
     });
     toggle.onchange = () =>
@@ -387,7 +388,7 @@ async function renderSkills(target) {
     use.disabled = sk.enabled === false || !skillCanBeSelected();
     if(!skillCanBeSelected())use.textContent=rdText("在任务中选用");
     use.classList.add("skill-use");
-    const ops = el("div", { class: "skill-actions" }, use, el("label",{class:"skill-enable"},toggle,rdText("启用")));
+    const ops = el("div", { class: "skill-actions" }, use, el("label",{class:"skill-enable"},toggle,rdText(sk.pluginId?"由插件管理":"启用")));
     const normalized = sk.path.replaceAll("\\", "/");
     const projectRoot = work.path.replaceAll("\\", "/") + "/.agents/skills/";
     const instanceRoot = current.codexHome.replaceAll("\\", "/") + "/skills/";
@@ -400,7 +401,7 @@ async function renderSkills(target) {
       (skScope === "project" ? projectRoot : instanceRoot).length,
     );
     const managed =
-      skScope !== "external" &&
+      !sk.pluginId && skScope !== "external" &&
       /^[a-zA-Z0-9_-]{1,64}\/SKILL\.md$/.test(relative);
     if (managed) {
       const slug = sk.path.replaceAll("\\", "/").split("/").at(-2);
@@ -434,6 +435,7 @@ async function renderSkills(target) {
           "div",
           {},
           el("strong", {}, sk.name),
+          RunDeskNativePlugins.originNode(sk),
           sk.description?.length>220?el("details",{class:"skill-description"},el("summary",{},sk.description.slice(0,160)+"…"),el("p",{},sk.description)):el("p", {}, sk.description || ""),
           el(
             "span",
@@ -770,6 +772,7 @@ async function renderMCP(target) {
     });
   target.replaceChildren(
     mcpTestPanel(info, cp),
+    RunDeskNativePlugins.mcpOrigins(info),
     list,
     el(
       "div",

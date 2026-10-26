@@ -326,7 +326,14 @@ func (m *Manager) MCP(wid string, ids ...string) (any, error) {
 	} else {
 		_ = json.Unmarshal(status, &state)
 	}
-	return map[string]any{"userServers": maskConfig(user), "effectiveServers": maskConfig(c.Config["mcp_servers"]), "version": version, "origins": c.Origins, "status": state}, nil
+	componentOrigins := map[string]NativePluginOrigin{}
+	plugins, _ := projectNativePlugins(nativeConfig{}, nil, status)
+	for _, plugin := range plugins {
+		for _, server := range plugin.MCPServers {
+			componentOrigins[server.Name] = server.Origin
+		}
+	}
+	return map[string]any{"userServers": maskConfig(user), "effectiveServers": maskConfig(c.Config["mcp_servers"]), "version": version, "origins": c.Origins, "status": diagnosticValue(state), "componentOrigins": componentOrigins}, nil
 }
 func (m *Manager) SaveMCP(wid, name, version string, value map[string]any, remove bool, ids ...string) (any, error) {
 	if !slug.MatchString(name) {
@@ -348,6 +355,9 @@ func (m *Manager) SaveMCP(wid, name, version string, value map[string]any, remov
 		old, _ := servers[name].(map[string]any)
 		value, e = prepareMCP(value, old)
 		if e != nil {
+			return nil, e
+		}
+		if e = m.checkNativePluginMCPWrite(wid, servers, map[string]any{name: value}, ids...); e != nil {
 			return nil, e
 		}
 		servers[name] = value

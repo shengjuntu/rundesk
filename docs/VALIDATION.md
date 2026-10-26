@@ -1,3 +1,15 @@
+# 0.52.0 验证记录
+
+本轮实现公共构建中心、动态冻结配方、镜像操作、构建助手和 Codex 原生插件只读识别。完整 Go 回归 **516 项含子测试 / 361 项顶层通过，0 失败、0 测试跳过**，逐包终止结果完整，使用独立 Kun 0.17.0 与新编译 RunDesk host。新增能力定向 race 58 项通过；镜像来源归档补丁及旧上传、执行、日志、取消和重启另有 10 项 race 回归。首轮 511 项通过后完成收尾，随后对最终冻结源码重新执行完整回归，原日志独立保留。Go vet、轻量 SDK 测试、Linux/Windows amd64 构建及文档/OpenAPI 检查通过，Windows 仅交叉编译。命令、统计和证据见 [validation-0.52.0.json](validation-0.52.0.json)。
+
+已发布 JavaScript 的 JSDOM 测试覆盖构建中心与原有运行预设，包括上传/响应丢失重试、启动部分失败保留身份、镜像删除与历史区分、检查失败状态、助手任务链接、插件来源及只读包检查；47 个脚本语法通过。没有运行真实浏览器布局验收。
+
+真实 Codex **0.163.0** 在临时 HOME、合成令牌和本地 MCP fixture 上验证了线程配置注入、initialize、tools/list、connected 状态与纯 POST 传输，**0 模型请求、0 plugin RPC**。该结果验证原生连接格式，不代表实际 RunDesk capability→Docker→模型完整任务通过。原生插件包检查与独立 Skill bootstrap 均不等于安装；稳定生命周期接口保持明确拒绝。
+
+自研 video-build 21 个文件和三套旧内置 ZIP 共 24 项逐字节保持。Docker 构建/删除/启动、真实容器回调、模型认证、GPU 与新闻成片质量仍待部署机验收。历史结果保留原版本范围。
+
+---
+
 # 0.51.0 验证记录
 
 新增独立 HyperFrames、video-use、OpenMontage 环境，共享生成 MCP 和配套 App 0.26.0 独立文本 TTS。自研 video-build 目录保持原样。完整 Go 回归 **458 项含子测试 / 319 项顶层通过，0 失败、0 测试跳过**；逐包终止结果完整，使用独立 Kun 0.17.0 与新编译 RunDesk host。Go vet、Linux/Windows amd64 构建和生成模板一致性检查通过，Windows 仅交叉编译。配套 App 完整 race 444 项通过，真实 App HTTP/MCP 生成联测 6 项通过。具体命令、计数和原始日志见 [validation-0.51.0.json](validation-0.51.0.json)。

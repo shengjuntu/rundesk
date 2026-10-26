@@ -2,6 +2,7 @@ package app
 
 import (
 	"archive/zip"
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"database/sql"
@@ -30,30 +31,39 @@ const buildContextLimit = 128 << 20
 const buildLogLimit = 4 << 20
 
 type ImageBuild struct {
-	Scope          string `json:"scope,omitempty"`
-	Source         string `json:"source,omitempty"`
-	ProfileID      string `json:"profileId,omitempty"`
-	CodexVersion   string `json:"codexVersion,omitempty"`
-	OfflineReady   bool   `json:"offlineReady"`
-	ID             string `json:"id"`
-	InstanceID     string `json:"instanceId"`
-	Name           string `json:"name"`
-	Dockerfile     string `json:"dockerfile"`
-	Reference      string `json:"reference"`
-	Status         string `json:"status"`
-	Created        string `json:"created"`
-	Updated        string `json:"updated"`
-	Started        string `json:"started,omitempty"`
-	Finished       string `json:"finished,omitempty"`
-	ContextSHA256  string `json:"contextSha256"`
-	ContextBytes   int64  `json:"contextBytes"`
-	Files          int    `json:"files"`
-	TimeoutMinutes int    `json:"timeoutMinutes"`
-	NoCache        bool   `json:"noCache"`
-	ImageID        string `json:"imageId,omitempty"`
-	ImageVersionID string `json:"imageVersionId,omitempty"`
-	Error          string `json:"error,omitempty"`
-	LogTruncated   bool   `json:"logTruncated"`
+	Scope          string           `json:"scope,omitempty"`
+	Source         string           `json:"source,omitempty"`
+	ProfileID      string           `json:"profileId,omitempty"`
+	CodexVersion   string           `json:"codexVersion,omitempty"`
+	OfflineReady   bool             `json:"offlineReady"`
+	ID             string           `json:"id"`
+	InstanceID     string           `json:"instanceId"`
+	Name           string           `json:"name"`
+	Dockerfile     string           `json:"dockerfile"`
+	Reference      string           `json:"reference"`
+	Status         string           `json:"status"`
+	Created        string           `json:"created"`
+	Updated        string           `json:"updated"`
+	Started        string           `json:"started,omitempty"`
+	Finished       string           `json:"finished,omitempty"`
+	ContextSHA256  string           `json:"contextSha256"`
+	ContextBytes   int64            `json:"contextBytes"`
+	Files          int              `json:"files"`
+	TimeoutMinutes int              `json:"timeoutMinutes"`
+	NoCache        bool             `json:"noCache"`
+	ImageID        string           `json:"imageId,omitempty"`
+	ImageVersionID string           `json:"imageVersionId,omitempty"`
+	Error          string           `json:"error,omitempty"`
+	LogTruncated   bool             `json:"logTruncated"`
+	RecipeID       string           `json:"recipeId,omitempty"`
+	RecipeRevision int              `json:"recipeRevision,omitempty"`
+	RecipeSHA      string           `json:"recipeSha,omitempty"`
+	RecipeSmoke    *RecipeSmokeSpec `json:"recipeSmoke,omitempty"`
+	OwnerRunID     string           `json:"ownerRunId,omitempty"`
+	RequestID      string           `json:"requestId,omitempty"`
+	RequestSHA     string           `json:"requestSha,omitempty"`
+	RebuildOf      string           `json:"rebuildOf,omitempty"`
+	TestKind       string           `json:"testKind,omitempty"`
 }
 
 func buildActive(s string) bool              { return s == "queued" || s == "running" || s == "canceling" }
@@ -196,6 +206,12 @@ func (m *Manager) CreateBuild(iid, name, dockerfile string, timeout int, noCache
 	return m.createBuild(iid, name, dockerfile, timeout, noCache, src, nil)
 }
 func (m *Manager) createBuild(iid, name, dockerfile string, timeout int, noCache bool, src io.Reader, setup *RuntimeImageInput) (ImageBuild, error) {
+	return m.createBuildWithRecipe(iid, name, dockerfile, timeout, noCache, src, setup, nil)
+}
+
+// recipe is trusted metadata produced by the build center, never a caller-supplied
+// ImageBuild. It authorizes platform-owned builds without changing an assistant.
+func (m *Manager) createBuildWithRecipe(iid, name, dockerfile string, timeout int, noCache bool, src io.Reader, setup *RuntimeImageInput, recipe *ImageBuild) (ImageBuild, error) {
 	m.buildMu.Lock()
 	defer m.buildMu.Unlock()
 	var v ImageBuild
@@ -206,7 +222,7 @@ func (m *Manager) createBuild(iid, name, dockerfile string, timeout int, noCache
 	if e != nil {
 		return v, e
 	}
-	if i.ID == DefaultInstance && setup == nil {
+	if i.ID == DefaultInstance && setup == nil && recipe == nil {
 		return v, failure(409, "not_docker_application", "请在专用应用中构建镜像")
 	}
 	name = strings.TrimSpace(name)
@@ -270,7 +286,9 @@ func (m *Manager) createBuild(iid, name, dockerfile string, timeout int, noCache
 	if e != nil {
 		return v, e
 	}
-	if e = os.Remove(filepath.Join(tmp, "context.zip")); e != nil {
+	// Retain the exact uploaded bytes for reproducible rebuilds. The extracted
+	// context can still be removed promptly after completion or cancellation.
+	if e = os.Chmod(filepath.Join(tmp, "context.zip"), 0400); e != nil {
 		return v, e
 	}
 	id := store.ID()
@@ -282,12 +300,25 @@ func (m *Manager) createBuild(iid, name, dockerfile string, timeout int, noCache
 		v.Scope, v.Source, v.ProfileID, v.CodexVersion = "setup", setup.Source, setup.ProfileID, setup.CodexVersion
 		v.Reference, v.Status = setup.Reference, "queued"
 		for _, old := range rows {
+			if recipe != nil {
+				break
+			}
 			if old.Scope == "setup" && buildActive(old.Status) && old.Reference == v.Reference {
 				if old.ContextSHA256 == v.ContextSHA256 && old.Source == v.Source {
 					return old, nil
 				}
 				return ImageBuild{}, failure(409, "runtime_image_busy", "此镜像已有准备任务，请先等待或取消")
 			}
+		}
+	}
+	if recipe != nil {
+		v.RecipeID, v.RecipeRevision, v.RecipeSHA = recipe.RecipeID, recipe.RecipeRevision, recipe.RecipeSHA
+		v.RecipeSmoke, v.OwnerRunID, v.RequestID, v.RequestSHA, v.RebuildOf = recipe.RecipeSmoke, recipe.OwnerRunID, recipe.RequestID, recipe.RequestSHA, recipe.RebuildOf
+		if setup == nil && (recipe.RecipeID != "" || recipe.Scope == "recipe") {
+			v.Scope, v.Source, v.Status = "recipe", "build", "queued"
+		}
+		if recipe.Reference != "" {
+			v.Reference = recipe.Reference
 		}
 	}
 	if e = os.Rename(tmp, m.buildDir(id)); e != nil {
@@ -312,7 +343,7 @@ func (m *Manager) StartBuild(iid, id string) (ImageBuild, error) {
 	if e != nil {
 		return v, e
 	}
-	if i.ID == DefaultInstance && v.Scope != "setup" {
+	if i.ID == DefaultInstance && v.Scope != "setup" && v.Scope != "recipe" {
 		return v, failure(409, "not_docker_application", "请在专用应用中构建镜像")
 	}
 	v.Status = "queued"
@@ -357,6 +388,11 @@ func (m *Manager) DeleteBuild(iid, id string) error {
 	}
 	if buildActive(v.Status) {
 		return failure(409, "build_active", "请先取消构建并等待结束")
+	}
+	// Keep the immutable image identity discoverable after history cleanup.
+	// This stores no build context or log and does not delete a Docker image.
+	if e = m.preserveBuildCenterImageSource(v); e != nil {
+		return e
 	}
 	if e = os.RemoveAll(m.buildDir(id)); e != nil {
 		return e
@@ -420,6 +456,16 @@ func (m *Manager) runNextBuild() {
 		m.buildMu.Unlock()
 		return
 	}
+	if e = m.checkBuildAssistantBuildExecution(v); e != nil {
+		v.Status, v.Error = "canceled", diagnosticText(e.Error())
+		v.Finished, v.Updated = store.Now(), store.Now()
+		if e = m.Store.Put("image-build", v.ID, v); e != nil {
+			log.Printf("build %s admission persistence: %v", v.ID, e)
+		}
+		_ = os.RemoveAll(filepath.Join(m.buildDir(v.ID), "context"))
+		m.buildMu.Unlock()
+		return
+	}
 	ctx, cancel := context.WithTimeout(m.ctx, time.Duration(v.TimeoutMinutes)*time.Minute)
 	m.buildCancels[v.ID] = cancel
 	v.Status = "running"
@@ -465,6 +511,11 @@ func (m *Manager) runNextBuild() {
 			v.Status, v.OfflineReady = "succeeded", true
 			break
 		}
+		if v.Scope == "recipe" || v.Scope == "image-test" {
+			v.Status = "succeeded"
+			v.OfflineReady = v.Scope == "recipe"
+			break
+		}
 		// Register by immutable image ID, never by a tag another process can move.
 		version, err := m.RegisterImage(v.InstanceID, imageID)
 		if err != nil {
@@ -481,16 +532,19 @@ func (m *Manager) runNextBuild() {
 	}
 	_ = os.RemoveAll(filepath.Join(m.buildDir(v.ID), "context"))
 }
-func (m *Manager) executeBuild(ctx context.Context, v ImageBuild) (string, bool, error) {
+func (m *Manager) executeBuild(ctx context.Context, v ImageBuild) (imageID string, truncated bool, err error) {
 	endpoint := os.Getenv("RUNDESK_DOCKER_HOST")
 	if endpoint != "" && (!strings.HasPrefix(endpoint, "unix:///") || strings.ContainsAny(endpoint, "\n\r\x00")) {
 		return "", false, fmt.Errorf("仅支持本机 Docker Unix socket")
+	}
+	if v.Scope == "image-test" {
+		return m.executeBuildCenterTest(ctx, v)
 	}
 	i, e := m.Instance(v.InstanceID)
 	if e != nil {
 		return "", false, e
 	}
-	if v.Scope != "setup" && i.Execution.normalized().Mode != "docker" {
+	if v.Scope != "setup" && v.Scope != "recipe" && i.Execution.normalized().Mode != "docker" {
 		return "", false, fmt.Errorf("应用已切换为本机执行，构建未启动")
 	}
 	dir := m.buildDir(v.ID)
@@ -499,17 +553,24 @@ func (m *Manager) executeBuild(ctx context.Context, v ImageBuild) (string, bool,
 		return "", false, e
 	}
 	defer f.Close()
-	out := &buildLogWriter{f: f}
-	if v.Scope == "setup" && v.Source == "build" {
+	bounded := &buildLogWriter{f: f}
+	out := newBuildLogRedactor(bounded)
+	defer func() {
+		if flushErr := out.Flush(); err == nil && flushErr != nil {
+			err = flushErr
+		}
+		truncated = bounded.truncated || out.Truncated()
+	}()
+	if v.Scope == "setup" && v.Source == "build" && !v.NoCache {
 		if id := m.cachedRuntimeImage(v); id != "" {
 			fmt.Fprintln(out, "相同配方的镜像已存在，跳过构建并重新检查工具。")
 			err := m.verifyRuntimeImage(ctx, v, id, out)
-			return id, out.truncated, err
+			return id, bounded.truncated, err
 		}
 	}
 	if v.Scope == "setup" && v.Source != "build" {
 		id, err := m.acquireRuntimeImage(ctx, v, out)
-		return id, out.truncated, err
+		return id, bounded.truncated, err
 	}
 	iidfile := filepath.Join(dir, "image-id")
 	_ = os.Remove(iidfile)
@@ -544,23 +605,29 @@ func (m *Manager) executeBuild(ctx context.Context, v ImageBuild) (string, bool,
 		e = ctx.Err()
 	}
 	if e != nil {
-		return "", out.truncated, fmt.Errorf("Docker 构建失败，请查看日志：%w", e)
+		return "", bounded.truncated, fmt.Errorf("Docker 构建失败，请查看日志：%w", e)
 	}
 	b, e := os.ReadFile(iidfile)
 	if e != nil {
-		return "", out.truncated, fmt.Errorf("Docker 未返回镜像身份：%w", e)
+		return "", bounded.truncated, fmt.Errorf("Docker 未返回镜像身份：%w", e)
 	}
 	id := strings.TrimSpace(string(b))
 	if len(id) != 71 || !strings.HasPrefix(id, "sha256:") {
-		return "", out.truncated, fmt.Errorf("Docker 返回无效镜像身份")
+		return "", bounded.truncated, fmt.Errorf("Docker 返回无效镜像身份")
 	}
 	if _, e = hex.DecodeString(id[7:]); e != nil {
-		return "", out.truncated, e
+		return "", bounded.truncated, e
 	}
 	if v.Scope == "setup" {
 		e = m.verifyRuntimeImage(ctx, v, id, out)
+	} else if v.Scope == "recipe" {
+		spec := RecipeSmokeSpec{}
+		if v.RecipeSmoke != nil {
+			spec = *v.RecipeSmoke
+		}
+		e = m.runBuildCenterSmoke(ctx, id, spec, out)
 	}
-	return id, out.truncated, e
+	return id, bounded.truncated, e
 }
 func (m *Manager) BuildLog(iid, id string, after int64) (any, error) {
 	m.buildMu.Lock()
@@ -580,11 +647,30 @@ func (m *Manager) BuildLog(iid, id string, after int64) (any, error) {
 		return nil, e
 	}
 	defer f.Close()
-	if _, e = f.Seek(after, io.SeekStart); e != nil {
+	// Older build records may predate write-time redaction. Sanitize the bounded
+	// file before applying offsets so credentials split across a read boundary
+	// cannot escape; the cursor always measures the sanitized stream.
+	var clean bytes.Buffer
+	redactor := newBuildLogRedactor(&clean)
+	if _, e = io.Copy(redactor, io.LimitReader(f, buildLogLimit)); e != nil {
 		return nil, e
 	}
-	b, e := io.ReadAll(io.LimitReader(f, 64<<10))
-	return map[string]any{"text": strings.ToValidUTF8(string(b), "�"), "next": after + int64(len(b)), "status": v.Status, "truncated": v.LogTruncated}, e
+	if e = redactor.Flush(); e != nil {
+		return nil, e
+	}
+	b := clean.Bytes()
+	logTruncated := v.LogTruncated || redactor.Truncated()
+	if len(b) > buildLogLimit {
+		b, logTruncated = b[:buildLogLimit], true
+	}
+	if after > int64(len(b)) {
+		after = int64(len(b))
+	}
+	end := after + (64 << 10)
+	if end > int64(len(b)) {
+		end = int64(len(b))
+	}
+	return map[string]any{"text": strings.ToValidUTF8(string(b[after:end]), "�"), "next": end, "status": v.Status, "truncated": logTruncated}, nil
 }
 func (s *Server) buildRoutes(mux *http.ServeMux) {
 	m := s.Manager

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Add app Docker image"
+  short_description: "Build an application image through RunDesk tools"
+  default_prompt: "Use $add-app-docker-image to create and test a RunDesk application image from this project."

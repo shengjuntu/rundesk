@@ -1,0 +1,184 @@
+{"Time":"2026-10-20T12:55:34.604905788+08:00","Action":"start","Package":"github.com/your-org/kun/sdk/client"}
+{"Time":"2026-10-20T12:55:34.606802754+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/client","Test":"TestHandshakeIdentityAndCapabilities"}
+{"Time":"2026-10-20T12:55:34.606849995+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestHandshakeIdentityAndCapabilities","Output":"=== RUN   TestHandshakeIdentityAndCapabilities\n"}
+{"Time":"2026-10-20T12:55:34.609220916+08:00","Action":"start","Package":"github.com/your-org/kun/sdk/protocol"}
+{"Time":"2026-10-20T12:55:34.60923353+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestHandshakeIdentityAndCapabilities","Output":"--- PASS: TestHandshakeIdentityAndCapabilities (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.609244998+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Test":"TestHandshakeIdentityAndCapabilities","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.609263536+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/client","Test":"TestLegacyEngineCoreAndOptionalExtension"}
+{"Time":"2026-10-20T12:55:34.60926621+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestLegacyEngineCoreAndOptionalExtension","Output":"=== RUN   TestLegacyEngineCoreAndOptionalExtension\n"}
+{"Time":"2026-10-20T12:55:34.611576805+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestLegacyEngineCoreAndOptionalExtension","Output":"--- PASS: TestLegacyEngineCoreAndOptionalExtension (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.611589744+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Test":"TestLegacyEngineCoreAndOptionalExtension","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.61159359+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch"}
+{"Time":"2026-10-20T12:55:34.611596915+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch","Output":"=== RUN   TestRejectHandshakeMismatch\n"}
+{"Time":"2026-10-20T12:55:34.611601092+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch/wrong-protocol"}
+{"Time":"2026-10-20T12:55:34.611604336+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch/wrong-protocol","Output":"=== RUN   TestRejectHandshakeMismatch/wrong-protocol\n"}
+{"Time":"2026-10-20T12:55:34.611721413+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestKunArtifactRulesRejectTraversalAndInvalidDefinitions"}
+{"Time":"2026-10-20T12:55:34.61172577+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestKunArtifactRulesRejectTraversalAndInvalidDefinitions","Output":"=== RUN   TestKunArtifactRulesRejectTraversalAndInvalidDefinitions\n"}
+{"Time":"2026-10-20T12:55:34.611797838+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestKunArtifactRulesRejectTraversalAndInvalidDefinitions","Output":"--- PASS: TestKunArtifactRulesRejectTraversalAndInvalidDefinitions (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.611801274+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestKunArtifactRulesRejectTraversalAndInvalidDefinitions","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.611804889+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestKnownDurableEngineVersionsOnly"}
+{"Time":"2026-10-20T12:55:34.611806582+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestKnownDurableEngineVersionsOnly","Output":"=== RUN   TestKnownDurableEngineVersionsOnly\n"}
+{"Time":"2026-10-20T12:55:34.611828925+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestKnownDurableEngineVersionsOnly","Output":"--- PASS: TestKnownDurableEngineVersionsOnly (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.611831469+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestKnownDurableEngineVersionsOnly","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.61183875+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestDiagnosticProviderPreservesLegacyWireField"}
+{"Time":"2026-10-20T12:55:34.611840643+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestDiagnosticProviderPreservesLegacyWireField","Output":"=== RUN   TestDiagnosticProviderPreservesLegacyWireField\n"}
+{"Time":"2026-10-20T12:55:34.612092603+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestDiagnosticProviderPreservesLegacyWireField","Output":"--- PASS: TestDiagnosticProviderPreservesLegacyWireField (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.61210362+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestDiagnosticProviderPreservesLegacyWireField","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.612107185+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestKunFixtureValidation"}
+{"Time":"2026-10-20T12:55:34.612109528+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestKunFixtureValidation","Output":"=== RUN   TestKunFixtureValidation\n"}
+{"Time":"2026-10-20T12:55:34.612218463+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestKunFixtureValidation","Output":"--- PASS: TestKunFixtureValidation (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.612222008+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestKunFixtureValidation","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.612226154+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds"}
+{"Time":"2026-10-20T12:55:34.612227717+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds","Output":"=== RUN   TestHypothesisIntegrityAndBounds\n"}
+{"Time":"2026-10-20T12:55:34.612741862+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/longReason"}
+{"Time":"2026-10-20T12:55:34.612748282+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/longReason","Output":"=== RUN   TestHypothesisIntegrityAndBounds/longReason\n"}
+{"Time":"2026-10-20T12:55:34.6128199+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/longReason","Output":"--- PASS: TestHypothesisIntegrityAndBounds/longReason (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.612824006+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/longReason","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.612828924+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/absent"}
+{"Time":"2026-10-20T12:55:34.612830526+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/absent","Output":"=== RUN   TestHypothesisIntegrityAndBounds/absent\n"}
+{"Time":"2026-10-20T12:55:34.612864457+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/absent","Output":"--- PASS: TestHypothesisIntegrityAndBounds/absent (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.612866871+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/absent","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.612868914+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/identity"}
+{"Time":"2026-10-20T12:55:34.612871908+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/identity","Output":"=== RUN   TestHypothesisIntegrityAndBounds/identity\n"}
+{"Time":"2026-10-20T12:55:34.612971238+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/identity","Output":"--- PASS: TestHypothesisIntegrityAndBounds/identity (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.612978719+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/identity","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.612980763+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/record"}
+{"Time":"2026-10-20T12:55:34.612982435+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/record","Output":"=== RUN   TestHypothesisIntegrityAndBounds/record\n"}
+{"Time":"2026-10-20T12:55:34.613011629+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/record","Output":"--- PASS: TestHypothesisIntegrityAndBounds/record (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.613014313+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/record","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.613016146+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/parent"}
+{"Time":"2026-10-20T12:55:34.613017598+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/parent","Output":"=== RUN   TestHypothesisIntegrityAndBounds/parent\n"}
+{"Time":"2026-10-20T12:55:34.613054764+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/parent","Output":"--- PASS: TestHypothesisIntegrityAndBounds/parent (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.613056877+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/parent","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.613061114+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/outputHash"}
+{"Time":"2026-10-20T12:55:34.613062816+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/outputHash","Output":"=== RUN   TestHypothesisIntegrityAndBounds/outputHash\n"}
+{"Time":"2026-10-20T12:55:34.613168366+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/outputHash","Output":"--- PASS: TestHypothesisIntegrityAndBounds/outputHash (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.613174655+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/outputHash","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.613176898+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/noop"}
+{"Time":"2026-10-20T12:55:34.613178551+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/noop","Output":"=== RUN   TestHypothesisIntegrityAndBounds/noop\n"}
+{"Time":"2026-10-20T12:55:34.613187074+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/noop","Output":"--- PASS: TestHypothesisIntegrityAndBounds/noop (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.613189377+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/noop","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.61319114+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/bytes"}
+{"Time":"2026-10-20T12:55:34.613192592+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/bytes","Output":"=== RUN   TestHypothesisIntegrityAndBounds/bytes\n"}
+{"Time":"2026-10-20T12:55:34.613287395+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch/wrong-protocol","Output":"--- PASS: TestRejectHandshakeMismatch/wrong-protocol (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.613293725+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch/wrong-protocol","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.613295818+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch/wrong-envelope"}
+{"Time":"2026-10-20T12:55:34.61329754+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch/wrong-envelope","Output":"=== RUN   TestRejectHandshakeMismatch/wrong-envelope\n"}
+{"Time":"2026-10-20T12:55:34.61347652+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/bytes","Output":"--- PASS: TestHypothesisIntegrityAndBounds/bytes (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.613480476+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/bytes","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.61348307+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/invalidUTF8"}
+{"Time":"2026-10-20T12:55:34.613484743+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/invalidUTF8","Output":"=== RUN   TestHypothesisIntegrityAndBounds/invalidUTF8\n"}
+{"Time":"2026-10-20T12:55:34.613512675+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/invalidUTF8","Output":"--- PASS: TestHypothesisIntegrityAndBounds/invalidUTF8 (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.613514698+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/invalidUTF8","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.613517302+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/live"}
+{"Time":"2026-10-20T12:55:34.613518764+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/live","Output":"=== RUN   TestHypothesisIntegrityAndBounds/live\n"}
+{"Time":"2026-10-20T12:55:34.613546756+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/live","Output":"--- PASS: TestHypothesisIntegrityAndBounds/live (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.613548599+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/live","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.613550832+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/negative"}
+{"Time":"2026-10-20T12:55:34.613552525+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/negative","Output":"=== RUN   TestHypothesisIntegrityAndBounds/negative\n"}
+{"Time":"2026-10-20T12:55:34.613591434+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/negative","Output":"--- PASS: TestHypothesisIntegrityAndBounds/negative (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.613593877+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/negative","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.6135957+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/original"}
+{"Time":"2026-10-20T12:55:34.613597433+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/original","Output":"=== RUN   TestHypothesisIntegrityAndBounds/original\n"}
+{"Time":"2026-10-20T12:55:34.613620297+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/original","Output":"--- PASS: TestHypothesisIntegrityAndBounds/original (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.61362241+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/original","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.613627208+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/reason"}
+{"Time":"2026-10-20T12:55:34.613630022+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/reason","Output":"=== RUN   TestHypothesisIntegrityAndBounds/reason\n"}
+{"Time":"2026-10-20T12:55:34.613652516+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/reason","Output":"--- PASS: TestHypothesisIntegrityAndBounds/reason (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.613654849+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds/reason","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.613828702+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds","Output":"--- PASS: TestHypothesisIntegrityAndBounds (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.613833439+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/protocol","Test":"TestHypothesisIntegrityAndBounds","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.613835362+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Output":"PASS\n"}
+{"Time":"2026-10-20T12:55:34.614130742+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/protocol","Output":"ok  \tgithub.com/your-org/kun/sdk/protocol\t0.005s\n"}
+{"Time":"2026-10-20T12:55:34.614145855+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/protocol","Elapsed":0.005}
+{"Time":"2026-10-20T12:55:34.615288453+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch/wrong-envelope","Output":"--- PASS: TestRejectHandshakeMismatch/wrong-envelope (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.615298679+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch/wrong-envelope","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.615302975+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch/wrong-engine"}
+{"Time":"2026-10-20T12:55:34.615305809+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch/wrong-engine","Output":"=== RUN   TestRejectHandshakeMismatch/wrong-engine\n"}
+{"Time":"2026-10-20T12:55:34.61677146+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch/wrong-engine","Output":"--- PASS: TestRejectHandshakeMismatch/wrong-engine (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.616782317+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch/wrong-engine","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.616785581+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch/missing-engine-version"}
+{"Time":"2026-10-20T12:55:34.616787655+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch/missing-engine-version","Output":"=== RUN   TestRejectHandshakeMismatch/missing-engine-version\n"}
+{"Time":"2026-10-20T12:55:34.618459526+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch/missing-engine-version","Output":"--- PASS: TestRejectHandshakeMismatch/missing-engine-version (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.618480718+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch/missing-engine-version","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.618486938+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch","Output":"--- PASS: TestRejectHandshakeMismatch (0.01s)\n"}
+{"Time":"2026-10-20T12:55:34.618490954+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectHandshakeMismatch","Elapsed":0.01}
+{"Time":"2026-10-20T12:55:34.618499477+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse"}
+{"Time":"2026-10-20T12:55:34.61850197+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse","Output":"=== RUN   TestRejectDamagedResponse\n"}
+{"Time":"2026-10-20T12:55:34.618505015+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/malformed"}
+{"Time":"2026-10-20T12:55:34.61850859+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/malformed","Output":"=== RUN   TestRejectDamagedResponse/malformed\n"}
+{"Time":"2026-10-20T12:55:34.620828129+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/malformed","Output":"--- PASS: TestRejectDamagedResponse/malformed (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.620841449+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/malformed","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.620844654+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/duplicate"}
+{"Time":"2026-10-20T12:55:34.620847037+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/duplicate","Output":"=== RUN   TestRejectDamagedResponse/duplicate\n"}
+{"Time":"2026-10-20T12:55:34.623201409+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/duplicate","Output":"--- PASS: TestRejectDamagedResponse/duplicate (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.623211744+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/duplicate","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.623214518+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/missing-id"}
+{"Time":"2026-10-20T12:55:34.623216642+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/missing-id","Output":"=== RUN   TestRejectDamagedResponse/missing-id\n"}
+{"Time":"2026-10-20T12:55:34.625638445+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/missing-id","Output":"--- PASS: TestRejectDamagedResponse/missing-id (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.625654338+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/missing-id","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.625657964+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/conflicting"}
+{"Time":"2026-10-20T12:55:34.625660488+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/conflicting","Output":"=== RUN   TestRejectDamagedResponse/conflicting\n"}
+{"Time":"2026-10-20T12:55:34.628004754+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/conflicting","Output":"--- PASS: TestRejectDamagedResponse/conflicting (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.628016942+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/conflicting","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.628020347+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/unknown-id"}
+{"Time":"2026-10-20T12:55:34.628022681+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/unknown-id","Output":"=== RUN   TestRejectDamagedResponse/unknown-id\n"}
+{"Time":"2026-10-20T12:55:34.629764228+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/unknown-id","Output":"--- PASS: TestRejectDamagedResponse/unknown-id (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.629775084+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/unknown-id","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.629782255+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/oversized"}
+{"Time":"2026-10-20T12:55:34.629784418+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/oversized","Output":"=== RUN   TestRejectDamagedResponse/oversized\n"}
+{"Time":"2026-10-20T12:55:34.676901016+08:00","Action":"start","Package":"github.com/your-org/kun/sdk/validation"}
+{"Time":"2026-10-20T12:55:34.678586043+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/validation","Test":"TestStrictJSONLimitsAndNoSideEffects"}
+{"Time":"2026-10-20T12:55:34.678606243+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/validation","Test":"TestStrictJSONLimitsAndNoSideEffects","Output":"=== RUN   TestStrictJSONLimitsAndNoSideEffects\n"}
+{"Time":"2026-10-20T12:55:34.682633653+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/validation","Test":"TestStrictJSONLimitsAndNoSideEffects","Output":"--- PASS: TestStrictJSONLimitsAndNoSideEffects (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.683030121+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/validation","Test":"TestStrictJSONLimitsAndNoSideEffects","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.683039535+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/validation","Test":"TestCatalogAndFastGuardsArePureAndStable"}
+{"Time":"2026-10-20T12:55:34.683041828+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/validation","Test":"TestCatalogAndFastGuardsArePureAndStable","Output":"=== RUN   TestCatalogAndFastGuardsArePureAndStable\n"}
+{"Time":"2026-10-20T12:55:34.683692189+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/validation","Test":"TestCatalogAndFastGuardsArePureAndStable","Output":"--- PASS: TestCatalogAndFastGuardsArePureAndStable (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.683698218+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/validation","Test":"TestCatalogAndFastGuardsArePureAndStable","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.683731268+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/validation","Test":"TestFastProgramValidationIsPureAndBounded"}
+{"Time":"2026-10-20T12:55:34.683734533+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/validation","Test":"TestFastProgramValidationIsPureAndBounded","Output":"=== RUN   TestFastProgramValidationIsPureAndBounded\n"}
+{"Time":"2026-10-20T12:55:34.684023099+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/validation","Test":"TestFastProgramValidationIsPureAndBounded","Output":"--- PASS: TestFastProgramValidationIsPureAndBounded (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.684032633+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/validation","Test":"TestFastProgramValidationIsPureAndBounded","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.684038943+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/validation","Test":"TestSchemaAssertionsAndExactNumbers"}
+{"Time":"2026-10-20T12:55:34.684042248+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/validation","Test":"TestSchemaAssertionsAndExactNumbers","Output":"=== RUN   TestSchemaAssertionsAndExactNumbers\n"}
+{"Time":"2026-10-20T12:55:34.684363042+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/validation","Test":"TestSchemaAssertionsAndExactNumbers","Output":"--- PASS: TestSchemaAssertionsAndExactNumbers (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.684371564+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/validation","Test":"TestSchemaAssertionsAndExactNumbers","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.68437543+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/validation","Test":"TestSchemaCompositionLocalRefsAndBounds"}
+{"Time":"2026-10-20T12:55:34.684379927+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/validation","Test":"TestSchemaCompositionLocalRefsAndBounds","Output":"=== RUN   TestSchemaCompositionLocalRefsAndBounds\n"}
+{"Time":"2026-10-20T12:55:34.684879461+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/validation","Test":"TestSchemaCompositionLocalRefsAndBounds","Output":"--- PASS: TestSchemaCompositionLocalRefsAndBounds (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.684891268+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/validation","Test":"TestSchemaCompositionLocalRefsAndBounds","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.684895425+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/validation","Test":"TestSchemaObjectDependenciesAndAlternatives"}
+{"Time":"2026-10-20T12:55:34.684898099+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/validation","Test":"TestSchemaObjectDependenciesAndAlternatives","Output":"=== RUN   TestSchemaObjectDependenciesAndAlternatives\n"}
+{"Time":"2026-10-20T12:55:34.685061155+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/validation","Test":"TestSchemaObjectDependenciesAndAlternatives","Output":"--- PASS: TestSchemaObjectDependenciesAndAlternatives (0.00s)\n"}
+{"Time":"2026-10-20T12:55:34.685068075+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/validation","Test":"TestSchemaObjectDependenciesAndAlternatives","Elapsed":0}
+{"Time":"2026-10-20T12:55:34.685072892+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/validation","Output":"PASS\n"}
+{"Time":"2026-10-20T12:55:34.685267336+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/validation","Output":"ok  \tgithub.com/your-org/kun/sdk/validation\t0.008s\n"}
+{"Time":"2026-10-20T12:55:34.685280976+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/validation","Elapsed":0.008}
+{"Time":"2026-10-20T12:55:34.750988501+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/oversized","Output":"--- PASS: TestRejectDamagedResponse/oversized (0.12s)\n"}
+{"Time":"2026-10-20T12:55:34.751024144+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse/oversized","Elapsed":0.12}
+{"Time":"2026-10-20T12:55:34.751038816+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse","Output":"--- PASS: TestRejectDamagedResponse (0.13s)\n"}
+{"Time":"2026-10-20T12:55:34.751052958+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Test":"TestRejectDamagedResponse","Elapsed":0.13}
+{"Time":"2026-10-20T12:55:34.751056543+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/client","Test":"TestExactResponseLimit"}
+{"Time":"2026-10-20T12:55:34.75106128+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestExactResponseLimit","Output":"=== RUN   TestExactResponseLimit\n"}
+{"Time":"2026-10-20T12:55:34.998484956+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestExactResponseLimit","Output":"--- PASS: TestExactResponseLimit (0.25s)\n"}
+{"Time":"2026-10-20T12:55:34.998523373+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Test":"TestExactResponseLimit","Elapsed":0.25}
+{"Time":"2026-10-20T12:55:34.998529563+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/client","Test":"TestOversizedRequestAndUnserializableParameterDoNotKillWorker"}
+{"Time":"2026-10-20T12:55:34.998532307+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestOversizedRequestAndUnserializableParameterDoNotKillWorker","Output":"=== RUN   TestOversizedRequestAndUnserializableParameterDoNotKillWorker\n"}
+{"Time":"2026-10-20T12:55:35.086728808+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestOversizedRequestAndUnserializableParameterDoNotKillWorker","Output":"--- PASS: TestOversizedRequestAndUnserializableParameterDoNotKillWorker (0.09s)\n"}
+{"Time":"2026-10-20T12:55:35.08677664+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Test":"TestOversizedRequestAndUnserializableParameterDoNotKillWorker","Elapsed":0.09}
+{"Time":"2026-10-20T12:55:35.086804192+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/client","Test":"TestConcurrentOutOfOrderResponses"}
+{"Time":"2026-10-20T12:55:35.086807757+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestConcurrentOutOfOrderResponses","Output":"=== RUN   TestConcurrentOutOfOrderResponses\n"}
+{"Time":"2026-10-20T12:55:35.088731569+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestConcurrentOutOfOrderResponses","Output":"--- PASS: TestConcurrentOutOfOrderResponses (0.00s)\n"}
+{"Time":"2026-10-20T12:55:35.088747393+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Test":"TestConcurrentOutOfOrderResponses","Elapsed":0}
+{"Time":"2026-10-20T12:55:35.088755084+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/client","Test":"TestCanceledCallLateResponseDoesNotReachNextCall"}
+{"Time":"2026-10-20T12:55:35.08875887+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestCanceledCallLateResponseDoesNotReachNextCall","Output":"=== RUN   TestCanceledCallLateResponseDoesNotReachNextCall\n"}
+{"Time":"2026-10-20T12:55:35.122797993+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestCanceledCallLateResponseDoesNotReachNextCall","Output":"--- PASS: TestCanceledCallLateResponseDoesNotReachNextCall (0.03s)\n"}
+{"Time":"2026-10-20T12:55:35.1229025+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Test":"TestCanceledCallLateResponseDoesNotReachNextCall","Elapsed":0.03}
+{"Time":"2026-10-20T12:55:35.12294212+08:00","Action":"run","Package":"github.com/your-org/kun/sdk/client","Test":"TestRemoteErrorAndResultDecodeLeaveWorkerUsable"}
+{"Time":"2026-10-20T12:55:35.122945966+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRemoteErrorAndResultDecodeLeaveWorkerUsable","Output":"=== RUN   TestRemoteErrorAndResultDecodeLeaveWorkerUsable\n"}
+{"Time":"2026-10-20T12:55:35.12530227+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Test":"TestRemoteErrorAndResultDecodeLeaveWorkerUsable","Output":"--- PASS: TestRemoteErrorAndResultDecodeLeaveWorkerUsable (0.00s)\n"}
+{"Time":"2026-10-20T12:55:35.125336812+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Test":"TestRemoteErrorAndResultDecodeLeaveWorkerUsable","Elapsed":0}
+{"Time":"2026-10-20T12:55:35.125351124+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Output":"PASS\n"}
+{"Time":"2026-10-20T12:55:35.127953749+08:00","Action":"output","Package":"github.com/your-org/kun/sdk/client","Output":"ok  \tgithub.com/your-org/kun/sdk/client\t0.523s\n"}
+{"Time":"2026-10-20T12:55:35.127976213+08:00","Action":"pass","Package":"github.com/your-org/kun/sdk/client","Elapsed":0.523}

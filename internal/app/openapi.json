@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Control API (RDCA)",
-    "version": "0.51.0",
+    "version": "0.52.0",
     "description": "RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter，当前未实现或声明 UHP 兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。当前应用接入、错误、幂等及示例见 docs/API-V1.md。"
   },
   "servers": [
@@ -1696,6 +1696,1385 @@
           }
         },
         "x-administrator-only": true
+      }
+    },
+    "/build-center/assistant-runs": {
+      "post": {
+        "operationId": "post_build_center_assistant_runs",
+        "summary": "管理员：发起现有Codex队列任务，bootstrap Skill并注入限时构建MCP，不安装原生插件",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildAssistantRun"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "发起现有Codex队列任务，bootstrap Skill并注入限时构建MCP，不安装原生插件。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "prompt": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 65536
+                  },
+                  "instanceId": {
+                    "type": "string"
+                  },
+                  "workspaceId": {
+                    "type": "string",
+                    "description": "只作为父项目上下文，任务使用新专用工作区"
+                  },
+                  "requestId": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{24}$",
+                    "description": "同一逻辑操作重试保持不变；更改参数需新值。"
+                  }
+                },
+                "required": [
+                  "prompt",
+                  "requestId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/build-center/assistant-runs/{id}": {
+      "get": {
+        "operationId": "get_build_center_assistant_runs_id",
+        "summary": "管理员：读取构建助手任务与会话绑定",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildAssistantRun"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取构建助手任务与会话绑定。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
+      }
+    },
+    "/build-center/assistant-runs/{id}/revoke": {
+      "post": {
+        "operationId": "post_build_center_assistant_runs_id_revoke",
+        "summary": "管理员：撤销任务构建能力；已启动Docker构建由原取消接口处理",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildAssistantRun"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "撤销任务构建能力；已启动Docker构建由原取消接口处理。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
+      }
+    },
+    "/build-center/mcp": {
+      "post": {
+        "operationId": "post_build_center_mcp",
+        "summary": "管理员：限时、精确任务绑定的构建MCP JSON-RPC端点",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": false,
+        "description": "只接受当前构建任务的短期Bearer能力；验证task/session/instance/workspace/path和到期。不能用管理员或应用凭据替代。仅开放自身配方导入、构建、日志、取消、产物和离线检查；不授予镜像删除、实例管理、原生插件安装、通用管理或跨任务访问。仅此精确端点自鉴权，Host/Origin守卫仍生效。MCP通知可返回202。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "x-build-task-capability-only": true,
+        "security": [
+          {
+            "BuildTaskCapability": []
+          }
+        ]
+      }
+    },
+    "/build-center/recipes": {
+      "get": {
+        "operationId": "get_build_center_recipes",
+        "summary": "管理员：读取内置与自定义配方",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BuildRecipe"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取内置与自定义配方。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
+      },
+      "post": {
+        "operationId": "post_build_center_recipes",
+        "summary": "管理员：导入并冻结自定义配方，拒绝危险路径和凭据文件",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildRecipe"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "导入并冻结自定义配方，拒绝危险路径和凭据文件。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "manifest": {
+                    "type": "string",
+                    "description": "BuildRecipeManifest的JSON字符串"
+                  },
+                  "context": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Docker context ZIP，最多32MiB"
+                  },
+                  "requestId": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{24}$",
+                    "description": "同一逻辑操作重试保持不变；更改参数需新值。"
+                  }
+                },
+                "required": [
+                  "manifest",
+                  "context",
+                  "requestId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/build-center/recipes/{rid}": {
+      "get": {
+        "operationId": "get_build_center_recipes_rid",
+        "summary": "管理员：读取配方冻结元数据",
+        "parameters": [
+          {
+            "name": "rid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildRecipe"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取配方冻结元数据。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
+      },
+      "delete": {
+        "operationId": "delete_build_center_recipes_rid",
+        "summary": "管理员：归档自定义配方，保留历史和输入，内置项不可更改",
+        "parameters": [
+          {
+            "name": "rid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "revision",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildRecipe"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "归档自定义配方，保留历史和输入，内置项不可更改。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
+      }
+    },
+    "/build-center/recipes/{rid}/build": {
+      "post": {
+        "operationId": "post_build_center_recipes_rid_build",
+        "summary": "管理员：在现有队列构建已冻结配方，不修改默认助手",
+        "parameters": [
+          {
+            "name": "rid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageBuild"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "在现有队列构建已冻结配方，不修改默认助手。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "recipeRevision": {
+                    "type": "integer"
+                  },
+                  "codexVersion": {
+                    "type": "string"
+                  },
+                  "reference": {
+                    "type": "string"
+                  },
+                  "noCache": {
+                    "type": "boolean"
+                  },
+                  "requestId": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{24}$",
+                    "description": "同一逻辑操作重试保持不变；更改参数需新值。"
+                  }
+                },
+                "required": [
+                  "recipeRevision",
+                  "requestId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/build-center/builds": {
+      "get": {
+        "operationId": "get_build_center_builds",
+        "summary": "管理员：读取setup、应用和平台全局构建",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ImageBuild"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取setup、应用和平台全局构建。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
+      }
+    },
+    "/build-center/builds/{bid}": {
+      "get": {
+        "operationId": "get_build_center_builds_bid",
+        "summary": "管理员：读取全局构建状态",
+        "parameters": [
+          {
+            "name": "bid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageBuild"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取全局构建状态。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
+      }
+    },
+    "/build-center/builds/{bid}/rebuild": {
+      "post": {
+        "operationId": "post_build_center_builds_bid_rebuild",
+        "summary": "管理员：复制经过摘要校验的历史冻结输入，创建新构建",
+        "parameters": [
+          {
+            "name": "bid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageBuild"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "复制经过摘要校验的历史冻结输入，创建新构建。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "requestId": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{24}$",
+                    "description": "同一逻辑操作重试保持不变；更改参数需新值。"
+                  },
+                  "noCache": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "requestId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/build-center/builds/{bid}/cancel": {
+      "post": {
+        "operationId": "post_build_center_builds_bid_cancel",
+        "summary": "管理员：取消排队或运行中的构建",
+        "parameters": [
+          {
+            "name": "bid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageBuild"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "取消排队或运行中的构建。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
+      }
+    },
+    "/build-center/builds/{bid}/log": {
+      "get": {
+        "operationId": "get_build_center_builds_bid_log",
+        "summary": "管理员：读取有界脱敏日志，游标针对脱敏后流",
+        "parameters": [
+          {
+            "name": "bid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4194304
+            },
+            "description": "字节偏移；每次最多返回 64 KiB，next 为后续偏移。"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "next": {
+                      "type": "integer"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "truncated": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "text",
+                    "next",
+                    "status",
+                    "truncated"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取有界脱敏日志，游标针对脱敏后流。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
+      }
+    },
+    "/build-center/images": {
+      "get": {
+        "operationId": "get_build_center_images",
+        "summary": "管理员：按固定Image ID聚合RunDesk登记或构建的镜像",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BuildCenterImage"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "按固定Image ID聚合RunDesk登记或构建的镜像。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
+      }
+    },
+    "/build-center/images/{key}": {
+      "get": {
+        "operationId": "get_build_center_images_key",
+        "summary": "管理员：读取镜像来源和引用",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildCenterImage"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取镜像来源和引用。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
+      },
+      "delete": {
+        "operationId": "delete_build_center_images_key",
+        "summary": "管理员：按不可变ID非强制删除实际Docker镜像，保护实例、环境、活动任务及外部容器引用；保留历史、项目和HOME",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "imageId": {
+                      "type": "string"
+                    },
+                    "deleted": {
+                      "type": "boolean"
+                    },
+                    "registrationCount": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "imageId",
+                    "deleted",
+                    "registrationCount"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "按不可变ID非强制删除实际Docker镜像，保护实例、环境、活动任务及外部容器引用；保留历史、项目和HOME。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "imageId": {
+                    "type": "string"
+                  },
+                  "requestId": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{24}$",
+                    "description": "同一逻辑操作重试保持不变；更改参数需新值。"
+                  }
+                },
+                "required": [
+                  "imageId",
+                  "requestId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/build-center/images/{key}/check": {
+      "post": {
+        "operationId": "post_build_center_images_key_check",
+        "summary": "管理员：核对实际固定镜像，失败标unavailable，不推断已删除",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildCenterImage"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "核对实际固定镜像，失败标unavailable，不推断已删除。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
+      }
+    },
+    "/build-center/images/{key}/launch": {
+      "post": {
+        "operationId": "post_build_center_images_key_launch",
+        "summary": "管理员：创建或显式复用独立空闲实例，沿用环境生命周期启动，不运行模型",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "instance": {
+                      "$ref": "#/components/schemas/Instance"
+                    },
+                    "workspace": {
+                      "$ref": "#/components/schemas/Workspace"
+                    },
+                    "environment": {
+                      "$ref": "#/components/schemas/Environment"
+                    }
+                  },
+                  "required": [
+                    "instance",
+                    "workspace",
+                    "environment"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "创建或显式复用独立空闲实例，沿用环境生命周期启动，不运行模型。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "instanceId": {
+                    "type": "string"
+                  },
+                  "workspaceId": {
+                    "type": "string"
+                  },
+                  "requestId": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{24}$",
+                    "description": "同一逻辑操作重试保持不变；更改参数需新值。"
+                  }
+                },
+                "required": [
+                  "name",
+                  "requestId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/build-center/images/{key}/tests": {
+      "post": {
+        "operationId": "post_build_center_images_key_tests",
+        "summary": "管理员：队列执行离线检查或冻结smoke，不调用模型或外部服务",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "已接收，执行终态需查询任务",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageBuild"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "队列执行离线检查或冻结smoke，不调用模型或外部服务。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "offline",
+                      "smoke"
+                    ]
+                  },
+                  "requestId": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{24}$",
+                    "description": "同一逻辑操作重试保持不变；更改参数需新值。"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "requestId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/build-center/tests/{id}": {
+      "get": {
+        "operationId": "get_build_center_tests_id",
+        "summary": "管理员：读取镜像检查任务",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageBuild"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取镜像检查任务。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
+      }
+    },
+    "/build-center/tests/{id}/log": {
+      "get": {
+        "operationId": "get_build_center_tests_id_log",
+        "summary": "管理员：读取有界脱敏日志，游标针对脱敏后流",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "next": {
+                      "type": "integer"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "truncated": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "text",
+                    "next",
+                    "status",
+                    "truncated"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取有界脱敏日志，游标针对脱敏后流。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
       }
     },
     "/instances/{iid}/builds": {
@@ -14471,6 +15850,195 @@
         "x-administrator-only": true
       }
     },
+    "/instances/{iid}/plugins": {
+      "get": {
+        "operationId": "get_instances_iid_plugins",
+        "summary": "管理员：用稳定config/skills/MCP接口识别配置和组件来源，安装清单未知",
+        "parameters": [
+          {
+            "name": "iid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "workspaceId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "省略只返回支持能力，不启动进程"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativePluginOverview"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "用稳定config/skills/MCP接口识别配置和组件来源，安装清单未知。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
+      }
+    },
+    "/plugins/inspect": {
+      "post": {
+        "operationId": "post_plugins_inspect",
+        "summary": "管理员：只读检查portable或Codex兼容插件ZIP，不安装或执行",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginPackageInspection"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "只读检查portable或Codex兼容插件ZIP，不安装或执行。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "最多16MiB的原生插件ZIP"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/instances/{iid}/plugins/": {
+      "post": {
+        "operationId": "post_instances_iid_plugins",
+        "summary": "/instances/{iid}/plugins/",
+        "parameters": [
+          {
+            "name": "iid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativeObject"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true
+      }
+    },
     "/processes": {
       "get": {
         "operationId": "get_processes",
@@ -20502,6 +22070,86 @@
           }
         }
       }
+    },
+    "/instances/{iid}/plugins/install": {
+      "post": {
+        "operationId": "post_instances_iid_plugins_install",
+        "parameters": [
+          {
+            "name": "iid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-administrator-only": true,
+        "summary": "管理员：原生插件生命周期尚无稳定驱动，明确拒绝且不变更",
+        "description": "原生插件生命周期尚无稳定驱动，明确拒绝且不变更。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。",
+        "responses": {
+          "501": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/instances/{iid}/plugins/uninstall": {
+      "post": {
+        "operationId": "post_instances_iid_plugins_uninstall",
+        "parameters": [
+          {
+            "name": "iid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-administrator-only": true,
+        "summary": "管理员：原生插件生命周期尚无稳定驱动，明确拒绝且不变更",
+        "description": "原生插件生命周期尚无稳定驱动，明确拒绝且不变更。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。",
+        "responses": {
+          "501": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -20514,6 +22162,11 @@
         "type": "apiKey",
         "in": "cookie",
         "name": "rundesk"
+      },
+      "BuildTaskCapability": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "仅构建助手MCP接受的短期任务能力，不是管理员或应用令牌。"
       }
     },
     "schemas": {
@@ -22314,7 +23967,8 @@
             "type": "string",
             "enum": [
               "available",
-              "unavailable"
+              "unavailable",
+              "deleted"
             ]
           }
         },
@@ -26180,6 +27834,33 @@
           },
           "logTruncated": {
             "type": "boolean"
+          },
+          "recipeId": {
+            "type": "string"
+          },
+          "recipeSha": {
+            "type": "string"
+          },
+          "ownerRunId": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "requestSha": {
+            "type": "string"
+          },
+          "rebuildOf": {
+            "type": "string"
+          },
+          "testKind": {
+            "type": "string"
+          },
+          "recipeRevision": {
+            "type": "integer"
+          },
+          "recipeSmoke": {
+            "$ref": "#/components/schemas/RecipeSmokeSpec"
           }
         },
         "required": [
@@ -27897,6 +29578,676 @@
           "instanceId",
           "workspaceId",
           "skills"
+        ],
+        "additionalProperties": false
+      },
+      "RecipePluginRequirement": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "marketplace": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "RecipeSmokeSpec": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 600
+          },
+          "expectedFiles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "容器内规范绝对路径"
+            }
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "BuildRecipeManifest": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "const": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "dockerfile": {
+            "type": "string"
+          },
+          "plugins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipePluginRequirement"
+            }
+          },
+          "smoke": {
+            "$ref": "#/components/schemas/RecipeSmokeSpec"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "name",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "BuildRecipe": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "const": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "dockerfile": {
+            "type": "string"
+          },
+          "plugins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipePluginRequirement"
+            }
+          },
+          "smoke": {
+            "$ref": "#/components/schemas/RecipeSmokeSpec"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "profileId": {
+            "type": "string"
+          },
+          "contextSha256": {
+            "type": "string"
+          },
+          "recipeSha": {
+            "type": "string"
+          },
+          "created": {
+            "type": "string"
+          },
+          "updated": {
+            "type": "string"
+          },
+          "ownerRunId": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "archived": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "revision",
+          "name",
+          "version",
+          "contextSha256",
+          "recipeSha",
+          "archived"
+        ],
+        "additionalProperties": false
+      },
+      "BuildCenterImage": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "imageId": {
+            "type": "string"
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "profileId": {
+                  "type": "string"
+                },
+                "recipeId": {
+                  "type": "string"
+                },
+                "recipeRevision": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "kind",
+                "id",
+                "name"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "registrations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "instanceId": {
+                  "type": "string"
+                },
+                "versionId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "instanceId",
+                "versionId"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "selectedBy": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "instanceId": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "instanceId",
+                "name"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "environments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Environment"
+            }
+          },
+          "availability": {
+            "type": "string",
+            "enum": [
+              "unverified",
+              "available",
+              "unavailable",
+              "deleted"
+            ]
+          },
+          "checkedAt": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "lastTest": {
+            "$ref": "#/components/schemas/ImageBuild"
+          }
+        },
+        "required": [
+          "key",
+          "imageId",
+          "references",
+          "sources",
+          "registrations",
+          "selectedBy",
+          "environments",
+          "availability"
+        ],
+        "additionalProperties": false
+      },
+      "BuildAssistantRun": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "parentWorkspaceId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "taskId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "created": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "revokedAt": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "skillBootstrap": {
+            "const": true
+          },
+          "nativePluginInstalled": {
+            "const": false
+          }
+        },
+        "required": [
+          "id",
+          "instanceId",
+          "workspaceId",
+          "sessionId",
+          "taskId",
+          "status",
+          "created",
+          "expiresAt",
+          "skillBootstrap",
+          "nativePluginInstalled"
+        ],
+        "additionalProperties": false
+      },
+      "NativePluginOrigin": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "native_plugin"
+          },
+          "pluginId": {
+            "type": "string"
+          },
+          "pluginDisplayName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "pluginId"
+        ],
+        "additionalProperties": false
+      },
+      "NativePluginStatus": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "configured": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "loaded": {
+            "type": "string",
+            "enum": [
+              "observed",
+              "unknown"
+            ]
+          },
+          "inventoryState": {
+            "const": "unknown"
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "origin": {
+                  "$ref": "#/components/schemas/NativePluginOrigin"
+                }
+              },
+              "required": [
+                "name",
+                "path",
+                "enabled",
+                "origin"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "mcpServers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "runtimeStatus": {
+                  "type": "string"
+                },
+                "origin": {
+                  "$ref": "#/components/schemas/NativePluginOrigin"
+                }
+              },
+              "required": [
+                "name",
+                "origin"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "configured",
+          "enabled",
+          "loaded",
+          "inventoryState",
+          "skills",
+          "mcpServers"
+        ],
+        "additionalProperties": false
+      },
+      "NativePluginSupport": {
+        "type": "object",
+        "properties": {
+          "inspection": {
+            "type": "boolean"
+          },
+          "configuration": {
+            "type": "boolean"
+          },
+          "effectiveComponents": {
+            "type": "boolean"
+          },
+          "nativeInventory": {
+            "const": false
+          },
+          "nativeMutation": {
+            "const": false
+          },
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "inspection",
+          "configuration",
+          "effectiveComponents",
+          "nativeInventory",
+          "nativeMutation",
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "NativePluginWarning": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "additionalProperties": false
+      },
+      "NativePluginOverview": {
+        "type": "object",
+        "properties": {
+          "instanceId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "backend": {
+            "type": "string"
+          },
+          "runtime": {
+            "type": "string"
+          },
+          "readOnly": {
+            "const": true
+          },
+          "support": {
+            "$ref": "#/components/schemas/NativePluginSupport"
+          },
+          "plugins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NativePluginStatus"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NativePluginWarning"
+            }
+          }
+        },
+        "required": [
+          "instanceId",
+          "backend",
+          "runtime",
+          "readOnly",
+          "support",
+          "plugins",
+          "warnings"
+        ],
+        "additionalProperties": false
+      },
+      "PluginPackageInspection": {
+        "type": "object",
+        "properties": {
+          "readOnly": {
+            "const": true
+          },
+          "installSupported": {
+            "const": false
+          },
+          "format": {
+            "type": "string"
+          },
+          "manifestPath": {
+            "type": "string"
+          },
+          "manifest": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "declared": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "kind",
+                "name",
+                "declared"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "requirement": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "compatibility": {
+            "type": "object",
+            "properties": {
+              "codex": {
+                "type": "string"
+              },
+              "kun": {
+                "const": "unsupported"
+              },
+              "stableNativeInstall": {
+                "const": false
+              },
+              "openaiExtensionSource": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "codex",
+              "kun",
+              "stableNativeInstall",
+              "openaiExtensionSource"
+            ],
+            "additionalProperties": false
+          },
+          "unknownFields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NativePluginWarning"
+            }
+          }
+        },
+        "required": [
+          "readOnly",
+          "installSupported",
+          "format",
+          "manifestPath",
+          "manifest",
+          "components",
+          "dependencies",
+          "compatibility",
+          "unknownFields",
+          "warnings"
         ],
         "additionalProperties": false
       }

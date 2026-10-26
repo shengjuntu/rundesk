@@ -1,0 +1,43 @@
+{
+  "passed": true,
+  "testedRelease": "RunDesk 0.52.0",
+  "codexVersion": "0.163.0",
+  "serverUserAgent": "rundesk_native_mcp_fixture/0.163.0 (Ubuntu 24.4.0; x86_64) unknown (rundesk_native_mcp_fixture; 1)",
+  "mcpMethods": [
+    "initialize",
+    "notifications/initialized",
+    "tools/list",
+    "resources/list",
+    "resources/templates/list"
+  ],
+  "getCount": 0,
+  "runtimeStatuses": [
+    "connected"
+  ],
+  "toolNames": [
+    [
+      "build_recipes_list"
+    ]
+  ],
+  "modelTurns": 0,
+  "modelProviderRequests": 0,
+  "pluginRPCs": 0,
+  "authentication": "synthetic bearer verified",
+  "temporaryHome": true,
+  "statusRpcThreadScoped": true,
+  "configKeys": [
+    "url",
+    "http_headers",
+    "enabled",
+    "required",
+    "startup_timeout_sec",
+    "tool_timeout_sec"
+  ],
+  "threadConfigKey": "mcp_servers.rundesk_build_center",
+  "threadEnvironments": [],
+  "transport": "POST-only JSON responses; notifications return HTTP 202; unsupported resources return JSON-RPC -32601",
+  "optionalResourceDiscovery": "resources/list and resources/templates/list were attempted; method-not-found did not block tool discovery",
+  "versionScope": "Observed on Codex App Server 0.163.0 only; other versions are unverified.",
+  "limitation": "Local synthetic MCP startup/discovery only. No actual RunDesk capability grant, model turn, Docker build, plugin installation, or UI end-to-end run.",
+  "reproduce": "python3 scripts/codex-build-mcp-smoke.py --codex /opt/codex/versions/0.163.0/bin/codex"
+}

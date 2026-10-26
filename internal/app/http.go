@@ -67,6 +67,10 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 	s.environmentRoutes(mux)
 	s.imageRoutes(mux)
 	s.buildRoutes(mux)
+	s.buildCenterRecipeRoutes(mux)
+	s.buildCenterImageRoutes(mux)
+	s.buildAssistantRoutes(mux)
+	s.nativePluginRoutes(mux)
 	s.libraryRoutes(mux)
 	s.collaborationRoutes(mux)
 	s.userRoutes(mux)
@@ -82,7 +86,7 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 		writeJSON(w, 200, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("GET /api/meta", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, map[string]any{"name": "RunDesk", "version": Version, "apiVersions": []string{"v1"}, "demo": m.Demo, "protocol": "Codex App Server / Kun JSONL", "capabilities": []string{"kun", "kun-devtools", "unified-debug-workbench", "llm-http-observation", "debug-service", "debug-mcp-readonly", "instances", "sessions", "trace", "events", "approvals", "skills", "mcp", "notes", "files", "api-v1", "idempotency", "configuration-summary", "application-metadata", "application-connect", "application-runtime", "application-runtime-presets", "application-runtime-diagnostics", "mcp-server-approval-policy", "reply-feedback", "applications", "skill-bundles", "task-recovery", "native-retry-status", "task-queue", "schedules", "application-credentials", "docker-environments", "image-catalog", "setup-runtime-images", "member-project-access", "personal-file-library", "collaboration", "a2a-0.3-jsonrpc", "gitea-blackboard"}})
+		writeJSON(w, 200, map[string]any{"name": "RunDesk", "version": Version, "apiVersions": []string{"v1"}, "demo": m.Demo, "protocol": "Codex App Server / Kun JSONL", "capabilities": []string{"kun", "kun-devtools", "unified-debug-workbench", "llm-http-observation", "debug-service", "debug-mcp-readonly", "instances", "sessions", "trace", "events", "approvals", "skills", "mcp", "notes", "files", "api-v1", "idempotency", "configuration-summary", "application-metadata", "application-connect", "application-runtime", "application-runtime-presets", "application-runtime-diagnostics", "mcp-server-approval-policy", "reply-feedback", "applications", "skill-bundles", "task-recovery", "native-retry-status", "task-queue", "schedules", "application-credentials", "docker-environments", "image-catalog", "setup-runtime-images", "build-center", "dynamic-image-recipes", "image-lifecycle", "native-plugin-inspection", "build-assistant", "member-project-access", "personal-file-library", "collaboration", "a2a-0.3-jsonrpc", "gitea-blackboard"}})
 	})
 	mux.HandleFunc("GET /api/workspaces", func(w http.ResponseWriter, r *http.Request) {
 		if k := principal(r); k != nil {
@@ -358,7 +362,10 @@ func (s *Server) guard(next http.Handler) http.Handler {
 			writeErr(w, 403, errors.New("跨站请求被拒绝"))
 			return
 		}
-		if strings.HasPrefix(r.URL.Path, "/api/") {
+		// This one MCP endpoint authenticates a short-lived task capability itself.
+		// Keep Host, Origin and cross-site checks above, and never widen this to a prefix.
+		buildCapability := r.Method == "POST" && r.URL.Path == "/api/build-center/mcp"
+		if strings.HasPrefix(r.URL.Path, "/api/") && !buildCapability {
 			var err error
 			r, err = s.authorize(r)
 			if err != nil {

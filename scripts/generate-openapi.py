@@ -869,6 +869,68 @@ op['parameters'].append({'name':'presetId','in':'query','schema':st(maxLength=12
 op['responses']['200']={'description':'成功','content':{'application/json':{'schema':ref('ApplicationRuntimeSkills')}}}
 op['responses']['default']={'description':'归属、权限或环境未准备错误','content':{'application/json':{'schema':ref('Error')}}}
 
-spec={'openapi':'3.1.0','info':{'title':'RunDesk Control API (RDCA)','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter，当前未实现或声明 UHP 兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。当前应用接入、错误、幂等及示例见 docs/API-V1.md。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'}},'schemas':schemas}}
+
+# Flat platform build resources and native Codex plugin observation.
+request24=st(pattern=r'^[a-f0-9]{24}$',description='同一逻辑操作重试保持不变；更改参数需新值。')
+schemas['RecipePluginRequirement']=obj({'id':st(),'marketplace':st(),'version':st()},['id'])
+schemas['RecipeSmokeSpec']=obj({'command':arr(st()),'timeoutSeconds':{'type':'integer','minimum':1,'maximum':600},'expectedFiles':arr(st(description='容器内规范绝对路径'))})
+schemas['BuildRecipeManifest']=obj({'schemaVersion':{'const':1},'name':st(minLength=1,maxLength=120),'version':st(maxLength=64),'description':st(maxLength=4000),'dockerfile':st(),'plugins':arr(ref('RecipePluginRequirement')),'smoke':ref('RecipeSmokeSpec')},['schemaVersion','name','version'])
+schemas['BuildRecipe']=obj(schemas['BuildRecipeManifest']['properties']|{k:st() for k in ['id','kind','profileId','contextSha256','recipeSha','created','updated','ownerRunId']}|{'revision':integer,'archived':bool_},['id','kind','revision','name','version','contextSha256','recipeSha','archived'])
+schemas['ImageBuild']['properties'].update({k:st() for k in ['recipeId','recipeSha','ownerRunId','requestId','requestSha','rebuildOf','testKind']})
+schemas['ImageBuild']['properties'].update({'recipeRevision':integer,'recipeSmoke':ref('RecipeSmokeSpec')})
+schemas['ImageVersion']['properties']['availability']=st(enum=['available','unavailable','deleted'])
+schemas['BuildCenterImage']=obj({'key':st(),'imageId':st(),'references':arr(st()),'sources':arr(obj({'kind':st(),'id':st(),'name':st(),'status':st(),'profileId':st(),'recipeId':st(),'recipeRevision':integer},['kind','id','name'])),'registrations':arr(obj({'instanceId':st(),'versionId':st()},['instanceId','versionId'])),'selectedBy':arr(obj({'instanceId':st(),'name':st()},['instanceId','name'])),'environments':arr(ref('Environment')),'availability':st(enum=['unverified','available','unavailable','deleted']),'checkedAt':st(),'error':st(),'lastTest':ref('ImageBuild')},['key','imageId','references','sources','registrations','selectedBy','environments','availability'])
+schemas['BuildAssistantRun']=obj({k:st() for k in ['id','instanceId','workspaceId','parentWorkspaceId','sessionId','taskId','status','created','expiresAt','revokedAt','error']}|{'skillBootstrap':{'const':True},'nativePluginInstalled':{'const':False}},['id','instanceId','workspaceId','sessionId','taskId','status','created','expiresAt','skillBootstrap','nativePluginInstalled'])
+schemas['NativePluginOrigin']=obj({'type':{'const':'native_plugin'},'pluginId':st(),'pluginDisplayName':st()},['type','pluginId'])
+schemas['NativePluginStatus']=obj({'id':st(),'displayName':st(),'configured':bool_,'enabled':{'type':['boolean','null']},'loaded':st(enum=['observed','unknown']),'inventoryState':{'const':'unknown'},'skills':arr(obj({'name':st(),'path':st(),'enabled':{'type':['boolean','null']},'origin':ref('NativePluginOrigin')},['name','path','enabled','origin'])),'mcpServers':arr(obj({'name':st(),'runtimeStatus':st(),'origin':ref('NativePluginOrigin')},['name','origin']))},['id','configured','enabled','loaded','inventoryState','skills','mcpServers'])
+schemas['NativePluginSupport']=obj({'inspection':bool_,'configuration':bool_,'effectiveComponents':bool_,'nativeInventory':{'const':False},'nativeMutation':{'const':False},'code':st()},['inspection','configuration','effectiveComponents','nativeInventory','nativeMutation','code'])
+schemas['NativePluginWarning']=obj({'code':st(),'message':st()},['code','message'])
+schemas['NativePluginOverview']=obj({'instanceId':st(),'workspaceId':st(),'backend':st(),'runtime':st(),'readOnly':{'const':True},'support':ref('NativePluginSupport'),'plugins':arr(ref('NativePluginStatus')),'warnings':arr(ref('NativePluginWarning'))},['instanceId','backend','runtime','readOnly','support','plugins','warnings'])
+schemas['PluginPackageInspection']=obj({'readOnly':{'const':True},'installSupported':{'const':False},'format':st(),'manifestPath':st(),'manifest':obj({'name':st(),'version':st(),'description':st()},['name']),'components':arr(obj({'kind':st(),'name':st(),'path':st(),'declared':bool_},['kind','name','declared'])),'dependencies':arr(obj({'name':st(),'requirement':st()},['name'])),'compatibility':obj({'codex':st(),'kun':{'const':'unsupported'},'stableNativeInstall':{'const':False},'openaiExtensionSource':st()},['codex','kun','stableNativeInstall','openaiExtensionSource']),'unknownFields':arr(st()),'warnings':arr(ref('NativePluginWarning'))},['readOnly','installSupported','format','manifestPath','manifest','components','dependencies','compatibility','unknownFields','warnings'])
+
+def build_op(path,method,response,body=None,status='200',description=''):
+ op=paths.setdefault(path,{}).setdefault(method,{'operationId':method+'_'+re.sub(r'[^A-Za-z0-9]+','_',path).strip('_'),'parameters':[{'name':name,'in':'path','required':True,'schema':st()} for name in re.findall(r'\{([^}]+)\}',path)]})
+ op['x-administrator-only']=True
+ op.pop('x-application-scopes',None)
+ op['summary']='管理员：'+description
+ op['description']=description+'。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。'
+ op['responses']={status:{'description':'已接收，执行终态需查询任务' if status=='202' else '成功','content':{'application/json':{'schema':response}}},'default':{'description':'结构化权限、归属、状态或执行错误','content':{'application/json':{'schema':ref('Error')}}}}
+ if body is not None:op['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
+ return op
+
+build_op('/build-center/recipes','get',obj({'items':arr(ref('BuildRecipe'))},['items']),description='读取内置与自定义配方')
+op=build_op('/build-center/recipes','post',ref('BuildRecipe'),description='导入并冻结自定义配方，拒绝危险路径和凭据文件')
+op['requestBody']={'required':True,'content':{'multipart/form-data':{'schema':obj({'manifest':st(description='BuildRecipeManifest的JSON字符串'),'context':st(format='binary',description='Docker context ZIP，最多32MiB'),'requestId':request24},['manifest','context','requestId'])}}}
+build_op('/build-center/recipes/{rid}','get',ref('BuildRecipe'),description='读取配方冻结元数据')
+op=build_op('/build-center/recipes/{rid}','delete',ref('BuildRecipe'),description='归档自定义配方，保留历史和输入，内置项不可更改')
+op['parameters'].append({'name':'revision','in':'query','required':True,'schema':integer})
+build_op('/build-center/recipes/{rid}/build','post',ref('ImageBuild'),obj({'recipeRevision':integer,'codexVersion':st(),'reference':st(),'noCache':bool_,'requestId':request24},['recipeRevision','requestId']),description='在现有队列构建已冻结配方，不修改默认助手')
+build_op('/build-center/builds','get',obj({'items':arr(ref('ImageBuild'))},['items']),description='读取setup、应用和平台全局构建')
+build_op('/build-center/builds/{bid}','get',ref('ImageBuild'),description='读取全局构建状态')
+build_op('/build-center/builds/{bid}/rebuild','post',ref('ImageBuild'),obj({'requestId':request24,'noCache':bool_},['requestId']),description='复制经过摘要校验的历史冻结输入，创建新构建')
+build_op('/build-center/builds/{bid}/cancel','post',ref('ImageBuild'),description='取消排队或运行中的构建')
+for path in ['/build-center/builds/{bid}/log','/build-center/tests/{id}/log']:
+ op=build_op(path,'get',obj({'text':st(),'next':integer,'status':st(),'truncated':bool_},['text','next','status','truncated']),description='读取有界脱敏日志，游标针对脱敏后流')
+ op['parameters'].append({'name':'after','in':'query','schema':{'type':'integer','minimum':0}})
+build_op('/build-center/images','get',obj({'items':arr(ref('BuildCenterImage'))},['items']),description='按固定Image ID聚合RunDesk登记或构建的镜像')
+build_op('/build-center/images/{key}','get',ref('BuildCenterImage'),description='读取镜像来源和引用')
+build_op('/build-center/images/{key}/check','post',ref('BuildCenterImage'),description='核对实际固定镜像，失败标unavailable，不推断已删除')
+build_op('/build-center/images/{key}','delete',obj({'imageId':st(),'deleted':bool_,'registrationCount':integer},['imageId','deleted','registrationCount']),obj({'imageId':st(),'requestId':request24},['imageId','requestId']),description='按不可变ID非强制删除实际Docker镜像，保护实例、环境、活动任务及外部容器引用；保留历史、项目和HOME')
+build_op('/build-center/images/{key}/launch','post',obj({'instance':ref('Instance'),'workspace':ref('Workspace'),'environment':ref('Environment')},['instance','workspace','environment']),obj({'name':st(),'instanceId':st(),'workspaceId':st(),'requestId':request24},['name','requestId']),description='创建或显式复用独立空闲实例，沿用环境生命周期启动，不运行模型')
+build_op('/build-center/images/{key}/tests','post',ref('ImageBuild'),obj({'kind':st(enum=['offline','smoke']),'requestId':request24},['kind','requestId']),status='202',description='队列执行离线检查或冻结smoke，不调用模型或外部服务')
+build_op('/build-center/tests/{id}','get',ref('ImageBuild'),description='读取镜像检查任务')
+build_op('/build-center/assistant-runs','post',ref('BuildAssistantRun'),obj({'prompt':st(minLength=1,maxLength=65536),'instanceId':st(),'workspaceId':st(description='只作为父项目上下文，任务使用新专用工作区'),'requestId':request24},['prompt','requestId']),description='发起现有Codex队列任务，bootstrap Skill并注入限时构建MCP，不安装原生插件')
+build_op('/build-center/assistant-runs/{id}','get',ref('BuildAssistantRun'),description='读取构建助手任务与会话绑定')
+build_op('/build-center/assistant-runs/{id}/revoke','post',ref('BuildAssistantRun'),description='撤销任务构建能力；已启动Docker构建由原取消接口处理')
+op=build_op('/build-center/mcp','post',obj(extra=True),obj(extra=True),description='限时、精确任务绑定的构建MCP JSON-RPC端点')
+op.update({'x-administrator-only':False,'x-build-task-capability-only':True,'security':[{'BuildTaskCapability':[]}],'description':'只接受当前构建任务的短期Bearer能力；验证task/session/instance/workspace/path和到期。不能用管理员或应用凭据替代。仅开放自身配方导入、构建、日志、取消、产物和离线检查；不授予镜像删除、实例管理、原生插件安装、通用管理或跨任务访问。仅此精确端点自鉴权，Host/Origin守卫仍生效。MCP通知可返回202。'})
+op=build_op('/instances/{iid}/plugins','get',ref('NativePluginOverview'),description='用稳定config/skills/MCP接口识别配置和组件来源，安装清单未知')
+op['parameters'].append({'name':'workspaceId','in':'query','schema':st(),'description':'省略只返回支持能力，不启动进程'})
+op=build_op('/plugins/inspect','post',ref('PluginPackageInspection'),description='只读检查portable或Codex兼容插件ZIP，不安装或执行')
+op['requestBody']={'required':True,'content':{'multipart/form-data':{'schema':obj({'file':st(format='binary',description='最多16MiB的原生插件ZIP')},['file'])}}}
+for action in ['install','uninstall']:
+ op=build_op('/instances/{iid}/plugins/'+action,'post',ref('Error'),status='501',description='原生插件生命周期尚无稳定驱动，明确拒绝且不变更')
+
+spec={'openapi':'3.1.0','info':{'title':'RunDesk Control API (RDCA)','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter，当前未实现或声明 UHP 兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。当前应用接入、错误、幂等及示例见 docs/API-V1.md。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'},'BuildTaskCapability':{'type':'http','scheme':'bearer','description':'仅构建助手MCP接受的短期任务能力，不是管理员或应用令牌。'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')

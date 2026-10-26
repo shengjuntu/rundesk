@@ -1055,6 +1055,10 @@ func (m *Manager) runCodex(s Session, w Workspace, h *handle, in Input, recovery
 			m.finish(s.ID, "failed", e.Error())
 		}
 	}
+	if e := m.checkBuildAssistantExecution(s); e != nil {
+		fail(e)
+		return
+	}
 	i, e := m.Instance(s.InstanceID)
 	if e != nil {
 		fail(e)
@@ -1098,6 +1102,10 @@ func (m *Manager) runCodex(s Session, w Workspace, h *handle, in Input, recovery
 	var raw json.RawMessage
 	if !ready {
 		params := permissions.threadParams(w.Path)
+		if e := m.configureBuildAssistant(s, w, params); e != nil {
+			fail(e)
+			return
+		}
 		captureConfigured := m.configureHTTPObservation(ctx, c, s, w, params)
 		if s.TraceOrigin != nil {
 			if e := m.configureTraceAnalysis(s, params); e != nil {

@@ -1,3 +1,12 @@
+# 0.52.0
+
+- 新增跨应用常驻构建中心，列出六套内置配方、自定义配方、全局构建、镜像与检查结果；任务自由组合资源，不新增工作流层级。
+- 导入动态 Docker context 与 manifest，冻结摘要和原始 ZIP；复用原构建队列，支持日志、取消和按历史输入重建。
+- 增加按固定 Image ID 的检查与非强制实际删除、引用保护、专用 Codex Docker 实例启动、离线/声明 smoke 测试；保留项目、HOME 和历史。
+- 提供原生 Codex build-tools 插件与 add-app-docker-image Skill、使用现有任务的构建助手及限时任务范围 MCP。
+- 支持原生插件包只读检查、配置和有效 Skills/MCP 来源展示；不调用尚未稳定的原生安装/卸载接口，不宣称 Kun 兼容或插件已安装。
+- 保留旧 video-build、内置配方字节、应用运行预设、独立 Kun 及默认关闭的 HTTP 观测。
+
 # 0.51.0
 
 - 保留自研 video-build，新增 HyperFrames、video-use、OpenMontage 三套独立上游配置和 Codex Docker 构建入口。

@@ -1,0 +1,6 @@
+{
+  "name": "rundesk-build-tools",
+  "version": "1.0.0",
+  "description": "Create and test RunDesk application Docker images with a task-scoped build capability.",
+  "skills": "./skills/"
+}

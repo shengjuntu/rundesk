@@ -1,0 +1,6 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "rundesk-build-tools",
+  "version": "1.0.0",
+  "description": "Create and test RunDesk application Docker images with a task-scoped build capability."
+}

@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="/environments.css" />
     <link rel="stylesheet" href="/images.css" />
     <link rel="stylesheet" href="/builds.css" />
+    <link rel="stylesheet" href="/build-center.css" />
 <link rel="stylesheet" href="/library.css" />
     <link rel="stylesheet" href="/users.css" />
     <link rel="stylesheet" href="/diagnostics.css" />
@@ -26,6 +27,7 @@
     <link rel="stylesheet" href="/kun.css"/>
     <script defer src="/mcp-tests.js"></script>
     <script defer src="/mcp-policy.js"></script>
+    <script defer src="/plugins.js"></script>
     <script defer src="/manage.js"></script>
     <script defer src="/reliability.js"></script>
     <script defer src="/configuration.js"></script>
@@ -33,6 +35,7 @@
     <script defer src="/environments.js"></script>
     <script defer src="/images.js"></script>
     <script defer src="/builds.js"></script>
+    <script defer src="/build-center.js"></script>
 <script defer src="/library.js"></script>
     <script defer src="/users.js"></script>
     <script defer src="/processes.js"></script><script defer src="/usage.js"></script><script defer src="/tasks.js"></script><script defer src="/schedules.js"></script><script defer src="/application-keys.js"></script>
@@ -75,6 +78,7 @@
           <button id="nav-assistant" title="对话" aria-label="对话" class="selected" aria-current="page"><span class="nav-symbol"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M21 11a8 8 0 0 1-8 8H5l-3 3V11a9 9 0 0 1 19 0Z"/></svg></span><span class="rail-label">对话</span></button>
           <button id="nav-tasks" title="任务" aria-label="任务"><span class="nav-symbol"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></svg></span><span class="rail-label">任务</span></button>
           <button id="nav-applications" title="应用" aria-label="应用"><span class="nav-symbol"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="rail-label">应用</span><span id="application-count" class="nav-count"></span></button>
+          <button id="nav-build-center" title="构建中心" aria-label="构建中心"><span class="nav-symbol" aria-hidden="true">▣</span><span class="rail-label">构建中心</span></button>
           <a href="/collaboration.html" title="协作" aria-label="协作" class="nav-item"><span class="nav-symbol"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><path d="m10 8-4 8m8-8 4 8M8 19h8"/></svg></span><span class="rail-label">协作</span></a>
           <button id="nav-library" title="我的文件" aria-label="我的文件" type="button" class="nav-item"><span class="nav-symbol"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 7h7l2-3h9v16H3Z"/><path d="M7 12h10M7 16h7"/></svg></span><span class="rail-label">我的文件</span></button>
 <button id="nav-users" title="用户与授权" aria-label="用户与授权"><span class="nav-symbol"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 6"/></svg></span><span class="rail-label">用户与授权</span></button>
@@ -142,6 +146,7 @@
         </div>
         <section id="tasks-page" class="tasks-page hidden" aria-label="任务队列"><div class="page-intro"><div><p class="eyebrow">BACKGROUND TASKS</p><h1>任务</h1><p id="queue-summary"></p></div><button id="new-task" class="primary">新建任务</button></div><div class="task-toolbar"><select id="task-filter" aria-label="任务状态"><option value="">所有状态</option><option value="queued">排队中</option><option value="running">运行中</option><option value="waiting">等待审批</option><option value="canceled">已取消</option><option value="interrupted">已停止</option><option value="completed">已完成</option><option value="failed">失败</option><option value="unconfirmed">待核对</option></select><button id="queue-toggle">暂停调度</button><button id="processes-open">运行进程</button><button id="usage-open">用量统计</button><button id="queue-settings">并发设置</button><button id="tasks-refresh">刷新</button></div><p id="tasks-error" class="tasks-error" role="status"></p><div id="task-list"></div><button id="tasks-more" class="hidden">加载更多</button><div id="schedule-list" class="schedule-list"></div></section>
         <section id="applications-page" class="applications-page hidden" aria-label="应用管理"></section>
+        <section id="build-center-page" class="applications-page hidden" aria-label="构建中心"></section>
         <section id="capability-page" class="capability-page hidden" aria-label="能力管理"></section>
         <div class="main-row">
           <section class="conversation">
@@ -326,6 +331,7 @@
         ><button data-settings-tab="kun">Agent 引擎</button
         ><button data-settings-tab="instances">模型与认证</button
         ><button class="selected" data-settings-tab="notes">项目记忆</button
+        ><button data-settings-tab="plugins">原生插件</button
         ><button data-settings-tab="skills">技能 Skills</button
         ><button data-settings-tab="mcp">工具 MCP</button
         ><button data-settings-tab="runtime">运行诊断</button>

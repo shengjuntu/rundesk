@@ -164,6 +164,7 @@ func (m *Manager) ImportMCP(wid, version string, b MCPBundle, overwrite bool, id
 	if current != version {
 		return nil, errors.New("配置已变更，请刷新后重试")
 	}
+	changes := map[string]any{}
 	for name, value := range b.Servers {
 		if !slug.MatchString(name) {
 			return nil, fmt.Errorf("无效 MCP 名称: %s", name)
@@ -177,7 +178,13 @@ func (m *Manager) ImportMCP(wid, version string, b MCPBundle, overwrite bool, id
 		if e != nil {
 			return nil, fmt.Errorf("%s: %w", name, e)
 		}
-		servers[name] = prepared
+		changes[name] = prepared
+	}
+	if e = m.checkNativePluginMCPWrite(wid, servers, changes, ids...); e != nil {
+		return nil, e
+	}
+	for name, value := range changes {
+		servers[name] = value
 	}
 	return m.writeMCP(wid, current, servers, ids...)
 }

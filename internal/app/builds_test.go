@@ -101,7 +101,9 @@ func TestBuildProcessHelper(t *testing.T) {
 		os.Exit(2)
 	}
 	if mode == "logs" {
-		fmt.Print(strings.Repeat("x", buildLogLimit+1000))
+		// Exercise the total log cap using ordinary lines; oversized individual
+		// lines are deliberately suppressed by credential redaction.
+		fmt.Print(strings.Repeat("x\n", buildLogLimit/2+1000))
 	}
 	if iid == "" {
 		os.Exit(3)

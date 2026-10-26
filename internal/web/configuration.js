@@ -16,7 +16,7 @@ function capabilityInventory(data) {
   for(const [kind,message] of Object.entries(data.errors||{})) result.append(el("p",{class:"error"},kind+"："+message));
   if(data.skills) {
     const card=el("section",{class:"card"},el("h3",{},rdText("当前可用 Skills")));
-    for(const skill of data.skills) card.append(el("div",{class:"capability-row"},el("strong",{},skill.name),el("span",{class:"badge"},scopeLabel(skill.sourceScope)),el("span",{class:"muted"},skill.enabled===false?rdText("已禁用"):rdText("已启用"))));
+    for(const skill of data.skills) card.append(el("div",{class:"capability-row"},el("strong",{},skill.name),el("span",{class:"badge"},skill.pluginId?rdText("原生插件：")+skill.pluginId:scopeLabel(skill.sourceScope)),el("span",{class:"muted"},skill.enabled===false?rdText("已禁用"):rdText("已启用"))));
     if(!data.skills.length) card.append(el("p",{class:"help"},rdText("这个助手或应用在当前项目没有发现 Skill。")));
     if(data.skillWarnings?.length) card.append(el("p",{class:"error"},rdText("部分 Skill 加载失败，请在 Skills 设置中查看详细错误。")));
     result.append(card);
@@ -27,7 +27,7 @@ function capabilityInventory(data) {
     for(const server of data.mcp.servers||[]) {
       const observed=names.get(server.name);
       const label=!server.enabled?rdText("已禁用"):observed?rdFormat("${0} 个已发现工具",Object.keys(observed.tools||{}).length):rdText("未发现工具状态");
-      card.append(el("div",{class:"capability-row"},el("strong",{},server.name),el("span",{class:"muted"},label)));
+      card.append(el("div",{class:"capability-row"},el("strong",{},server.name),el("span",{class:"muted"},label),RunDeskNativePlugins.originNode(server.origin||observed)));
     }
     if(!data.mcp.servers?.length)card.append(el("p",{class:"help"},rdText("这个助手或应用在当前项目没有配置 MCP 服务。")));
     if(status?.error)card.append(el("p",{class:"error"},status.error));
@@ -46,6 +46,7 @@ async function renderConfigurationOverview(target) {
   const tiles=el("div",{class:"configuration-grid"});
   for(const [label,description,tab] of [
     [rdText("模型与认证"),current.defaultModel||rdText("沿用 Codex 模型配置"),"instances"],
+    [rdText("原生插件"),rdText("原生包检查与组件归属（只读）"),"plugins"],
     ["Skills",rdText("完整技能目录与项目约定"),"skills"],
     [rdText("MCP 工具"),rdText("连接服务、配置凭据与查看状态"),"mcp"],
     [rdText("运行诊断"),rdText("权限、生效值与连接问题"),"runtime"],

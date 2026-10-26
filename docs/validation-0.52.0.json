@@ -1,0 +1,104 @@
+{
+  "version": "0.52.0",
+  "date": "2026-10-20",
+  "go": "1.25.12",
+  "kun": "0.17.0",
+  "workerProtocol": 16,
+  "fullSuite": {
+    "command": "RUNDESK_TEST_KUN=<independent-kun> RUNDESK_TEST_HOST=<fresh-host> go test -json ./... -count=1 -timeout=300s",
+    "passed": true,
+    "testsPassed": 516,
+    "topLevelTests": 361,
+    "testSkips": [],
+    "everyPackageTerminated": true,
+    "source": "tests-0.52.0.jsonl",
+    "summary": "tests-0.52.0-summary.json",
+    "scope": "Final frozen production source, including image-source archive preservation and assistant artifact pagination bounds."
+  },
+  "targetedRace": {
+    "passed": true,
+    "testsPassed": 58,
+    "topLevelTests": 42,
+    "source": "validation/current/0.52.0/build-plugin-race.jsonl",
+    "scope": "New build center, assistant, native plugin, log redaction and administrator/task-capability boundaries; Docker operations use fixtures."
+  },
+  "finalArchiveHookRace": {
+    "passed": true,
+    "testsPassed": 10,
+    "topLevelTests": 4,
+    "source": "validation/current/0.52.0/archive-and-legacy-build-race.jsonl",
+    "scope": "Final minimal image-source preservation after history removal, plus legacy upload/execution/log/cancellation/restart regressions."
+  },
+  "sdk": {
+    "passed": true,
+    "source": "validation/current/0.52.0/kun-sdk.jsonl"
+  },
+  "vet": {
+    "passed": true,
+    "source": "validation/current/0.52.0/go-vet.log"
+  },
+  "builds": {
+    "linuxAmd64": true,
+    "linuxVersion": "RunDesk 0.52.0",
+    "windowsAmd64CrossCompile": true,
+    "windowsRuntimeTested": false
+  },
+  "web": {
+    "javascriptSyntaxFiles": 47,
+    "passed": true,
+    "browser": "JSDOM, shipped JavaScript with API fixtures",
+    "buildCenter": "validation/current/0.52.0/build-center-ui.log",
+    "legacyPresets": "validation/current/0.52.0/runtime-presets-ui.log",
+    "checks": [
+      "six flat recipes",
+      "custom multipart import and response-loss idempotency",
+      "HTTP without SubtleCrypto",
+      "duplicate-click build prevention",
+      "frozen rebuild",
+      "real-image delete separate from history",
+      "offline/smoke failure state",
+      "partial launch identity retained across dialog reopen",
+      "explicit new launch",
+      "late responses and deep-link return",
+      "assistant real task/session references",
+      "read-only native package inspection and component origins"
+    ],
+    "realBrowserLayout": false
+  },
+  "nativeCodex": {
+    "passed": true,
+    "version": "0.163.0",
+    "source": "native-build-mcp-0.52.0.json",
+    "scope": "Real local App Server startup, thread config injection, synthetic Bearer, initialize/tools/list and connected runtime. No model turn or plugin RPC."
+  },
+  "preservation": {
+    "passed": true,
+    "source": "build-center-preservation-0.52.0.json",
+    "unchangedFileCount": 24
+  },
+  "skill": {
+    "creatorInit": true,
+    "quickValidate": true,
+    "nativePackageInspection": true,
+    "nativePluginInstalled": false
+  },
+  "contract": {
+    "openapiVersion": "3.1.0",
+    "api": "RDCA v1",
+    "paths": 215,
+    "operations": 254,
+    "docsCheck": true
+  },
+  "limits": [
+    "No real Docker Engine build, delete, container launch or Docker-to-host callback exercised.",
+    "No real model task, GPU generation or business-quality video test.",
+    "Native plugin inventory/install/uninstall remain unsupported or unknown through the stable adapter.",
+    "No claim of full host-wide race or production multi-tenant isolation."
+  ],
+  "initialFullSuite": {
+    "passed": true,
+    "testsPassed": 511,
+    "source": "validation/current/0.52.0/go-test-initial.jsonl",
+    "scope": "Passed before final bounded follow-up hardening; final frozen source was then rerun in full."
+  }
+}

@@ -1,6 +1,6 @@
 # 升级到当前版本
 
-当前版本 RunDesk 0.51.0，配套独立 Kun 0.17.0、worker 协议 16、fork schema 3；视频工具 profile 为 video-build 1.4.0。
+当前版本 RunDesk 0.52.0，配套独立 Kun 0.17.0、worker 协议 16、fork schema 3；视频工具 profile 为 video-build 1.4.0。
 
 1. 等待活动任务结束，停止原服务，备份数据目录、工作区、Codex HOME/配置、独立 Kun 执行日志及服务环境设置。
 2. 在 RunDesk 源码执行 `make build`，本包只构建宿主；Kun 在其独立源码目录执行 `go build -o bin/kun ./cmd/kun`。将 Kun 放在 RunDesk 可执行文件旁，或通过 `--kun /absolute/path/to/kun` 指定。RunDesk 使用轻量 SDK 快照构建，不再包含 `cmd/kun` 或引擎源码。
@@ -12,6 +12,14 @@
 重启不会重放已开始或结果未确认的任务；排队任务保留。先检查原回执、任务状态与副作用证据再决定后续操作。一个可靠本地文件系统的数据目录只运行一个 RunDesk；不要删除运行中的 server.lock 来并行启动服务。
 
 验证记录按实际版本与执行范围保存；0.49.4 的普通全量测试和局部 race 结果不是 0.49.5 全量 race 验收。当前能力与本版实际测试见 [STATUS](STATUS.md) 和 [VALIDATION](VALIDATION.md)。
+
+## 0.52.0：构建中心与原生插件准备
+
+保留原数据目录升级并刷新浏览器。构建中心读取原 setup 和应用构建记录，原有应用/实例、工作区、HOME、配方及制作入口不自动迁移。自定义配方保存在数据目录，无需重编译；删除构建记录不删除 Docker 镜像，删除镜像不删除项目或 HOME。旧历史若没有冻结 context.zip，重建会明确失败，应重新导入原输入。
+
+“让 Codex 添加”需要已经可用的 Codex 实例和模型认证，使用新专用工作区。Docker 助手需要配置容器可达的 `RUNDESK_BUILD_MCP_ORIGIN` 或 `--public-url`，不得把容器 localhost 当作宿主。构建权限限当前任务并到期失效；不传 Docker socket 或宿主管理员令牌。
+
+插件页和 ZIP 检查均只读。本版不调用尚未稳定的 plugin/list/read/install/uninstall，也不把展开 Skill 当作原生插件已安装。Skill bootstrap 会在回执明确标注。详见[构建中心](BUILD-CENTER.md)与[原生插件](NATIVE-PLUGINS.md)。
 
 ## 0.51.0：三个独立上游视频配置
 

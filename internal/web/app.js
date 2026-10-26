@@ -889,13 +889,13 @@ async function previewFile(file) {
 async function openSettings(tab = "overview") {
   window.RunDeskTraceUI?.close();
   state.settingsTab = tab;
-  if(["skills","mcp"].includes(tab))return showCapabilityPage(tab);
+  if(["plugins","skills","mcp"].includes(tab))return showCapabilityPage(tab);
   if(state.view==="capability")closeSettings();
   $("#settings").showModal();
   await renderSettings();
 }
 async function renderSettings() {
-  if(["skills","mcp"].includes(state.settingsTab)&&state.view!=="capability")return showCapabilityPage(state.settingsTab);
+  if(["plugins","skills","mcp"].includes(state.settingsTab)&&state.view!=="capability")return showCapabilityPage(state.settingsTab);
   const shared=instance()?.id==="default"&&!!state.taskAppID;
   $("#settings-title").textContent=(shared?rdText("通用助手（历史任务共享）"):contextTitle())+rdText(" · 设置");
   $("#settings-eyebrow").textContent=instance()?.id==="default"?"ASSISTANT SETTINGS":"APPLICATION SETTINGS";
@@ -914,6 +914,7 @@ async function renderSettings() {
     else if (tab === "instances") await renderAssistantSettings(target);
     else if (tab === "advanced") await renderInstances(target);
     else if (tab === "notes") renderNotes(target);
+    else if (tab === "plugins") await RunDeskNativePlugins.render(target);
     else if (tab === "skills") await renderSkills(target);
     else if (tab === "mcp") await renderMCP(target);
     else await renderRuntime(target);

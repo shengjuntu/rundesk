@@ -1,6 +1,6 @@
 # RunDesk Control API（RDCA）v1
 
-RunDesk 自身 API 的名称为 **RunDesk Control API（RDCA）**。当前契约随 RunDesk 0.51.0 发布。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
+RunDesk 自身 API 的名称为 **RunDesk Control API（RDCA）**。当前契约随 RunDesk 0.52.0 发布。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
 
 RunDesk 不依赖 HarnessRouter。UHP 是后续独立兼容入口的目标，未来与 RDCA 共用任务、权限和轨迹核心；当前未实现或声明 UHP 兼容。本次命名不改变既有请求、响应和行为，详见 [API 定位与兼容计划](API-STRATEGY.md)。
 
@@ -182,3 +182,11 @@ TaskSpec.input 的稳定入口是 `{text,files?,skills?}`；files 使用服务�
 `succeeded` 且 `offlineReady=true` 表示离线工具检查完成，不表示模型、账号、公网搜索或业务研究通过。平台/配方/Codex 版本不匹配会失败；已有应用不自动绑定或更新。当前模板版本为 1.1.0。
 
 `PUT /setup` 新增 `applicationsOnly`，允许仅使用 Docker 应用时完成初始化，而不要求本机 Codex/Kun 可执行程序。它不改变通用助手运行后端。内置模板随二进制发布，管理员主机无需 Python/npm。
+
+## 公共构建中心与原生插件
+
+0.52.0 增加 `/build-center/recipes`、`/build-center/builds`、`/build-center/images`、`/build-center/tests`、`/build-center/assistant-runs` 等管理员管理资源，沿用现有构建队列和环境管理；新任务可自由选择资源，不增加工作流模型。multipart 动态配方导入及各资源操作通过 body/form 的 24 位十六进制 requestId 持久去重。详细路径、冻结输入、删除保护及测试范围见[构建中心](BUILD-CENTER.md)。
+
+`/instances/{iid}/plugins` 与 `/plugins/inspect` 提供原生配置/有效组件来源及 ZIP 只读检查。插件生命周期能力按实际稳定 API 开放，当前不调用 plugin/list/read/install/uninstall，不把配置或独立 Skill bootstrap 计为安装。见[原生插件支持](NATIVE-PLUGINS.md)。
+
+构建助手 MCP 是独立的短期任务能力入口，不能使用应用凭据或管理员令牌冒充，不授予通用构建中心访问。其鉴权在精确 MCP 端点内部执行，Host/Origin 守卫继续保留。其余管理路径由原管理员边界保护；应用凭据与成员仍默认拒绝。
