@@ -5,8 +5,10 @@ import (
 	"github.com/shengjuntu/rundesk/internal/tracequery"
 	"net/http/httptest"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestTraceAnalysisNewThreadAndSnapshot(t *testing.T) {
@@ -19,7 +21,41 @@ func TestTraceAnalysisNewThreadAndSnapshot(t *testing.T) {
 		t.Fatal(e)
 	}
 	source = waitState(t, m, source.ID, "completed")
-	before, _ := m.Store.Events(source.ID, 0, 1000)
+	before, e := m.Store.Events(source.ID, 0, 1000)
+	// The native completion callback publishes Session.Status before appending
+	// run/state and expiring approvals. Capture the immutable source baseline
+	// only after that callback's final journal event, not merely its state update.
+	// A timed delay would still race under load and could hide a real mutation.
+	journalDeadline := time.Now().Add(5 * time.Second)
+	for {
+		if e != nil {
+			t.Fatal(e)
+		}
+		terminal, drained := false, false
+		for _, event := range before {
+			if event.Method == "run/state" {
+				var state struct {
+					RunID  string `json:"runId"`
+					Status string `json:"status"`
+				}
+				if json.Unmarshal(event.Data, &state) == nil && state.RunID == source.RunID && state.Status == "completed" {
+					terminal = true
+				}
+			}
+			if terminal && event.Method == "approval/expired" {
+				drained = true
+				break
+			}
+		}
+		if drained {
+			break
+		}
+		if time.Now().After(journalDeadline) {
+			t.Fatal("source terminal callback did not finish its journal")
+		}
+		time.Sleep(time.Millisecond)
+		before, e = m.Store.Events(source.ID, 0, 1000)
+	}
 	selection := TraceSelection{SessionID: source.ID, RunID: source.RunID, EventIDs: []int64{before[0].ID}}
 	h := NewHandler(m, "", true)
 	body, _ := json.Marshal(map[string]any{"traceAnalysis": selection})
@@ -52,9 +88,15 @@ func TestTraceAnalysisNewThreadAndSnapshot(t *testing.T) {
 	if analysis.ThreadID == source.ThreadID {
 		t.Fatal("analysis reused original native thread")
 	}
-	after, _ := m.Store.Events(source.ID, 0, 1000)
-	old, _ := m.Session(source.ID)
-	if len(before) != len(after) || old.RunID != source.RunID || old.ThreadID != source.ThreadID {
+	after, e := m.Store.Events(source.ID, 0, 1000)
+	if e != nil {
+		t.Fatal(e)
+	}
+	old, e := m.Session(source.ID)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if len(before) != len(after) || !reflect.DeepEqual(before, after) || old.RunID != source.RunID || old.ThreadID != source.ThreadID {
 		t.Fatal("source run modified")
 	}
 	events, _ := m.Store.Events(analysis.ID, 0, 1000)

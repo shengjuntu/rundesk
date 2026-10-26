@@ -6,14 +6,16 @@ import (
 )
 
 func (s *Server) queueRoutes(mux *http.ServeMux) {
-	m := s.Manager
-	mux.HandleFunc("GET /api/queue", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, m.Queue()) })
+	tasks := s.taskControl()
+	var queue QueueControl = s.Manager
+	var resources TaskResourceControl = s.Manager
+	mux.HandleFunc("GET /api/queue", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, queue.Queue()) })
 	mux.HandleFunc("PUT /api/queue", func(w http.ResponseWriter, r *http.Request) {
 		var q QueueSettings
 		if !decode(w, r, &q) {
 			return
 		}
-		v, e := m.SaveQueue(q)
+		v, e := queue.SaveQueue(q)
 		respond(w, v, e)
 	})
 	mux.HandleFunc("POST /api/tasks", func(w http.ResponseWriter, r *http.Request) {
@@ -23,7 +25,7 @@ func (s *Server) queueRoutes(mux *http.ServeMux) {
 		}
 		spec.Input.LibraryOwner = personalOwner(r)
 		spec.SubmittingKeyID = submittingKey(r)
-		v, e := m.Enqueue(spec)
+		v, e := tasks.Enqueue(spec)
 		if e != nil {
 			writeErr(w, 400, e)
 			return
@@ -42,7 +44,7 @@ func (s *Server) queueRoutes(mux *http.ServeMux) {
 			limit = n
 		}
 		rows := []Task{}
-		for _, t := range m.Tasks() {
+		for _, t := range tasks.Tasks() {
 			if !taskVisible(r, t) {
 				continue
 			}
@@ -72,9 +74,23 @@ func (s *Server) queueRoutes(mux *http.ServeMux) {
 		}
 		writeJSON(w, 200, map[string]any{"items": rows, "nextCursor": next})
 	})
-	mux.HandleFunc("GET /api/tasks/{tid}", func(w http.ResponseWriter, r *http.Request) { v, e := m.Task(r.PathValue("tid")); respond(w, v, e) })
+	mux.HandleFunc("GET /api/tasks/{tid}", func(w http.ResponseWriter, r *http.Request) { v, e := tasks.Task(r.PathValue("tid")); respond(w, v, e) })
 	mux.HandleFunc("POST /api/tasks/{tid}/cancel", func(w http.ResponseWriter, r *http.Request) {
-		v, e := m.CancelTask(r.PathValue("tid"))
+		v, e := tasks.CancelTask(r.PathValue("tid"))
+		respond(w, v, e)
+	})
+	mux.HandleFunc("GET /api/tasks/{tid}/resources", func(w http.ResponseWriter, r *http.Request) {
+		v, e := resources.TaskResources(r.PathValue("tid"))
+		respond(w, v, e)
+	})
+	mux.HandleFunc("POST /api/tasks/{tid}/resources/export", func(w http.ResponseWriter, r *http.Request) {
+		// Keep the filesystem materialization explicitly administrative even
+		// when this handler is composed outside the standard application gate.
+		if principal(r) != nil || human(r) != nil {
+			writeErr(w, 403, forbidden())
+			return
+		}
+		v, e := resources.ExportTaskResources(r.PathValue("tid"))
 		respond(w, v, e)
 	})
 }

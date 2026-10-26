@@ -1,3 +1,13 @@
+# v0.52.0 重构：统一观测模型 v1
+
+新增 `observations` / `activity` 只读查询、共同数据模型及 HTTP/MCP 接入。全量 Go 回归 594 项通过，14 项依赖独立 Kun 的测试因当前环境未提供运行时而跳过。最终核心包 race 73 项通过；应用观测/调试/诊断 race 80 项通过，4 项外部 Kun 测试跳过。Go vet、Linux amd64 构建与 Windows amd64 交叉编译通过。
+
+验证覆盖历史 task/run、迟到事件、零 through、三路独立身份、失败与审批/回放语义、WebSocket 跨轮次、>8 MiB 正文元数据隔离、固定分页、应用/成员授权及旧查询兼容。元数据查询采用逐记录单次 JSONB 解析，已解决 race 下大正文重复解析超时。最后补充的回放/采集丢失修正由完整 tracequery race 和应用定向 race 覆盖。
+
+本轮没有真实供应商调用、真实 Codex/Kun 模型联调或新的浏览器视觉验收。保持现有工作台，Kun HTTP 路由与集中密钥/结算尚未新增。命令、结果与跳过清单见 [本轮验证记录](validation/current/unified-observation.json)。以下内容保留各原版本验证范围，不当作本轮实机验收。
+
+---
+
 # 0.52.0 验证记录
 
 本轮实现公共构建中心、动态冻结配方、镜像操作、构建助手和 Codex 原生插件只读识别。完整 Go 回归 **516 项含子测试 / 361 项顶层通过，0 失败、0 测试跳过**，逐包终止结果完整，使用独立 Kun 0.17.0 与新编译 RunDesk host。新增能力定向 race 58 项通过；镜像来源归档补丁及旧上传、执行、日志、取消和重启另有 10 项 race 回归。首轮 511 项通过后完成收尾，随后对最终冻结源码重新执行完整回归，原日志独立保留。Go vet、轻量 SDK 测试、Linux/Windows amd64 构建及文档/OpenAPI 检查通过，Windows 仅交叉编译。命令、统计和证据见 [validation-0.52.0.json](validation-0.52.0.json)。

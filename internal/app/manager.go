@@ -99,6 +99,7 @@ type handle struct {
 	requests           map[string]Approval
 }
 type Manager struct {
+	uhpMu               sync.Mutex
 	observationMu       sync.RWMutex
 	observation         *observeproxy.Proxy
 	observationOptions  ObservationOptions
@@ -841,6 +842,14 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 		return s, failure(503, "runtime_unavailable", "后台正在停止或事件记录已失效，任务未提交")
 	}
 	s, _ = m.Session(id)
+	// Capture declarations before taking global queue/application locks: a
+	// Docker environment inspection may hold its own lock during a slow call.
+	// This is metadata evidence, not native loading or a content snapshot.
+	resourceManifest, e := m.SessionResources(s)
+	if e != nil {
+		return s, e
+	}
+	resourceObservedAt := store.Now()
 	// The reservation guard applies even to sessions prepared before a preset
 	// was registered. Disabling and final admission share one lock.
 	m.applicationMu.Lock()
@@ -855,55 +864,13 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 	if active(s.Status) {
 		return s, failure(409, "session_busy", "该会话已有任务正在运行")
 	}
-	if s.RuntimeKind == "kun" {
-		for _, f := range in.Files {
-			switch strings.ToLower(filepath.Ext(f)) {
-			case ".png", ".jpg", ".jpeg", ".webp", ".gif":
-				return s, failure(400, "kun_text_only", "首版 Kun 不支持图像输入，请改用文本文件")
-			}
-		}
+	backend, e := m.runtimeBackend(s.RuntimeKind)
+	if e != nil {
+		return s, e
 	}
-	if s.RuntimeKind == "kun" && recovery != nil {
-		return s, failure(400, "kun_recovery_unsupported", "首版 Kun 不支持原生 Codex 恢复或分析入口，请使用 Kun DevTools")
-	}
-	if s.RuntimeKind == "kun" && s.TraceOrigin != nil && (len(in.Files) > 0 || len(in.Skills) > 0 || in.KunResume != nil) {
-		return s, failure(400, "diagnostic_input_only", "诊断会话只接收问题文本；不接收文件、技能或恢复请求")
-	}
-	if in.FastSkillID != "" {
-		if s.RuntimeKind != "kun" || s.KunCase != nil || s.KunFork != nil || s.TraceOrigin != nil {
-			return s, failure(409, "skill_ordinary_application_only", "快速 Skill 只支持普通 Kun 应用运行")
-		}
-		if _, err := m.kunStartRequest(s, w, in); err != nil {
-			return s, err
-		}
-	}
-	if s.KunCase != nil || in.KunCase != nil {
-		if s.KunCase == nil || in.KunCase == nil || s.RunID != "" || recovery != nil || len(queued) > 0 {
-			return s, failure(409, "case_single_run", "案例会话只允许固定预览首次启动；重跑请创建新预览")
-		}
-		if _, err := m.kunCaseStartRequest(s, w, in); err != nil {
-			return s, err
-		}
-	}
-	if s.KunFork != nil || in.KunFork != nil {
-		if s.KunFork == nil || in.KunFork == nil || in.KunFork.PreviewID != s.KunFork.PreviewID || s.RunID != "" || len(in.Files) > 0 || len(in.Skills) > 0 || in.KunResume != nil || recovery != nil {
-			return s, failure(409, "hybrid_single_run", "分叉会话只允许固定预览的首次启动；重试实验请创建新分叉")
-		}
-	}
-	if in.KunResume != nil {
-		if s.RuntimeKind != "kun" {
-			return s, failure(400, "not_kun", "该会话不使用 Kun")
-		}
-		skills, err := m.validateKunResume(s, w, h, in)
-		if err != nil {
-			return s, err
-		}
-		in.Skills = skills
-	}
-	if recovery != nil {
-		if e = m.validateRecovery(s, h, recovery); e != nil {
-			return s, e
-		}
+	in, e = backend.Prepare(RuntimeAdmission{Session: s, Workspace: w, Handle: h, Input: in, Recovery: recovery, Queued: len(queued) > 0})
+	if e != nil {
+		return s, e
 	}
 	m.queueMu.Lock()
 	defer m.queueMu.Unlock()
@@ -999,6 +966,9 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 	s, _ = m.Session(id)
 	instanceAtSubmit, _ := m.Instance(s.InstanceID)
 	record := map[string]any{"taskId": taskID, "instanceRevision": instanceAtSubmit.Revision, "runId": s.RunID, "input": in, "notes": w.Notes, "notesRevision": w.Revision, "cwd": w.Path, "instanceId": s.InstanceID, "model": s.Model}
+	record["resources"] = resourceManifest
+	record["resourceBasis"] = "declared_at_admission"
+	record["resourceObservedAt"] = resourceObservedAt
 	if s.KunCase != nil {
 		record["kunCase"] = s.KunCase
 	}
@@ -1028,202 +998,12 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 }
 func (m *Manager) run(s Session, w Workspace, h *handle, in Input, recovery *RecoveryPlan) {
 	defer m.unreserveProcess(s.ID)
-	backend, err := agentBackend(s.RuntimeKind)
+	backend, err := m.runtimeBackend(s.RuntimeKind)
 	if err != nil {
 		m.finish(s.ID, "failed", err.Error())
 		return
 	}
-	backend.Run(m, s, w, h, in, recovery)
-}
-func (m *Manager) runCodex(s Session, w Workspace, h *handle, in Input, recovery *RecoveryPlan) {
-	fail := func(e error) {
-		h.mu.Lock()
-		c := h.client
-		h.client = nil
-		h.thread = ""
-		canceled := h.canceled || m.ctx.Err() != nil
-		h.mu.Unlock()
-		if c != nil {
-			c.Close()
-			<-c.Done()
-		}
-		m.observationDisconnected(s.ID)
-		m.expire(s.ID, h)
-		if canceled {
-			m.finish(s.ID, "interrupted", "")
-		} else {
-			m.finish(s.ID, "failed", e.Error())
-		}
-	}
-	if e := m.checkBuildAssistantExecution(s); e != nil {
-		fail(e)
-		return
-	}
-	i, e := m.Instance(s.InstanceID)
-	if e != nil {
-		fail(e)
-		return
-	}
-	permissions := i.Permissions.normalized()
-	if s.TraceOrigin != nil {
-		permissions.Sandbox = "read-only"
-		permissions.NetworkAccess = nil
-	}
-	h.mu.Lock()
-	old := h.client
-	changed := old != nil && (h.permissionsKey != "" && h.permissionsKey != permissions.key() || h.thread != "" && h.observationEnabled != s.ObserveHTTP)
-	if changed {
-		h.client = nil
-		h.thread = ""
-	}
-	h.mu.Unlock()
-	if changed {
-		old.Close()
-		<-old.Done()
-	}
-	c, e := m.connect(s.ID, w, h, s.InstanceID)
-	if e != nil {
-		fail(e)
-		return
-	}
-	ctx, cancel := context.WithTimeout(m.ctx, 90*time.Second)
-	defer cancel()
-	h.mu.Lock()
-	canceled := h.canceled
-	h.mu.Unlock()
-	if canceled {
-		m.finish(s.ID, "interrupted", "")
-		return
-	}
-	// A fresh process must resume the native thread before it can accept a turn.
-	h.mu.Lock()
-	ready := h.thread != "" && h.thread == s.ThreadID
-	h.mu.Unlock()
-	var raw json.RawMessage
-	if !ready {
-		params := permissions.threadParams(w.Path)
-		if e := m.configureBuildAssistant(s, w, params); e != nil {
-			fail(e)
-			return
-		}
-		captureConfigured := m.configureHTTPObservation(ctx, c, s, w, params)
-		if s.TraceOrigin != nil {
-			if e := m.configureTraceAnalysis(s, params); e != nil {
-				fail(e)
-				return
-			}
-		}
-		if s.Model != "" {
-			params["model"] = s.Model
-		}
-		method := "thread/start"
-		if s.ThreadID != "" {
-			method = "thread/resume"
-			params["threadId"] = s.ThreadID
-			params["excludeTurns"] = true
-		}
-		raw, e = c.Call(ctx, method, params)
-		if e != nil {
-			fail(fmt.Errorf("Codex %s: %w", method, e))
-			return
-		}
-		var res struct {
-			Thread struct {
-				ID string `json:"id"`
-			} `json:"thread"`
-		}
-		if e = json.Unmarshal(raw, &res); e != nil || res.Thread.ID == "" {
-			fail(errors.New("thread/start/resume 未返回 thread.id"))
-			return
-		}
-		s.ThreadID = res.Thread.ID
-		if e = m.update(s.ID, func(v *Session) { v.ThreadID = s.ThreadID }); e != nil {
-			fail(e)
-			return
-		}
-		h.mu.Lock()
-		h.thread = s.ThreadID
-		h.permissionsKey = permissions.key()
-		h.observationEnabled = s.ObserveHTTP
-		h.mu.Unlock()
-		if captureConfigured {
-			m.observationApplied(s.ID, s.ObserveHTTP)
-		}
-		m.recordEffective(s.ID, raw, permissions)
-	}
-	// Reload queues updated MCP configuration for the next turn on this thread.
-	if _, e = c.Call(ctx, "config/mcpServer/reload", map[string]any{}); e != nil {
-		fail(fmt.Errorf("MCP reload: %w", e))
-		return
-	}
-	root, e := os.OpenRoot(w.Path)
-	if e != nil {
-		fail(e)
-		return
-	}
-	e = root.MkdirAll("outputs/"+s.ID, 0700)
-	root.Close()
-	if e != nil {
-		fail(e)
-		return
-	}
-	text := in.Text
-	text += recoveryInstructions(recovery)
-	if s.TraceOrigin != nil {
-		text += traceAnalysisInstructions(s.TraceOrigin)
-	}
-	if w.Notes != "" {
-		text += "\n\n<project-notes revision=\"" + fmt.Sprint(w.Revision) + "\">\n" + w.Notes + "\n</project-notes>"
-	}
-	text += "\n\n[Application context] Save deliverable files in " + filepath.Join(w.Path, "outputs", s.ID) + ". Uploaded files, if any, are listed below."
-	input := []any{}
-	for _, f := range in.Files {
-		path := filepath.Join(w.Path, filepath.FromSlash(f))
-		text += "\nUploaded file: " + path
-		ext := strings.ToLower(filepath.Ext(f))
-		if ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".webp" {
-			input = append(input, map[string]string{"type": "localImage", "path": path})
-		}
-	}
-	input = append(input, map[string]string{"type": "text", "text": text})
-	for _, sk := range in.Skills {
-		input = append(input, map[string]string{"type": "skill", "name": sk.Name, "path": sk.Path})
-	}
-	h.mu.Lock()
-	canceled = h.canceled
-	h.mu.Unlock()
-	if canceled {
-		m.finish(s.ID, "interrupted", "")
-		return
-	}
-	raw, e = c.Call(ctx, "turn/start", map[string]any{"threadId": s.ThreadID, "input": input})
-	if e != nil {
-		fail(fmt.Errorf("Codex turn/start: %w", e))
-		return
-	}
-	var result struct {
-		Turn struct {
-			ID string `json:"id"`
-		} `json:"turn"`
-	}
-	if e = json.Unmarshal(raw, &result); e != nil || result.Turn.ID == "" {
-		fail(errors.New("Codex turn/start 未返回有效 turn.id；提交结果无法确认，未自动重发，请核对原生线程"))
-		return
-	}
-	_ = m.update(s.ID, func(v *Session) {
-		if v.TurnID == "" {
-			v.TurnID = result.Turn.ID
-		}
-		if v.Status == "starting" {
-			v.Status = "running"
-		}
-	})
-	h.mu.Lock()
-	canceled = h.canceled
-	h.mu.Unlock()
-	if canceled {
-		go m.interrupt(s.ID, h, s.RunID)
-	}
+	backend.Run(RuntimeRun{Session: s, Workspace: w, Handle: h, Input: in, Recovery: recovery})
 }
 func (m *Manager) Stop(id string) error { return m.StopRun(id, "") }
 func (m *Manager) StopRun(id, expectedRunID string) error {
@@ -1252,7 +1032,7 @@ func (m *Manager) StopRun(id, expectedRunID string) error {
 	if s.Status == "stopping" {
 		return nil
 	}
-	backend, err := agentBackend(s.RuntimeKind)
+	backend, err := m.runtimeBackend(s.RuntimeKind)
 	if err != nil {
 		return err
 	}
@@ -1261,35 +1041,9 @@ func (m *Manager) StopRun(id, expectedRunID string) error {
 	}
 	h.mu.Lock()
 	h.canceled = true
-	if s.Status == "starting" && s.TurnID == "" && h.client != nil {
-		h.client.Close()
-	}
 	h.mu.Unlock()
-	go backend.Stop(m, s, h)
+	backend.Stop(RuntimeStop{Session: s, Handle: h})
 	return nil
-}
-func (m *Manager) interrupt(id string, h *handle, expectedRunIDs ...string) {
-	h.op.Lock()
-	defer h.op.Unlock()
-	s, e := m.Session(id)
-	if e != nil || !active(s.Status) || (len(expectedRunIDs) > 0 && s.RunID != expectedRunIDs[0]) {
-		return
-	}
-	h.mu.Lock()
-	c := h.client
-	h.mu.Unlock()
-	if c == nil || s.TurnID == "" {
-		m.finish(id, "interrupted", "")
-		return
-	}
-	ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
-	defer cancel()
-	_, e = c.Call(ctx, "turn/interrupt", map[string]string{"threadId": s.ThreadID, "turnId": s.TurnID})
-	if e != nil {
-		c.Close()
-		m.finish(id, "interrupted", e.Error())
-	}
-	m.expire(id, h)
 }
 func (m *Manager) Approvals(id string) []Approval {
 	rows, e := m.Store.List("approval")

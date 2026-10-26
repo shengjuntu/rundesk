@@ -38,7 +38,7 @@ func TestExternalKunDebugCapabilitiesAreObserved(t *testing.T) {
 			t.Fatalf("invented %s capability: %+v", kind, caps.Queries[kind])
 		}
 	}
-	for _, kind := range []string{"events", "runs", "statistics", "llm_requests"} {
+	for _, kind := range []string{"events", "runs", "statistics", "llm_requests", "observations", "activity"} {
 		if !caps.Queries[kind].Supported || !caps.Queries[kind].Available {
 			t.Fatalf("host query %s unavailable: %+v", kind, caps.Queries[kind])
 		}

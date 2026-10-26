@@ -41,6 +41,7 @@
     <script defer src="/processes.js"></script><script defer src="/usage.js"></script><script defer src="/tasks.js"></script><script defer src="/schedules.js"></script><script defer src="/application-keys.js"></script>
     <link rel="stylesheet" href="/tasks.css"/>
     <script defer src="/skill-bundles.js"></script>
+    <script defer src="/trace-reader.js"></script>
     <script defer src="/debug-trace.js"></script>
     <script defer src="/experiments.js"></script>
     <script defer src="/kun-benchmarks.js"></script>
@@ -54,6 +55,7 @@
     <link rel="stylesheet" href="/experiments.css"/>
     <script defer src="/diagnostic-review.js"></script>
     <link rel="stylesheet" href="/debug-trace.css"/>
+    <link rel="stylesheet" href="/trace-reader.css"/>
     <script defer src="/trace.js"></script>
   </head>
   <body>
@@ -133,7 +135,7 @@
             <strong id="workspace-name">默认工作区</strong>
           </div>
           <div class="row">
-            <button id="trace-button" class="quiet">调试工作台</button
+            <button id="trace-button" class="quiet">轨迹</button
             ><span id="mode" class="badge">CODEX</span
             ><button id="settings-button" class="quiet">助手设置</button
             ><button id="diagnostics-button" class="quiet" data-diagnostics-open title="查看请求与运行错误">错误记录</button><button id="debug-button" class="quiet">
@@ -256,7 +258,7 @@
               ><button data-debug-tab="files">产物</button>
             </div>
             <div class="debug-info">
-              实时事件缓存与会话资料。完整轨迹和 HTTP 记录请打开调试工作台。
+              实时事件缓存与会话资料。完整轨迹和 HTTP 记录请打开运行轨迹。
             </div>
             <div id="event-controls" class="event-controls">
               <div class="row">

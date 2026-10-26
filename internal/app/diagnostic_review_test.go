@@ -42,7 +42,7 @@ func TestDiagnosticReviewLifecycle(t *testing.T) {
 		message := p.Message{Role: "assistant", Content: "fixture complete"}
 		finish := "stop"
 		if strings.Contains(string(p.JSON(req.Tools)), `"trace_propose"`) {
-			if len(req.Tools) != 9 || !strings.Contains(string(p.JSON(req.Tools)), "trace_list_llm_requests") || !strings.Contains(string(p.JSON(req.Tools)), "trace_read_llm_request") {
+			if len(req.Tools) != 11 || !strings.Contains(string(p.JSON(req.Tools)), "trace_list_llm_requests") || !strings.Contains(string(p.JSON(req.Tools)), "trace_read_llm_request") {
 				t.Error("diagnostic catalog changed")
 			}
 			if diagnosisCalls.Add(1) == 1 {

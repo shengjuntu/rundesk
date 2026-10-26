@@ -16,26 +16,33 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shengjuntu/rundesk/internal/resource"
 	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 const personalFileLimit int64 = 512 << 20
 
 type PersonalFile struct {
-	ID        string `json:"id"`
-	Owner     string `json:"owner"`
-	Name      string `json:"name"`
-	Size      int64  `json:"size"`
-	SHA256    string `json:"sha256"`
-	Created   string `json:"created"`
-	Kind      string `json:"kind"`
-	SessionID string `json:"sessionId,omitempty"`
-	Deleted   bool   `json:"deleted"`
+	ID         string               `json:"id"`
+	Owner      string               `json:"owner"`
+	Name       string               `json:"name"`
+	Size       int64                `json:"size"`
+	SHA256     string               `json:"sha256"`
+	Created    string               `json:"created"`
+	Kind       string               `json:"kind"`
+	SessionID  string               `json:"sessionId,omitempty"`
+	Deleted    bool                 `json:"deleted"`
+	Storage    resource.Storage     `json:"storage"`
+	Source     *resource.FileSource `json:"source,omitempty"`
+	SnapshotAt string               `json:"snapshotAt,omitempty"`
 }
 type libraryLink struct {
 	FileID      string `json:"fileId"`
 	WorkspaceID string `json:"workspaceId"`
 	Path        string `json:"path"`
+	// Original links index a workspace-owned source; removing its personal
+	// catalog entry must not revoke access to the independently owned source.
+	Original bool `json:"original,omitempty"`
 }
 type libraryRun struct {
 	Owner     string            `json:"owner"`
@@ -61,6 +68,9 @@ func libraryLinkID(wid, p string) string {
 func (m *Manager) personalFile(id string) (PersonalFile, error) {
 	var f PersonalFile
 	e := m.Store.Get("personal-file", id, &f)
+	if e == nil && f.Storage == "" {
+		f.Storage = resource.Managed // v0.52.0 records own their bytes.
+	}
 	return f, e
 }
 func (m *Manager) ownedFile(owner, id string) (PersonalFile, error) {
@@ -94,6 +104,9 @@ func (m *Manager) PersonalFiles(owner, q string) ([]PersonalFile, error) {
 			return out, e
 		}
 		if f.Owner == owner && !f.Deleted && strings.Contains(strings.ToLower(f.Name), q) {
+			if f.Storage == "" {
+				f.Storage = resource.Managed
+			}
 			out = append(out, f)
 		}
 	}
@@ -123,26 +136,11 @@ func (m *Manager) savePersonalLocked(owner, name, kind, sid, key string, src io.
 			return f, e
 		}
 	}
-	rows, e := m.Store.List("personal-file")
+	used, e := m.personalUsageLocked(owner)
 	if e != nil {
 		return f, e
 	}
-	count := 0
-	var used int64
-	for _, b := range rows {
-		var x PersonalFile
-		if e = json.Unmarshal(b, &x); e != nil {
-			return f, e
-		}
-		if x.Owner == owner && !x.Deleted {
-			count++
-			used += x.Size
-		}
-	}
-	if count >= 10000 || used >= 10<<30 {
-		return f, failure(413, "personal_library_full", "个人文件库已满，请删除不需要的文件（最多 10000 个、10 GiB）")
-	}
-	f = PersonalFile{ID: store.ID(), Owner: owner, Name: cleanPersonalName(name), Created: store.Now(), Kind: kind, SessionID: sid}
+	f = PersonalFile{ID: store.ID(), Owner: owner, Name: cleanPersonalName(name), Created: store.Now(), Kind: kind, SessionID: sid, Storage: resource.Managed}
 	dir := filepath.Dir(m.libraryPath(f))
 	if e = os.MkdirAll(dir, 0700); e != nil {
 		return f, e
@@ -166,37 +164,20 @@ func (m *Manager) savePersonalLocked(owner, name, kind, sid, key string, src io.
 	}
 	f.Size = n
 	f.SHA256 = hex.EncodeToString(h.Sum(nil))
-	if e = m.Store.Put("personal-file", f.ID, f); e != nil {
+	records := []store.Record{{Kind: "personal-file", ID: f.ID, Value: f}}
+	if key != "" {
+		records = append(records, store.Record{Kind: "library-capture", ID: key, Value: libraryLink{FileID: f.ID}})
+	}
+	if e = m.Store.PutMany(records...); e != nil {
 		os.Remove(m.libraryPath(f))
 		return f, e
-	}
-	if key != "" {
-		e = m.Store.Put("library-capture", key, libraryLink{FileID: f.ID})
 	}
 	return f, e
 }
 func (m *Manager) saveUploaded(owner, wid, p, name string) (PersonalFile, error) {
 	m.libraryMu.Lock()
 	defer m.libraryMu.Unlock()
-	ws, e := m.Workspace(wid)
-	if e != nil {
-		return PersonalFile{}, e
-	}
-	root, e := os.OpenRoot(ws.Path)
-	if e != nil {
-		return PersonalFile{}, e
-	}
-	defer root.Close()
-	src, e := root.Open(p)
-	if e != nil {
-		return PersonalFile{}, e
-	}
-	defer src.Close()
-	f, e := m.savePersonalLocked(owner, name, "upload", "", "", src)
-	if e == nil {
-		e = m.Store.Put("library-link", libraryLinkID(wid, p), libraryLink{FileID: f.ID, WorkspaceID: wid, Path: p})
-	}
-	return f, e
+	return m.savePersonalReferenceLocked(owner, name, "upload", "", "", resource.FileSource{WorkspaceID: wid, Path: p}, "")
 }
 func (m *Manager) AttachPersonal(owner, id, wid string) (map[string]any, error) {
 	m.libraryMu.Lock()
@@ -209,11 +190,14 @@ func (m *Manager) AttachPersonal(owner, id, wid string) (map[string]any, error) 
 	if e != nil {
 		return nil, e
 	}
-	src, e := os.Open(m.libraryPath(f))
+	src, e := m.openPersonalContent(f)
 	if e != nil {
 		return nil, e
 	}
 	defer src.Close()
+	if f.Storage == resource.Reference && f.Source.WorkspaceID == wid && strings.HasPrefix(f.Source.Path, "uploads/") {
+		return map[string]any{"name": f.Name, "size": f.Size, "path": f.Source.Path, "libraryFileId": f.ID, "materialized": false}, nil
+	}
 	root, e := os.OpenRoot(ws.Path)
 	if e != nil {
 		return nil, e
@@ -227,7 +211,7 @@ func (m *Manager) AttachPersonal(owner, id, wid string) (map[string]any, error) 
 	if e != nil {
 		return nil, e
 	}
-	_, e = io.Copy(out, src)
+	e = copyPersonalVerified(out, src, f)
 	ce := out.Close()
 	if e == nil {
 		e = ce
@@ -241,7 +225,7 @@ func (m *Manager) AttachPersonal(owner, id, wid string) (map[string]any, error) 
 		root.Remove(p)
 		return nil, e
 	}
-	return map[string]any{"name": f.Name, "size": f.Size, "path": p, "libraryFileId": f.ID}, nil
+	return map[string]any{"name": f.Name, "size": f.Size, "path": p, "libraryFileId": f.ID, "materialized": true}, nil
 }
 func (m *Manager) libraryPathDeleted(wid, p string) error {
 	var link libraryLink
@@ -251,6 +235,9 @@ func (m *Manager) libraryPathDeleted(wid, p string) error {
 	}
 	if e != nil {
 		return e
+	}
+	if link.Original {
+		return nil
 	}
 	f, e := m.personalFile(link.FileID)
 	if e != nil {
@@ -275,8 +262,10 @@ func (m *Manager) DeletePersonal(owner, id string) error {
 	if e = m.Store.Put("personal-file", id, f); e != nil {
 		return e
 	}
-	if e = os.Remove(m.libraryPath(f)); e != nil && !os.IsNotExist(e) {
-		return e
+	if f.Storage != resource.Reference {
+		if e = os.Remove(m.libraryPath(f)); e != nil && !os.IsNotExist(e) {
+			return e
+		}
 	}
 	return nil
 }
@@ -358,34 +347,13 @@ func (m *Manager) capturePersonalRun(s Session) {
 		fail(e)
 		return
 	}
-	ws, e := m.Workspace(s.WorkspaceID)
-	if e != nil {
-		fail(e)
-		return
-	}
-	root, e := os.OpenRoot(ws.Path)
-	if e != nil {
-		fail(e)
-		return
-	}
-	defer root.Close()
 	for p, hash := range hashes {
 		if r.Before[p] == hash {
 			continue
 		}
-		src, e := root.Open(p)
-		if e != nil {
-			fail(e)
-			return
-		}
 		key := libraryLinkID(r.Owner, s.RunID+"/"+p+"/"+hash)
-		f, e := m.savePersonalLocked(r.Owner, filepath.Base(p), "generated", s.ID, key, src)
-		src.Close()
+		_, e := m.savePersonalReferenceLocked(r.Owner, filepath.Base(p), "generated", s.ID, key, resource.FileSource{WorkspaceID: s.WorkspaceID, Path: p}, hash)
 		if e != nil {
-			fail(e)
-			return
-		}
-		if e = m.Store.Put("library-link", libraryLinkID(s.WorkspaceID, p), libraryLink{FileID: f.ID, WorkspaceID: s.WorkspaceID, Path: p}); e != nil {
 			fail(e)
 			return
 		}
@@ -428,7 +396,7 @@ func (m *Manager) deletedPersonalRefs(owner string) ([]libraryLink, error) {
 		if e != nil {
 			return out, e
 		}
-		if f.Owner == owner && f.Deleted {
+		if f.Owner == owner && f.Deleted && !link.Original {
 			out = append(out, link)
 		}
 	}
@@ -436,12 +404,13 @@ func (m *Manager) deletedPersonalRefs(owner string) ([]libraryLink, error) {
 }
 func (s *Server) libraryRoutes(mux *http.ServeMux) {
 	m := s.Manager
+	var artifacts PersonalArtifacts = m
 	mux.HandleFunc("GET /api/library/deleted-references", func(w http.ResponseWriter, r *http.Request) {
 		v, e := m.deletedPersonalRefs(personalOwner(r))
 		respond(w, v, e)
 	})
 	mux.HandleFunc("GET /api/library", func(w http.ResponseWriter, r *http.Request) {
-		v, e := m.PersonalFiles(personalOwner(r), r.URL.Query().Get("q"))
+		v, e := artifacts.PersonalFiles(personalOwner(r), r.URL.Query().Get("q"))
 		respond(w, v, e)
 	})
 	mux.HandleFunc("POST /api/library", func(w http.ResponseWriter, r *http.Request) {
@@ -470,22 +439,27 @@ func (s *Server) libraryRoutes(mux *http.ServeMux) {
 		respond(w, v, e)
 	})
 	mux.HandleFunc("DELETE /api/library/{fid}", func(w http.ResponseWriter, r *http.Request) {
-		e := m.DeletePersonal(personalOwner(r), r.PathValue("fid"))
+		e := artifacts.DeletePersonal(personalOwner(r), r.PathValue("fid"))
 		respond(w, map[string]bool{"ok": e == nil}, e)
+	})
+	mux.HandleFunc("POST /api/library/{fid}/snapshot", func(w http.ResponseWriter, r *http.Request) {
+		v, e := artifacts.SnapshotPersonal(personalOwner(r), r.PathValue("fid"))
+		respond(w, v, e)
 	})
 	mux.HandleFunc("GET /api/library/{fid}/content", func(w http.ResponseWriter, r *http.Request) {
 		m.libraryMu.Lock()
 		f, e := m.ownedFile(personalOwner(r), r.PathValue("fid"))
 		var src *os.File
+		var cleanup func()
 		if e == nil {
-			src, e = os.Open(m.libraryPath(f))
+			src, cleanup, e = m.openPersonalDownload(f)
 		}
 		m.libraryMu.Unlock()
 		if e != nil {
 			respond(w, nil, e)
 			return
 		}
-		defer src.Close()
+		defer cleanup()
 		ext := strings.ToLower(filepath.Ext(f.Name))
 		typ := mime.TypeByExtension(ext)
 		inline := strings.Contains("|.png|.jpg|.jpeg|.gif|.webp|.mp3|.wav|.mp4|.txt|.md|.json|.log|", "|"+ext+"|") && ext != ""
@@ -501,6 +475,7 @@ func (s *Server) libraryRoutes(mux *http.ServeMux) {
 		}
 		w.Header().Set("Cache-Control", "private, no-store")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("ETag", `"sha256-`+f.SHA256+`"`)
 		at, _ := time.Parse(time.RFC3339Nano, f.Created)
 		http.ServeContent(w, r, f.Name, at, src)
 	})

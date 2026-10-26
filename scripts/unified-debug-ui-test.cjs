@@ -8,7 +8,10 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
   const page=await browser.newPage({viewport:{width:1440,height:1000}});page.on('pageerror',e=>errors.push(e.message));
   await page.route('http://rundesk.test/**',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><html><body><button id="trace-button">轨迹</button><textarea id="prompt"></textarea></body></html>'}));
   await page.goto('http://rundesk.test/');
-  for(const file of ['style.css','kun.css','debug-trace.css'])await page.addStyleTag({content:fs.readFileSync(path.join(root,'internal/web',file),'utf8')});
+  for(const file of ['style.css','kun.css','debug-trace.css','trace-reader.css'])await page.addStyleTag({content:fs.readFileSync(path.join(root,'internal/web',file),'utf8')});
+  // Optional local fixture font when a headless image has no CJK system fonts.
+  // Fonts are data URLs, never fetched from the network or shipped with RunDesk.
+  if(process.env.UI_CJK_FONT_DIR){const fontRoot=path.resolve(process.env.UI_CJK_FONT_DIR);let css=fs.readFileSync(path.join(fontRoot,'400.css'),'utf8').replace(/,\s*url\([^)]+\.woff\)\s*format\('woff'\)/g,'');css=css.replace(/url\((\.\/files\/[^)]+\.woff2)\)/g,(_,file)=>'url(data:font/woff2;base64,'+fs.readFileSync(path.join(fontRoot,file)).toString('base64')+')');await page.addStyleTag({content:css+'\nbody{font-family:"Noto Sans SC",Arial,sans-serif}button,input,select,textarea{font-family:inherit}pre,code{font-family:ui-monospace,"Noto Sans SC",monospace}'});}
   await page.evaluate(()=>{
    window.requests=[];window.errors=[];window.rdText=x=>x;window.$=s=>document.querySelector(s);window.toast=e=>window.errors.push(String(e));window.safe=fn=>Promise.resolve().then(fn).catch(e=>window.errors.push(e.message));
    window.el=(tag,attrs={},...children)=>{const n=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')n.className=v;else if(k.startsWith('on'))n.addEventListener(k.slice(2),v);else if(v!==false&&v!=null)n.setAttribute(k,v===true?'':v);}for(const c of children.flat())if(c!=null)n.append(c instanceof Node?c:document.createTextNode(String(c)));return n;};
@@ -18,6 +21,18 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
    const before='{ "method":"item/started", "params":{"item":{"arguments":{"exact":9007199254740993,"nested":{"text":"'+ '中'.repeat(17000)+'"}}}}}';
    const after='{"method":"item/completed","params":{"item":{"result":{"answer":"完整结果 <img src=x onerror=alert(1)>"}}}}';
    const events=[{id:10,method:'kun/model.started',data:{sequence:1,runId:'run-1',data:{step:1,request:{model:'fixture',messages:[],tools:[]}}}},{id:11,method:'kun/model.completed',data:{sequence:2,runId:'run-1',data:{step:1,message:{content:'完成'},usage:{total_tokens:3}}}},{id:100,method:'kun/model.started',data:{sequence:3,runId:'run-2',data:{step:2,request:{model:'future'}}}}];
+   const traceEntry=(id,role,title,blocks,extra={})=>({id,role,title,blocks,contentTruncated:false,contentUnavailable:false,activity:{id,sessionId:'s1',runId:'run-1',source:'kun_sdk',kind:role==='tool'?'tool':role==='reasoning'?'reasoning':'message',type:role==='tool'?'toolCall':'agentMessage',status:'completed',start:'2026-10-20T14:24:08Z',end:'2026-10-20T14:24:09Z',durationMs:1000,native:{workerSequence:2},evidence:[{eventId:11,readWith:'event',workerSequence:2}],issues:[],missing:[],...extra}});
+   const transcript=[
+    traceEntry('user-1','user','用户消息',[{kind:'text',text:'请让移动端的会话轨迹更简洁，保留失败原因和来源证据。'}],{source:'host'}),
+    traceEntry('readable-1','assistant','助手回复',[{kind:'text',text:'这是一段简洁的会话轨迹。\n\n我会先检查 **窄屏布局**，再验证工具动作和正文的阅读顺序。'}]),
+    traceEntry('tool-1','tool','读取 internal/web/trace-reader.css',[{kind:'code',language:'sh',text:'sed -n \'1,80p\' internal/web/trace-reader.css'},{kind:'text',text:'已读取轨迹布局与窄屏样式。'}]),
+    traceEntry('reason-1','reasoning','推理记录',[{kind:'text',text:'将导航和证据面板按需收起，让正文保留足够的阅读宽度。'}]),
+    traceEntry('failed-1','tool','检查窄屏溢出',[{kind:'code',text:'AssertionError: content width exceeds the viewport by 24px'}],{status:'failed',issues:['failed']}),
+    traceEntry('approval-1','system','等待工具审批',[{kind:'text',text:'写入样式变更前需要用户确认。'}],{kind:'approval',status:'pending',durationMs:null}),
+    traceEntry('diff-1','tool','更新响应式布局',[{kind:'diff',path:'internal/web/trace-reader.css',text:'@@ -1,2 +1,2 @@\n-.trace-reader { grid-template-columns: 220px 1fr; }\n+.trace-reader { grid-template-columns: minmax(0, 1fr); }'}]),
+    traceEntry('answer-2','assistant','助手回复',[{kind:'text',text:'### 修改结果\n\n| 项目 | 状态 |\n| --- | --- |\n| 会话阅读 | 工具默认折叠 |\n| 调试证据 | 按需查看 |\n\n下一步在移动端核对横向溢出。'}]),
+    traceEntry('transport-1','system','LLM 请求 / 响应',[],{source:'observeproxy',kind:'transport',type:'llmExchange',native:{},evidence:[{eventId:50,readWith:'llm_request'}],transport:{method:'POST',statusCode:200,complete:false,truncated:true,incomplete:false,captureLoss:true,headersRedacted:true,requestBytes:25,responseBytes:45}}),
+   ];
    const current={status:'paused',phase:'before_model',runId:'run-2',revision:7,step:2,debug:{pause:{phase:'before_model'}},actions:{},modules:{},budget:{}};
    window.api=async(url,opts={})=>{
     requests.push({url,method:opts.method||'GET'});const u=new URL(url,'http://rundesk.test');
@@ -31,6 +46,7 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
      if(kind==='events')return {data:{through:99,events:[]}};
      if(kind==='runs')return {data:{runs:[{id:'run-1',question:'原始请求',status:'completed'},{id:'run-2',question:'后续运行',status:'running'}],nextOffset:2,hasMore:false,total:2}};
      if(kind==='statistics')return {data:{steps:1,attentionSteps:0,withoutCompleteDuration:0}};
+     if(kind==='transcript')return {data:{schemaVersion:1,sessionId:'s1',snapshotThrough:99,entries:transcript,offset:0,nextOffset:transcript.length,hasMore:false,total:transcript.length,coverage:'retained fixture records'}};
      const step={id:'canonical-step',runId:'run-1',type:'mcpToolCall',title:'结构化工具',status:'completed',eventIds:[10,11],workerSequences:[1,2],durationMs:100,issues:[],startObserved:true,endObserved:true,association:'observed',clock:'host',preview:{arguments:'preview only'},previewTruncated:true};
      if(kind==='steps'||kind==='issues')return {data:{steps:[step],nextOffset:1,total:1,hasMore:false}};
      if(kind==='step')return {data:step};
@@ -49,8 +65,22 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
     throw Error('Unexpected fixture request '+url);
    };
   });
-  for(const file of ['kun-inspect.js','kun-panels.js','kun-debug.js','kun.js','debug-trace.js','trace.js'])await page.addScriptTag({content:fs.readFileSync(path.join(root,'internal/web',file),'utf8')});
-  await page.locator('#trace-button').click();const d=page.locator('#debug-inspector');await d.locator('.debug-step').first().waitFor();
+  for(const file of ['kun-inspect.js','kun-panels.js','kun-debug.js','kun.js','trace-reader.js','debug-trace.js','trace.js'])await page.addScriptTag({content:fs.readFileSync(path.join(root,'internal/web',file),'utf8')});
+  await page.locator('#trace-button').click();const d=page.locator('#debug-inspector');await d.locator('.trace-entry').first().waitFor();
+  assert((await d.locator('.trace-content').innerText()).includes('这是一段简洁的会话轨迹。'));
+  assert.equal(await d.locator('[data-entry-id="tool-1"] details').evaluate(n=>n.open),false,'ordinary tools should start folded');
+  assert.equal(await d.locator('[data-entry-id="reason-1"] details').evaluate(n=>n.open),false,'reasoning should start folded');
+  assert.equal(await d.locator('[data-entry-id="failed-1"] details').evaluate(n=>n.open),true,'failure must remain visible');
+  assert.equal(await d.locator('[data-entry-id="approval-1"] details').evaluate(n=>n.open),true,'pending approval must remain visible');
+  assert.equal(await d.locator('[data-entry-id="transport-1"]').count(),0,'transport is not part of the default reading surface');
+  assert(!(await page.evaluate(()=>requests)).some(r=>new URL(r.url,'http://rundesk.test').searchParams.get('kind')==='event'),'reader eagerly loaded raw evidence');
+  await page.evaluate(()=>document.fonts.ready);
+  if(shots)await page.screenshot({path:path.join(shots,'trace-reader-desktop.png')});
+  await d.locator('[data-entry-id="tool-1"]').getByRole('button',{name:/查看证据/}).click();await d.locator('.trace-evidence').waitFor({state:'visible'});
+  assert((await d.locator('.trace-evidence').innerText()).includes('Kun'));if(shots)await page.screenshot({path:path.join(shots,'trace-reader-evidence.png')});
+  await d.getByRole('button',{name:'收起证据',exact:true}).click();
+  await page.setViewportSize({width:390,height:844});assert(await d.evaluate(n=>n.scrollWidth<=n.clientWidth+1),'mobile trace overflow');if(shots)await page.screenshot({path:path.join(shots,'trace-reader-mobile.png')});await page.setViewportSize({width:1440,height:1000});
+  await d.locator('.debug-workbench-tabs [data-panel=steps]').click();await d.locator('.debug-step').first().waitFor();
   await d.getByRole('combobox',{name:'调试轮次'}).selectOption('run-1');await d.locator('.debug-step').first().click();
   await d.getByRole('button',{name:'读取完整结构（所有来源事件）',exact:true}).click();await d.getByText('已完整读取 2 个来源事件（已脱敏）。',{exact:true}).waitFor();
   const evidence=await d.locator('.debug-evidence').innerText();assert(evidence.includes('9007199254740993'),'large integer rounded');assert(evidence.includes('完整结果'),'completion event missing');assert(evidence.includes('中'.repeat(17000)),'chunked arguments truncated');assert.equal(await d.locator('img').count(),0);
@@ -71,6 +101,6 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
   const req=await page.evaluate(()=>requests);assert(req.every(r=>r.method==='GET'),'inspection had side effects');const fixed=req.filter(r=>/kind=(step|steps|statistics|llm_request)/.test(r.url));assert(fixed.every(r=>new URL(r.url,'http://rundesk.test').searchParams.get('through')==='99'),'views use different source cutoffs');
   assert.deepEqual(errors,[]);assert.deepEqual(await page.evaluate(()=>window.errors),[]);
   await d.getByRole('button',{name:'返回对话',exact:true}).click();await d.waitFor({state:'detached'});assert.equal(await page.locator('#kun-devtools').count(),0,'mounted inspector leaked after close');
-  console.log(JSON.stringify({passed:true,scope:'real Chromium with explicit DebugService fixture; no model calls',checks:['canonical server projection','all start/end evidence with Unicode pagination and exact integers','HTTP byte reconstruction across UTF-8 boundaries and ordered SSE response','decoded WebSocket message selection and exact payload bytes with unsupported-compression labels','capture state labels','shared run and fixed through','single mounted Kun workbench','historical control protection','read-only inspection','mobile layout']}));
+  console.log(JSON.stringify({passed:true,scope:'real Chromium with explicit DebugService fixture; no model calls',checks:['conversation reader with folded tools/reasoning and visible failures/approvals','lazy source-evidence drawer','canonical server projection','all start/end evidence with Unicode pagination and exact integers','HTTP byte reconstruction across UTF-8 boundaries and ordered SSE response','decoded WebSocket message selection and exact payload bytes with unsupported-compression labels','capture state labels','shared run and fixed through','single mounted Kun workbench','historical control protection','read-only inspection','mobile trace and workbench layout']}));
  }finally{await browser?.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});

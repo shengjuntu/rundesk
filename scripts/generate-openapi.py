@@ -107,6 +107,7 @@ requests={
  ('POST','/workspaces/{wid}/mcp/import'):obj({'version':st(),'bundle':obj(extra=True),'overwrite':bool_},['version','bundle']),
 }
 idempotent={('POST',p) for p in ['/setup/codex-install','/setup/runtime-images','/kun-task-sets','/kun-rubrics','/kun-evaluations','/kun-forks','/kun-forks/{fid}/start','/kun-forks/{fid}/hypotheses','/experiments','/experiments/{eid}/branches','/instances','/workspaces','/sessions','/sessions/{sid}/turns','/sessions/{sid}/recover','/sessions/{sid}/kun/resume','/tasks','/schedules','/workspaces/{wid}/mcp-tests']}
+idempotent.update({('POST','/tasks/{tid}/resources/export'),('POST','/library/{fid}/snapshot')})
 summaries={
  '/instances/{iid}/images':'管理员：GET 读取持久化镜像目录及环境差异；POST 检查并登记本机镜像，不构建、不拉取、不启动容器',
  '/instances/{iid}/images/{vid}/check':'管理员：按固定 Image ID 核对可用性；失败仍返回记录，检查 availability 和 error',
@@ -548,12 +549,36 @@ for path,ops in paths.items():
    op['requestBody']={'required':True,'content':{'multipart/form-data':{'schema':obj({'file':st(format='binary',description='ZIP 最大 32 MiB；解压 128 MiB，4000 条目。禁止符号链接及路径穿越。'),'name':st(maxLength=120),'dockerfile':st(default='Dockerfile'),'timeoutMinutes':{'type':'integer','minimum':1,'maximum':120,'default':30},'noCache':bool_},['file'])}}}
 
 
-schemas['PersonalFile']=obj({'id':st(),'owner':st(),'name':st(),'size':integer,'sha256':st(),'created':st(),'kind':st(enum=['upload','generated']),'sessionId':st(),'deleted':bool_},['id','owner','name','size','sha256','created','kind','deleted'])
+schemas['ResourceRef']=obj({'kind':st(),'id':st(),'version':st()},['kind','id'])
+schemas['ResourceScope']=obj({k:st() for k in ['instanceId','workspaceId','sessionId','taskId']})
+schemas['ResourceConfiguration']=obj({'backend':st(),'state':st(enum=['declared','configured','unsupported']),'nativeFormat':st(),'names':arr(st())},['backend','state'])
+schemas['ResourcePolicy']=obj({'sandbox':st(),'approvalPolicy':st(),'reviewer':st(),'networkAccess':bool_},['sandbox','approvalPolicy','reviewer'])
+schemas['ResourceDescriptor']=obj({'ref':ref('ResourceRef'),'owner':ref('ResourceScope'),'storage':st(enum=['reference','managed','snapshot']),'source':obj({'system':st(),'id':st()},['system','id']),'versionKind':st(enum=['binding','content','live']),'configuration':ref('ResourceConfiguration'),'policy':ref('ResourcePolicy')},['ref','owner','storage','source','versionKind'])
+schemas['ResourceBinding']=obj({'role':st(),'ref':ref('ResourceRef'),'access':st(enum=['read','write'])},['role','ref','access'])
+schemas['ResourceManifest']=obj({'schema':{'const':1},'scope':ref('ResourceScope'),'resources':arr(ref('ResourceDescriptor')),'bindings':arr(ref('ResourceBinding'))},['schema','scope','resources','bindings'])
+schemas['TaskStateView']=obj({k:st() for k in ['id','sessionId','runId','status','created','updated','startedAt','finishedAt']}|{'cancelRequested':bool_},['id','sessionId','status','cancelRequested','created','updated'])
+schemas['TaskRuntimeView']=obj({k:st() for k in ['kind','executionMode','environmentId','sessionId','runId','threadId','turnId']}|{'nativeAssociation':st(enum=['not_started','current_run','unavailable'])},['kind','executionMode','sessionId','nativeAssociation'])
+schemas['TaskResourceView']=obj({'schema':{'const':1},'observedAt':st(),'stateSource':{'const':'platform_sqlite'},'availability':st(enum=['available','unavailable']),'unavailableReason':st(),'configurationBasis':st(enum=['current_bindings','unavailable']),'task':ref('TaskStateView'),'runtime':ref('TaskRuntimeView'),'resources':ref('ResourceManifest')},['schema','observedAt','stateSource','availability','configurationBasis','task','resources'])
+schemas['TaskResourceExport']=obj({'taskId':st(),'observedAt':st(),'path':st(description='Administrator-only host path to the disposable JSON view.')},['taskId','observedAt','path'])
+for path,method,response in [('/tasks/{tid}/resources','get','TaskResourceView'),('/tasks/{tid}/resources/export','post','TaskResourceExport')]:
+ op=paths[path][method]
+ op['summary']='任务资源引用检查' if method=='get' else '显式刷新任务目录视图'
+ op['description']='读取平台任务状态与当前资源绑定，不启动引擎、不复制原始文件、不修改任务。配置标记 current_bindings；不是历史生效配置。已删除会话返回保留的 Task 状态和 unavailable，不虚构原生身份。'
+ op['parameters']=[p for p in op['parameters'] if p['in']!='query']
+ op['responses']['200']['content']={'application/json':{'schema':ref(response)}}
+ if method=='get':op['x-administrator-only']=False;op['x-application-scopes']=['read'];op['description']+=' 应用凭据必须拥有该 Task。响应不包含主机绝对路径、凭据或任务正文。'
+ else:
+  op['x-administrator-only']=True
+  op['requestBody']={'required':True,'content':{'application/json':{'schema':obj()}}}
+  op['description']+=' 管理员专用，需要 Idempotency-Key 和空 JSON 对象。写入 <data>/tasks/<id>/resources.json，带 observedAt，可删除和重建；不是实时 /proc 或第二个可写状态源。相同 Key 重放原回执，刷新需要新 Key。'
+
+schemas['PersonalFileSource']=obj({'workspaceId':st(),'path':st(description='Workspace-relative original location; never an absolute host path.')},['workspaceId','path'])
+schemas['PersonalFile']=obj({'id':st(),'owner':st(),'name':st(),'size':integer,'sha256':st(),'created':st(),'kind':st(enum=['upload','generated']),'sessionId':st(),'deleted':bool_,'storage':st(enum=['reference','managed','snapshot']),'source':ref('PersonalFileSource'),'snapshotAt':st()},['id','owner','name','size','sha256','created','kind','deleted','storage'])
 for path,ops in paths.items():
  if not path.startswith('/library'):continue
  for method,op in ops.items():
   op['x-administrator-only']=False;op['x-personal-user-only']=True
-  op['description']='管理员或个人用户可访问自己的文件库；应用凭据不可用。不允许通过参数指定他人的 owner。删除保留历史引用墓碑，内容读取与再次加入返回 410。'
+  op['description']='管理员或个人用户可访问自己的文件库；应用凭据不可用。不允许通过参数指定他人的 owner。新工作区文件默认 reference；来源移除返回 410，内容改变返回 409。直接上传到个人库为 managed，旧记录兼容。删除目录条目后内容读取与再次加入返回 410；新原始来源仍保留，已物化附件沿用历史墓碑。'
   schema=arr(ref('PersonalFile')) if method=='get' else ref('PersonalFile')
   if method=='delete':schema=obj({'ok':bool_},['ok'])
   if path.endswith('/deleted-references'):schema=arr(obj({'fileId':st(),'workspaceId':st(),'path':st()},['fileId','workspaceId','path']))
@@ -562,11 +587,16 @@ for path,ops in paths.items():
    op['parameters'].append({'name':'preview','in':'query','schema':st(enum=['0','1'])});continue
   op['responses']['200']['content']['application/json']['schema']=schema
   if method=='get' and path=='/library':op['parameters'].append({'name':'q','in':'query','schema':st(),'description':'按文件名搜索'})
-  if method=='post':op['requestBody']={'required':True,'content':{'multipart/form-data':{'schema':obj({'file':st(format='binary',description='上传最大 32 MiB')},['file'])}}}
+  if method=='post':
+   if path.endswith('/snapshot'):
+    op['summary']='显式保留文件引用的已记录版本'
+    op['description']+=' 需要 Idempotency-Key 和空 JSON 对象。校验原文件内容后保存独立 snapshot，保留同一文件 ID；已托管/快照文件验证后原样返回。若来源已变化，不把新内容当作旧版本归档。'
+    op['requestBody']={'required':True,'content':{'application/json':{'schema':obj()}}}
+   else:op['requestBody']={'required':True,'content':{'multipart/form-data':{'schema':obj({'file':st(format='binary',description='上传最大 32 MiB')},['file'])}}}
 for path,ops in paths.items():
  if not path.endswith('/uploads'):continue
  op=ops.get('post')
- if op:op['requestBody']['content']['multipart/form-data']['schema']={'oneOf':[obj({'file':st(format='binary')},['file']),obj({'libraryFileId':st(description='本人的个人库文件；服务端复制到当前获授权工作区，不新增库条目。')},['libraryFileId'])]}
+ if op:op['requestBody']['content']['multipart/form-data']['schema']={'oneOf':[obj({'file':st(format='binary')},['file']),obj({'libraryFileId':st(description='本人的个人库文件；同工作区有效上传引用可复用，其他情况显式物化到获授权工作区，不新增库条目。')},['libraryFileId'])]}
 
 # Collaboration management is administrator-only; A2A also accepts scoped application keys.
 for path, methods in {

@@ -1,6 +1,6 @@
 # RunDesk 文档
 
-当前版本 RunDesk 0.49.5 / 外部 Kun 0.17.0 / worker 协议 16；视频配套 Video App 0.23.0 与 video-build 1.4.0。按当前实现维护使用说明；验证日志按实际测试版本保存，旧版本的结果不当作本轮验收。
+当前源码基于 RunDesk 0.52.0 重构 / 外部 Kun 0.17.0 / worker 协议 16。视频专题保留各自配套版本记录。验证日志按实际测试版本保存，旧版本的结果不当作本轮验收。
 
 | 需要了解 | 入口 |
 | --- | --- |
@@ -8,6 +8,8 @@
 | 应用如何接入 | [RunDesk Control API（RDCA）v1](API-V1.md) |
 | 独立 API 与未来 UHP 兼容 | [API 定位与兼容计划](API-STRATEGY.md) |
 | 系统分层与后端扩展 | [架构](ARCHITECTURE.md)、[能力矩阵](BACKENDS.md) |
+| v0.52.0 重构：资源与任务边界 | [资源契约](RESOURCE-CONTRACTS.md)、[任务资源视图](TASK-RESOURCES.md) |
+| 三路观测数据的共同模型 | [统一观测模型 v1](OBSERVATION-MODEL.md)、[模型传输边界](MODEL-TRANSPORT-BOUNDARIES.md) |
 | 如何调试 Agent 执行轨迹 | [统一工作台与采集](UNIFIED_DEBUGGING.md)、[轨迹调试](DEBUG.md) |
 | 如何复用验证有效的轨迹 | [K4](KUN-K4.md) |
 | 当前完成度与缺口 | [状态](STATUS.md) |

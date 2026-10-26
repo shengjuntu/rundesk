@@ -8,8 +8,37 @@ window.RunDeskLibrary=(()=>{
  async function preview(f){const {body}=dialog(f.name),url='/api/v1/library/'+f.id+'/content?preview=1',ext=f.name.split('.').pop().toLowerCase();if(['png','jpg','jpeg','gif','webp'].includes(ext)){const img=node('img',undefined,'personal-library-preview');img.src=url;img.alt=f.name;body.append(img);}else if(['mp3','wav','mp4'].includes(ext)){const media=node(ext==='mp4'?'video':'audio',undefined,'personal-library-preview');media.controls=true;media.src=url;body.append(media);}else if(['txt','md','json','log'].includes(ext)&&f.size<1048576){try{const r=await fetch(url);if(!r.ok)throw Error(rdText('文件不可用或已删除'));body.append(node('pre',await r.text(),'personal-library-text'));}catch(e){body.append(node('p',e.message));}}else{body.append(node('p',rdText('此格式请下载后查看。')));}const link=node('a',rdText('下载文件'));link.href='/api/v1/library/'+f.id+'/content';body.append(link);}
  function open(choose){
   const {d,body}=dialog(choose?rdText('从个人文件库加入'):rdText('我的文件')),search=node('input'),toolbar=node('div',undefined,'personal-library-toolbar'),list=node('div',undefined,'personal-library-list'),error=node('p',undefined,'personal-library-error'),upload=node('input');search.type='search';search.placeholder=rdText('搜索文件名');search.setAttribute('aria-label',rdText('搜索文件名'));upload.type='file';upload.multiple=true;upload.hidden=true;
-  toolbar.append(search,btn(rdText('上传文件'),()=>upload.click()));body.append(toolbar,node('p',rdText('上传和会话生成的文件会自动保存在这里。'),'personal-library-help'),upload,error,list);let sequence=0;
-  async function refresh(){const seq=++sequence;try{const files=await request('/library?q='+encodeURIComponent(search.value));if(seq!==sequence||!d.open)return;list.replaceChildren();for(const f of files){const row=node('article',undefined,'personal-library-row');row.dataset.fileId=f.id;const info=node('div',undefined,'personal-library-info'),actions=node('div',undefined,'personal-library-actions');info.append(btn(f.name,()=>preview(f),'personal-library-filename'),node('p',`${f.kind==='generated'?rdText('生成'):rdText('上传')} · ${(f.size/1024).toFixed(1)} KB · ${new Date(f.created).toLocaleString()}`,'personal-library-help'));const download=node('a',rdText('下载'));download.href='/api/v1/library/'+f.id+'/content';actions.append(download);if(choose){const add=btn(rdText('加入'),async()=>{add.disabled=true;try{await choose(f);d.close();}catch(e){error.textContent=e.message;add.disabled=false;}},'primary');actions.prepend(add);}actions.append(btn(rdText('删除'),async()=>{if(!confirm(rdFormat("删除“${0}”？文件将从个人库移除，历史引用显示已删除。",f.name)))return;try{await request('/library/'+f.id,{method:'DELETE'});await refresh();}catch(e){error.textContent=e.message;}}));row.append(info,actions);list.append(row);}if(!files.length)list.append(node('p',search.value?rdText('没有匹配文件'):rdText('还没有文件，上传或生成后会自动出现在这里。'),'personal-library-empty'));}catch(e){error.textContent=e.message;}}
+  toolbar.append(search,btn(rdText('上传文件'),()=>upload.click()));body.append(toolbar,node('p',rdText('工作区文件保留在原处，这里登记引用。需要保留当前版本时，请保存快照；原文件改动或删除后，旧引用将不可用。'),'personal-library-help'),upload,error,list);let sequence=0;
+  async function refresh(){
+   const seq=++sequence;
+   try{
+    const files=await request('/library?q='+encodeURIComponent(search.value));
+    if(seq!==sequence||!d.open)return;
+    list.replaceChildren();error.textContent='';
+    for(const f of files){
+     const row=node('article',undefined,'personal-library-row');row.dataset.fileId=f.id;
+     const info=node('div',undefined,'personal-library-info'),actions=node('div',undefined,'personal-library-actions');
+     const storage=f.storage==='reference'?rdText('原文件引用'):f.storage==='snapshot'?rdText('已保存快照'):rdText('托管文件');
+     info.append(btn(f.name,()=>preview(f),'personal-library-filename'),node('p',`${f.kind==='generated'?rdText('生成'):rdText('上传')} · ${storage} · ${(f.size/1024).toFixed(1)} KB · ${new Date(f.created).toLocaleString()}`,'personal-library-help'));
+     const download=node('a',rdText('下载'));download.href='/api/v1/library/'+f.id+'/content';actions.append(download);
+     if(choose){const add=btn(rdText('加入'),async()=>{add.disabled=true;try{await choose(f);d.close();}catch(e){error.textContent=e.message;add.disabled=false;}},'primary');actions.prepend(add);}
+     if(f.storage==='reference'){
+      const key=crypto.randomUUID();
+      const snapshot=btn(rdText('保存快照'),async()=>{
+       snapshot.disabled=true;error.textContent='';
+       try{await request('/library/'+f.id+'/snapshot',{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':key},body:'{}'});await refresh();}
+       catch(e){error.textContent=e.message;snapshot.disabled=false;}
+      });actions.append(snapshot);
+     }
+     actions.append(btn(rdText('删除'),async()=>{
+      const prompt=f.storage==='reference'?rdFormat('移除“${0}”的文件库引用？工作区中的原文件会保留。',f.name):f.source?rdFormat('删除“${0}”的文件库条目和快照？工作区中的原文件会保留。',f.name):rdFormat('删除“${0}”？文件将从个人库移除，历史引用显示已删除。',f.name);
+      if(!confirm(prompt))return;
+      try{await request('/library/'+f.id,{method:'DELETE'});await refresh();}catch(e){error.textContent=e.message;}
+     }));row.append(info,actions);list.append(row);
+    }
+    if(!files.length)list.append(node('p',search.value?rdText('没有匹配文件'):rdText('还没有文件，上传或生成后会自动出现在这里。'),'personal-library-empty'));
+   }catch(e){error.textContent=e.message;}
+  }
   search.oninput=()=>refresh();upload.onchange=async()=>{error.textContent='';try{for(const f of upload.files){const data=new FormData();data.append('file',f);await request('/library',{method:'POST',body:data});}await refresh();}catch(e){error.textContent=e.message;}finally{upload.value='';}};refresh();
  }
  return{open,menu};

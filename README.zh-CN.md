@@ -19,6 +19,8 @@ RunDesk 是面向应用的 Agent 执行平台，通过一套 API 接入 Kun 与 
 
 ## 快速开始
 
+本源码是在 v0.52.0 上完成的资源与执行模块重构：独立 Codex/Kun 后端通过显式宿主服务运行，任务控制、资源引用和权限具备固定契约；新增任务资源检查及按需目录视图。新工作区产物默认保留原件引用，可显式保存快照，旧文件副本继续兼容。详见 [资源契约](docs/RESOURCE-CONTRACTS.md)、[任务资源视图](docs/TASK-RESOURCES.md) 和 [本轮验证](docs/validation/current/resource-refactor.json)。
+
 Go 1.25.12 或兼容的更新版本；WebUI 已嵌入，无前端构建步骤。
 
 ```bash

@@ -3,6 +3,8 @@ package app
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/shengjuntu/rundesk/internal/resource"
 )
 
 func libraryUpload(t *testing.T, h http.Handler, p, token, name, text string) *httptest.ResponseRecorder {
@@ -154,6 +158,16 @@ func TestGeneratedPersonalFilesSurviveSessionAndDoNotResurrect(t *testing.T) {
 		t.Fatal(files, e)
 	}
 	first := files[0]
+	if first.Storage != resource.Reference || first.Source == nil {
+		t.Fatal("generated artifact was not registered as a reference", first)
+	}
+	if _, e = os.Stat(m.libraryPath(first)); !os.IsNotExist(e) {
+		t.Fatal("automatic capture copied source bytes", e)
+	}
+	first, e = m.SnapshotPersonal(u.ID, first.ID)
+	if e != nil || first.Storage != resource.Snapshot {
+		t.Fatal("explicit archive failed", first, e)
+	}
 	s.RunID = "run-owner-b"
 	if e = m.preparePersonalRun(s, s.RunID, v.ID); e != nil {
 		t.Fatal(e)
@@ -182,6 +196,203 @@ func TestGeneratedPersonalFilesSurviveSessionAndDoNotResurrect(t *testing.T) {
 	a, e = os.ReadFile(m.libraryPath(first))
 	if e != nil || string(a) != "new" {
 		t.Fatal("session deletion removed personal file", e)
+	}
+}
+
+func TestPersonalSourceReferenceIdentityAndRemoval(t *testing.T) {
+	m, u, code, _, other, session, _ := userFixture(t)
+	h := NewHandler(m, userTestAdmin, true)
+	r := libraryUpload(t, h, "/api/v1/member/"+u.Grants[0].ID+"/workspaces/"+session.WorkspaceID+"/uploads", code, "source.txt", "original")
+	if r.Code != 201 {
+		t.Fatal(r.Code, r.Body.String())
+	}
+	files, err := m.PersonalFiles(u.ID, "")
+	if err != nil || len(files) != 1 {
+		t.Fatal(files, err)
+	}
+	f := files[0]
+	if f.Storage != resource.Reference || f.Source == nil || f.Source.WorkspaceID != session.WorkspaceID {
+		t.Fatal("upload did not retain source identity", f)
+	}
+	if _, err := os.Stat(m.libraryPath(f)); !os.IsNotExist(err) {
+		t.Fatal("uploaded source was duplicated", err)
+	}
+	r = appRequest(h, "GET", "/api/v1/library/"+f.ID+"/content", "", code, "")
+	if r.Code != 200 || r.Body.String() != "original" {
+		t.Fatal("reference content unavailable", r.Code, r.Body.String())
+	}
+	r = appRequest(h, "POST", "/api/v1/library/"+f.ID+"/snapshot", "{}", other, "snapshot-foreign-001")
+	if r.Code != 404 {
+		t.Fatal("another owner archived a reference", r.Code, r.Body.String())
+	}
+	attached, err := m.AttachPersonal(u.ID, f.ID, session.WorkspaceID)
+	if err != nil || attached["path"] != f.Source.Path || attached["materialized"] != false {
+		t.Fatal("same workspace upload was copied", attached, err)
+	}
+	target, err := m.CreateWorkspace("materialized destination", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	materialized, err := m.AttachPersonal(u.ID, f.ID, target.ID)
+	if err != nil || materialized["materialized"] != true {
+		t.Fatal("cross-workspace input was not materialized", materialized, err)
+	}
+	b, err := os.ReadFile(filepath.Join(target.Path, materialized["path"].(string)))
+	if err != nil || string(b) != "original" {
+		t.Fatal("materialized content mismatch", string(b), err)
+	}
+	ws, _ := m.Workspace(session.WorkspaceID)
+	source := filepath.Join(ws.Path, filepath.FromSlash(f.Source.Path))
+	if err := os.WriteFile(source, []byte("modified"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	r = appRequest(h, "GET", "/api/v1/library/"+f.ID+"/content", "", code, "")
+	if r.Code != 409 || !strings.Contains(r.Body.String(), "personal_file_source_changed") {
+		t.Fatal("new bytes served as historical artifact", r.Code, r.Body.String())
+	}
+	if _, err := m.SnapshotPersonal(u.ID, f.ID); err == nil {
+		t.Fatal("changed bytes archived as original")
+	}
+	if err := os.Remove(source); err != nil {
+		t.Fatal(err)
+	}
+	r = appRequest(h, "GET", "/api/v1/library/"+f.ID+"/content", "", code, "")
+	if r.Code != 410 || !strings.Contains(r.Body.String(), "personal_file_source_missing") {
+		t.Fatal("missing source not reported", r.Code, r.Body.String())
+	}
+	if err := os.WriteFile(source, []byte("original"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.DeletePersonal(u.ID, f.ID); err != nil {
+		t.Fatal(err)
+	}
+	b, err = os.ReadFile(source)
+	if err != nil || string(b) != "original" {
+		t.Fatal("catalog deletion removed source", err, string(b))
+	}
+	if err := m.validateInput(ws, Input{Files: []string{f.Source.Path}}); err != nil {
+		t.Fatal("removing catalog entry revoked original source", err)
+	}
+	if err := m.validateInput(target, Input{Files: []string{materialized["path"].(string)}}); err == nil {
+		t.Fatal("materialized historical attachment ignored deletion")
+	}
+}
+
+func TestPersonalSnapshotAndLegacyStorage(t *testing.T) {
+	m, u, code, _, _, session, _ := userFixture(t)
+	h := NewHandler(m, userTestAdmin, true)
+	r := libraryUpload(t, h, "/api/v1/member/"+u.Grants[0].ID+"/workspaces/"+session.WorkspaceID+"/uploads", code, "snapshot.txt", "frozen")
+	if r.Code != 201 {
+		t.Fatal(r.Code, r.Body.String())
+	}
+	files, _ := m.PersonalFiles(u.ID, "")
+	f := files[0]
+	r = appRequest(h, "POST", "/api/v1/library/"+f.ID+"/snapshot", "{}", code, "snapshot-first-001")
+	if r.Code != 200 {
+		t.Fatal(r.Code, r.Body.String())
+	}
+	var snapshot PersonalFile
+	if err := json.Unmarshal(r.Body.Bytes(), &snapshot); err != nil || snapshot.Storage != resource.Snapshot || snapshot.ID != f.ID || snapshot.SnapshotAt == "" {
+		t.Fatal("invalid promotion", snapshot, err)
+	}
+	second, err := m.SnapshotPersonal(u.ID, f.ID)
+	if err != nil || second.SnapshotAt != snapshot.SnapshotAt {
+		t.Fatal("snapshot retry changed identity", second, err)
+	}
+	ws, _ := m.Workspace(session.WorkspaceID)
+	if err := os.Remove(filepath.Join(ws.Path, filepath.FromSlash(f.Source.Path))); err != nil {
+		t.Fatal(err)
+	}
+	r = appRequest(h, "GET", "/api/v1/library/"+f.ID+"/content", "", code, "")
+	if r.Code != 200 || r.Body.String() != "frozen" {
+		t.Fatal("snapshot depends on source", r.Code, r.Body.String())
+	}
+	// Records predating storage policies still own their historical bytes.
+	snapshot.Storage, snapshot.Source = "", nil
+	if err := m.Store.Put("personal-file", snapshot.ID, snapshot); err != nil {
+		t.Fatal(err)
+	}
+	r = appRequest(h, "GET", "/api/v1/library/"+snapshot.ID+"/content", "", code, "")
+	if r.Code != 200 || r.Body.String() != "frozen" {
+		t.Fatal("v0.52.0 stored file no longer readable", r.Code, r.Body.String())
+	}
+	legacy, err := m.ownedFile(u.ID, snapshot.ID)
+	if err != nil || legacy.Storage != resource.Managed {
+		t.Fatal("legacy record not interpreted as managed", legacy, err)
+	}
+	legacy, err = m.SnapshotPersonal(u.ID, snapshot.ID)
+	if err != nil || legacy.Storage != resource.Managed {
+		t.Fatal("legacy snapshot retry changed storage", legacy, err)
+	}
+}
+
+func TestPersonalReferenceDownloadPinsVerifiedBytes(t *testing.T) {
+	m, u, _, _, _, session, _ := userFixture(t)
+	ws, _ := m.Workspace(session.WorkspaceID)
+	if err := os.MkdirAll(filepath.Join(ws.Path, "uploads"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(ws.Path, "uploads", "source.txt")
+	if err := os.WriteFile(path, []byte("original"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	f, err := m.saveUploaded(u.ID, ws.ID, "uploads/source.txt", "source.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	download, cleanup, err := m.openPersonalDownload(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	if err := os.WriteFile(path, []byte("changed after open"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	b, err := io.ReadAll(download)
+	if err != nil || string(b) != "original" {
+		t.Fatal("response bytes changed after validation", err, string(b))
+	}
+	cleanup()
+	if _, err := os.Stat(download.Name()); !os.IsNotExist(err) {
+		t.Fatal("temporary download bytes retained", err)
+	}
+	if _, err := os.Stat(m.libraryPath(f)); !os.IsNotExist(err) {
+		t.Fatal("download archived a reference implicitly", err)
+	}
+}
+
+func TestPersonalReferenceRejectsSourceAliasesAndCopyChanges(t *testing.T) {
+	m, u, _, _, _, session, _ := userFixture(t)
+	ws, _ := m.Workspace(session.WorkspaceID)
+	if err := os.MkdirAll(filepath.Join(ws.Path, "uploads"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(ws.Path, "uploads", "source.txt")
+	if err := os.WriteFile(path, []byte("original"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	f, err := m.saveUploaded(u.ID, ws.ID, "uploads/source.txt", "source.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(path, path+".real"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(path+".real", path); err != nil {
+		t.Skip("symlinks unavailable", err)
+	}
+	_, err = m.openPersonalContent(f)
+	var api *apiError
+	if !errors.As(err, &api) || api.Code != "personal_file_source_invalid" {
+		t.Fatal("symlink source accepted", err)
+	}
+	if err := copyPersonalVerified(io.Discard, strings.NewReader("different"), f); err == nil {
+		t.Fatal("copy registered content differing from recorded hash")
+	}
+	for _, p := range []string{"../outside", "uploads/../../outside", "/absolute", "uploads\\source.txt"} {
+		if _, err := m.openArtifactSource(resource.FileSource{WorkspaceID: ws.ID, Path: p}); err == nil {
+			t.Fatal("unsafe source accepted", p)
+		}
 	}
 }
 

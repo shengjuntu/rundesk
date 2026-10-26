@@ -3840,7 +3840,10 @@
                 "issues",
                 "statistics",
                 "llm_requests",
-                "llm_request"
+                "llm_request",
+                "observations",
+                "activity",
+                "transcript"
               ]
             }
           },
@@ -3872,7 +3875,7 @@
               "type": "integer",
               "minimum": 0
             },
-            "description": "仅 events；宿主事件 ID 下界，不包含；默认 0。"
+            "description": "仅 events；宿主事件 ID 下界，不包含；默认 0。 observations 使用返回的 nextAfter 继续按事件编号分页。"
           },
           {
             "name": "through",
@@ -3882,7 +3885,7 @@
               "type": "integer",
               "minimum": 0
             },
-            "description": "用于 events/event、五种重建查询和 llm_requests/llm_request；省略时固定当前宿主事件上界（event 默认不限上界）。后续分页必须原样保留响应 through，包括 0。不接受大于当前已保留最大 ID 的值。"
+            "description": "用于 events/event、五种重建查询和 llm_requests/llm_request；省略时固定当前宿主事件上界（event 默认不限上界）。后续分页必须原样保留响应 through，包括 0。不接受大于当前已保留最大 ID 的值。 observations/activity 同样固定此宿主上界；显式 0 始终为空快照。 transcript 同样适用。"
           },
           {
             "name": "eventId",
@@ -3903,7 +3906,7 @@
               "minimum": 0,
               "maximum": 2147483647
             },
-            "description": "event 为脱敏 JSON 的 Unicode 字符偏移；llm_request 正文为字节偏移，metadata 仅接受 0，*_chunks 为采集片段偏移，*_messages 为消息偏移，*_payload 为选定消息的字节偏移；runs/steps/issues/llm_requests 为记录偏移。默认 0。"
+            "description": "event 为脱敏 JSON 的 Unicode 字符偏移；llm_request 正文为字节偏移，metadata 仅接受 0，*_chunks 为采集片段偏移，*_messages 为消息偏移，*_payload 为选定消息的字节偏移；runs/steps/issues/llm_requests 为记录偏移。默认 0。 activity 为统一活动的记录偏移。 transcript 同样适用。"
           },
           {
             "name": "limit",
@@ -3914,7 +3917,7 @@
               "minimum": 1,
               "maximum": 16000
             },
-            "description": "events 默认 50、最大 200；event 默认 4000、最大 16000 字符；runs/steps/issues 默认 50、最大 50；llm_requests 默认 25、最大 50；llm_request 正文默认 4000、最大 16000 字节，*_chunks 和 *_messages 默认/最大 50，*_payload 默认 4000、最大 16000 字节。其他 kind 不接受。"
+            "description": "events 默认 50、最大 200；event 默认 4000、最大 16000 字符；runs/steps/issues 默认 50、最大 50；llm_requests 默认 25、最大 50；llm_request 正文默认 4000、最大 16000 字节，*_chunks 和 *_messages 默认/最大 50，*_payload 默认 4000、最大 16000 字节。其他 kind 不接受。 observations/activity 默认 50、最大 200。 transcript 同样适用。 transcript 默认 20、最大 50。"
           },
           {
             "name": "runId",
@@ -3924,7 +3927,7 @@
               "type": "string",
               "maxLength": 256
             },
-            "description": "steps/step/issues/statistics 的所属轮次，存在性与 step 归属均核对；llm_requests/llm_request 按已记录 labels.runId 精确筛选，不猜测缺失关联。"
+            "description": "steps/step/issues/statistics 的所属轮次，存在性与 step 归属均核对；llm_requests/llm_request 按已记录 labels.runId 精确筛选，不猜测缺失关联。 observations/activity 按明确或有证据重建的轮次筛选，不按时间强行归并跨来源请求。 transcript 同样适用。"
           },
           {
             "name": "type",
@@ -4000,6 +4003,45 @@
               "maximum": 4095
             },
             "description": "仅 llm_request 的 websocket_upstream_payload/websocket_client_payload；默认 0。其余 section 即使显式传 0 也拒绝。"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "host",
+                "codex_app_server",
+                "kun_sdk",
+                "observeproxy"
+              ]
+            },
+            "description": "仅 observations/activity：记录来源。外层响应 source=unified_observation；单条记录保留来源判定依据。"
+          },
+          {
+            "name": "recordKind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 256,
+              "enum": [
+                "run",
+                "model",
+                "tool",
+                "mcp",
+                "approval",
+                "message",
+                "reasoning",
+                "context",
+                "usage",
+                "transport",
+                "error",
+                "event"
+              ]
+            },
+            "description": "仅 observations/activity：规范化记录类别的精确匹配；未知原生方法保留为 event，不丢弃证据。"
           }
         ],
         "responses": {
@@ -4062,7 +4104,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "只读；应用凭据需 read 与会话归属，成员需项目授权。Codex 支持 overview/run（宿主概况，无 revision/sequence）、events/event（宿主保留事件）、runs/steps/step/issues/statistics（生命周期记录重建）及 llm_requests/llm_request（已保留的 HTTP 观测）；内部快照/上下文等仍返回 409 debug_unsupported。Kun 内部查询需在线 worker；不启动/恢复进程，不调用模型或工具，不写入对话。source 区分 host_session、host_journal、host_projection、http_observation、kun_worker。重建步骤不等于完整模型内部状态。先查询 capabilities；supported 与 available 区分支持情况与当前可用性。响应最大 4 MiB，超限返回 413。 llm_requests/llm_request 的 source=http_observation。列表只返回已保留观测的摘要；缺记录不代表没有上游请求。请求详情以 metadata、request/response 和 websocket 方向分块读取；正文 offset/limit 为字节，跨块精确恢复须拼接 bodyBase64 解码后的字节，不可拼接可能替换无效 UTF-8 的 text。标记 complete、truncated、incomplete 与 captureLoss，不能将有限采集判为完整。元数据上限 512 KiB，查询期限 8 秒。WebSocket 只读解码最多读取 32 MiB 原始帧，聚合载荷最多 16 MiB、4096 消息和 16384 帧；部分/压缩/非法帧明确标记。 runs/steps/step/issues/statistics 的 through 是宿主固定范围，source=host_projection，最多 20000 生命周期记录/64 MiB、单记录 8 MiB、查询索引期限 8 秒；超限 413，不返回不完整统计。 step.data 为 DebugStep；列表按首次来源事件顺序，issues 为确定性信号而非根因诊断。 events.data 为 DebugEventPage，仅元数据，不加载正文；event.data 为 DebugEventChunk，单事件超过 8 MiB 返回 413。历史查询从 through/sequence 固定，但不同请求不承诺组成跨数据源原子快照。未知和不适用字段即使为 0 也拒绝。",
+        "description": "只读；应用凭据需 read 与会话归属，成员需项目授权。Codex 支持 overview/run（宿主概况，无 revision/sequence）、events/event（宿主保留事件）、runs/steps/step/issues/statistics（生命周期记录重建）及 llm_requests/llm_request（已保留的 HTTP 观测）；内部快照/上下文等仍返回 409 debug_unsupported。Kun 内部查询需在线 worker；不启动/恢复进程，不调用模型或工具，不写入对话。source 区分 host_session、host_journal、host_projection、http_observation、kun_worker。重建步骤不等于完整模型内部状态。先查询 capabilities；supported 与 available 区分支持情况与当前可用性。响应最大 4 MiB，超限返回 413。 llm_requests/llm_request 的 source=http_observation。列表只返回已保留观测的摘要；缺记录不代表没有上游请求。请求详情以 metadata、request/response 和 websocket 方向分块读取；正文 offset/limit 为字节，跨块精确恢复须拼接 bodyBase64 解码后的字节，不可拼接可能替换无效 UTF-8 的 text。标记 complete、truncated、incomplete 与 captureLoss，不能将有限采集判为完整。元数据上限 512 KiB，查询期限 8 秒。WebSocket 只读解码最多读取 32 MiB 原始帧，聚合载荷最多 16 MiB、4096 消息和 16384 帧；部分/压缩/非法帧明确标记。 runs/steps/step/issues/statistics 的 through 是宿主固定范围，source=host_projection，最多 20000 生命周期记录/64 MiB、单记录 8 MiB、查询索引期限 8 秒；超限 413，不返回不完整统计。 step.data 为 DebugStep；列表按首次来源事件顺序，issues 为确定性信号而非根因诊断。 events.data 为 DebugEventPage，仅元数据，不加载正文；event.data 为 DebugEventChunk，单事件超过 8 MiB 返回 413。历史查询从 through/sequence 固定，但不同请求不承诺组成跨数据源原子快照。未知和不适用字段即使为 0 也拒绝。 observations/activity 是 schemaVersion=1 的统一只读观测投影，source=unified_observation；前者按 after/limit 读取元数据事件，后者按 offset/limit 读取运行时步骤及传输活动。原始证据引用既有 event 或 llm_request，不复制正文。所有筛选和身份补充限于固定 through；Kun sequence/revision 独立保留，WebSocket 连接不能据建立时标签强归整个轮次。 transcript 为统一观测模型的会话阅读投影，source=unified_observation，返回 TranscriptPage；仅接受 through/runId/offset/limit，默认 20、最大 50 条。原始正文仍留在事件日志。单条最多 12000 个 Unicode 字符/32 个内容块，每页原始内容读取预算 16 MiB；超出时 contentTruncated/contentUnavailable 明示，使用 activity.evidence 读取来源。开放中的 Codex 消息可包含按原生 turnId/itemId 唯一对应的保留增量，并标记 contentPartial；不表示调用完成。HTTP 正文不进入会话内容，传输活动独立展示。",
         "x-application-scopes": [
           "read"
         ]
@@ -7713,7 +7755,7 @@
                     "properties": {
                       "libraryFileId": {
                         "type": "string",
-                        "description": "本人的个人库文件；服务端复制到当前获授权工作区，不新增库条目。"
+                        "description": "本人的个人库文件；同工作区有效上传引用可复用，其他情况显式物化到获授权工作区，不新增库条目。"
                       }
                     },
                     "required": [
@@ -10091,6 +10133,178 @@
           "run"
         ],
         "description": "应用凭据还必须符合服务端的应用、专用配置和项目归属校验。"
+      }
+    },
+    "/tasks/{tid}/resources": {
+      "get": {
+        "operationId": "get_tasks_tid_resources",
+        "summary": "任务资源引用检查",
+        "parameters": [
+          {
+            "name": "tid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResourceView"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": false,
+        "description": "读取平台任务状态与当前资源绑定，不启动引擎、不复制原始文件、不修改任务。配置标记 current_bindings；不是历史生效配置。已删除会话返回保留的 Task 状态和 unavailable，不虚构原生身份。 应用凭据必须拥有该 Task。响应不包含主机绝对路径、凭据或任务正文。",
+        "x-application-scopes": [
+          "read"
+        ]
+      }
+    },
+    "/tasks/{tid}/resources/export": {
+      "post": {
+        "operationId": "post_tasks_tid_resources_export",
+        "summary": "显式刷新任务目录视图",
+        "parameters": [
+          {
+            "name": "tid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            },
+            "description": "每个逻辑操作唯一。相同请求重试必须复用，不能将 Key 用于不同请求。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResourceExport"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取平台任务状态与当前资源绑定，不启动引擎、不复制原始文件、不修改任务。配置标记 current_bindings；不是历史生效配置。已删除会话返回保留的 Task 状态和 unavailable，不虚构原生身份。 管理员专用，需要 Idempotency-Key 和空 JSON 对象。写入 <data>/tasks/<id>/resources.json，带 observedAt，可删除和重建；不是实时 /proc 或第二个可写状态源。相同 Key 重放原回执，刷新需要新 Key。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
       }
     },
     "/schedules": {
@@ -14886,7 +15100,7 @@
         },
         "x-administrator-only": false,
         "x-personal-user-only": true,
-        "description": "管理员或个人用户可访问自己的文件库；应用凭据不可用。不允许通过参数指定他人的 owner。删除保留历史引用墓碑，内容读取与再次加入返回 410。"
+        "description": "管理员或个人用户可访问自己的文件库；应用凭据不可用。不允许通过参数指定他人的 owner。新工作区文件默认 reference；来源移除返回 410，内容改变返回 409。直接上传到个人库为 managed，旧记录兼容。删除目录条目后内容读取与再次加入返回 410；新原始来源仍保留，已物化附件沿用历史墓碑。"
       }
     },
     "/library": {
@@ -14963,7 +15177,7 @@
         },
         "x-administrator-only": false,
         "x-personal-user-only": true,
-        "description": "管理员或个人用户可访问自己的文件库；应用凭据不可用。不允许通过参数指定他人的 owner。删除保留历史引用墓碑，内容读取与再次加入返回 410。"
+        "description": "管理员或个人用户可访问自己的文件库；应用凭据不可用。不允许通过参数指定他人的 owner。新工作区文件默认 reference；来源移除返回 410，内容改变返回 409。直接上传到个人库为 managed，旧记录兼容。删除目录条目后内容读取与再次加入返回 410；新原始来源仍保留，已物化附件沿用历史墓碑。"
       },
       "post": {
         "operationId": "post_library",
@@ -15027,7 +15241,7 @@
         },
         "x-administrator-only": false,
         "x-personal-user-only": true,
-        "description": "管理员或个人用户可访问自己的文件库；应用凭据不可用。不允许通过参数指定他人的 owner。删除保留历史引用墓碑，内容读取与再次加入返回 410。",
+        "description": "管理员或个人用户可访问自己的文件库；应用凭据不可用。不允许通过参数指定他人的 owner。新工作区文件默认 reference；来源移除返回 410，内容改变返回 409。直接上传到个人库为 managed，旧记录兼容。删除目录条目后内容读取与再次加入返回 410；新原始来源仍保留，已物化附件沿用历史墓碑。",
         "requestBody": {
           "required": true,
           "content": {
@@ -15131,7 +15345,104 @@
         },
         "x-administrator-only": false,
         "x-personal-user-only": true,
-        "description": "管理员或个人用户可访问自己的文件库；应用凭据不可用。不允许通过参数指定他人的 owner。删除保留历史引用墓碑，内容读取与再次加入返回 410。"
+        "description": "管理员或个人用户可访问自己的文件库；应用凭据不可用。不允许通过参数指定他人的 owner。新工作区文件默认 reference；来源移除返回 410，内容改变返回 409。直接上传到个人库为 managed，旧记录兼容。删除目录条目后内容读取与再次加入返回 410；新原始来源仍保留，已物化附件沿用历史墓碑。"
+      }
+    },
+    "/library/{fid}/snapshot": {
+      "post": {
+        "operationId": "post_library_fid_snapshot",
+        "summary": "显式保留文件引用的已记录版本",
+        "parameters": [
+          {
+            "name": "fid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            },
+            "description": "每个逻辑操作唯一。相同请求重试必须复用，不能将 Key 用于不同请求。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。202 仅表示任务已接收。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalFile"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RunDesk-API-Version": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "v1"
+                  ]
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                },
+                "description": "仅适用于幂等提交；true 表示返回原始回执。"
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": false,
+        "x-personal-user-only": true,
+        "description": "管理员或个人用户可访问自己的文件库；应用凭据不可用。不允许通过参数指定他人的 owner。新工作区文件默认 reference；来源移除返回 410，内容改变返回 409。直接上传到个人库为 managed，旧记录兼容。删除目录条目后内容读取与再次加入返回 410；新原始来源仍保留，已物化附件沿用历史墓碑。 需要 Idempotency-Key 和空 JSON 对象。校验原文件内容后保存独立 snapshot，保留同一文件 ID；已托管/快照文件验证后原样返回。若来源已变化，不把新内容当作旧版本归档。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
       }
     },
     "/library/{fid}/content": {
@@ -15217,7 +15528,7 @@
         },
         "x-administrator-only": false,
         "x-personal-user-only": true,
-        "description": "管理员或个人用户可访问自己的文件库；应用凭据不可用。不允许通过参数指定他人的 owner。删除保留历史引用墓碑，内容读取与再次加入返回 410。"
+        "description": "管理员或个人用户可访问自己的文件库；应用凭据不可用。不允许通过参数指定他人的 owner。新工作区文件默认 reference；来源移除返回 410，内容改变返回 409。直接上传到个人库为 managed，旧记录兼容。删除目录条目后内容读取与再次加入返回 410；新原始来源仍保留，已物化附件沿用历史墓碑。"
       }
     },
     "/workspaces/{wid}/mcp-tests/{testid}": {
@@ -18826,7 +19137,10 @@
                 "issues",
                 "statistics",
                 "llm_requests",
-                "llm_request"
+                "llm_request",
+                "observations",
+                "activity",
+                "transcript"
               ]
             }
           },
@@ -18858,7 +19172,7 @@
               "type": "integer",
               "minimum": 0
             },
-            "description": "仅 events；宿主事件 ID 下界，不包含；默认 0。"
+            "description": "仅 events；宿主事件 ID 下界，不包含；默认 0。 observations 使用返回的 nextAfter 继续按事件编号分页。"
           },
           {
             "name": "through",
@@ -18868,7 +19182,7 @@
               "type": "integer",
               "minimum": 0
             },
-            "description": "用于 events/event、五种重建查询和 llm_requests/llm_request；省略时固定当前宿主事件上界（event 默认不限上界）。后续分页必须原样保留响应 through，包括 0。不接受大于当前已保留最大 ID 的值。"
+            "description": "用于 events/event、五种重建查询和 llm_requests/llm_request；省略时固定当前宿主事件上界（event 默认不限上界）。后续分页必须原样保留响应 through，包括 0。不接受大于当前已保留最大 ID 的值。 observations/activity 同样固定此宿主上界；显式 0 始终为空快照。 transcript 同样适用。"
           },
           {
             "name": "eventId",
@@ -18889,7 +19203,7 @@
               "minimum": 0,
               "maximum": 2147483647
             },
-            "description": "event 为脱敏 JSON 的 Unicode 字符偏移；llm_request 正文为字节偏移，metadata 仅接受 0，*_chunks 为采集片段偏移，*_messages 为消息偏移，*_payload 为选定消息的字节偏移；runs/steps/issues/llm_requests 为记录偏移。默认 0。"
+            "description": "event 为脱敏 JSON 的 Unicode 字符偏移；llm_request 正文为字节偏移，metadata 仅接受 0，*_chunks 为采集片段偏移，*_messages 为消息偏移，*_payload 为选定消息的字节偏移；runs/steps/issues/llm_requests 为记录偏移。默认 0。 activity 为统一活动的记录偏移。 transcript 同样适用。"
           },
           {
             "name": "limit",
@@ -18900,7 +19214,7 @@
               "minimum": 1,
               "maximum": 16000
             },
-            "description": "events 默认 50、最大 200；event 默认 4000、最大 16000 字符；runs/steps/issues 默认 50、最大 50；llm_requests 默认 25、最大 50；llm_request 正文默认 4000、最大 16000 字节，*_chunks 和 *_messages 默认/最大 50，*_payload 默认 4000、最大 16000 字节。其他 kind 不接受。"
+            "description": "events 默认 50、最大 200；event 默认 4000、最大 16000 字符；runs/steps/issues 默认 50、最大 50；llm_requests 默认 25、最大 50；llm_request 正文默认 4000、最大 16000 字节，*_chunks 和 *_messages 默认/最大 50，*_payload 默认 4000、最大 16000 字节。其他 kind 不接受。 observations/activity 默认 50、最大 200。 transcript 同样适用。 transcript 默认 20、最大 50。"
           },
           {
             "name": "runId",
@@ -18910,7 +19224,7 @@
               "type": "string",
               "maxLength": 256
             },
-            "description": "steps/step/issues/statistics 的所属轮次，存在性与 step 归属均核对；llm_requests/llm_request 按已记录 labels.runId 精确筛选，不猜测缺失关联。"
+            "description": "steps/step/issues/statistics 的所属轮次，存在性与 step 归属均核对；llm_requests/llm_request 按已记录 labels.runId 精确筛选，不猜测缺失关联。 observations/activity 按明确或有证据重建的轮次筛选，不按时间强行归并跨来源请求。 transcript 同样适用。"
           },
           {
             "name": "type",
@@ -18986,6 +19300,45 @@
               "maximum": 4095
             },
             "description": "仅 llm_request 的 websocket_upstream_payload/websocket_client_payload；默认 0。其余 section 即使显式传 0 也拒绝。"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "host",
+                "codex_app_server",
+                "kun_sdk",
+                "observeproxy"
+              ]
+            },
+            "description": "仅 observations/activity：记录来源。外层响应 source=unified_observation；单条记录保留来源判定依据。"
+          },
+          {
+            "name": "recordKind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 256,
+              "enum": [
+                "run",
+                "model",
+                "tool",
+                "mcp",
+                "approval",
+                "message",
+                "reasoning",
+                "context",
+                "usage",
+                "transport",
+                "error",
+                "event"
+              ]
+            },
+            "description": "仅 observations/activity：规范化记录类别的精确匹配；未知原生方法保留为 event，不丢弃证据。"
           }
         ],
         "responses": {
@@ -19048,7 +19401,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "个人访问码或成员 Cookie。grantId 必须属于当前用户；仅允许授权应用项目。viewer 仅 GET；runner 可提交、上传、审批。任务和文件在同项目共享。变更为本机执行后禁止成员写入。",
+        "description": "个人访问码或成员 Cookie。grantId 必须属于当前用户；仅允许授权应用项目。viewer 仅 GET；runner 可提交、上传、审批。任务和文件在同项目共享。变更为本机执行后禁止成员写入。 observations/activity 是 schemaVersion=1 的统一只读观测投影，source=unified_observation；前者按 after/limit 读取元数据事件，后者按 offset/limit 读取运行时步骤及传输活动。原始证据引用既有 event 或 llm_request，不复制正文。所有筛选和身份补充限于固定 through；Kun sequence/revision 独立保留，WebSocket 连接不能据建立时标签强归整个轮次。 transcript 为统一观测模型的会话阅读投影，source=unified_observation，返回 TranscriptPage；仅接受 through/runId/offset/limit，默认 20、最大 50 条。原始正文仍留在事件日志。单条最多 12000 个 Unicode 字符/32 个内容块，每页原始内容读取预算 16 MiB；超出时 contentTruncated/contentUnavailable 明示，使用 activity.evidence 读取来源。开放中的 Codex 消息可包含按原生 turnId/itemId 唯一对应的保留增量，并标记 contentPartial；不表示调用完成。HTTP 正文不进入会话内容，传输活动独立展示。",
         "x-personal-user-only": true
       }
     },
@@ -20193,7 +20546,7 @@
                     "properties": {
                       "libraryFileId": {
                         "type": "string",
-                        "description": "本人的个人库文件；服务端复制到当前获授权工作区，不新增库条目。"
+                        "description": "本人的个人库文件；同工作区有效上传引用可复用，其他情况显式物化到获授权工作区，不新增库条目。"
                       }
                     },
                     "required": [
@@ -27699,7 +28052,8 @@
               "host_journal",
               "host_projection",
               "http_observation",
-              "kun_worker"
+              "kun_worker",
+              "unified_observation"
             ]
           },
           "kind": {
@@ -27724,7 +28078,10 @@
               "issues",
               "statistics",
               "llm_requests",
-              "llm_request"
+              "llm_request",
+              "observations",
+              "activity",
+              "transcript"
             ]
           },
           "through": {
@@ -27739,7 +28096,9 @@
           "sequence": {
             "type": "integer"
           },
-          "data": {}
+          "data": {
+            "description": "observations 时为 UnifiedObservationPage；activity 时为 UnifiedActivityPage；transcript 时为 TranscriptPage；其余 kind 沿既有查询结构。"
+          }
         },
         "required": [
           "sessionId",
@@ -27879,6 +28238,378 @@
         ],
         "additionalProperties": false
       },
+      "ResourceRef": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "ResourceScope": {
+        "type": "object",
+        "properties": {
+          "instanceId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "taskId": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "ResourceConfiguration": {
+        "type": "object",
+        "properties": {
+          "backend": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "declared",
+              "configured",
+              "unsupported"
+            ]
+          },
+          "nativeFormat": {
+            "type": "string"
+          },
+          "names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "backend",
+          "state"
+        ],
+        "additionalProperties": false
+      },
+      "ResourcePolicy": {
+        "type": "object",
+        "properties": {
+          "sandbox": {
+            "type": "string"
+          },
+          "approvalPolicy": {
+            "type": "string"
+          },
+          "reviewer": {
+            "type": "string"
+          },
+          "networkAccess": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sandbox",
+          "approvalPolicy",
+          "reviewer"
+        ],
+        "additionalProperties": false
+      },
+      "ResourceDescriptor": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "$ref": "#/components/schemas/ResourceRef"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/ResourceScope"
+          },
+          "storage": {
+            "type": "string",
+            "enum": [
+              "reference",
+              "managed",
+              "snapshot"
+            ]
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "system": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "system",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          "versionKind": {
+            "type": "string",
+            "enum": [
+              "binding",
+              "content",
+              "live"
+            ]
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/ResourceConfiguration"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/ResourcePolicy"
+          }
+        },
+        "required": [
+          "ref",
+          "owner",
+          "storage",
+          "source",
+          "versionKind"
+        ],
+        "additionalProperties": false
+      },
+      "ResourceBinding": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string"
+          },
+          "ref": {
+            "$ref": "#/components/schemas/ResourceRef"
+          },
+          "access": {
+            "type": "string",
+            "enum": [
+              "read",
+              "write"
+            ]
+          }
+        },
+        "required": [
+          "role",
+          "ref",
+          "access"
+        ],
+        "additionalProperties": false
+      },
+      "ResourceManifest": {
+        "type": "object",
+        "properties": {
+          "schema": {
+            "const": 1
+          },
+          "scope": {
+            "$ref": "#/components/schemas/ResourceScope"
+          },
+          "resources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResourceDescriptor"
+            }
+          },
+          "bindings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResourceBinding"
+            }
+          }
+        },
+        "required": [
+          "schema",
+          "scope",
+          "resources",
+          "bindings"
+        ],
+        "additionalProperties": false
+      },
+      "TaskStateView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "created": {
+            "type": "string"
+          },
+          "updated": {
+            "type": "string"
+          },
+          "startedAt": {
+            "type": "string"
+          },
+          "finishedAt": {
+            "type": "string"
+          },
+          "cancelRequested": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "sessionId",
+          "status",
+          "cancelRequested",
+          "created",
+          "updated"
+        ],
+        "additionalProperties": false
+      },
+      "TaskRuntimeView": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "executionMode": {
+            "type": "string"
+          },
+          "environmentId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "threadId": {
+            "type": "string"
+          },
+          "turnId": {
+            "type": "string"
+          },
+          "nativeAssociation": {
+            "type": "string",
+            "enum": [
+              "not_started",
+              "current_run",
+              "unavailable"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "executionMode",
+          "sessionId",
+          "nativeAssociation"
+        ],
+        "additionalProperties": false
+      },
+      "TaskResourceView": {
+        "type": "object",
+        "properties": {
+          "schema": {
+            "const": 1
+          },
+          "observedAt": {
+            "type": "string"
+          },
+          "stateSource": {
+            "const": "platform_sqlite"
+          },
+          "availability": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable"
+            ]
+          },
+          "unavailableReason": {
+            "type": "string"
+          },
+          "configurationBasis": {
+            "type": "string",
+            "enum": [
+              "current_bindings",
+              "unavailable"
+            ]
+          },
+          "task": {
+            "$ref": "#/components/schemas/TaskStateView"
+          },
+          "runtime": {
+            "$ref": "#/components/schemas/TaskRuntimeView"
+          },
+          "resources": {
+            "$ref": "#/components/schemas/ResourceManifest"
+          }
+        },
+        "required": [
+          "schema",
+          "observedAt",
+          "stateSource",
+          "availability",
+          "configurationBasis",
+          "task",
+          "resources"
+        ],
+        "additionalProperties": false
+      },
+      "TaskResourceExport": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string"
+          },
+          "observedAt": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string",
+            "description": "Administrator-only host path to the disposable JSON view."
+          }
+        },
+        "required": [
+          "taskId",
+          "observedAt",
+          "path"
+        ],
+        "additionalProperties": false
+      },
+      "PersonalFileSource": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string",
+            "description": "Workspace-relative original location; never an absolute host path."
+          }
+        },
+        "required": [
+          "workspaceId",
+          "path"
+        ],
+        "additionalProperties": false
+      },
       "PersonalFile": {
         "type": "object",
         "properties": {
@@ -27912,6 +28643,20 @@
           },
           "deleted": {
             "type": "boolean"
+          },
+          "storage": {
+            "type": "string",
+            "enum": [
+              "reference",
+              "managed",
+              "snapshot"
+            ]
+          },
+          "source": {
+            "$ref": "#/components/schemas/PersonalFileSource"
+          },
+          "snapshotAt": {
+            "type": "string"
           }
         },
         "required": [
@@ -27922,7 +28667,8 @@
           "sha256",
           "created",
           "kind",
-          "deleted"
+          "deleted",
+          "storage"
         ],
         "additionalProperties": false
       },
@@ -30248,6 +30994,651 @@
           "compatibility",
           "unknownFields",
           "warnings"
+        ],
+        "additionalProperties": false
+      },
+      "ObservationNativeIDs": {
+        "type": "object",
+        "properties": {
+          "rpcId": {
+            "type": "string"
+          },
+          "threadId": {
+            "type": "string"
+          },
+          "turnId": {
+            "type": "string"
+          },
+          "itemId": {
+            "type": "string"
+          },
+          "itemType": {
+            "type": "string"
+          },
+          "callId": {
+            "type": "string"
+          },
+          "step": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "workerSequence": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "workerRevision": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "mcpServer": {
+            "type": "string"
+          },
+          "mcpExchangeId": {
+            "type": "string"
+          },
+          "captureId": {
+            "type": "string"
+          },
+          "transportId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ObservationEvidence": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "readWith": {
+            "type": "string",
+            "enum": [
+              "event",
+              "llm_request"
+            ]
+          },
+          "workerSequence": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "eventId",
+          "readWith"
+        ]
+      },
+      "ObservationUsage": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string"
+          },
+          "aggregation": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObservationEvidence"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "scope",
+          "aggregation",
+          "evidence"
+        ],
+        "description": "用量证据语义，不是结算账单。累计thread与逐调用用量不可直接求和或跨来源重复统计；原始计数通过evidence读取。"
+      },
+      "ObservationTransport": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "websocket": {
+            "type": "boolean"
+          },
+          "requestBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "responseBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "incomplete": {
+            "type": "boolean"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "captureLoss": {
+            "type": "boolean"
+          },
+          "headersRedacted": {
+            "type": "boolean"
+          },
+          "complete": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "websocket",
+          "requestBytes",
+          "responseBytes",
+          "incomplete",
+          "truncated",
+          "captureLoss",
+          "headersRedacted",
+          "complete"
+        ]
+      },
+      "UnifiedObservationEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "taskId": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "host",
+              "codex_app_server",
+              "kun_sdk",
+              "observeproxy"
+            ]
+          },
+          "sourceBasis": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "run",
+              "model",
+              "tool",
+              "mcp",
+              "approval",
+              "message",
+              "reasoning",
+              "context",
+              "usage",
+              "transport",
+              "error",
+              "event"
+            ]
+          },
+          "method": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string"
+          },
+          "clock": {
+            "type": "string"
+          },
+          "phase": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "association": {
+            "type": "string"
+          },
+          "associationBasis": {
+            "type": "string"
+          },
+          "native": {
+            "$ref": "#/components/schemas/ObservationNativeIDs"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObservationEvidence"
+            }
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "usage": {
+            "$ref": "#/components/schemas/ObservationUsage"
+          },
+          "transport": {
+            "$ref": "#/components/schemas/ObservationTransport"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "eventId",
+          "sessionId",
+          "source",
+          "sourceBasis",
+          "kind",
+          "method",
+          "direction",
+          "time",
+          "clock",
+          "phase",
+          "status",
+          "association",
+          "associationBasis",
+          "native",
+          "evidence",
+          "issues"
+        ],
+        "description": "仅白名单元数据，原始payload留在现有事件日志。sourceBasis/associationBasis说明来源和轮次判断依据。"
+      },
+      "UnifiedObservationActivity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "taskId": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "host",
+              "codex_app_server",
+              "kun_sdk",
+              "observeproxy"
+            ]
+          },
+          "sourceBasis": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "run",
+              "model",
+              "tool",
+              "mcp",
+              "approval",
+              "message",
+              "reasoning",
+              "context",
+              "usage",
+              "transport",
+              "error",
+              "event"
+            ]
+          },
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "clock": {
+            "type": "string"
+          },
+          "durationMs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reportedDurationMs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "point": {
+            "type": "boolean"
+          },
+          "startObserved": {
+            "type": "boolean"
+          },
+          "endObserved": {
+            "type": "boolean"
+          },
+          "association": {
+            "type": "string"
+          },
+          "associationBasis": {
+            "type": "string"
+          },
+          "native": {
+            "$ref": "#/components/schemas/ObservationNativeIDs"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObservationEvidence"
+            }
+          },
+          "evidenceTruncated": {
+            "type": "boolean"
+          },
+          "missing": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "usage": {
+            "$ref": "#/components/schemas/ObservationUsage"
+          },
+          "transport": {
+            "$ref": "#/components/schemas/ObservationTransport"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "sessionId",
+          "source",
+          "sourceBasis",
+          "kind",
+          "type",
+          "title",
+          "status",
+          "clock",
+          "point",
+          "startObserved",
+          "endObserved",
+          "association",
+          "associationBasis",
+          "native",
+          "evidence",
+          "evidenceTruncated",
+          "missing",
+          "issues"
+        ],
+        "description": "宿主run、生命周期步骤或独立transport活动；同run不代表同次模型调用。缺失和截断保留，历史task身份只从固定范围内日志补充。"
+      },
+      "UnifiedObservationPage": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [
+              1
+            ]
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "snapshotThrough": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "observations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UnifiedObservationEvent"
+            }
+          },
+          "nextAfter": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "coverage": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "schemaVersion",
+          "sessionId",
+          "snapshotThrough",
+          "observations",
+          "nextAfter",
+          "hasMore",
+          "coverage"
+        ]
+      },
+      "UnifiedActivityPage": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [
+              1
+            ]
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "snapshotThrough": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "activity": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UnifiedObservationActivity"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "nextOffset": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "coverage": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "schemaVersion",
+          "sessionId",
+          "snapshotThrough",
+          "activity",
+          "total",
+          "offset",
+          "nextOffset",
+          "hasMore",
+          "coverage"
+        ]
+      },
+      "TranscriptBlock": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "code",
+              "json",
+              "diff",
+              "file"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "TranscriptEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "与 activity.id 相同的稳定标识。"
+          },
+          "activity": {
+            "$ref": "#/components/schemas/UnifiedObservationActivity"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant",
+              "tool",
+              "reasoning",
+              "system"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "blocks": {
+            "type": "array",
+            "maxItems": 32,
+            "items": {
+              "$ref": "#/components/schemas/TranscriptBlock"
+            }
+          },
+          "contentTruncated": {
+            "type": "boolean"
+          },
+          "contentUnavailable": {
+            "type": "boolean"
+          },
+          "contentPartial": {
+            "type": "boolean",
+            "description": "消息尚未结束；可见增量不能作为完成证据。"
+          }
+        },
+        "required": [
+          "id",
+          "activity",
+          "role",
+          "title",
+          "blocks",
+          "contentTruncated",
+          "contentUnavailable",
+          "contentPartial"
+        ],
+        "additionalProperties": false
+      },
+      "TranscriptPage": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "snapshotThrough": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "entries": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/TranscriptEntry"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nextOffset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "coverage": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "sessionId",
+          "snapshotThrough",
+          "entries",
+          "total",
+          "offset",
+          "nextOffset",
+          "hasMore",
+          "coverage"
         ],
         "additionalProperties": false
       }

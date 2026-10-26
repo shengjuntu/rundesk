@@ -11,18 +11,18 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
  ]);
  let patchMode='normal',releasePatch,server,browser;
  const menu=fs.readFileSync(path.join(root,'internal/web/index.html'),'utf8').match(/<details id="session-menu"[\s\S]*?<\/details>/)[0].replace('session-menu hidden','session-menu');
- const html=`<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/kun.css"><link rel="stylesheet" href="/debug-trace.css"></head><body><button id="trace-button">调试工作台</button>${menu}<textarea id="prompt"></textarea><script>
+ const html=`<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/kun.css"><link rel="stylesheet" href="/debug-trace.css"><link rel="stylesheet" href="/trace-reader.css"></head><body><button id="trace-button">运行轨迹</button>${menu}<textarea id="prompt"></textarea><script>
  window.errors=[];window.rdText=x=>x;window.$=s=>document.querySelector(s);window.toast=e=>errors.push(String(e));window.safe=fn=>Promise.resolve().then(fn).catch(e=>errors.push(e.message));
  window.el=(tag,attrs={},...children)=>{const n=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')n.className=v;else if(k.startsWith('on'))n.addEventListener(k.slice(2),v);else if(v!==false&&v!=null)n.setAttribute(k,v===true?'':v);}for(const c of children.flat())if(c!=null)n.append(c instanceof Node?c:document.createTextNode(String(c)));return n;};
  window.button=(text,fn,cls='')=>el('button',{type:'button',class:cls,onclick:()=>safe(fn)},text);
  window.api=async(url,options={})=>{const response=await fetch('/api/v1'+url,{method:options.method||'GET',headers:{'Content-Type':'application/json'},body:options.body?JSON.stringify(options.body):undefined});const value=await response.json();if(!response.ok)throw Error(value.error||'HTTP '+response.status);return value;};
  window.state={session:null,sessions:[]};window.refreshSessions=async()=>{};window.scheduleRender=()=>{};
  window.selectSession=async id=>{window.RunDeskDebug?.close();state.session=await api('/sessions/'+id);state.sessions=[state.session];};
- </script><script src="/debug-trace.js"></script><script src="/trace.js"></script><script>selectSession(new URLSearchParams(location.search).get('sid')||'s1').then(()=>window.ready=true);</script></body></html>`;
+ </script><script src="/trace-reader.js"></script><script src="/debug-trace.js"></script><script src="/trace.js"></script><script>selectSession(new URLSearchParams(location.search).get('sid')||'s1').then(()=>window.ready=true);</script></body></html>`;
  const send=(res,value,status=200)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(value));};
  server=http.createServer(async(req,res)=>{
   try{
-   const u=new URL(req.url,'http://fixture');if(!u.pathname.startsWith('/api/v1/')){if(u.pathname==='/'){res.writeHead(200,{'Content-Type':'text/html'});res.end(html);return;}const name=u.pathname.slice(1);if(!['style.css','kun.css','debug-trace.css','debug-trace.js','trace.js'].includes(name)){res.writeHead(404);res.end();return;}res.writeHead(200,{'Content-Type':name.endsWith('.css')?'text/css':'text/javascript'});res.end(fs.readFileSync(path.join(root,'internal/web',name)));return;}
+   const u=new URL(req.url,'http://fixture');if(!u.pathname.startsWith('/api/v1/')){if(u.pathname==='/'){res.writeHead(200,{'Content-Type':'text/html'});res.end(html);return;}const name=u.pathname.slice(1);if(!['style.css','kun.css','debug-trace.css','trace-reader.css','trace-reader.js','debug-trace.js','trace.js'].includes(name)){res.writeHead(404);res.end();return;}res.writeHead(200,{'Content-Type':name.endsWith('.css')?'text/css':'text/javascript'});res.end(fs.readFileSync(path.join(root,'internal/web',name)));return;}
    const api=u.pathname.slice('/api/v1'.length),sid=api.split('/')[2],session=sessions.get(sid);let body='';for await(const chunk of req)body+=chunk;
    requests.push({method:req.method,path:api,body:body?JSON.parse(body):undefined});
    if(/^\/sessions\/[^/]+$/.test(api)){
@@ -37,7 +37,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
     }
    }
    if(api.endsWith('/debug/capabilities')){send(res,{backend:session.runtimeKind,queries:['steps','llm_requests']});return;}
-   if(api.endsWith('/debug/query')){const kind=u.searchParams.get('kind');if(kind==='events'){send(res,{data:{through:20,events:[]}});return;}if(kind==='runs'){send(res,{data:{runs:[{id:'run-1',question:'当前任务',status:'running'}],total:1,nextOffset:1,hasMore:false}});return;}if(kind==='statistics'){send(res,{data:{steps:0,attentionSteps:0,withoutCompleteDuration:0}});return;}if(kind==='steps'){send(res,{data:{steps:[],total:0,nextOffset:0,hasMore:false}});return;}if(kind==='llm_requests'){send(res,{data:{requests:[],total:0,nextOffset:0,hasMore:false}});return;}}
+   if(api.endsWith('/debug/query')){const kind=u.searchParams.get('kind');if(kind==='events'){send(res,{data:{through:20,events:[]}});return;}if(kind==='runs'){send(res,{data:{runs:[{id:'run-1',question:'当前任务',status:'running'}],total:1,nextOffset:1,hasMore:false}});return;}if(kind==='statistics'){send(res,{data:{steps:0,attentionSteps:0,withoutCompleteDuration:0}});return;}if(kind==='steps'){send(res,{data:{steps:[],total:0,nextOffset:0,hasMore:false}});return;}if(kind==='transcript'){send(res,{data:{schemaVersion:1,sessionId:sid,snapshotThrough:20,entries:[],offset:0,nextOffset:0,hasMore:false,total:0,coverage:'retained fixture records'}});return;}if(kind==='llm_requests'){send(res,{data:{requests:[],total:0,nextOffset:0,hasMore:false}});return;}}
    send(res,{error:'Unexpected fixture endpoint '+api},404);
   }catch(e){send(res,{error:e.message},500);}
  });

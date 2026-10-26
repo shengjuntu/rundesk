@@ -14,7 +14,7 @@ var kunDiagnosticProviderExecutable = os.Executable
 var kunDiagnosticTools = []string{
 	"trace_list_runs", "trace_find_steps", "trace_get_step", "trace_read_event",
 	"trace_find_issues", "trace_propose", "trace_list_llm_requests",
-	"trace_read_llm_request", "trace_statistics",
+	"trace_read_llm_request", "trace_statistics", "trace_list_observations", "trace_list_activity",
 }
 
 func (m *Manager) kunDiagnosticRequest(s Session, w Workspace, in Input, cfg p.Config, key string) (p.Start, error) {

@@ -1,0 +1,61 @@
+{
+  "baseline": "RunDesk v0.52.0",
+  "base_commit": "04e822f",
+  "prior_resource_refactor_commit": "ea69ec8",
+  "protocol_version": "2026-10-19",
+  "upstream_commit": "caa3c0a109fffd84ef245dcdad23f2cdfeff7153",
+  "suite": "uhp-conformance 2026.10.19.post2",
+  "scope": "Service facade over shared TaskControl/TaskSubmissionControl; no HarnessRouter runtime dependency",
+  "validation": {
+    "go_test_all": {
+      "result": "pass",
+      "app_seconds": 87.192
+    },
+    "go_vet_all": {
+      "result": "pass"
+    },
+    "uhp_task_race": {
+      "result": "pass",
+      "log": "Targeted UHP and shared submission race tests",
+      "app_seconds": 30.186
+    },
+    "full_race": {
+      "result": "pass",
+      "command": "go test -race ./internal/app ./internal/resource",
+      "app_seconds": 154.847
+    },
+    "official_suite": {
+      "result": "pass",
+      "passed": 50,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "report": "uhp-conformance-demo.json",
+      "backend": "native Codex protocol demo fixture; no provider calls"
+    },
+    "builds": {
+      "linux_amd64": "pass",
+      "windows_amd64": "pass"
+    }
+  },
+  "regressions": [
+    "Concurrent same-key retries wait on one atomic task/response/receipt transaction.",
+    "Session continuation creates distinct tasks while preserving native thread and workspace.",
+    "Streaming disconnect does not cancel work; explicit cancellation retains emitted partial output.",
+    "Native fragments emitted during synchronous cancellation are drained before final response freezes.",
+    "Credential ownership, file scope, traversal/symlink rejection and corrupt-receipt fail-closed behavior.",
+    "Durable receipt replay across restart and response-history deletion.",
+    "Existing trace-analysis snapshot test now waits for terminal journal completion; source immutability assertions retained and strengthened."
+  ],
+  "limitations": [
+    "No real Codex provider or Kun 0.17.0 runtime end-to-end validation in this environment.",
+    "Codex max_step unsupported; Kun uses observable native step count.",
+    "Per-request instructions travel as marked task text rather than native system/developer role overrides.",
+    "Kun image input unsupported; Codex images require a supporting model.",
+    "max_output_tokens and store:false are observably ignored; durable audit/response retention remains enabled.",
+    "UHP session deletion/sharing and harness CRUD/plugin/environment/memory management not implemented.",
+    "Original artifact references can become changed/missing; historical bytes are never fabricated or silently substituted.",
+    "Official suite success on fixture is not a claim of complete normative conformance across all native backends."
+  ],
+  "generated_at": "2026-10-20T11:05:44.118088+00:00"
+}

@@ -1,0 +1,79 @@
+{
+  "baseVersion": "0.52.0",
+  "runtimeVersionUnchanged": true,
+  "baseArchiveSHA256": "c046ba3f4746292823b5a7b1281371f3985af2dd500f9c0507b3f65b49043168",
+  "validatedAt": "2026-10-20T09:52:00.608057+00:00",
+  "toolchain": "go1.25.12 linux/amd64",
+  "checks": [
+    {
+      "command": "go test ./... (original v0.52.0)",
+      "result": "passed",
+      "appSeconds": 78.41
+    },
+    {
+      "command": "go test ./... (refactored)",
+      "result": "passed",
+      "appSeconds": 79.424
+    },
+    {
+      "command": "go test -race ./internal/app ./internal/resource",
+      "result": "passed",
+      "appSeconds": 125.828
+    },
+    {
+      "command": "go test -race ./internal/app -run 'TestAdmittedResource|TestTaskResource' -count=1",
+      "result": "passed"
+    },
+    {
+      "command": "go test ./internal/app ./internal/web -run 'Test.*OpenAPI|TestAdmittedResource|TestTaskResource|TestPersonal|TestGeneratedPersonal' -count=1",
+      "result": "passed"
+    },
+    {
+      "command": "go vet ./...",
+      "result": "passed"
+    },
+    {
+      "command": "cd third_party/kun-sdk && go test ./...",
+      "result": "passed"
+    },
+    {
+      "command": "CGO_ENABLED=0 go build -buildvcs=false -trimpath ./cmd/rundesk",
+      "result": "passed",
+      "target": "linux/amd64"
+    },
+    {
+      "command": "CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -buildvcs=false -trimpath ./cmd/rundesk",
+      "result": "passed",
+      "target": "windows/amd64"
+    },
+    {
+      "command": "node --check internal/web/library.js",
+      "result": "passed"
+    },
+    {
+      "command": "python3 scripts/generate-openapi.py",
+      "result": "passed",
+      "paths": 218,
+      "operations": 257
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "reviewedRegressions": [
+    "stale cancellation cannot close a newer Codex run connection",
+    "reference downloads verify a temporary immutable response buffer",
+    "slash-relative resource locations support Windows conversion",
+    "resource declaration recorded at admission remains historical after current policy changes",
+    "deleted Session retains Task facts with explicit unavailable resource association",
+    "resource metadata gathering occurs before global application/queue locks"
+  ],
+  "limitations": [
+    "External Kun 0.17 integration tests require RUNDESK_TEST_KUN and were skipped; available older binary was not substituted.",
+    "No real model-provider, Docker daemon, or browser-layout acceptance run. Tests use local fixtures/native demo protocol where applicable.",
+    "UHP protocol serving/conformance is outside this internal refactor and remains unimplemented.",
+    "This is an internal module boundary, not a dynamically loadable third-party backend SDK.",
+    "No deployment or live user data migration performed."
+  ]
+}

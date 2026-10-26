@@ -35,7 +35,7 @@ func TestKunDiagnosticSourceRemainsPausedAndFrozen(t *testing.T) {
 			return
 		}
 		text := string(p.JSON(req))
-		if len(req.Tools) != 9 || !strings.Contains(text, "trace_list_llm_requests") || !strings.Contains(text, "trace_read_llm_request") || strings.Contains(text, "BUSINESS-INSTRUCTIONS") || strings.Contains(text, "FUTURE-SOURCE-RECORD") {
+		if len(req.Tools) != 11 || !strings.Contains(text, "trace_list_llm_requests") || !strings.Contains(text, "trace_read_llm_request") || strings.Contains(text, "BUSINESS-INSTRUCTIONS") || strings.Contains(text, "FUTURE-SOURCE-RECORD") {
 			t.Errorf("diagnostic contamination: %s", text)
 		}
 		n := calls.Add(1)

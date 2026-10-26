@@ -1,5 +1,7 @@
 # 统一调试工作台与 Codex 观测
 
+在 v0.52.0 重构基础上，新增 [统一观测模型 v1](OBSERVATION-MODEL.md)：Codex App Server、Kun SDK 和已保留代理记录共享事件/活动查询与证据引用。下面的采集、原始详情及现有工作台契约继续保留。
+
 RunDesk 0.49.1 使用同一个调试工作台检查轨迹、结构化证据和 Kun DevTools。Codex HTTP 采集默认关闭，按会话保存开关。共同视图使用会话和固定宿主事件范围；Kun 的内部状态与控制继续按自身 run、sequence 和 revision 校验。合并入口不改变原任务的执行权限，也不让 Codex 获得 Kun 的单步能力。
 
 ## 采集和问答的数据来源

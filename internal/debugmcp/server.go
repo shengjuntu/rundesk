@@ -15,6 +15,9 @@ import (
 )
 
 var descriptions = map[string]string{
+	"transcript":   "Read bounded conversation presentation entries with canonical unified activity metadata and source evidence. Default 20, max 50; retain through and follow nextOffset. Text is a redacted display projection, may be truncated or unavailable; raw evidence remains authoritative. Tools pair only through native identities. Transport records remain separate. Open Codex messages may contain partial retained deltas, never a completion claim.",
+	"observations": "List canonical observation envelopes from host, Codex App Server, Kun SDK and observeproxy in host event ID order. Metadata only, default 50, max 200, no raw bodies. Keep through including zero and advance after with nextAfter. Filter by runId/source/recordKind; evidence references read through debug_event or debug_llm_request. No inferred per-call runtime/transport merge.",
+	"activity":     "List unified run aggregates (source host), runtime steps (native source) and independent transport exchanges at a fixed through snapshot. Ordered by first evidence event ID, not cross-clock time. Default 50, max 200; follow nextOffset. Projection limits still apply with filters. Preserve source clocks, missing boundaries, association confidence and original evidence. Same-run records are not proof of the same model call; WebSocket connections may span runs.",
 	"llm_requests": "List retained pass-through model HTTP observations at one fixed host through cursor, optionally scoped by explicit runId. Max 50. Evidence event IDs identify records; an empty list is not proof no API request occurred.",
 	"llm_request":  "Read retained HTTP request/response observation metadata or exact captured byte pages (base64; byte offsets), including incomplete/redacted states. Request/response and websocket_upstream/websocket_client sections contain bytes; *_chunks contain observer chunk metadata. For WebSocket list *_messages, then read *_payload with messageIndex for unmasked message bytes. Compressed payloads are not decompressed; inspect decode flags. Follow nextOffset. No replay or upstream request.",
 	"runs":         "List recorded runs for either backend at a fixed host through cursor. Max 50 per page; keep returned through including zero for later queries. Synthetic IDs indicate missing run identity.",
@@ -51,10 +54,16 @@ func Tools() []any {
 				schema["description"] = "Only for WebSocket payload sections; message index, defaults to0"
 			case "section":
 				schema = map[string]any{"type": "string", "enum": []string{"metadata", "request", "response", "websocket_upstream", "websocket_client", "request_chunks", "response_chunks", "websocket_upstream_chunks", "websocket_client_chunks", "websocket_upstream_messages", "websocket_client_messages", "websocket_upstream_payload", "websocket_client_payload"}}
-			case "runId", "type", "status", "query", "stepId":
+			case "runId", "type", "status", "query", "stepId", "source", "recordKind":
 				schema = map[string]any{"type": "string", "maxLength": 256}
 				if field == "query" {
 					schema["maxLength"] = 1000
+				}
+				if field == "source" {
+					schema["enum"] = []string{"host", "codex_app_server", "kun_sdk", "observeproxy"}
+				}
+				if field == "recordKind" {
+					schema["enum"] = []string{"run", "model", "tool", "mcp", "approval", "message", "reasoning", "context", "usage", "transport", "error", "event"}
 				}
 				if field == "stepId" {
 					schema["minLength"] = 1
@@ -71,9 +80,9 @@ func Tools() []any {
 				required = append(required, field)
 			case "limit":
 				schema["minimum"] = 1
-				if d.Projection(kind) || kind == "llm_requests" {
+				if d.Projection(kind) || kind == "llm_requests" || kind == "transcript" {
 					schema["maximum"] = 50
-				} else if kind == "events" {
+				} else if kind == "events" || d.Unified(kind) {
 					schema["maximum"] = 200
 				} else {
 					schema["maximum"] = 16000
@@ -105,7 +114,7 @@ func arguments(kind string, raw json.RawMessage) (url.Values, error) {
 		if !allowed[name] {
 			return nil, fmt.Errorf("unknown or inapplicable tool argument")
 		}
-		if name == "runId" || name == "type" || name == "status" || name == "query" || name == "stepId" || name == "section" {
+		if name == "runId" || name == "type" || name == "status" || name == "query" || name == "stepId" || name == "section" || name == "source" || name == "recordKind" {
 			var text string
 			if len(value) == 0 || value[0] != '"' || json.Unmarshal(value, &text) != nil {
 				return nil, fmt.Errorf("invalid text argument")

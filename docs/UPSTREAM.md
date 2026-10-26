@@ -56,6 +56,10 @@ RunDesk 0.45.0 introduces its own Go host lifecycle interface and capability cat
 
 The public README and UHP architecture, tasks, governance and conformance pages were reviewed again on 2026-10-18. RunDesk's own contract is named RunDesk Control API (RDCA). The accepted direction is an independent RunDesk platform with a future UHP server interface, sharing its own task and trace core; HarnessRouter is not a required service or backend. A downstream application's migration is a client integration goal, not automatic portability of the original service's sessions, credentials or execution state. See [API strategy](API-STRATEGY.md). No upstream materials were copied for this documentation decision.
 
+## UHP implementation reference in the v0.52.0 refactor
+
+The independent `/v1` adapter follows UHP `2026-10-19`, pinned to HarnessRouter commit `caa3c0a109fffd84ef245dcdad23f2cdfeff7153`. Reference scope: `protocol/versions/2026-10-19`, its JSON/OpenAPI schemas, and the `2026.10.19.post2` conformance suite. RunDesk's implementation is new Go code; no upstream protocol implementation or schema is redistributed in this source tree. The helper `scripts/test-uhp-conformance.sh` runs an unmodified, caller-supplied checkout of the official Apache-2.0 suite; that checkout is not a build or runtime dependency. Protocol provenance and validation limitations are documented in [UHP](UHP.md). No upstream endorsement is implied.
+
 ## Runtime profiles in 0.46.0
 
 Thanks to Agent-Reach contributors. The user-selected fork https://github.com/silently0801/agent-reach is pinned to cf70302e928155703829439115a18132928f8913 (1.1.0, MIT). RunDesk installs the CLI, its upstream tools and its Skill in the generated image; no credentials are distributed. Its system setup is translated into explicit Docker layers instead of running an unpinned best-effort installer. See [assessment](../examples/news2douyin/AGENT-REACH.md) and [notices](../examples/_shared/THIRD_PARTY.md).

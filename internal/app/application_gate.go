@@ -232,14 +232,14 @@ func (s *Server) checkApplication(r *http.Request, k *ApplicationKey) error {
 		if len(p) > 3 {
 			return forbidden()
 		}
-		t, e := m.Task(p[1])
+		t, e := s.taskControl().Task(p[1])
 		if e != nil {
 			return e
 		}
 		if !taskVisible(r, t) {
 			return forbidden()
 		}
-		if len(p) == 2 && method == "GET" || len(p) == 3 && p[2] == "cancel" && method == "POST" && k.scope("run") {
+		if len(p) == 2 && method == "GET" || len(p) == 3 && p[2] == "resources" && method == "GET" && k.scope("read") || len(p) == 3 && p[2] == "cancel" && method == "POST" && k.scope("run") {
 			return nil
 		}
 	case "schedules":

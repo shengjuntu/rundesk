@@ -133,7 +133,7 @@ func TestKunExternalVersionAndDiagnosticCapabilityBoundary(t *testing.T) {
 		t.Fatal(err)
 	}
 	d := start.Diagnostic
-	if d == nil || d.Provider == nil || d.SnapshotPath != "" || d.Provider.Name != "rundesk_trace" || !d.Provider.Allowlist || len(d.Provider.EnabledTools) != 9 {
+	if d == nil || d.Provider == nil || d.SnapshotPath != "" || d.Provider.Name != "rundesk_trace" || !d.Provider.Allowlist || len(d.Provider.EnabledTools) != 11 {
 		t.Fatalf("diagnostic provider boundary: %+v", d)
 	}
 	if err = d.Provider.Validate(); err != nil {

@@ -12,7 +12,7 @@ import (
 var ErrProjectionLimit = errors.New("trace projection exceeds 20000 lifecycle records, 64 MiB total or 8 MiB per event; choose an earlier through cursor or a smaller source session")
 
 // Deltas are retained in the journal but never mistaken for complete calls.
-const lifecycleSQL = `method IN ('run/input','run/steer','turn/started','turn/completed','run/state','item/started','item/completed','approval/pending','approval/resolved','approval/expired','error','warning','configWarning','thread/compacted','kun/run.started','kun/run.paused','kun/run.finished','kun/model.started','kun/model.completed','kun/fast.completed','kun/fast.fallback','kun/tool.started','kun/tool.completed','kun/mcp.request','kun/mcp.response','kun/mcp.failed','kun/mcp.ready','kun/approval.requested','kun/control.applied','kun/context.built','kun/capability.ready')`
+const lifecycleSQL = `method IN ('run/input','run/steer','turn/started','turn/completed','run/state','item/started','item/completed','approval/pending','approval/resolved','approval/expired','error','warning','configWarning','thread/compacted','kun/run.started','kun/run.paused','kun/run.finished','kun/model.started','kun/model.completed','kun/fast.completed','kun/fast.fallback','kun/tool.started','kun/tool.completed','kun/mcp.request','kun/mcp.response','kun/mcp.failed','kun/mcp.ready','kun/approval.requested','kun/control.applied','kun/control.queued','kun/context.built','kun/capability.ready')`
 
 type projection struct {
 	runs         []Run
@@ -335,22 +335,31 @@ func (p *projection) ingest(id int64, at, method string, d map[string]any) {
 		status = "expired"
 	case "kun/fast.completed":
 		kind, title, status = "fastReply", "Kun fast path reply", "completed"
+		if str(data["status"]) == "rejected" {
+			status = "rejected"
+		}
 	case "kun/fast.fallback":
 		kind, title, status = "fastFallback", "Kun fast path fallback", "recorded"
 	case "kun/model.started", "kun/model.completed":
 		kind = "modelCall"
 		title = "Kun model"
-		if str(data["purpose"]) == "plan" {
+		purpose := str(data["purpose"])
+		if purpose == "plan" {
 			title = "Kun explicit plan"
 		}
 		if step := numberKey(data["step"]); step != "" {
-			base = key(rid, "model", step)
+			// Planning and acting can share a step. Missing purpose stays in its
+			// own legacy/default scope; do not infer it from an adjacent call.
+			base = key(rid, "model", step, purpose)
 		}
 		phase = "start"
 		status = "running"
 		if method == "kun/model.completed" {
 			phase = "end"
 			status = "completed"
+			if str(data["status"]) == "rejected" {
+				status = "rejected"
+			}
 			if hasError(data["error"]) {
 				status = "failed"
 			}
@@ -480,6 +489,11 @@ func (p *projection) evidence(s *Step, id int64, d map[string]any) {
 	}
 }
 func (p *projection) payload(s *Step, payload map[string]any) {
+	if _, present := payload["content"]; s.Type == "userMessage" && present {
+		s.contentFingerprint = transcriptFingerprint(s.Type, payload)
+	} else if _, present := payload["input"]; (s.Type == "run/input" || s.Type == "run/steer") && present {
+		s.contentFingerprint = transcriptFingerprint(s.Type, payload)
+	}
 	combined := map[string]any{}
 	for k, v := range s.Payload {
 		combined[k] = v
@@ -519,7 +533,7 @@ func (p *projection) finish() {
 		if s.Status == "unknown" {
 			s.Issues = appendUnique(s.Issues, "status_unknown")
 		}
-		if isFailure(s.Status) || s.Status == "warning" || s.Status == "pending" {
+		if isFailure(s.Status) || s.Status == "warning" || s.Status == "pending" || s.Status == "rejected" {
 			s.Issues = appendUnique(s.Issues, s.Status)
 		}
 	}

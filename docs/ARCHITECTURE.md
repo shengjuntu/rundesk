@@ -24,10 +24,12 @@ flowchart TD
 | --- | --- | --- |
 | 应用契约 | `/api/v1`、认证/归属、幂等、结构化错误 | `internal/app/api_v1.go`、`application_keys.go`、`http.go` |
 | 平台服务 | 应用/实例、任务队列、会话、审批入口、文件、事件投影 | `internal/app`、`internal/store` |
-| 后端入口 | 注册内置后端、能力描述、运行和停止分派 | `internal/app/backends.go` |
-| Codex 连接 | App Server JSON-RPC、原生线程/轮次、恢复和事件 | `internal/rpc`、`internal/app/manager.go` |
+| 任务契约 | 提交、查询、取消；队列管理与资源检查独立接口 | `internal/app/task_control.go` |
+| 资源契约 | 身份、版本、归属、绑定、路径解析、权限声明 | `internal/resource`、`internal/app/resources.go` |
+| 后端入口 | 注册内置后端、能力描述、准入、运行和停止分派 | `internal/app/backends.go`、`runtime_services.go`、`runtime_host.go` |
+| Codex 连接 | App Server JSON-RPC、原生线程/轮次、恢复和事件 | `internal/rpc`、`internal/app/runtime_codex.go` |
 | HTTP 观测 | 原协议直通、旁路字节副本、有界队列与采集完整性 | `internal/observeproxy`、`internal/app/observation.go` |
-| Kun 连接 | 外部 worker 启动、真实版本/能力握手、请求关联、事件补取 | SDK `client`、`internal/app/kun.go` |
+| Kun 连接 | 外部 worker 启动、真实版本/能力握手、请求关联、事件补取 | SDK `client`、`internal/app/runtime_kun.go` |
 | Kun 公共契约 | 消息、客户端与纯校验；不链接执行内核 | `third_party/kun-sdk` |
 | 外部 Kun 执行内核 | 模型/工具循环、控制、快照、动作账本、回放、Skill 快速路径 | 独立 Kun 项目 `internal/engine`、`cmd/kun` |
 | 执行环境 | 本机进程、Codex 容器与挂载/租约 | `internal/app/execution.go` 及 environment 文件 |
@@ -43,9 +45,11 @@ flowchart TD
 
 ## 后端契约与扩展边界
 
-`AgentBackend` 当前抽出了运行、停止和静态能力目录。注册表未知类型直接失败，不回退 Codex；`Manager.run` 和停止流程按会话后端选择适配器。共同授权、队列额度、输入持久化及生命周期仍由平台负责。
+基于 v0.52.0 的重构采用独立执行模块加公共服务。`RuntimeBackend` 定义 `Info/Prepare/Run/Stop`；Codex 与 Kun 各自实现原生执行流程，构造时注入生命周期、资源、权限及原生扩展接口，不接收或保存 `*Manager`。`runtime_host.go` 集中组装宿主服务；Kun 事件插入、游标推进和 Session 投影仍由宿主事务统一提交。注册表未知类型直接失败，不回退 Codex。
 
-这是内部接口整理的第一层，尚不是可动态加载的插件 SDK。配置类型仍覆盖 Kun/Codex；连接、审批、恢复及 Kun 实验准备仍有专用实现。添加第三个后端需要补配置、生命周期、环境与契约测试，不能仅登记名称。后续继续将这些行为逐步收敛，保持现有 API 和副作用语义。
+`TaskControl` 供 API 使用，`QueueControl` 与 `TaskResourceControl` 分别控制管理和检查能力。共同授权、队列额度、输入持久化及生命周期仍由平台负责，准入中的引擎专属检查移入各自的 `Prepare`。`PolicyService` 保存平台权限声明，由后端映射到真实执行策略；实际运行时回报与声明仍分别记录。
+
+这些是内部模块契约，尚不是可动态加载的插件 SDK。已有原生配置/审批/恢复/实验辅助逻辑继续通过专用宿主接口提供；`Input` 和连接句柄仍含现有引擎专属数据。添加第三个后端需实现模块、配置、环境和能力测试，不能仅登记名称。配置来源与资源引用规则见 [资源契约](RESOURCE-CONTRACTS.md)。
 
 能力目录描述“实现支持”；`setup/environment` 检查已配置实例的本机前置条件；会话 DebugService 进一步区分 supported 与 available。不能把目录中的 step 能力理解为每个后端、每种运行状态均可调用。
 
@@ -66,6 +70,8 @@ Kun 自然语言诊断使用宿主提供的 `__trace_mcp` 只读证据桥，固�
 ## 进程与持久化
 
 Go 主服务嵌入 WebUI，SQLite 保存平台对象与事件。每个加载的 Kun 会话使用独立 worker 和执行数据库，通过序号补取与去重关联宿主投影；两库没有跨进程原子事务。默认全局并发 4，队列、直接会话与恢复共用额度，等待审批也占额度。
+
+任务检查返回平台状态与资源引用，可显式导出为 `<data>/tasks/<taskId>/resources.json`。文件是带观察时间的可重建视图，修改它不会修改任务；不会把原生会话数据库或工作区复制进去。新个人产物默认登记原文件引用，只有显式快照保留独立版本；历史托管副本继续兼容。见 [任务资源视图](TASK-RESOURCES.md) 和 [文件库](PERSONAL-FILES.md)。
 
 配置通过 revision 防止覆盖；向导将默认实例和 setup 状态原子保存。重启恢复排队元数据，已开始或结果未确认的执行进入中断/待核对状态，不靠跨后端自动重试修复。
 

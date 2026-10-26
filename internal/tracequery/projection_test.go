@@ -131,6 +131,42 @@ func TestProjectionHybridReplayIsAnObservation(t *testing.T) {
 	}
 }
 
+func TestProjectionKunModelPurposeSeparatesInterleavedCalls(t *testing.T) {
+	for _, actionPurpose := range []string{"", "act"} {
+		t.Run("action_purpose_"+actionPurpose, func(t *testing.T) {
+			data := func(purpose string) map[string]any {
+				v := map[string]any{"step": 3}
+				if purpose != "" {
+					v["purpose"] = purpose
+				}
+				return v
+			}
+			p := project(t, input("r"),
+				worker("model.started", "r", 10, data("plan")),
+				worker("model.started", "r", 11, data(actionPurpose)),
+				worker("model.completed", "r", 12, data(actionPurpose)),
+				worker("model.completed", "r", 13, data("plan")))
+			calls := stepsOf(p, "modelCall")
+			if len(calls) != 2 {
+				t.Fatalf("plan/action boundaries were not paired independently: %+v", calls)
+			}
+			for i, want := range []struct {
+				title     string
+				ids, seqs []int64
+				duration  int64
+			}{{"Kun explicit plan", []int64{2, 5}, []int64{10, 13}, 3000}, {"Kun model", []int64{3, 4}, []int64{11, 12}, 1000}} {
+				call := calls[i]
+				if call.Title != want.title || call.Status != "completed" || !call.StartObserved || !call.EndObserved || call.DurationMS == nil || *call.DurationMS != want.duration || len(call.Missing) != 0 || len(call.Issues) != 0 {
+					t.Fatalf("unexpected call boundaries: %+v", call)
+				}
+				if fmt.Sprint(call.EventIDs) != fmt.Sprint(want.ids) || fmt.Sprint(call.WorkerSequences) != fmt.Sprint(want.seqs) {
+					t.Fatalf("plan/action evidence crossed scopes: %+v", call)
+				}
+			}
+		})
+	}
+}
+
 func TestProjectionRedactionPrecisionPreviewAndClock(t *testing.T) {
 	start := item("started", "t", "a", map[string]any{"authorization": "secret-header", "arguments": map[string]any{"count": json.Number("9007199254740993"), "password": "secret-password", "long": strings.Repeat("字", 9000)}})
 	end := item("completed", "t", "a", map[string]any{"exitCode": 0})

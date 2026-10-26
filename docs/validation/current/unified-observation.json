@@ -1,0 +1,177 @@
+{
+  "baseline": "RunDesk v0.52.0 plus resource and UHP refactors",
+  "prior_commit": "587b5959fa9b767d014f3ad0d80eeea4acaf7076",
+  "schema_version": 1,
+  "generated_at": "2026-10-20T14:46:01.362018+00:00",
+  "checks": {
+    "full_go_test": {
+      "command": "go test -json ./... -count=1 -timeout=300s",
+      "passed": 594,
+      "failed": 0,
+      "skipped": [
+        "TestDiagnosticReviewLifecycle",
+        "TestKunCheckpointAfterWorkerKillAndHostRestart",
+        "TestKunDebugReadScopesAndControlProjection",
+        "TestKunDiagnosticSourceRemainsPausedAndFrozen",
+        "TestHybridHostLifecycle",
+        "TestKunRuntimeHarnessHTTPAuthorizationAndRecovery",
+        "TestKunPlanActProcessAndConfigHTTP",
+        "TestKunHypothesisHostWorkerLifecycle",
+        "TestLiveHostConfirmationExecutionAndCredentialDrift",
+        "TestKunMCPWorkerApprovalScopesAndFrozenConfig",
+        "TestKunSkillEndToEndIndependentGateAndApplicationScope",
+        "TestKunProcessConversationAndDebugHTTP",
+        "TestSetupKunIndependentAndAtomic",
+        "TestSetupKunMissingCredentialAndDraft"
+      ],
+      "packages": [
+        {
+          "Package": "github.com/shengjuntu/rundesk/cmd/rundesk",
+          "Action": "pass",
+          "Elapsed": 0.011
+        },
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/debugapi",
+          "Action": "pass",
+          "Elapsed": 0.005
+        },
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/experiment",
+          "Action": "pass",
+          "Elapsed": 0.006
+        },
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/mcptest",
+          "Action": "pass",
+          "Elapsed": 0.042
+        },
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/debugmcp",
+          "Action": "pass",
+          "Elapsed": 0.079
+        },
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/mcp",
+          "Action": "pass",
+          "Elapsed": 0.12
+        },
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/resource",
+          "Action": "pass",
+          "Elapsed": 0.004
+        },
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/servicelock",
+          "Action": "pass",
+          "Elapsed": 0.012
+        },
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/containerruntime",
+          "Action": "pass",
+          "Elapsed": 0.52
+        },
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/web",
+          "Action": "pass",
+          "Elapsed": 0.003
+        },
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/rpc",
+          "Action": "pass",
+          "Elapsed": 0.471
+        },
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/store",
+          "Action": "pass",
+          "Elapsed": 0.659
+        },
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/tracequery",
+          "Action": "pass",
+          "Elapsed": 1.517
+        },
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/observeproxy",
+          "Action": "pass",
+          "Elapsed": 2.07
+        },
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/app",
+          "Action": "pass",
+          "Elapsed": 114.66
+        }
+      ]
+    },
+    "final_core_race": {
+      "command": "go test -race -json ./internal/tracequery ./internal/debugapi ./internal/debugmcp ./internal/observeproxy ./internal/store -count=1 -timeout=180s",
+      "passed": 73,
+      "failed": 0,
+      "skipped": [],
+      "packages": [
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/debugapi",
+          "Action": "pass",
+          "Elapsed": 1.017
+        },
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/debugmcp",
+          "Action": "pass",
+          "Elapsed": 1.376
+        },
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/observeproxy",
+          "Action": "pass",
+          "Elapsed": 3.449
+        },
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/store",
+          "Action": "pass",
+          "Elapsed": 6.792
+        },
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/tracequery",
+          "Action": "pass",
+          "Elapsed": 16.081
+        }
+      ]
+    },
+    "final_app_race": {
+      "command": "go test -race -json ./internal/app -run 'TestUnified|Test.*Debug|Test.*Diagnostic|TestTrace|TestModelObservation|TestObservation' -count=1 -timeout=180s",
+      "passed": 80,
+      "failed": 0,
+      "skipped": [
+        "TestDiagnosticReviewLifecycle",
+        "TestKunDebugReadScopesAndControlProjection",
+        "TestKunDiagnosticSourceRemainsPausedAndFrozen",
+        "TestKunProcessConversationAndDebugHTTP"
+      ],
+      "packages": [
+        {
+          "Package": "github.com/shengjuntu/rundesk/internal/app",
+          "Action": "pass",
+          "Elapsed": 23.698
+        }
+      ]
+    },
+    "vet": "pass",
+    "linux_amd64_build": "pass",
+    "windows_amd64_cross_build": "pass"
+  },
+  "regressions": [
+    "Mixed-source historical task/run identity, late events and frozen zero cursor.",
+    "Unknown large payload and large proxy bodies stay out of metadata responses; parse once inside SQLite.",
+    "Runtime model calls and transport attempts remain separate; WebSocket connection does not inherit a run.",
+    "Native sequence/revision/transportId/captureId remain distinct.",
+    "Explicit failed, pending, replayed, reused, unknown and incomplete states; loss cannot claim complete.",
+    "Run evidence truncation and mixed host/worker clocks disclosed.",
+    "HTTP/MCP application and member authorization; queries never start workers.",
+    "Existing projections, HTTP raw-byte reads, UHP, resources and storage remain compatible."
+  ],
+  "limits": [
+    "External Kun-dependent tests skipped because the required standalone runtime is unavailable.",
+    "No live provider or real Codex/Kun model call validation.",
+    "No frontend layout changes or new browser visual validation.",
+    "No automatic Kun HTTP routing, central credential management or billing ledger in this iteration.",
+    "Final replay/loss invariant fixes after the broad suite are covered by final complete tracequery race and targeted app race suites; final binaries rebuilt."
+  ]
+}

@@ -21,6 +21,10 @@ Independent video environments: keep our own `examples/video-build`, and add sep
 
 ## Quick start
 
+This v0.52.0-based refactor introduces independent runtime modules with explicit host services, shared resource references and permission contracts, task resource inspection, and reference-first personal artifacts with explicit snapshots. Existing stored copies remain readable. See [resource contracts](docs/RESOURCE-CONTRACTS.md) and [task resource views](docs/TASK-RESOURCES.md). The additional [UHP facade](docs/UHP.md) serves `/v1` against the same task kernel, with its fixed protocol version and implementation limits documented separately.
+
+The [unified observation model v1](docs/OBSERVATION-MODEL.md) reads Codex App Server, Kun SDK and retained proxy evidence through one versioned event/activity contract. It shares the existing journal, fixed history cursors and read-only debug permissions. The current trace UI remains compatible.
+
 Use Go 1.25.12 or a compatible newer toolchain. The WebUI is embedded; no frontend build is required.
 
 ```bash
@@ -38,7 +42,7 @@ This source distribution builds RunDesk only. Build Kun separately in its own pr
 
 [Application API v1](docs/API-V1.md) · [Architecture](docs/ARCHITECTURE.md) · [Backend capabilities](docs/BACKENDS.md) · [Unified debugging and capture](docs/UNIFIED_DEBUGGING.md) · [Trace debugging](docs/DEBUG.md) · [Current status](docs/STATUS.md) · [Validation](docs/VALIDATION.md) · [Upgrading](docs/UPGRADING.md)
 
-RunDesk's own contract is named **RunDesk Control API (RDCA)**; v1 stays at `/api/v1`, with its machine-readable contract at `/api/v1/openapi.json`. [Python client](examples/application_client.py) and [minimal application example](examples/application_quickstart.py) use the same contract. RunDesk remains independent of HarnessRouter. A future UHP server interface will share RunDesk's task and trace core so existing UHP clients can switch to RunDesk and inspect new runs in its debugging workbench; it is not implemented or claimed today. See [API strategy and compatibility plan](docs/API-STRATEGY.md).
+RunDesk's own contract is named **RunDesk Control API (RDCA)**; v1 stays at `/api/v1`, with its machine-readable contract at `/api/v1/openapi.json`. [Python client](examples/application_client.py) and [minimal application example](examples/application_quickstart.py) use the same contract. RunDesk remains independent of HarnessRouter. The additional `/v1` UHP interface shares RunDesk's task and trace core. It targets UHP `2026-10-19` and supports task execution, continuation, cancellation, streaming, files and session inspection. Native backend limits and the distinction between fixture validation and a full conformance claim are recorded in [UHP service](docs/UHP.md). See [API strategy and compatibility plan](docs/API-STRATEGY.md).
 
 ## Execution boundaries
 

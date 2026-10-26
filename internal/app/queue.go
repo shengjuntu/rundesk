@@ -114,26 +114,7 @@ func (m *Manager) pendingCountLocked() int {
 	return n
 }
 func (m *Manager) Enqueue(spec TaskSpec) (Task, error) {
-	t, s, e := m.prepareTask(spec, true)
-	if e != nil {
-		return t, e
-	}
-	m.queueMu.Lock()
-	defer m.queueMu.Unlock()
-	if m.ctx.Err() != nil {
-		return t, failure(503, "runtime_unavailable", "后台正在停止")
-	}
-	if m.pendingCountLocked() >= 1000 {
-		return t, failure(429, "queue_full", "待处理任务最多 1000 项")
-	}
-	if e = m.Store.PutMany(store.Record{Kind: "task", ID: t.ID, Value: t}, store.Record{Kind: "session", ID: s.ID, Value: s}); e != nil {
-		return t, e
-	}
-	m.tasks[t.ID] = t
-	m.mu.Lock()
-	m.sessions[s.ID] = &s
-	m.mu.Unlock()
-	return t, nil
+	return m.SubmitTask(TaskSubmission{Spec: spec})
 }
 func (m *Manager) saveTaskLocked(t Task) error {
 	t.Updated = store.Now()

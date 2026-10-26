@@ -13,10 +13,12 @@ import (
 
 const MaxResponseBytes = 4 << 20
 
-var Kinds = []string{"overview", "run", "events", "event", "context", "tools", "budget", "modules", "breakpoints", "actions", "snapshot", "evidence", "diff", "runs", "steps", "step", "issues", "statistics", "llm_requests", "llm_request"}
+var Kinds = []string{"overview", "run", "events", "event", "context", "tools", "budget", "modules", "breakpoints", "actions", "snapshot", "evidence", "diff", "runs", "steps", "step", "issues", "statistics", "llm_requests", "llm_request", "observations", "activity", "transcript"}
 
 type Query struct {
 	Kind         string `json:"kind"`
+	Source       string `json:"source,omitempty"`
+	RecordKind   string `json:"recordKind,omitempty"`
 	Section      string `json:"section,omitempty"`
 	MessageIndex *int   `json:"messageIndex,omitempty"`
 	Sequence     int64  `json:"sequence,omitempty"`
@@ -39,6 +41,12 @@ func Fields(kind string) []string {
 	switch kind {
 	case "overview":
 		return []string{}
+	case "observations":
+		return []string{"through", "after", "runId", "source", "recordKind", "limit"}
+	case "activity":
+		return []string{"through", "runId", "source", "recordKind", "offset", "limit"}
+	case "transcript":
+		return []string{"through", "runId", "offset", "limit"}
 	case "llm_requests":
 		return []string{"through", "runId", "offset", "limit"}
 	case "llm_request":
@@ -74,13 +82,13 @@ func (q Query) Validate() error {
 	for _, field := range Fields(q.Kind) {
 		allowed[field] = true
 	}
-	present := map[string]bool{"sequence": q.Sequence != 0, "fromSequence": q.FromSequence != 0, "after": q.After != 0, "through": q.Through != nil, "eventId": q.EventID != 0, "offset": q.Offset != 0, "limit": q.Limit != 0, "runId": q.RunID != "", "type": q.Type != "", "status": q.Status != "", "query": q.Search != "", "stepId": q.StepID != "", "section": q.Section != "", "messageIndex": q.MessageIndex != nil}
+	present := map[string]bool{"source": q.Source != "", "recordKind": q.RecordKind != "", "sequence": q.Sequence != 0, "fromSequence": q.FromSequence != 0, "after": q.After != 0, "through": q.Through != nil, "eventId": q.EventID != 0, "offset": q.Offset != 0, "limit": q.Limit != 0, "runId": q.RunID != "", "type": q.Type != "", "status": q.Status != "", "query": q.Search != "", "stepId": q.StepID != "", "section": q.Section != "", "messageIndex": q.MessageIndex != nil}
 	for field, yes := range present {
 		if yes && !allowed[field] {
 			return fmt.Errorf("inapplicable debug selector")
 		}
 	}
-	for field, value := range map[string]string{"runId": q.RunID, "type": q.Type, "status": q.Status, "query": q.Search, "stepId": q.StepID, "section": q.Section} {
+	for field, value := range map[string]string{"source": q.Source, "recordKind": q.RecordKind, "runId": q.RunID, "type": q.Type, "status": q.Status, "query": q.Search, "stepId": q.StepID, "section": q.Section} {
 		limit := 256
 		if field == "query" {
 			limit = 1000
@@ -90,6 +98,26 @@ func (q Query) Validate() error {
 		}
 	}
 	switch q.Kind {
+	case "transcript":
+		if q.Limit > 50 {
+			return fmt.Errorf("at most 50 transcript entries per page")
+		}
+		return nil
+	case "observations", "activity":
+		if q.Limit > 200 || q.Through != nil && q.After > *q.Through {
+			return fmt.Errorf("invalid unified observation page")
+		}
+		switch q.Source {
+		case "", "host", "codex_app_server", "kun_sdk", "observeproxy":
+		default:
+			return fmt.Errorf("unsupported observation source")
+		}
+		switch q.RecordKind {
+		case "", "run", "model", "tool", "mcp", "approval", "message", "reasoning", "context", "usage", "transport", "error", "event":
+		default:
+			return fmt.Errorf("unsupported observation record kind")
+		}
+		return nil
 	case "llm_requests":
 		if q.Limit > 50 {
 			return fmt.Errorf("at most 50 model requests per page")
@@ -155,6 +183,12 @@ func Parse(values url.Values) (Query, error) {
 			continue
 		}
 		switch name {
+		case "source":
+			q.Source = items[0]
+			continue
+		case "recordKind":
+			q.RecordKind = items[0]
+			continue
 		case "section":
 			q.Section = items[0]
 			continue
@@ -239,3 +273,6 @@ func Projection(kind string) bool {
 }
 
 func Observation(kind string) bool { return kind == "llm_requests" || kind == "llm_request" }
+
+// Unified identifies the versioned read model shared by runtime and transport evidence.
+func Unified(kind string) bool { return kind == "observations" || kind == "activity" }

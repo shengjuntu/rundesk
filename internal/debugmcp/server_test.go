@@ -87,7 +87,7 @@ func TestLifecycleValidationAndNoControlForwarding(t *testing.T) {
 			Annotations map[string]bool `json:"annotations"`
 		} `json:"tools"`
 	}
-	if json.Unmarshal(rows[10]["result"], &catalog) != nil || len(catalog.Tools) != 21 {
+	if json.Unmarshal(rows[10]["result"], &catalog) != nil || len(catalog.Tools) != 24 {
 		t.Fatal("missing tools", string(rows[10]["result"]))
 	}
 	names := map[string]bool{}
@@ -97,7 +97,7 @@ func TestLifecycleValidationAndNoControlForwarding(t *testing.T) {
 			t.Fatal(tool)
 		}
 	}
-	if !names["debug_llm_requests"] || !names["debug_llm_request"] {
+	if !names["debug_llm_requests"] || !names["debug_llm_request"] || !names["debug_observations"] || !names["debug_activity"] || !names["debug_transcript"] {
 		t.Fatal("missing observation tools")
 	}
 	if !bytes.Contains(rows[11]["result"], []byte(`"isError":false`)) {

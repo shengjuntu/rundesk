@@ -1,0 +1,75 @@
+{
+  "feature": "Conversation trace reader over unified observations",
+  "base": "rundesk v0.52.0 refactor; parent 3de9ab3",
+  "checkedAt": "2026-10-20T15:39:53.353397+00:00",
+  "fullGoSuite": {
+    "command": "go test -json ./... -count=1 -timeout=300s",
+    "testsIncludingSubtests": {
+      "pass": 604,
+      "skip": 14
+    },
+    "skips": "External Kun executable integration cases; not a live native-worker certification"
+  },
+  "finalCoreRace": {
+    "packages": [
+      "internal/tracequery",
+      "internal/debugapi",
+      "internal/debugmcp"
+    ],
+    "testsIncludingSubtests": {
+      "pass": 40
+    }
+  },
+  "finalAppRace": {
+    "selector": "TestTranscript|TestUnified|Test.*Debug|Test.*Diagnostic|TestTrace",
+    "testsIncludingSubtests": {
+      "pass": 62,
+      "skip": 4
+    }
+  },
+  "vet": "go vet ./... passed",
+  "builds": [
+    "linux/amd64 passed",
+    "windows/amd64 cross-build passed"
+  ],
+  "readerDOM": {
+    "passed": true,
+    "scope": "JSDOM + shipped trace reader + explicit read-only query fixture; no provider or layout claims",
+    "checks": [
+      "conversation/tool folding",
+      "safe Markdown and literal raw evidence",
+      "bounded page replacement",
+      "failure and approval visibility",
+      "source and truncation labels",
+      "lazy evidence reads",
+      "round navigation",
+      "fixed and explicit zero snapshots",
+      "unknown snapshot clears stale content without queries",
+      "stale page and evidence response rejection",
+      "teardown"
+    ]
+  },
+  "browser": [
+    {
+      "script": "scripts/unified-debug-ui-test.cjs",
+      "passed": true,
+      "scope": "Actual Chromium with explicit service fixture; desktop/mobile reading, lazy evidence, exact HTTP and WebSocket bytes, fixed history, historical Kun controls, single dialog and GET-only inspection"
+    },
+    {
+      "script": "scripts/capture-settings-ui-test.cjs",
+      "passed": true,
+      "scope": "Actual Chromium with HTTP API fixture; preferences vs applied state, rejected/lost/stale saves, Kun unsupported switch, mobile"
+    },
+    {
+      "script": "scripts/debug-trace-ui-smoke.cjs",
+      "passed": true,
+      "scope": "Actual Chromium and RunDesk host with explicit Codex protocol simulator; actual transcript query/read view, paging, fixed cutoff, stale response, literal untrusted content and mobile"
+    }
+  ],
+  "limits": [
+    "No live provider or actual Codex model calls",
+    "External Kun worker-dependent tests skipped; retained Kun fixtures and control guards covered",
+    "History refresh remains explicit; text search is limited to current page",
+    "Files and images remain source references; no guessed child-agent trees or transport/model-call matches"
+  ]
+}

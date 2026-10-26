@@ -131,6 +131,15 @@ func ParseArgs(name string, raw json.RawMessage) (Args, error) {
 	if err := dec.Decode(new(any)); err != io.EOF {
 		return Args{}, errors.New("one argument object required")
 	}
+	if name == "trace_list_observations" || name == "trace_list_activity" {
+		if _, explicit := fields["limit"]; explicit && a.Limit == 0 {
+			return Args{}, errors.New("limit must be positive when supplied")
+		}
+		kind := strings.TrimPrefix(name, "trace_list_")
+		if err := (UnifiedArgs{RunID: a.RunID, Source: a.Source, Kind: a.RecordKind, After: a.After, Offset: a.Offset, Limit: a.Limit}).Validate(kind); err != nil {
+			return Args{}, err
+		}
+	}
 	return a, nil
 }
 func (r *Reader) CallJSONContext(ctx context.Context, name string, raw json.RawMessage) (any, error) {

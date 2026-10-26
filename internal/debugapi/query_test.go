@@ -19,3 +19,33 @@ func TestStrictSelectors(t *testing.T) {
 		}
 	}
 }
+
+func TestUnifiedSelectors(t *testing.T) {
+	for _, query := range []string{"kind=observations&through=0&source=codex_app_server&recordKind=tool&limit=200", "kind=observations&after=1&through=2&runId=r", "kind=activity&offset=3&source=kun_sdk&recordKind=model&limit=200"} {
+		v, _ := url.ParseQuery(query)
+		if _, err := Parse(v); err != nil {
+			t.Fatal(query, err)
+		}
+	}
+	for _, query := range []string{"kind=observations&offset=0", "kind=activity&after=0", "kind=activity&sequence=0", "kind=observations&source=bogus", "kind=observations&recordKind=bogus", "kind=observations&after=1&through=0", "kind=observations&limit=201", "kind=activity&limit=0", "kind=events&source=host"} {
+		v, _ := url.ParseQuery(query)
+		if _, err := Parse(v); err == nil {
+			t.Fatal("accepted", query)
+		}
+	}
+}
+
+func TestTranscriptSelectors(t *testing.T) {
+	for _, query := range []string{"kind=transcript&through=0&limit=50", "kind=transcript&runId=r&offset=3&limit=40"} {
+		values, _ := url.ParseQuery(query)
+		if _, err := Parse(values); err != nil {
+			t.Fatal(query, err)
+		}
+	}
+	for _, query := range []string{"kind=transcript&source=host", "kind=transcript&after=0", "kind=transcript&limit=51", "kind=transcript&limit=0", "kind=transcript&query=secret", "kind=transcript&offset=0&offset=1"} {
+		values, _ := url.ParseQuery(query)
+		if _, err := Parse(values); err == nil {
+			t.Fatal("accepted", query)
+		}
+	}
+}

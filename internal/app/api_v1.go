@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/shengjuntu/rundesk/internal/resource"
 	"github.com/shengjuntu/rundesk/internal/rpc"
 	"github.com/shengjuntu/rundesk/internal/store"
 )
@@ -41,8 +42,21 @@ func writeAPIError(w http.ResponseWriter, status int, err error) {
 	var typed *apiError
 	var native *rpc.Error
 	var transport *rpc.TransportError
+	var resourceError *resource.Error
 	if !errors.As(err, &typed) {
 		switch {
+		case errors.As(err, &resourceError):
+			typed = &apiError{Status: 409, Code: resourceError.Code}
+			switch resourceError.Code {
+			case "resource_invalid", "resource_path_invalid", "resource_access_invalid", "resource_scope_invalid":
+				typed.Status = 400
+			case "resource_not_bound":
+				typed.Status = 404
+			case "resource_scope_mismatch", "resource_read_only":
+				typed.Status = 403
+			case "resource_unavailable":
+				typed.Status = 503
+			}
 		case errors.Is(err, context.DeadlineExceeded):
 			typed = &apiError{Status: 504, Code: "codex_timeout"}
 		case errors.Is(err, context.Canceled):
@@ -148,6 +162,9 @@ func supportsIdempotency(r *http.Request) bool {
 		return false
 	}
 	p := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(p) == 4 && p[1] == "library" && p[3] == "snapshot" || len(p) == 5 && p[1] == "tasks" && p[3] == "resources" && p[4] == "export" {
+		return true
+	}
 	return (len(p) == 3 && p[1] == "setup" && (p[2] == "codex-install" || p[2] == "runtime-images")) || (len(p) == 2 && p[1] == "kun-benchmarks") || (len(p) == 4 && p[1] == "kun-benchmarks" && (p[3] == "start" || p[3] == "stop" || p[3] == "evaluate")) || (len(p) == 2 && p[1] == "kun-skills") || (len(p) == 4 && (p[1] == "kun-skills" && (p[3] == "validations" || p[3] == "promote" || p[3] == "disable") || p[1] == "kun-skill-validations" && (p[3] == "start" || p[3] == "evaluate"))) || len(p) == 2 && (p[1] == "kun-rubrics" || p[1] == "kun-evaluations" || p[1] == "kun-task-sets" || p[1] == "kun-case-runs") || len(p) == 4 && p[1] == "kun-case-runs" && p[3] == "start" || len(p) == 4 && p[1] == "kun-forks" && p[3] == "hypotheses" || len(p) == 2 && p[1] == "kun-forks" || len(p) == 4 && p[1] == "kun-forks" && p[3] == "start" || len(p) == 2 && p[1] == "experiments" || len(p) == 4 && p[1] == "experiments" && p[3] == "branches" || len(p) == 5 && p[1] == "sessions" && p[3] == "kun" && p[4] == "resume" || len(p) == 4 && p[1] == "workspaces" && p[3] == "mcp-tests" || len(p) == 2 && (p[1] == "instances" || p[1] == "workspaces" || p[1] == "sessions" || p[1] == "tasks" || p[1] == "schedules" || p[1] == "collaborations") || len(p) == 4 && p[1] == "sessions" && (p[3] == "turns" || p[3] == "recover")
 }
 

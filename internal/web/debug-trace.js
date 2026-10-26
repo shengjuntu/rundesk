@@ -1,4 +1,4 @@
-// One workbench, one backend projection, one fixed source cursor.
+// Conversation reading and evidence inspection share one fixed source cursor.
 window.RunDeskDebug=(()=>{
  const labels={running:'进行中',completed:'调用完成',succeeded:'调用完成',recorded:'已记录',pending:'等待审批',accepted:'已允许',declined:'已拒绝',failed:'失败',unknown:'记录不完整',expired:'已失效',warning:'告警',interrupted:'中断',canceled:'取消',cancelled:'取消',paused:'暂停',waiting:'等待'};
  const associations={observed:'记录明确指定',reconstructed:'由关联标识重建',inferred:'按记录顺序推定',missing:'缺少运行标识'};
@@ -12,9 +12,9 @@ window.RunDeskDebug=(()=>{
   const sid=session.id,base='/sessions/'+encodeURIComponent(sid)+'/debug/';
   let through=null,epoch=0,listTicket=0,detailTicket=0,eventTicket=0,httpTicket=0,httpDetailTicket=0,evidenceTicket=0,offset=0,next=0,hasMore=false,runOffset=0,runNext=0,runMore=false,closed=false;
   let selectedRun=selection.runId||'',query='',kind='steps',type='',creating=false,capturing=false,panel=selection.panel||'trace',kunView=null,kunMountPending=null,kunSwitchTicket=0,httpOffset=0,httpNext=0,httpMore=false,caps=null;
-  const d=el('dialog',{class:'debug-inspector debug-workbench',id:'debug-inspector','aria-label':'调试工作台'}),info=el('p',{class:'help',role:'status'}),error=el('p',{class:'error',role:'alert'}),stats=el('p',{class:'debug-summary'}),list=el('div',{class:'debug-step-list'}),detail=el('section',{class:'debug-step-detail'}),analysisStats=el('p',{class:'debug-summary'});
+  const d=el('dialog',{class:'debug-inspector debug-workbench',id:'debug-inspector','aria-label':rdText('运行轨迹')}),info=el('p',{class:'help',role:'status'}),error=el('p',{class:'error',role:'alert'}),stats=el('p',{class:'debug-summary'}),list=el('div',{class:'debug-step-list'}),detail=el('section',{class:'debug-step-detail'}),analysisStats=el('p',{class:'debug-summary'});
   d.dataset.sessionId=sid;
-  const tabs=el('nav',{class:'debug-workbench-tabs','aria-label':'调试视图'}),tracePanel=el('section',{'data-debug-panel':'trace'}),httpPanel=el('section',{'data-debug-panel':'http',class:'hidden'}),analysisPanel=el('section',{'data-debug-panel':'analysis',class:'hidden'}),kunPanel=el('section',{'data-debug-panel':'kun',class:'hidden'});
+  const tabs=el('nav',{class:'debug-workbench-tabs','aria-label':'调试视图'}),tracePanel=el('section',{'data-debug-panel':'trace'}),stepsPanel=el('section',{'data-debug-panel':'steps',class:'hidden'}),httpPanel=el('section',{'data-debug-panel':'http',class:'hidden'}),analysisPanel=el('section',{'data-debug-panel':'analysis',class:'hidden'}),kunPanel=el('section',{'data-debug-panel':'kun',class:'hidden'});
   const diagnosisQuestion=el('textarea',{rows:4,maxLength:4000,'aria-label':'诊断问题',placeholder:'例如：本轮使用了哪些工具？请求参数是什么？请引用来源事件分析失败原因。'}),diagnosisFeedback=el('p',{role:'status'});
   const diagnosisStart=button('创建诊断并发送问题',startDiagnosis);
   const experimentStart=button('创建离线实验基线',async()=>{if(capturing||through===null||!selectedRun)return;const e=epoch;capturing=true;syncDiagnosis();try{const branch=await api('/experiments',{method:'POST',body:{sessionId:sid,runId:selectedRun,through,title:[...(session.title||'Kun')+' · 离线基线'].slice(0,120).join('')}});if(alive(e)){d.close();RunDeskExperiments.open({sessionId:sid,branchId:branch.id});}else toast('离线基线已保存。');}finally{capturing=false;if(!closed)syncDiagnosis();}});
@@ -27,6 +27,10 @@ window.RunDeskDebug=(()=>{
   const alive=e=>!closed&&epoch===e;
   const scope=()=>({through,...(selectedRun?{runId:selectedRun}:{})});
   const args=()=>({...scope(),...(query?{query}:{}),...(type?{type}:{})});
+  const reader=RunDeskTraceReader.mount({host:tracePanel,read,scope,session,
+   onSelectRun:async runId=>{selectedRun=runId;if(runId&&![...runs.options].some(v=>v.value===runId))runs.append(el('option',{value:runId},runId));runs.value=runId;await apply();},
+   onTransport:async eventId=>{const e=epoch;await switchPanel('http');if(alive(e)){const r=await read({kind:'llm_request',...scope(),eventId,section:'metadata'});if(alive(e))await loadHTTPDetail({...r.data,eventId});}},
+   ...(session.runtimeKind==='kun'?{onKun:sequence=>switchPanel('kun',{sequence})}:{})});
   const prev=button('上一页',()=>{offset=Math.max(0,offset-20);return loadSteps();}),more=button('下一页',()=>{offset=next;return loadSteps();});
   const runsPrev=button('更早轮次',()=>{runOffset=Math.max(0,runOffset-50);return loadRuns();}),runsNext=button('更多轮次',()=>{runOffset=runNext;return loadRuns();});
   function clearDetail(){detailTicket++;eventTicket++;evidenceTicket++;detail.replaceChildren(el('p',{class:'help'},'选择步骤，查看参数、结果与全部来源事件。'));}
@@ -246,10 +250,12 @@ window.RunDeskDebug=(()=>{
    }finally{creating=false;if(!closed)syncDiagnosis();}
   }
   async function switchPanel(value,extra={}){
-   if(!['trace','http','analysis','kun'].includes(value)||value==='kun'&&session.runtimeKind!=='kun')value='trace';panel=value;
-   for(const node of [tracePanel,httpPanel,analysisPanel,kunPanel])node.classList.toggle('hidden',node.dataset.debugPanel!==panel);
+   if(!['trace','steps','http','analysis','kun'].includes(value)||value==='kun'&&session.runtimeKind!=='kun')value='trace';panel=value;
+   for(const node of [tracePanel,stepsPanel,httpPanel,analysisPanel,kunPanel])node.classList.toggle('hidden',node.dataset.debugPanel!==panel);
    for(const b of tabs.children){b.classList.toggle('selected',b.dataset.panel===panel);b.setAttribute('aria-current',b.dataset.panel===panel?'page':'false');}
    d.dataset.panel=panel;const ticket=++kunSwitchTicket;
+   if(panel==='trace')await reader.setScope(scope());
+   if(panel==='steps'||panel==='analysis')await loadSteps();
    if(panel==='http')await loadHTTP();
    if(panel==='kun'&&through!==null){
     if(!kunView){if(!kunMountPending)kunMountPending=RunDeskKun.mount({host:kunPanel,session,scope:scope(),selection:extra});kunView=await kunMountPending;if(closed){kunView?.destroy();kunView=null;return;}}
@@ -257,31 +263,31 @@ window.RunDeskDebug=(()=>{
    }
   }
   async function refresh(keepOrigin=false){
-   const e=++epoch;through=null;offset=0;runOffset=0;httpOffset=0;listTicket++;httpTicket++;httpDetailTicket++;clearDetail();error.textContent='';info.textContent='固定当前历史范围…';list.replaceChildren();stats.textContent='';latest.disabled=true;syncDiagnosis();
+   const e=++epoch;through=null;offset=0;runOffset=0;httpOffset=0;listTicket++;httpTicket++;httpDetailTicket++;reader.setScope(scope());clearDetail();error.textContent='';info.textContent='固定当前历史范围…';list.replaceChildren();stats.textContent='';latest.disabled=true;syncDiagnosis();
    try{
     const values=await Promise.all([api(base+'capabilities'),read({kind:'events',limit:1,...(keepOrigin&&selection.through!=null?{through:selection.through}:{})}),readCaptureSettings()]);if(!alive(e))return;
     caps=values[0];through=values[1].data.through;d.dataset.through=through;
     info.textContent=`${session.title||sid} · ${caps.backend} · 固定宿主历史 ≤ #${through}，新增记录需手动刷新。`;
     capabilities.replaceChildren(el('summary',{},'记录来源与后端能力'),el('p',{class:'help'},'轨迹与摘要共用后端结构化查询。未配对记录明确标记；HTTP 正文只有经过代理才可观测。历史缺失不会被推测成完整记录。'),el('pre',{},txt(caps.queries)));
-    await Promise.all([loadRuns(),loadSteps()]);
+    await loadRuns();
     if(!alive(e))return;
     if(kunView)await kunView.setScope(scope());await switchPanel(panel);
-    if(keepOrigin&&selection.eventId&&alive(e)){await switchPanel('trace');detail.replaceChildren();await loadEvent(selection.eventId,0,detail,e,detailTicket);}
+    if(keepOrigin&&selection.eventId&&alive(e)){await switchPanel('trace');await reader.inspectEvent(selection.eventId);}
    }catch(err){if(alive(e))error.textContent=err.message;}
    finally{if(alive(e)){latest.disabled=false;syncDiagnosis();}}
   }
-  async function apply(){httpTicket++;httpDetailTicket++;selectedRun=runs.value;query=search.value.trim();type=types.value;kind=issues.checked?'issues':'steps';offset=0;httpOffset=0;d.dataset.runId=selectedRun;syncDiagnosis();if(kunView)await kunView.setScope(scope());await loadSteps();if(panel==='http')await loadHTTP();}
-  const latest=button('读取最新记录',()=>refresh(false)),filter=button('查询',apply);
+  async function apply(){httpTicket++;httpDetailTicket++;selectedRun=runs.value;query=search.value.trim();type=types.value;kind=issues.checked?'issues':'steps';offset=0;httpOffset=0;d.dataset.runId=selectedRun;syncDiagnosis();if(kunView)await kunView.setScope(scope());await reader.setScope(scope());if(panel==='steps'||panel==='analysis')await loadSteps();if(panel==='http')await loadHTTP();}
+  const latest=button(rdText('读取最新记录'),()=>refresh(false)),filter=button('查询',apply);
   runs.onchange=apply;types.onchange=apply;issues.onchange=apply;search.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();apply();}};
-  for(const [key,label]of Object.entries({trace:'轨迹',http:'LLM 请求 / 响应',analysis:'摘要与问答',...(session.runtimeKind==='kun'?{kun:'Kun 高级调试'}:{})})){const b=button(label,()=>switchPanel(key));b.dataset.panel=key;tabs.append(b);}
-  tracePanel.append(el('div',{class:'debug-filters'},el('label',{},'类型',types),el('label',{},'预览搜索',search),el('label',{class:'debug-check'},issues,'仅需关注'),filter),stats,el('div',{class:'debug-columns'},el('section',{},list,el('div',{class:'debug-pages'},prev,pageLabel,more)),detail));
+  for(const [key,label]of Object.entries({trace:'会话轨迹',steps:'步骤检查',http:'LLM 请求 / 响应',analysis:'摘要与问答',...(session.runtimeKind==='kun'?{kun:'Kun 高级调试'}:{})})){const b=button(rdText(label),()=>switchPanel(key));b.dataset.panel=key;tabs.append(b);}
+  stepsPanel.append(el('div',{class:'debug-filters'},el('label',{},'类型',types),el('label',{},'预览搜索',search),el('label',{class:'debug-check'},issues,'仅需关注'),filter),stats,el('div',{class:'debug-columns'},el('section',{},list,el('div',{class:'debug-pages'},prev,pageLabel,more)),detail));
   httpPanel.append(captureSettings,captureState,el('p',{class:'help'},'直通观测保留原协议。Request 与 Response 来自旁路副本，凭据头会脱敏，正文保留实际字节；未采集、截断或丢失会明确标记。'),httpStatus,el('div',{class:'debug-columns'},el('section',{},httpList,el('div',{class:'debug-pages'},httpPrev,httpPage,httpMoreButton)),httpDetail));
   analysisPanel.append(el('h3',{},'当前范围摘要'),analysisStats,el('p',{class:'help'},'以上为结构化记录统计，沿用轨迹中的步骤筛选。模型分析会通过只读查询工具按需读取选定轮次的固定历史，并引用来源事件。'),el('section',{class:'debug-diagnosis'},el('h3',{},'询问这段轨迹'),el('p',{class:'help'},'请先选择一个轮次。创建独立诊断会话后使用原会话配置的模型；用量记入诊断会话。诊断结论和建议需要审核。'),diagnosisQuestion,diagnosisStart,diagnosisFeedback));
   if(session.runtimeKind==='kun')analysisPanel.append(el('section',{class:'debug-diagnosis'},el('h3',{},'离线记录实验'),el('p',{class:'help'},'复制所选轮次固定范围的 Kun 记录；离线编辑不会调用模型或工具。'),experimentStart,button('查看已有离线分支',()=>{d.close();RunDeskExperiments.open({sessionId:sid});})));
-  d.append(el('div',{class:'dialog-head'},el('h2',{},'调试工作台'),button('返回对话',()=>d.close(),'quiet')),info,error,
-   el('div',{class:'debug-scope'},el('label',{},'轮次',runs),latest),el('div',{class:'debug-pages debug-run-pages'},runsPrev,runPage,runsNext),tabs,tracePanel,httpPanel,analysisPanel,kunPanel,capabilities);
-  d.onclose=()=>{closed=true;epoch++;captureTicket++;kunView?.destroy();if(active?.dialog===d)active=null;d.remove();if(location.hash==='#trace')history.replaceState(null,'',location.pathname+location.search+'#session/'+encodeURIComponent(sid));if(typeof scheduleRender==='function')scheduleRender();};
-  active={sid,dialog:d,close:()=>d.close(),select:async value=>{if(value.runId!==undefined){selectedRun=value.runId;if(selectedRun&&![...runs.options].some(v=>v.value===selectedRun))runs.append(el('option',{value:selectedRun},'已选轮次 · '+selectedRun));runs.value=selectedRun;await apply();}if(value.through!=null&&value.through!==through){selection=value;await refresh(true);}await switchPanel(value.panel||panel,value);if(value.eventId&&through!==null){detail.replaceChildren();await loadEvent(value.eventId,0,detail,epoch,detailTicket);}}};
+  d.append(el('div',{class:'dialog-head'},el('h2',{},rdText('运行轨迹')),el('div',{class:'debug-heading-actions'},latest,button(rdText('返回对话'),()=>d.close(),'quiet'))),info,error,
+   el('div',{class:'debug-scope'},el('label',{},'轮次',runs)),el('div',{class:'debug-pages debug-run-pages'},runsPrev,runPage,runsNext),tabs,tracePanel,stepsPanel,httpPanel,analysisPanel,kunPanel,capabilities);
+  d.onclose=()=>{closed=true;epoch++;captureTicket++;reader.destroy();kunView?.destroy();if(active?.dialog===d)active=null;d.remove();if(location.hash==='#trace')history.replaceState(null,'',location.pathname+location.search+'#session/'+encodeURIComponent(sid));if(typeof scheduleRender==='function')scheduleRender();};
+  active={sid,dialog:d,close:()=>d.close(),select:async value=>{if(value.runId!==undefined){selectedRun=value.runId;if(selectedRun&&![...runs.options].some(v=>v.value===selectedRun))runs.append(el('option',{value:selectedRun},'已选轮次 · '+selectedRun));runs.value=selectedRun;await apply();}if(value.through!=null&&value.through!==through){selection=value;await refresh(true);}await switchPanel(value.eventId?'trace':value.panel||panel,value);if(value.eventId&&through!==null)await reader.inspectEvent(value.eventId);}};
   document.body.append(d);d.showModal();syncDiagnosis();switchPanel(panel);refresh(true);return d;
  }
  function validSuggestion(p,origin){return !!origin&&p?.status==='suggestion_only'&&p.sessionId===origin.sessionId&&p.runId===origin.runId&&p.through===origin.through&&['inspect','steer','configuration'].includes(p.kind)&&typeof p.text==='string'&&typeof p.reason==='string'&&Array.isArray(p.evidenceIds)&&p.evidenceIds.length>0&&p.evidenceIds.length<=16&&p.evidenceIds.every(id=>Number.isSafeInteger(id)&&id>0&&id<=origin.through);}

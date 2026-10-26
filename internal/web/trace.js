@@ -10,7 +10,7 @@ window.RunDeskTraceUI={
  openOrigin:async origin=>{await selectSession(origin.sessionId);return RunDeskDebug.open(state.session,{runId:origin.runId,through:origin.through});},
  sessionChanged:()=>{if(RunDeskDebug.isOpen()&&RunDeskDebug.sessionId()!==state.session?.id)RunDeskDebug.close();if(location.hash==="#trace"&&state.session)RunDeskTraceUI.open();}
 };
-$("#trace-button").textContent=rdText("调试工作台");
+$("#trace-button").textContent=rdText("轨迹");
 $("#trace-button").onclick=RunDeskTraceUI.open;
 
 // The session menu opens the same control, so preference state has one editor.

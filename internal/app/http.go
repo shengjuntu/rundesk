@@ -24,6 +24,7 @@ import (
 
 type Server struct {
 	Manager      *Manager
+	Tasks        TaskControl
 	Token        string
 	cookie       string
 	Local        bool
@@ -31,7 +32,7 @@ type Server struct {
 }
 
 func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) http.Handler {
-	s := &Server{Manager: m, Token: token, cookie: store.ID() + store.ID(), Local: local}
+	s := &Server{Manager: m, Tasks: m, Token: token, cookie: store.ID() + store.ID(), Local: local}
 	if len(publicOrigin) > 0 {
 		s.PublicOrigin = publicOrigin[0]
 	}
@@ -291,7 +292,7 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 		writeErr(w, 404, failure(404, "not_found", "API 路径或方法不存在"))
 	})
 	mux.Handle("/", http.FileServerFS(web.Files))
-	return s.apiBoundary(s.guard(s.userGate(s.applicationGate(s.idempotent(mux)))))
+	return s.apiBoundary(s.uhpBoundary(s.guard(s.userGate(s.applicationGate(s.idempotent(mux))))))
 }
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")

@@ -35,6 +35,7 @@ type Run struct {
 	EventIDs     []int64 `json:"eventIds"`
 }
 type Step struct {
+	contentFingerprint string         // Exact text identity for display-only input echo suppression.
 	ID                 string         `json:"id"`
 	RunID              string         `json:"runId"`
 	Type               string         `json:"type"`
@@ -59,6 +60,9 @@ type Step struct {
 	ReportedDurationMS *int64         `json:"reportedDurationMs,omitempty"`
 }
 type Args struct {
+	Source       string         `json:"source,omitempty"`
+	RecordKind   string         `json:"recordKind,omitempty"`
+	After        int64          `json:"after,omitempty"`
 	MessageIndex *int           `json:"messageIndex,omitempty"`
 	Section      string         `json:"section,omitempty"`
 	Proposal     *ProposalInput `json:"proposal,omitempty"`
@@ -184,6 +188,9 @@ func (r *Reader) Call(name string, a Args) (any, error) {
 func (r *Reader) CallContext(ctx context.Context, name string, a Args) (any, error) {
 	if a.Offset < 0 || a.Limit < 0 || a.Limit > 20000 || utf8.RuneCountInString(a.Query) > 1000 {
 		return nil, errors.New("invalid query limits")
+	}
+	if name == "trace_list_observations" || name == "trace_list_activity" {
+		return r.Unified(ctx, strings.TrimPrefix(name, "trace_list_"), UnifiedArgs{RunID: a.RunID, Source: a.Source, Kind: a.RecordKind, After: a.After, Offset: a.Offset, Limit: a.Limit})
 	}
 	if name == "trace_list_llm_requests" || name == "trace_read_llm_request" {
 		return r.observation(ctx, name, a)
