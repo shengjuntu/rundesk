@@ -4,11 +4,11 @@
 
 RunDesk is an Agent execution platform for applications: one API connects Kun and Codex and manages tasks, sessions, tool approvals, and artifacts. The independent Kun engine makes execution traces debuggable through step controls, breakpoints, replay, and comparative evaluation. Independently validated successful traces can become reusable Skills, carrying debugging results into real application workflows.
 
-Video build integration: the built-in video-build profile is now 1.3.0 with adapter contract 2, pinned MIT video-use sources, continuous external narration and optional exact-text references on EDL clips for Video App 0.22. Runtime diagnostics inspect the selected running container, verify shared-workspace roundtrips and receive a nonce-bound PNG through the current MCP configuration; they do not call a model, prove model vision or rebuild environments. Existing unreferenced EDLs remain compatible. Rebuild the tool image, select it and explicitly update the application execution environment while retaining its workspace and model credentials. See [video-build](examples/video-build/README.md).
+Video build integration: Video App 0.23 uses an original Codex-directed HyperFrames workflow. The built-in video-build 1.4.0 profile provides HyperFrames 0.8.87, GSAP 3.15.0, FFmpeg and fonts by default; pinned MIT video-use and adapter contract 2 remain optional for existing EDL workflows. The main path saves and renders through App MCP without a shared production directory. Rebuild the tool image, select it and explicitly update the application execution environment while retaining its workspace and model credentials. See [video-build](examples/video-build/README.md).
 
 ## Current release
 
-**RunDesk 0.49.4 · external Kun 0.17.0 · worker protocol 16**. Kun now builds and ships as an independent project. RunDesk links only a lightweight SDK snapshot and connects to the selected executable through JSONL; the engine owns its execution journal, while RunDesk owns platform data and the debugging workbench. Existing video-build and default-off Codex HTTP observation behavior are retained. See [Kun separation and compatibility](docs/KUN-SEPARATION.md).
+**RunDesk 0.49.5 · external Kun 0.17.0 · worker protocol 16**. Kun now builds and ships as an independent project. RunDesk links only a lightweight SDK snapshot and connects to the selected executable through JSONL; the engine owns its execution journal, while RunDesk owns platform data and the debugging workbench. This release updates video-build to 1.4.0 while retaining the independent Kun boundary and default-off Codex HTTP observation. See [Kun separation and compatibility](docs/KUN-SEPARATION.md).
 
 - Prepare and reuse an application’s configured Docker environment before work, without changing its image or disconnecting active sessions.
 - Integrate applications with scoped credentials, durable queues, sessions, streaming events, files, and idempotency receipts.
@@ -51,4 +51,4 @@ Thanks to [MichaelKinsy/PiG](https://github.com/MichaelKinsy/PiG), Michael Kinsy
 
 See [examples](examples/README.md) for news2douyin, people-search and video-build. The shared CLI inspects, validates, prepares, packages and builds standalone Docker contexts. Research profiles use Exa and include a pinned Agent-Reach toolchain by default; the setup wizard can prepare them before application registration.
 
-Video App 0.7.0 deployment: [VIDEO-APP](docs/VIDEO-APP.md). The renderer image is separate from the managed Codex image.
+Video App 0.23 deployment: [VIDEO-APP](docs/VIDEO-APP.md). The renderer/App image remains separate from the managed Codex tool image. HyperFrames is the default video toolchain; video-use is an explicit compatibility option. Installation and media smoke checks do not establish real model production quality or visual understanding.

@@ -49,7 +49,7 @@ def version_command(argv):
 def runtime_probe():
     checks = {"profile": "missing", "adapter": "missing", "sourcePin": "missing", "ffmpeg": "missing", "ffprobe": "missing", "pythonDependencies": "missing"}
     result = {"status": "incomplete", "profileId": "", "profileVersion": "",
-              "adapterContractVersion": 0, "videoUseCommit": "",
+              "adapterContractVersion": 0, "videoUseCommit": "", "hasVideoUse": False,
               "pythonVersion": platform.python_version(), "ffmpegVersion": "", "ffprobeVersion": "", "checks": checks}
     lock = None
     try:
@@ -76,7 +76,68 @@ def runtime_probe():
             pass
         except Exception:
             checks[binary] = "failed"
-    if lock is not None and result["profileId"] == "video-build":
+    video = lock is not None and result["profileId"] == "video-build"
+    version = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)(?:-[A-Za-z0-9.-]+)?", result["profileVersion"])
+    hyperframes = video and version is not None and tuple(map(int, version.groups())) >= (1, 4, 0)
+    use_legacy = video and not hyperframes
+    if hyperframes:
+        # New profile selection is explicit; a malformed lock never disables required checks.
+        selected = lock.get("selection", {}).get("videoUse")
+        if type(selected) is not bool:
+            checks["profile"] = "invalid"
+            use_legacy = True
+        else:
+            use_legacy = selected
+        for key in ("node", "hyperframes", "gsap", "browser", "hyperframesLock"):
+            checks[key] = "missing"
+        try:
+            expected = lock["dependencies"]["hyperframes"]
+            versions = expected["npm"]
+            if set(versions) != {"hyperframes", "gsap"} or not all(isinstance(pin, str) and re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", pin) for pin in versions.values()):
+                raise ValueError("invalid npm lock")
+            for package in ("hyperframes", "gsap"):
+                actual = small_json("/opt/hyperframes/node_modules/" + package + "/package.json")
+                found = actual.get("version", "")
+                if not isinstance(found, str) or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", found):
+                    raise ValueError("invalid package version")
+                result[package + "Version"] = found
+                checks[package] = "ready" if found == versions[package] else "invalid"
+            with open("/opt/hyperframes/package-lock.json", "rb") as stream:
+                raw = stream.read(1024 * 1024 + 1)
+            pin = expected["npmLockSHA256"]
+            if len(raw) > 1024 * 1024 or not re.fullmatch(r"[0-9a-f]{64}", pin):
+                raise ValueError("invalid npm lock digest")
+            checks["hyperframesLock"] = "ready" if hashlib.sha256(raw).hexdigest() == pin else "invalid"
+        except Exception:
+            for key in ("hyperframes", "gsap", "hyperframesLock"):
+                if checks[key] == "missing":
+                    checks[key] = "invalid"
+        try:
+            raw = version_command(["node", "--version"]).strip()
+            found = re.fullmatch(r"v([0-9]+)\.([0-9]+)\.([0-9]+)", raw)
+            if not found:
+                raise ValueError("invalid node version")
+            result["nodeVersion"] = raw
+            checks["node"] = "ready" if int(found.group(1)) >= 22 else "invalid"
+        except Exception:
+            checks["node"] = "failed"
+        try:
+            raw = version_command(["node", "/opt/hyperframes/node_modules/hyperframes/bin/hyperframes.mjs", "--version"]).strip()
+            if raw != result.get("hyperframesVersion"):
+                raise ValueError("CLI version mismatch")
+        except Exception:
+            checks["hyperframes"] = "failed"
+        try:
+            # The image bundles this fixed browser path; do not execute arbitrary environment commands.
+            raw = version_command(["/usr/bin/chromium", "--version"]).strip()
+            found = re.search(r"(?:Chromium|Google Chrome(?: for Testing)?) ([0-9]+(?:\.[0-9]+){1,3})(?:\s|$)", raw)
+            if not found:
+                raise ValueError("invalid browser version")
+            result["browserVersion"] = found.group(1)
+            checks["browser"] = "ready"
+        except Exception:
+            checks["browser"] = "failed"
+    if use_legacy:
         try:
             packages = lock["dependencies"]["videoUse"]["python"]
             if not isinstance(packages, dict) or not 1 <= len(packages) <= 300:
@@ -89,6 +150,9 @@ def runtime_probe():
             checks["pythonDependencies"] = "ready"
         except Exception:
             checks["pythonDependencies"] = "invalid"
+    elif hyperframes:
+        checks["pythonDependencies"] = "not_required"
+        checks["sourcePin"] = "not_required"
     adapter = "/opt/rundesk-profile/tools/video_use_adapter.py"
     if os.path.isfile(adapter):
         try:
@@ -102,21 +166,26 @@ def runtime_probe():
             checks["adapter"] = "ready"
         except Exception:
             checks["adapter"] = "invalid"
-    try:
-        pin = small_json("/opt/video-use/RUNDESK_PIN.json", 4096)
-        if not re.fullmatch(r"[0-9a-f]{40}", pin.get("commit", "")):
-            raise ValueError("invalid commit")
-        if not os.path.isfile("/opt/video-use/helpers/render.py") or not os.path.isfile("/opt/video-use/LICENSE"):
-            raise ValueError("incomplete source")
-        checks["sourcePin"] = "ready" if pin["commit"] == result["videoUseCommit"] else "invalid"
-    except FileNotFoundError:
-        pass
-    except Exception:
-        checks["sourcePin"] = "invalid"
+    if use_legacy:
+        try:
+            pin = small_json("/opt/video-use/RUNDESK_PIN.json", 4096)
+            if not re.fullmatch(r"[0-9a-f]{40}", pin.get("commit", "")):
+                raise ValueError("invalid commit")
+            if not os.path.isfile("/opt/video-use/helpers/render.py") or not os.path.isfile("/opt/video-use/LICENSE"):
+                raise ValueError("incomplete source")
+            checks["sourcePin"] = "ready" if pin["commit"] == result["videoUseCommit"] else "invalid"
+        except FileNotFoundError:
+            pass
+        except Exception:
+            checks["sourcePin"] = "invalid"
+        result["hasVideoUse"] = all(checks[key] == "ready" for key in ("pythonDependencies", "adapter", "sourcePin"))
     if checks["profile"] == "ready":
-        result["status"] = "ready"
-        if result["profileId"] == "video-build" and any(checks[key] != "ready" for key in ("ffmpeg", "ffprobe", "pythonDependencies", "adapter", "sourcePin")):
-            result["status"] = "incomplete"
+        required = ["ffmpeg", "ffprobe"]
+        if use_legacy:
+            required += ["pythonDependencies", "adapter", "sourcePin"]
+        if hyperframes:
+            required += ["node", "hyperframes", "gsap", "browser", "hyperframesLock"]
+        result["status"] = "ready" if not video or all(checks[key] == "ready" for key in required) else "incomplete"
     return result
 
 

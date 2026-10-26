@@ -155,22 +155,30 @@ func (m *Manager) runtimeDockerCommand(ctx context.Context, out io.Writer, args 
 	}
 }
 
+const runtimeHyperframesLockSHA256 = "b3f48e9687cd27dea097203e928e6e7fd84344b88122ab2bb546d38b48705de1"
+
 func runtimeImageMatches(v ImageBuild, image imageInspection) bool {
 	labels := image.Config.Labels
 	reach := "true"
 	if v.ProfileID == "video-build" {
 		reach = "false"
 	}
-	return labels["io.rundesk.profile"] == v.ProfileID &&
+	videoTools := true
+	if v.ProfileID == "video-build" {
+		videoTools = labels["io.rundesk.hyperframes.version"] == "0.8.87" &&
+			labels["io.rundesk.gsap.version"] == "3.15.0" &&
+			labels["io.rundesk.hyperframes.lock"] == runtimeHyperframesLockSHA256 &&
+			(labels["io.rundesk.video-use.enabled"] == "false" || labels["io.rundesk.video-use.enabled"] == "true" && labels["io.rundesk.video-use.commit"] == "43cfc566833548093455c9d4a46bd69913b7e552" && labels["io.rundesk.video-use.adapter"] == "2")
+	}
+	return videoTools && labels["io.rundesk.profile"] == v.ProfileID &&
 		labels["org.opencontainers.image.version"] == runtimeProfileVersion(v.ProfileID) &&
 		labels["io.rundesk.agent-reach"] == reach &&
-		labels["io.rundesk.codex.version"] == v.CodexVersion &&
-		(v.ProfileID != "video-build" || (labels["io.rundesk.video-use.commit"] == "43cfc566833548093455c9d4a46bd69913b7e552" && labels["io.rundesk.video-use.adapter"] == "2"))
+		labels["io.rundesk.codex.version"] == v.CodexVersion
 }
 
 func runtimeProfileVersion(profile string) string {
 	if profile == "video-build" {
-		return "1.3.0"
+		return "1.4.0"
 	}
 	return "1.1.0"
 }
@@ -220,12 +228,17 @@ func (m *Manager) verifyRuntimeImage(parent context.Context, v ImageBuild, id st
 		return fmt.Errorf("镜像与所选配置或 Codex 版本不匹配；需要 RunDesk %s profile %s 的完整工具镜像", v.ProfileID, runtimeProfileVersion(v.ProfileID))
 	}
 	fmt.Fprintln(out, "检查只读根目录、运行用户、Codex、工具版本、Skills 与 Exa 配置；不调用模型或公网服务。")
-	ctx, cancel := context.WithTimeout(parent, 3*time.Minute)
+	timeout, memory, temporary, pids := 3*time.Minute, "512m", "/tmp:rw,nosuid,nodev,size=128m,mode=1777", "128"
+	if v.ProfileID == "video-build" {
+		// The offline doctor renders real browser frames and audio, rather than only printing versions.
+		timeout, memory, temporary, pids = 8*time.Minute, "2048m", "/tmp:rw,nosuid,nodev,size=768m,mode=1777", "256"
+	}
+	ctx, cancel := context.WithTimeout(parent, timeout)
 	defer cancel()
 	name := "rundesk-init-check-" + v.ID
 	// Mirror managed execution restrictions. The UID is deliberately unprivileged.
 	defer m.dockerRun(15*time.Second, "rm", "--force", name)
-	err = m.runtimeDockerCommand(ctx, out, "run", "--name", name, "--rm", "--pull=never", "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true", "--user", "1000:1000", "--memory", "512m", "--pids-limit", "128", "--tmpfs", "/tmp:rw,nosuid,nodev,size=128m,mode=1777", "--env", "HOME=/tmp", "--env", "CODEX_HOME=/tmp/codex", "--entrypoint", "python3", image.ID, "/opt/rundesk-profile/tools/profile_doctor.py", "--json")
+	err = m.runtimeDockerCommand(ctx, out, "run", "--name", name, "--rm", "--pull=never", "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true", "--user", "1000:1000", "--memory", memory, "--pids-limit", pids, "--tmpfs", temporary, "--env", "HOME=/tmp", "--env", "CODEX_HOME=/tmp/codex", "--entrypoint", "python3", image.ID, "/opt/rundesk-profile/tools/profile_doctor.py", "--json")
 	if err != nil {
 		return fmt.Errorf("镜像已获取，但离线工具检查未通过，请查看日志：%w", err)
 	}
@@ -238,7 +251,7 @@ func (s *Server) setupImageRoutes(mux *http.ServeMux) {
 		writeJSON(w, 200, map[string]any{"items": []map[string]any{
 			{"id": "news2douyin", "name": "新闻研究 · Exa + Agent-Reach", "reference": "rundesk-news2douyin:exa-agent-reach"},
 			{"id": "people-search", "name": "公开人物研究 · Exa + Agent-Reach", "reference": "rundesk-people-search:exa-agent-reach"},
-			{"id": "video-build", "name": "文字驱动视频 · video-use + FFmpeg", "reference": "rundesk-video-build:local"},
+			{"id": "video-build", "name": "文字驱动视频 · HyperFrames + FFmpeg", "reference": "rundesk-video-build:local"},
 		}, "platform": "linux/" + runtime.GOARCH, "supported": runtime.GOOS == "linux", "modelTested": false})
 	})
 	mux.HandleFunc("POST /api/setup/runtime-images", func(w http.ResponseWriter, r *http.Request) {

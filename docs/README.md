@@ -1,6 +1,6 @@
 # RunDesk 文档
 
-当前版本 RunDesk 0.49.4 / 外部 Kun 0.17.0 / worker 协议 16。按当前实现维护使用说明；验证日志按实际测试版本保存，旧版本的结果不当作本轮验收。
+当前版本 RunDesk 0.49.5 / 外部 Kun 0.17.0 / worker 协议 16；视频配套 Video App 0.23.0 与 video-build 1.4.0。按当前实现维护使用说明；验证日志按实际测试版本保存，旧版本的结果不当作本轮验收。
 
 | 需要了解 | 入口 |
 | --- | --- |
@@ -25,4 +25,4 @@
 
 典型运行配置与统一 CLI：[examples](../examples/README.md)。Agent-Reach 评估与初始化流程：[配置说明](../examples/news2douyin/AGENT-REACH.md)。
 
-- [视频应用与 Docker 联调](VIDEO-APP.md)：Video App 0.7.0 与 RunDesk 0.48.1 的双容器职责、启动、认证、素材和验收。
+- [视频应用与 Docker 联调](VIDEO-APP.md)：Video App 0.23.0、RunDesk 0.49.5 与 video-build 1.4.0 的自主导演、HyperFrames 工具与部署边界。

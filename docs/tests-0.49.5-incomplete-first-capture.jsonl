@@ -1,0 +1,365 @@
+{"Time":"2026-10-18T22:21:27.23115492+11:00","Action":"start","Package":"github.com/shengjuntu/rundesk/cmd/rundesk"}
+{"Time":"2026-10-18T22:21:27.231313513+11:00","Action":"start","Package":"github.com/shengjuntu/rundesk/examples/docker"}
+{"Time":"2026-10-18T22:21:27.231363846+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/examples/docker","Output":"?   \tgithub.com/shengjuntu/rundesk/examples/docker\t[no test files]\n"}
+{"Time":"2026-10-18T22:21:27.231393072+11:00","Action":"skip","Package":"github.com/shengjuntu/rundesk/examples/docker","Elapsed":0}
+{"Time":"2026-10-18T22:21:27.234279598+11:00","Action":"start","Package":"github.com/shengjuntu/rundesk/examples/profiletemplates"}
+{"Time":"2026-10-18T22:21:27.234365275+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/examples/profiletemplates","Output":"?   \tgithub.com/shengjuntu/rundesk/examples/profiletemplates\t[no test files]\n"}
+{"Time":"2026-10-18T22:21:27.234377499+11:00","Action":"skip","Package":"github.com/shengjuntu/rundesk/examples/profiletemplates","Elapsed":0}
+{"Time":"2026-10-18T22:21:27.272778523+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/cmd/rundesk","Test":"TestDebugMCPCLIHasNoTokenArgumentOrImplicitCredential"}
+{"Time":"2026-10-18T22:21:27.272810677+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/cmd/rundesk","Test":"TestDebugMCPCLIHasNoTokenArgumentOrImplicitCredential","Output":"=== RUN   TestDebugMCPCLIHasNoTokenArgumentOrImplicitCredential\n"}
+{"Time":"2026-10-18T22:21:27.277578321+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/cmd/rundesk","Test":"TestDebugMCPCLIHasNoTokenArgumentOrImplicitCredential","Output":"--- PASS: TestDebugMCPCLIHasNoTokenArgumentOrImplicitCredential (0.00s)\n"}
+{"Time":"2026-10-18T22:21:27.277680534+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/cmd/rundesk","Test":"TestDebugMCPCLIHasNoTokenArgumentOrImplicitCredential","Elapsed":0}
+{"Time":"2026-10-18T22:21:27.277711753+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/cmd/rundesk","Test":"TestLegacyDataDirectorySelection"}
+{"Time":"2026-10-18T22:21:27.277848056+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/cmd/rundesk","Test":"TestLegacyDataDirectorySelection","Output":"=== RUN   TestLegacyDataDirectorySelection\n"}
+{"Time":"2026-10-18T22:21:27.278515223+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/cmd/rundesk","Test":"TestLegacyDataDirectorySelection","Output":"--- PASS: TestLegacyDataDirectorySelection (0.00s)\n"}
+{"Time":"2026-10-18T22:21:27.278551755+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/cmd/rundesk","Test":"TestLegacyDataDirectorySelection","Elapsed":0}
+{"Time":"2026-10-18T22:21:27.278558894+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/cmd/rundesk","Output":"PASS\n"}
+{"Time":"2026-10-18T22:21:27.278795207+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/cmd/rundesk","Output":"ok  \tgithub.com/shengjuntu/rundesk/cmd/rundesk\t0.047s\n"}
+{"Time":"2026-10-18T22:21:27.280026576+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/cmd/rundesk","Elapsed":0.049}
+{"Time":"2026-10-18T22:21:33.680165643+11:00","Action":"start","Package":"github.com/shengjuntu/rundesk/internal/app"}
+{"Time":"2026-10-18T22:21:33.680309147+11:00","Action":"start","Package":"github.com/shengjuntu/rundesk/internal/containerruntime"}
+{"Time":"2026-10-18T22:21:33.680435645+11:00","Action":"start","Package":"github.com/shengjuntu/rundesk/internal/debugapi"}
+{"Time":"2026-10-18T22:21:33.680764313+11:00","Action":"start","Package":"github.com/shengjuntu/rundesk/internal/debugmcp"}
+{"Time":"2026-10-18T22:21:33.681005964+11:00","Action":"start","Package":"github.com/shengjuntu/rundesk/internal/experiment"}
+{"Time":"2026-10-18T22:21:33.681200496+11:00","Action":"start","Package":"github.com/shengjuntu/rundesk/internal/mcp"}
+{"Time":"2026-10-18T22:21:33.681296217+11:00","Action":"start","Package":"github.com/shengjuntu/rundesk/internal/mcptest"}
+{"Time":"2026-10-18T22:21:33.681467389+11:00","Action":"start","Package":"github.com/shengjuntu/rundesk/internal/observeproxy"}
+{"Time":"2026-10-18T22:21:33.684578843+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/containerruntime","Test":"TestSupervisorKillsDetachedDescendantsOnly"}
+{"Time":"2026-10-18T22:21:33.684608725+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/containerruntime","Test":"TestSupervisorKillsDetachedDescendantsOnly","Output":"=== RUN   TestSupervisorKillsDetachedDescendantsOnly\n"}
+{"Time":"2026-10-18T22:21:33.685209283+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestHTTPServerRequestsAndFiniteResponse"}
+{"Time":"2026-10-18T22:21:33.685226769+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestHTTPServerRequestsAndFiniteResponse","Output":"=== RUN   TestHTTPServerRequestsAndFiniteResponse\n"}
+{"Time":"2026-10-18T22:21:33.68526622+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestHTTPServerRequestsAndFiniteResponse/ping"}
+{"Time":"2026-10-18T22:21:33.685269341+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestHTTPServerRequestsAndFiniteResponse/ping","Output":"=== RUN   TestHTTPServerRequestsAndFiniteResponse/ping\n"}
+{"Time":"2026-10-18T22:21:33.685391793+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/experiment","Test":"TestRecordingForkInvalidationRestoreAndDiff"}
+{"Time":"2026-10-18T22:21:33.685397519+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/experiment","Test":"TestRecordingForkInvalidationRestoreAndDiff","Output":"=== RUN   TestRecordingForkInvalidationRestoreAndDiff\n"}
+{"Time":"2026-10-18T22:21:33.685573634+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/debugapi","Test":"TestStrictSelectors"}
+{"Time":"2026-10-18T22:21:33.685580832+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugapi","Test":"TestStrictSelectors","Output":"=== RUN   TestStrictSelectors\n"}
+{"Time":"2026-10-18T22:21:33.685962529+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugapi","Test":"TestStrictSelectors","Output":"--- PASS: TestStrictSelectors (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.685970227+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/debugapi","Test":"TestStrictSelectors","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.685982238+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugapi","Output":"PASS\n"}
+{"Time":"2026-10-18T22:21:33.686996947+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestLifecycleValidationAndNoControlForwarding"}
+{"Time":"2026-10-18T22:21:33.687014207+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestLifecycleValidationAndNoControlForwarding","Output":"=== RUN   TestLifecycleValidationAndNoControlForwarding\n"}
+{"Time":"2026-10-18T22:21:33.687771741+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/experiment","Test":"TestRecordingForkInvalidationRestoreAndDiff","Output":"--- PASS: TestRecordingForkInvalidationRestoreAndDiff (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.687793599+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/experiment","Test":"TestRecordingForkInvalidationRestoreAndDiff","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.687799442+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/experiment","Test":"TestRecordingForkBoundsAndIdentity"}
+{"Time":"2026-10-18T22:21:33.687802539+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/experiment","Test":"TestRecordingForkBoundsAndIdentity","Output":"=== RUN   TestRecordingForkBoundsAndIdentity\n"}
+{"Time":"2026-10-18T22:21:33.688152202+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestHTTPJSONAndSSE"}
+{"Time":"2026-10-18T22:21:33.688163981+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestHTTPJSONAndSSE","Output":"=== RUN   TestHTTPJSONAndSSE\n"}
+{"Time":"2026-10-18T22:21:33.688197146+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestHTTPJSONAndSSE/false"}
+{"Time":"2026-10-18T22:21:33.688200883+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestHTTPJSONAndSSE/false","Output":"=== RUN   TestHTTPJSONAndSSE/false\n"}
+{"Time":"2026-10-18T22:21:33.688478542+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/experiment","Test":"TestRecordingForkBoundsAndIdentity","Output":"--- PASS: TestRecordingForkBoundsAndIdentity (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.688542007+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/experiment","Test":"TestRecordingForkBoundsAndIdentity","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.688547525+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/experiment","Output":"PASS\n"}
+{"Time":"2026-10-18T22:21:33.689020903+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestHTTPPreservesBodyEncodedPathQueryAndHeaders"}
+{"Time":"2026-10-18T22:21:33.689031463+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestHTTPPreservesBodyEncodedPathQueryAndHeaders","Output":"=== RUN   TestHTTPPreservesBodyEncodedPathQueryAndHeaders\n"}
+{"Time":"2026-10-18T22:21:33.689390596+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/app","Test":"TestV1AuthAndErrorContract"}
+{"Time":"2026-10-18T22:21:33.689401532+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/app","Test":"TestV1AuthAndErrorContract","Output":"=== RUN   TestV1AuthAndErrorContract\n"}
+{"Time":"2026-10-18T22:21:33.690011584+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestHTTPServerRequestsAndFiniteResponse/ping","Output":"--- PASS: TestHTTPServerRequestsAndFiniteResponse/ping (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.690072068+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestHTTPServerRequestsAndFiniteResponse/ping","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.6901278+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestHTTPServerRequestsAndFiniteResponse/sampling/createMessage"}
+{"Time":"2026-10-18T22:21:33.690353354+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestHTTPServerRequestsAndFiniteResponse/sampling/createMessage","Output":"=== RUN   TestHTTPServerRequestsAndFiniteResponse/sampling/createMessage\n"}
+{"Time":"2026-10-18T22:21:33.690375487+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugapi","Output":"ok  \tgithub.com/shengjuntu/rundesk/internal/debugapi\t0.010s\n"}
+{"Time":"2026-10-18T22:21:33.690489279+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/experiment","Output":"ok  \tgithub.com/shengjuntu/rundesk/internal/experiment\t0.009s\n"}
+{"Time":"2026-10-18T22:21:33.690684084+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestLifecycleValidationAndNoControlForwarding","Output":"--- PASS: TestLifecycleValidationAndNoControlForwarding (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.690934163+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestLifecycleValidationAndNoControlForwarding","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.690948419+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestProtocolNegotiationAndBounds"}
+{"Time":"2026-10-18T22:21:33.691080473+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestProtocolNegotiationAndBounds","Output":"=== RUN   TestProtocolNegotiationAndBounds\n"}
+{"Time":"2026-10-18T22:21:33.691087087+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/debugapi","Elapsed":0.011}
+{"Time":"2026-10-18T22:21:33.691538763+11:00","Action":"start","Package":"github.com/shengjuntu/rundesk/internal/redaction"}
+{"Time":"2026-10-18T22:21:33.691578068+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/redaction","Output":"?   \tgithub.com/shengjuntu/rundesk/internal/redaction\t[no test files]\n"}
+{"Time":"2026-10-18T22:21:33.691585847+11:00","Action":"skip","Package":"github.com/shengjuntu/rundesk/internal/redaction","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.693435988+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/experiment","Elapsed":0.012}
+{"Time":"2026-10-18T22:21:33.694568627+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestHTTPPreservesBodyEncodedPathQueryAndHeaders","Output":"--- PASS: TestHTTPPreservesBodyEncodedPathQueryAndHeaders (0.01s)\n"}
+{"Time":"2026-10-18T22:21:33.694728768+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestHTTPPreservesBodyEncodedPathQueryAndHeaders","Elapsed":0.01}
+{"Time":"2026-10-18T22:21:33.694740093+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestSSEDeliveredBeforeUpstreamCompletes"}
+{"Time":"2026-10-18T22:21:33.694744318+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestSSEDeliveredBeforeUpstreamCompletes","Output":"=== RUN   TestSSEDeliveredBeforeUpstreamCompletes\n"}
+{"Time":"2026-10-18T22:21:33.694636192+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestHTTPServerRequestsAndFiniteResponse/sampling/createMessage","Output":"--- PASS: TestHTTPServerRequestsAndFiniteResponse/sampling/createMessage (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.694771445+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestHTTPServerRequestsAndFiniteResponse/sampling/createMessage","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.694776297+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestHTTPServerRequestsAndFiniteResponse","Output":"--- PASS: TestHTTPServerRequestsAndFiniteResponse (0.01s)\n"}
+{"Time":"2026-10-18T22:21:33.694778879+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestHTTPServerRequestsAndFiniteResponse","Elapsed":0.01}
+{"Time":"2026-10-18T22:21:33.694783017+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestResultCorrelation"}
+{"Time":"2026-10-18T22:21:33.694789202+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestResultCorrelation","Output":"=== RUN   TestResultCorrelation\n"}
+{"Time":"2026-10-18T22:21:33.694794871+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestResultCorrelation","Output":"--- PASS: TestResultCorrelation (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.694798392+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestResultCorrelation","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.694801908+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestSSEChunkingBoundsAndStop"}
+{"Time":"2026-10-18T22:21:33.694804907+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestSSEChunkingBoundsAndStop","Output":"=== RUN   TestSSEChunkingBoundsAndStop\n"}
+{"Time":"2026-10-18T22:21:33.694903044+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestSSEChunkingBoundsAndStop","Output":"--- PASS: TestSSEChunkingBoundsAndStop (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.695191321+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestHTTPJSONAndSSE/false","Output":"--- PASS: TestHTTPJSONAndSSE/false (0.01s)\n"}
+{"Time":"2026-10-18T22:21:33.695204276+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestHTTPJSONAndSSE/false","Elapsed":0.01}
+{"Time":"2026-10-18T22:21:33.695210681+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestHTTPJSONAndSSE/true"}
+{"Time":"2026-10-18T22:21:33.695214113+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestHTTPJSONAndSSE/true","Output":"=== RUN   TestHTTPJSONAndSSE/true\n"}
+{"Time":"2026-10-18T22:21:33.695230401+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestProtocolNegotiationAndBounds","Output":"--- PASS: TestProtocolNegotiationAndBounds (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.695234861+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestProtocolNegotiationAndBounds","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.695275899+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries"}
+{"Time":"2026-10-18T22:21:33.695283375+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries","Output":"=== RUN   TestClientOriginCredentialAndResponseBoundaries\n"}
+{"Time":"2026-10-18T22:21:33.695419667+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestSSEChunkingBoundsAndStop","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.69563584+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestStdioCancellationFixture"}
+{"Time":"2026-10-18T22:21:33.695645116+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestStdioCancellationFixture","Output":"=== RUN   TestStdioCancellationFixture\n"}
+{"Time":"2026-10-18T22:21:33.695904712+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestStdioCancellationFixture","Output":"--- PASS: TestStdioCancellationFixture (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.695971985+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestStdioCancellationFixture","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.695993305+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestStdioCancellationWaitsForProcess"}
+{"Time":"2026-10-18T22:21:33.696001185+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestStdioCancellationWaitsForProcess","Output":"=== RUN   TestStdioCancellationWaitsForProcess\n"}
+{"Time":"2026-10-18T22:21:33.69677628+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/redirect"}
+{"Time":"2026-10-18T22:21:33.696796805+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/redirect","Output":"=== RUN   TestClientOriginCredentialAndResponseBoundaries/redirect\n"}
+{"Time":"2026-10-18T22:21:33.698608473+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestSSEDeliveredBeforeUpstreamCompletes","Output":"--- PASS: TestSSEDeliveredBeforeUpstreamCompletes (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.698631035+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestSSEDeliveredBeforeUpstreamCompletes","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.698636662+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestCancellationStopsUpstreamAndMarksIncomplete"}
+{"Time":"2026-10-18T22:21:33.698640008+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestCancellationStopsUpstreamAndMarksIncomplete","Output":"=== RUN   TestCancellationStopsUpstreamAndMarksIncomplete\n"}
+{"Time":"2026-10-18T22:21:33.698642555+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestHTTPJSONAndSSE/true","Output":"--- PASS: TestHTTPJSONAndSSE/true (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.698689415+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestHTTPJSONAndSSE/true","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.698697267+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestHTTPJSONAndSSE","Output":"--- PASS: TestHTTPJSONAndSSE (0.01s)\n"}
+{"Time":"2026-10-18T22:21:33.698708626+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestHTTPJSONAndSSE","Elapsed":0.01}
+{"Time":"2026-10-18T22:21:33.698713405+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestHTTPBoundedAndNoRedirect"}
+{"Time":"2026-10-18T22:21:33.698737198+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestHTTPBoundedAndNoRedirect","Output":"=== RUN   TestHTTPBoundedAndNoRedirect\n"}
+{"Time":"2026-10-18T22:21:33.708915697+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/redirect","Output":"--- PASS: TestClientOriginCredentialAndResponseBoundaries/redirect (0.01s)\n"}
+{"Time":"2026-10-18T22:21:33.708969093+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/redirect","Elapsed":0.01}
+{"Time":"2026-10-18T22:21:33.708975681+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/denied"}
+{"Time":"2026-10-18T22:21:33.708979356+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/denied","Output":"=== RUN   TestClientOriginCredentialAndResponseBoundaries/denied\n"}
+{"Time":"2026-10-18T22:21:33.708984195+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/denied","Output":"--- PASS: TestClientOriginCredentialAndResponseBoundaries/denied (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.708988526+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/denied","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.708992183+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/large"}
+{"Time":"2026-10-18T22:21:33.708995532+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/large","Output":"=== RUN   TestClientOriginCredentialAndResponseBoundaries/large\n"}
+{"Time":"2026-10-18T22:21:33.709746752+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestCancellationStopsUpstreamAndMarksIncomplete","Output":"--- PASS: TestCancellationStopsUpstreamAndMarksIncomplete (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.709766998+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestCancellationStopsUpstreamAndMarksIncomplete","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.709773292+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestNoReplayAfterUpstreamDisconnect"}
+{"Time":"2026-10-18T22:21:33.709776876+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestNoReplayAfterUpstreamDisconnect","Output":"=== RUN   TestNoReplayAfterUpstreamDisconnect\n"}
+{"Time":"2026-10-18T22:21:33.709784006+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestNoReplayAfterUpstreamDisconnect","Output":"--- PASS: TestNoReplayAfterUpstreamDisconnect (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.709787458+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestNoReplayAfterUpstreamDisconnect","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.710130614+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestBoundsCaptureWithoutTruncatingForwardedBody"}
+{"Time":"2026-10-18T22:21:33.710138578+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestBoundsCaptureWithoutTruncatingForwardedBody","Output":"=== RUN   TestBoundsCaptureWithoutTruncatingForwardedBody\n"}
+{"Time":"2026-10-18T22:21:33.710200737+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestBoundsCaptureWithoutTruncatingForwardedBody","Output":"--- PASS: TestBoundsCaptureWithoutTruncatingForwardedBody (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.710205258+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestBoundsCaptureWithoutTruncatingForwardedBody","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.710209296+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestSlowRecorderNeverBlocksForwardingAndReportsLoss"}
+{"Time":"2026-10-18T22:21:33.710212317+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestSlowRecorderNeverBlocksForwardingAndReportsLoss","Output":"=== RUN   TestSlowRecorderNeverBlocksForwardingAndReportsLoss\n"}
+{"Time":"2026-10-18T22:21:33.715670491+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestSlowRecorderNeverBlocksForwardingAndReportsLoss","Output":"--- PASS: TestSlowRecorderNeverBlocksForwardingAndReportsLoss (0.01s)\n"}
+{"Time":"2026-10-18T22:21:33.718220275+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestSlowRecorderNeverBlocksForwardingAndReportsLoss","Elapsed":0.01}
+{"Time":"2026-10-18T22:21:33.718242842+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestQueueLossRecord"}
+{"Time":"2026-10-18T22:21:33.718246967+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestQueueLossRecord","Output":"=== RUN   TestQueueLossRecord\n"}
+{"Time":"2026-10-18T22:21:33.718253203+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestQueueLossRecord","Output":"--- PASS: TestQueueLossRecord (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.718256965+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestQueueLossRecord","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.718260958+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestRecorderErrorIsVisibleWithoutChangingResponse"}
+{"Time":"2026-10-18T22:21:33.718264014+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestRecorderErrorIsVisibleWithoutChangingResponse","Output":"=== RUN   TestRecorderErrorIsVisibleWithoutChangingResponse\n"}
+{"Time":"2026-10-18T22:21:33.724956843+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestRecorderErrorIsVisibleWithoutChangingResponse","Output":"--- PASS: TestRecorderErrorIsVisibleWithoutChangingResponse (0.01s)\n"}
+{"Time":"2026-10-18T22:21:33.724980288+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestRecorderErrorIsVisibleWithoutChangingResponse","Elapsed":0.01}
+{"Time":"2026-10-18T22:21:33.724987349+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestRetainedBodyRemainsPrefixAfterBudgetRecovers"}
+{"Time":"2026-10-18T22:21:33.724990831+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestRetainedBodyRemainsPrefixAfterBudgetRecovers","Output":"=== RUN   TestRetainedBodyRemainsPrefixAfterBudgetRecovers\n"}
+{"Time":"2026-10-18T22:21:33.72499873+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestRetainedBodyRemainsPrefixAfterBudgetRecovers","Output":"--- PASS: TestRetainedBodyRemainsPrefixAfterBudgetRecovers (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.725002212+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestRetainedBodyRemainsPrefixAfterBudgetRecovers","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.725005772+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestBodyCompletionDistinguishesLateReadErrorFromMissingBytes"}
+{"Time":"2026-10-18T22:21:33.72501513+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestBodyCompletionDistinguishesLateReadErrorFromMissingBytes","Output":"=== RUN   TestBodyCompletionDistinguishesLateReadErrorFromMissingBytes\n"}
+{"Time":"2026-10-18T22:21:33.725375807+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestBodyCompletionDistinguishesLateReadErrorFromMissingBytes","Output":"--- PASS: TestBodyCompletionDistinguishesLateReadErrorFromMissingBytes (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.725813961+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestBodyCompletionDistinguishesLateReadErrorFromMissingBytes","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.725824782+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestRecorderRecoveryPersistsScopedLossWithoutReplayingRequest"}
+{"Time":"2026-10-18T22:21:33.725828554+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/observeproxy","Test":"TestRecorderRecoveryPersistsScopedLossWithoutReplayingRequest","Output":"=== RUN   TestRecorderRecoveryPersistsScopedLossWithoutReplayingRequest\n"}
+{"Time":"2026-10-18T22:21:33.726322962+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/app","Test":"TestV1AuthAndErrorContract","Output":"--- PASS: TestV1AuthAndErrorContract (0.04s)\n"}
+{"Time":"2026-10-18T22:21:33.726339041+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/app","Test":"TestV1AuthAndErrorContract","Elapsed":0.04}
+{"Time":"2026-10-18T22:21:33.726347393+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/app","Test":"TestV1CreationReceiptsSourceAndLegacy"}
+{"Time":"2026-10-18T22:21:33.726350329+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/app","Test":"TestV1CreationReceiptsSourceAndLegacy","Output":"=== RUN   TestV1CreationReceiptsSourceAndLegacy\n"}
+{"Time":"2026-10-18T22:21:33.755996874+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/app","Test":"TestV1CreationReceiptsSourceAndLegacy","Output":"--- PASS: TestV1CreationReceiptsSourceAndLegacy (0.03s)\n"}
+{"Time":"2026-10-18T22:21:33.756025945+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/app","Test":"TestV1CreationReceiptsSourceAndLegacy","Elapsed":0.03}
+{"Time":"2026-10-18T22:21:33.756032204+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/app","Test":"TestV1ConcurrentTurnReplayRunsOnlyOnce"}
+{"Time":"2026-10-18T22:21:33.756036631+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/app","Test":"TestV1ConcurrentTurnReplayRunsOnlyOnce","Output":"=== RUN   TestV1ConcurrentTurnReplayRunsOnlyOnce\n"}
+{"Time":"2026-10-18T22:21:33.757953841+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestHTTPBoundedAndNoRedirect","Output":"--- PASS: TestHTTPBoundedAndNoRedirect (0.06s)\n"}
+{"Time":"2026-10-18T22:21:33.757970269+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestHTTPBoundedAndNoRedirect","Elapsed":0.06}
+{"Time":"2026-10-18T22:21:33.757976294+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestStdioFixture"}
+{"Time":"2026-10-18T22:21:33.757979988+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestStdioFixture","Output":"=== RUN   TestStdioFixture\n"}
+{"Time":"2026-10-18T22:21:33.757986887+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestStdioFixture","Output":"--- PASS: TestStdioFixture (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.758070746+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestStdioFixture","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.758076514+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestStdio"}
+{"Time":"2026-10-18T22:21:33.758087048+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestStdio","Output":"=== RUN   TestStdio\n"}
+{"Time":"2026-10-18T22:21:33.765292342+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestStdio","Output":"--- PASS: TestStdio (0.01s)\n"}
+{"Time":"2026-10-18T22:21:33.765319909+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestStdio","Elapsed":0.01}
+{"Time":"2026-10-18T22:21:33.765326888+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestServerRequestRejected"}
+{"Time":"2026-10-18T22:21:33.765330073+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestServerRequestRejected","Output":"=== RUN   TestServerRequestRejected\n"}
+{"Time":"2026-10-18T22:21:33.765335498+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestServerRequestRejected","Output":"--- PASS: TestServerRequestRejected (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.765339982+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Test":"TestServerRequestRejected","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.765344266+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Output":"PASS\n"}
+{"Time":"2026-10-18T22:21:33.765369858+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Output":"ok  \tgithub.com/shengjuntu/rundesk/internal/mcptest\t0.084s\n"}
+{"Time":"2026-10-18T22:21:33.765955276+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/mcptest","Elapsed":0.085}
+{"Time":"2026-10-18T22:21:33.799134902+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestStdioCancellationWaitsForProcess","Output":"--- PASS: TestStdioCancellationWaitsForProcess (0.10s)\n"}
+{"Time":"2026-10-18T22:21:33.799216298+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/mcp","Test":"TestStdioCancellationWaitsForProcess","Elapsed":0.1}
+{"Time":"2026-10-18T22:21:33.799224188+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcp","Output":"PASS\n"}
+{"Time":"2026-10-18T22:21:33.801420701+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/mcp","Output":"ok  \tgithub.com/shengjuntu/rundesk/internal/mcp\t0.120s\n"}
+{"Time":"2026-10-18T22:21:33.802310516+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/mcp","Elapsed":0.121}
+{"Time":"2026-10-18T22:21:33.83518634+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/large","Output":"--- PASS: TestClientOriginCredentialAndResponseBoundaries/large (0.13s)\n"}
+{"Time":"2026-10-18T22:21:33.835343495+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/large","Elapsed":0.13}
+{"Time":"2026-10-18T22:21:33.835354367+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/invalid"}
+{"Time":"2026-10-18T22:21:33.835358152+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/invalid","Output":"=== RUN   TestClientOriginCredentialAndResponseBoundaries/invalid\n"}
+{"Time":"2026-10-18T22:21:33.838202741+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/invalid","Output":"--- PASS: TestClientOriginCredentialAndResponseBoundaries/invalid (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.838228565+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/invalid","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.838235599+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/ok"}
+{"Time":"2026-10-18T22:21:33.838245637+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/ok","Output":"=== RUN   TestClientOriginCredentialAndResponseBoundaries/ok\n"}
+{"Time":"2026-10-18T22:21:33.839569+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/ok","Output":"--- PASS: TestClientOriginCredentialAndResponseBoundaries/ok (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.839587417+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries/ok","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.839596031+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries","Output":"--- PASS: TestClientOriginCredentialAndResponseBoundaries (0.14s)\n"}
+{"Time":"2026-10-18T22:21:33.83960035+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestClientOriginCredentialAndResponseBoundaries","Elapsed":0.14}
+{"Time":"2026-10-18T22:21:33.839604825+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestProjectionArgumentsAreTypedAndScoped"}
+{"Time":"2026-10-18T22:21:33.839608254+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestProjectionArgumentsAreTypedAndScoped","Output":"=== RUN   TestProjectionArgumentsAreTypedAndScoped\n"}
+{"Time":"2026-10-18T22:21:33.839615826+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestProjectionArgumentsAreTypedAndScoped","Output":"--- PASS: TestProjectionArgumentsAreTypedAndScoped (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.839620158+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Test":"TestProjectionArgumentsAreTypedAndScoped","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.839623511+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Output":"PASS\n"}
+{"Time":"2026-10-18T22:21:33.850641889+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Output":"ok  \tgithub.com/shengjuntu/rundesk/internal/debugmcp\t0.169s\n"}
+{"Time":"2026-10-18T22:21:33.851573366+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/debugmcp","Elapsed":0.171}
+{"Time":"2026-10-18T22:21:33.887180995+11:00","Action":"start","Package":"github.com/shengjuntu/rundesk/internal/rpc"}
+{"Time":"2026-10-18T22:21:33.889603068+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestRPCProcess"}
+{"Time":"2026-10-18T22:21:33.889621388+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestRPCProcess","Output":"=== RUN   TestRPCProcess\n"}
+{"Time":"2026-10-18T22:21:33.889653475+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestRPCProcess","Output":"--- PASS: TestRPCProcess (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.889657505+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestRPCProcess","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.889679412+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestFragmentedFramesOutOfOrderAndLargeNotification"}
+{"Time":"2026-10-18T22:21:33.889683702+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestFragmentedFramesOutOfOrderAndLargeNotification","Output":"=== RUN   TestFragmentedFramesOutOfOrderAndLargeNotification\n"}
+{"Time":"2026-10-18T22:21:33.901198386+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestFragmentedFramesOutOfOrderAndLargeNotification","Output":"--- PASS: TestFragmentedFramesOutOfOrderAndLargeNotification (0.01s)\n"}
+{"Time":"2026-10-18T22:21:33.901301485+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestFragmentedFramesOutOfOrderAndLargeNotification","Elapsed":0.01}
+{"Time":"2026-10-18T22:21:33.901313964+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestPendingCallUnblocksOnProcessExit"}
+{"Time":"2026-10-18T22:21:33.901319681+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestPendingCallUnblocksOnProcessExit","Output":"=== RUN   TestPendingCallUnblocksOnProcessExit\n"}
+{"Time":"2026-10-18T22:21:33.902192839+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestPendingCallUnblocksOnProcessExit","Output":"--- PASS: TestPendingCallUnblocksOnProcessExit (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.902248593+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestPendingCallUnblocksOnProcessExit","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.902254956+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestFailureProcess"}
+{"Time":"2026-10-18T22:21:33.902258559+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestFailureProcess","Output":"=== RUN   TestFailureProcess\n"}
+{"Time":"2026-10-18T22:21:33.902263067+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestFailureProcess","Output":"--- PASS: TestFailureProcess (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.902266357+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestFailureProcess","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.902269007+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestCallDeadlineIncludesBlockedPipeWrite"}
+{"Time":"2026-10-18T22:21:33.90227108+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestCallDeadlineIncludesBlockedPipeWrite","Output":"=== RUN   TestCallDeadlineIncludesBlockedPipeWrite\n"}
+{"Time":"2026-10-18T22:21:33.932197924+11:00","Action":"start","Package":"github.com/shengjuntu/rundesk/internal/servicelock"}
+{"Time":"2026-10-18T22:21:33.934410951+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/servicelock","Test":"TestLockFixture"}
+{"Time":"2026-10-18T22:21:33.934430667+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/servicelock","Test":"TestLockFixture","Output":"=== RUN   TestLockFixture\n"}
+{"Time":"2026-10-18T22:21:33.93445647+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/servicelock","Test":"TestLockFixture","Output":"--- PASS: TestLockFixture (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.934463461+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/servicelock","Test":"TestLockFixture","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.934470105+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/servicelock","Test":"TestExclusiveAndCrashRelease"}
+{"Time":"2026-10-18T22:21:33.934473136+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/servicelock","Test":"TestExclusiveAndCrashRelease","Output":"=== RUN   TestExclusiveAndCrashRelease\n"}
+{"Time":"2026-10-18T22:21:33.947375142+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/servicelock","Test":"TestExclusiveAndCrashRelease","Output":"--- PASS: TestExclusiveAndCrashRelease (0.01s)\n"}
+{"Time":"2026-10-18T22:21:33.947401258+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/servicelock","Test":"TestExclusiveAndCrashRelease","Elapsed":0.01}
+{"Time":"2026-10-18T22:21:33.947406999+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/servicelock","Test":"TestLegacyLockNeverOverwritten"}
+{"Time":"2026-10-18T22:21:33.947409759+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/servicelock","Test":"TestLegacyLockNeverOverwritten","Output":"=== RUN   TestLegacyLockNeverOverwritten\n"}
+{"Time":"2026-10-18T22:21:33.947798345+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/servicelock","Test":"TestLegacyLockNeverOverwritten","Output":"--- PASS: TestLegacyLockNeverOverwritten (0.00s)\n"}
+{"Time":"2026-10-18T22:21:33.947813554+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/servicelock","Test":"TestLegacyLockNeverOverwritten","Elapsed":0}
+{"Time":"2026-10-18T22:21:33.947819568+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/servicelock","Output":"PASS\n"}
+{"Time":"2026-10-18T22:21:33.948162616+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/servicelock","Output":"ok  \tgithub.com/shengjuntu/rundesk/internal/servicelock\t0.016s\n"}
+{"Time":"2026-10-18T22:21:33.94867374+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/servicelock","Elapsed":0.016}
+{"Time":"2026-10-18T22:21:34.083215917+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestCallDeadlineIncludesBlockedPipeWrite","Output":"--- PASS: TestCallDeadlineIncludesBlockedPipeWrite (0.18s)\n"}
+{"Time":"2026-10-18T22:21:34.083256543+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestCallDeadlineIncludesBlockedPipeWrite","Elapsed":0.18}
+{"Time":"2026-10-18T22:21:34.083265885+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestCanceledCallDoesNotSend"}
+{"Time":"2026-10-18T22:21:34.083270021+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestCanceledCallDoesNotSend","Output":"=== RUN   TestCanceledCallDoesNotSend\n"}
+{"Time":"2026-10-18T22:21:34.083935964+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestCanceledCallDoesNotSend","Output":"--- PASS: TestCanceledCallDoesNotSend (0.00s)\n"}
+{"Time":"2026-10-18T22:21:34.083950463+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestCanceledCallDoesNotSend","Elapsed":0}
+{"Time":"2026-10-18T22:21:34.083955974+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestMalformedProtocolFailsPromptly"}
+{"Time":"2026-10-18T22:21:34.083959361+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestMalformedProtocolFailsPromptly","Output":"=== RUN   TestMalformedProtocolFailsPromptly\n"}
+{"Time":"2026-10-18T22:21:34.087649311+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestMalformedProtocolFailsPromptly","Output":"--- PASS: TestMalformedProtocolFailsPromptly (0.00s)\n"}
+{"Time":"2026-10-18T22:21:34.087673012+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestMalformedProtocolFailsPromptly","Elapsed":0}
+{"Time":"2026-10-18T22:21:34.087677946+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestLongStderrDoesNotBlockReplies"}
+{"Time":"2026-10-18T22:21:34.087680853+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestLongStderrDoesNotBlockReplies","Output":"=== RUN   TestLongStderrDoesNotBlockReplies\n"}
+{"Time":"2026-10-18T22:21:34.116607895+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestLongStderrDoesNotBlockReplies","Output":"--- PASS: TestLongStderrDoesNotBlockReplies (0.03s)\n"}
+{"Time":"2026-10-18T22:21:34.11663282+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestLongStderrDoesNotBlockReplies","Elapsed":0.03}
+{"Time":"2026-10-18T22:21:34.116639943+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestUnexpectedExitKeepsExitCause"}
+{"Time":"2026-10-18T22:21:34.116643429+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestUnexpectedExitKeepsExitCause","Output":"=== RUN   TestUnexpectedExitKeepsExitCause\n"}
+{"Time":"2026-10-18T22:21:34.120103338+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestUnexpectedExitKeepsExitCause","Output":"--- PASS: TestUnexpectedExitKeepsExitCause (0.00s)\n"}
+{"Time":"2026-10-18T22:21:34.120132849+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestUnexpectedExitKeepsExitCause","Elapsed":0}
+{"Time":"2026-10-18T22:21:34.120139509+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestMessagePreservesNestedArgumentsAndExtensions"}
+{"Time":"2026-10-18T22:21:34.120142828+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestMessagePreservesNestedArgumentsAndExtensions","Output":"=== RUN   TestMessagePreservesNestedArgumentsAndExtensions\n"}
+{"Time":"2026-10-18T22:21:34.120319399+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestMessagePreservesNestedArgumentsAndExtensions","Output":"--- PASS: TestMessagePreservesNestedArgumentsAndExtensions (0.00s)\n"}
+{"Time":"2026-10-18T22:21:34.120326624+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestMessagePreservesNestedArgumentsAndExtensions","Elapsed":0}
+{"Time":"2026-10-18T22:21:34.120332232+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestMessagePreservesErrorAndResponseExtensions"}
+{"Time":"2026-10-18T22:21:34.120335424+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestMessagePreservesErrorAndResponseExtensions","Output":"=== RUN   TestMessagePreservesErrorAndResponseExtensions\n"}
+{"Time":"2026-10-18T22:21:34.120527026+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestMessagePreservesErrorAndResponseExtensions","Output":"--- PASS: TestMessagePreservesErrorAndResponseExtensions (0.00s)\n"}
+{"Time":"2026-10-18T22:21:34.120559907+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestMessagePreservesErrorAndResponseExtensions","Elapsed":0}
+{"Time":"2026-10-18T22:21:34.120565056+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestMessageEditsOverrideCapturedFields"}
+{"Time":"2026-10-18T22:21:34.120571264+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestMessageEditsOverrideCapturedFields","Output":"=== RUN   TestMessageEditsOverrideCapturedFields\n"}
+{"Time":"2026-10-18T22:21:34.120667633+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestMessageEditsOverrideCapturedFields","Output":"--- PASS: TestMessageEditsOverrideCapturedFields (0.00s)\n"}
+{"Time":"2026-10-18T22:21:34.120673128+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestMessageEditsOverrideCapturedFields","Elapsed":0}
+{"Time":"2026-10-18T22:21:34.120677528+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestConstructedMessageSerializationUnchanged"}
+{"Time":"2026-10-18T22:21:34.120680396+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestConstructedMessageSerializationUnchanged","Output":"=== RUN   TestConstructedMessageSerializationUnchanged\n"}
+{"Time":"2026-10-18T22:21:34.120733543+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestConstructedMessageSerializationUnchanged","Output":"--- PASS: TestConstructedMessageSerializationUnchanged (0.00s)\n"}
+{"Time":"2026-10-18T22:21:34.120740705+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestConstructedMessageSerializationUnchanged","Elapsed":0}
+{"Time":"2026-10-18T22:21:34.120744298+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestTreeFixture"}
+{"Time":"2026-10-18T22:21:34.120747966+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestTreeFixture","Output":"=== RUN   TestTreeFixture\n"}
+{"Time":"2026-10-18T22:21:34.120752671+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestTreeFixture","Output":"--- PASS: TestTreeFixture (0.00s)\n"}
+{"Time":"2026-10-18T22:21:34.120756027+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestTreeFixture","Elapsed":0}
+{"Time":"2026-10-18T22:21:34.120765445+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames"}
+{"Time":"2026-10-18T22:21:34.120768209+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames","Output":"=== RUN   TestOwnedGroupCleanupAndFinalFrames\n"}
+{"Time":"2026-10-18T22:21:34.120772253+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/close"}
+{"Time":"2026-10-18T22:21:34.120775662+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/close","Output":"=== RUN   TestOwnedGroupCleanupAndFinalFrames/close\n"}
+{"Time":"2026-10-18T22:21:34.226213512+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/containerruntime","Test":"TestSupervisorKillsDetachedDescendantsOnly","Output":"--- PASS: TestSupervisorKillsDetachedDescendantsOnly (0.54s)\n"}
+{"Time":"2026-10-18T22:21:34.226288173+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/containerruntime","Test":"TestSupervisorKillsDetachedDescendantsOnly","Elapsed":0.54}
+{"Time":"2026-10-18T22:21:34.226296864+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/containerruntime","Test":"TestExpiredLeaseDoesNotStartChild"}
+{"Time":"2026-10-18T22:21:34.226300391+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/containerruntime","Test":"TestExpiredLeaseDoesNotStartChild","Output":"=== RUN   TestExpiredLeaseDoesNotStartChild\n"}
+{"Time":"2026-10-18T22:21:34.226849785+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/containerruntime","Test":"TestExpiredLeaseDoesNotStartChild","Output":"--- PASS: TestExpiredLeaseDoesNotStartChild (0.00s)\n"}
+{"Time":"2026-10-18T22:21:34.226911982+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/containerruntime","Test":"TestExpiredLeaseDoesNotStartChild","Elapsed":0}
+{"Time":"2026-10-18T22:21:34.226917044+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/containerruntime","Test":"TestSeedPreservesEditsAndCopiesCompleteSkill"}
+{"Time":"2026-10-18T22:21:34.226919313+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/containerruntime","Test":"TestSeedPreservesEditsAndCopiesCompleteSkill","Output":"=== RUN   TestSeedPreservesEditsAndCopiesCompleteSkill\n"}
+{"Time":"2026-10-18T22:21:34.229209667+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/containerruntime","Test":"TestSeedPreservesEditsAndCopiesCompleteSkill","Output":"--- PASS: TestSeedPreservesEditsAndCopiesCompleteSkill (0.00s)\n"}
+{"Time":"2026-10-18T22:21:34.229249601+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/containerruntime","Test":"TestSeedPreservesEditsAndCopiesCompleteSkill","Elapsed":0}
+{"Time":"2026-10-18T22:21:34.229255373+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/containerruntime","Test":"TestSeedRejectsLinks"}
+{"Time":"2026-10-18T22:21:34.229258283+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/containerruntime","Test":"TestSeedRejectsLinks","Output":"=== RUN   TestSeedRejectsLinks\n"}
+{"Time":"2026-10-18T22:21:34.229965748+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/containerruntime","Test":"TestSeedRejectsLinks","Output":"--- PASS: TestSeedRejectsLinks (0.00s)\n"}
+{"Time":"2026-10-18T22:21:34.229974999+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/containerruntime","Test":"TestSeedRejectsLinks","Elapsed":0}
+{"Time":"2026-10-18T22:21:34.229979125+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/containerruntime","Output":"PASS\n"}
+{"Time":"2026-10-18T22:21:34.230532116+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/containerruntime","Output":"ok  \tgithub.com/shengjuntu/rundesk/internal/containerruntime\t0.550s\n"}
+{"Time":"2026-10-18T22:21:34.232211084+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/containerruntime","Elapsed":0.552}
+{"Time":"2026-10-18T22:21:34.239779122+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/close","Output":"--- PASS: TestOwnedGroupCleanupAndFinalFrames/close (0.12s)\n"}
+{"Time":"2026-10-18T22:21:34.239803731+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/close","Elapsed":0.12}
+{"Time":"2026-10-18T22:21:34.239832998+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/exit"}
+{"Time":"2026-10-18T22:21:34.239836897+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/exit","Output":"=== RUN   TestOwnedGroupCleanupAndFinalFrames/exit\n"}
+{"Time":"2026-10-18T22:21:34.275096905+11:00","Action":"start","Package":"github.com/shengjuntu/rundesk/internal/store"}
+{"Time":"2026-10-18T22:21:34.279160308+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestExperimentCaptureBounds"}
+{"Time":"2026-10-18T22:21:34.27918047+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestExperimentCaptureBounds","Output":"=== RUN   TestExperimentCaptureBounds\n"}
+{"Time":"2026-10-18T22:21:34.27920305+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestExperimentCaptureBounds/single_and_frozen_scope"}
+{"Time":"2026-10-18T22:21:34.279206489+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestExperimentCaptureBounds/single_and_frozen_scope","Output":"=== RUN   TestExperimentCaptureBounds/single_and_frozen_scope\n"}
+{"Time":"2026-10-18T22:21:34.354224163+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/exit","Output":"--- PASS: TestOwnedGroupCleanupAndFinalFrames/exit (0.11s)\n"}
+{"Time":"2026-10-18T22:21:34.354257527+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/exit","Elapsed":0.11}
+{"Time":"2026-10-18T22:21:34.354264698+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/invalid"}
+{"Time":"2026-10-18T22:21:34.354267566+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/invalid","Output":"=== RUN   TestOwnedGroupCleanupAndFinalFrames/invalid\n"}
+{"Time":"2026-10-18T22:21:34.361776578+11:00","Action":"start","Package":"github.com/shengjuntu/rundesk/internal/tracequery"}
+{"Time":"2026-10-18T22:21:34.361941289+11:00","Action":"start","Package":"github.com/shengjuntu/rundesk/internal/web"}
+{"Time":"2026-10-18T22:21:34.365875512+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/web","Test":"TestHTMLScriptAndStyleAssetsAreEmbedded"}
+{"Time":"2026-10-18T22:21:34.365899755+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/web","Test":"TestHTMLScriptAndStyleAssetsAreEmbedded","Output":"=== RUN   TestHTMLScriptAndStyleAssetsAreEmbedded\n"}
+{"Time":"2026-10-18T22:21:34.365929587+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/web","Test":"TestHTMLScriptAndStyleAssetsAreEmbedded","Output":"--- PASS: TestHTMLScriptAndStyleAssetsAreEmbedded (0.00s)\n"}
+{"Time":"2026-10-18T22:21:34.365933449+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/web","Test":"TestHTMLScriptAndStyleAssetsAreEmbedded","Elapsed":0}
+{"Time":"2026-10-18T22:21:34.36593877+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/web","Output":"PASS\n"}
+{"Time":"2026-10-18T22:21:34.366528976+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/web","Output":"ok  \tgithub.com/shengjuntu/rundesk/internal/web\t0.004s\n"}
+{"Time":"2026-10-18T22:21:34.367023039+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/web","Elapsed":0.005}
+{"Time":"2026-10-18T22:21:34.367726271+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/tracequery","Test":"TestObservationSnapshotPagingAndBytePrecision"}
+{"Time":"2026-10-18T22:21:34.367783369+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/tracequery","Test":"TestObservationSnapshotPagingAndBytePrecision","Output":"=== RUN   TestObservationSnapshotPagingAndBytePrecision\n"}
+{"Time":"2026-10-18T22:21:34.404487995+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestExperimentCaptureBounds/single_and_frozen_scope","Output":"--- PASS: TestExperimentCaptureBounds/single_and_frozen_scope (0.12s)\n"}
+{"Time":"2026-10-18T22:21:34.404529281+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestExperimentCaptureBounds/single_and_frozen_scope","Elapsed":0.12}
+{"Time":"2026-10-18T22:21:34.404535345+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestExperimentCaptureBounds/count"}
+{"Time":"2026-10-18T22:21:34.404537947+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestExperimentCaptureBounds/count","Output":"=== RUN   TestExperimentCaptureBounds/count\n"}
+{"Time":"2026-10-18T22:21:34.447397241+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestExperimentCaptureBounds/count","Output":"--- PASS: TestExperimentCaptureBounds/count (0.04s)\n"}
+{"Time":"2026-10-18T22:21:34.447421855+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestExperimentCaptureBounds/count","Elapsed":0.04}
+{"Time":"2026-10-18T22:21:34.447430504+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestExperimentCaptureBounds/total"}
+{"Time":"2026-10-18T22:21:34.447433205+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestExperimentCaptureBounds/total","Output":"=== RUN   TestExperimentCaptureBounds/total\n"}
+{"Time":"2026-10-18T22:21:34.470993087+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/invalid","Output":"--- PASS: TestOwnedGroupCleanupAndFinalFrames/invalid (0.12s)\n"}
+{"Time":"2026-10-18T22:21:34.471017173+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames/invalid","Elapsed":0.12}
+{"Time":"2026-10-18T22:21:34.471022475+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames","Output":"--- PASS: TestOwnedGroupCleanupAndFinalFrames (0.35s)\n"}
+{"Time":"2026-10-18T22:21:34.471028271+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Test":"TestOwnedGroupCleanupAndFinalFrames","Elapsed":0.35}
+{"Time":"2026-10-18T22:21:34.4710312+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Output":"PASS\n"}
+{"Time":"2026-10-18T22:21:34.472091699+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/rpc","Output":"ok  \tgithub.com/shengjuntu/rundesk/internal/rpc\t0.585s\n"}
+{"Time":"2026-10-18T22:21:34.473023287+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/rpc","Elapsed":0.586}
+{"Time":"2026-10-18T22:21:34.555472485+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/tracequery","Test":"TestObservationSnapshotPagingAndBytePrecision","Output":"--- PASS: TestObservationSnapshotPagingAndBytePrecision (0.19s)\n"}
+{"Time":"2026-10-18T22:21:34.555505274+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/tracequery","Test":"TestObservationSnapshotPagingAndBytePrecision","Elapsed":0.19}
+{"Time":"2026-10-18T22:21:34.555512005+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/tracequery","Test":"TestObservationTruncatedWebsocketAndLargeBody"}
+{"Time":"2026-10-18T22:21:34.5555217+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/tracequery","Test":"TestObservationTruncatedWebsocketAndLargeBody","Output":"=== RUN   TestObservationTruncatedWebsocketAndLargeBody\n"}
+{"Time":"2026-10-18T22:21:34.676595562+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestExperimentCaptureBounds/total","Output":"--- PASS: TestExperimentCaptureBounds/total (0.23s)\n"}
+{"Time":"2026-10-18T22:21:34.676634067+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestExperimentCaptureBounds/total","Elapsed":0.23}
+{"Time":"2026-10-18T22:21:34.676641097+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestExperimentCaptureBounds","Output":"--- PASS: TestExperimentCaptureBounds (0.40s)\n"}
+{"Time":"2026-10-18T22:21:34.676645052+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestExperimentCaptureBounds","Elapsed":0.4}
+{"Time":"2026-10-18T22:21:34.676648014+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestHistoricalEventFilters"}
+{"Time":"2026-10-18T22:21:34.676650872+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestHistoricalEventFilters","Output":"=== RUN   TestHistoricalEventFilters\n"}
+{"Time":"2026-10-18T22:21:34.70576833+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestHistoricalEventFilters","Output":"--- PASS: TestHistoricalEventFilters (0.03s)\n"}
+{"Time":"2026-10-18T22:21:34.705797713+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestHistoricalEventFilters","Elapsed":0.03}
+{"Time":"2026-10-18T22:21:34.705803314+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestKunBenchmarkAtomicPlanCreation"}
+{"Time":"2026-10-18T22:21:34.705806766+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestKunBenchmarkAtomicPlanCreation","Output":"=== RUN   TestKunBenchmarkAtomicPlanCreation\n"}
+{"Time":"2026-10-18T22:21:34.720486106+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestKunBenchmarkAtomicPlanCreation","Output":"--- PASS: TestKunBenchmarkAtomicPlanCreation (0.01s)\n"}
+{"Time":"2026-10-18T22:21:34.720513015+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestKunBenchmarkAtomicPlanCreation","Elapsed":0.01}
+{"Time":"2026-10-18T22:21:34.720519432+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestKunCompareBoundsAndCursors"}
+{"Time":"2026-10-18T22:21:34.720522028+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestKunCompareBoundsAndCursors","Output":"=== RUN   TestKunCompareBoundsAndCursors\n"}
+{"Time":"2026-10-18T22:21:34.979844149+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestKunCompareBoundsAndCursors","Output":"--- PASS: TestKunCompareBoundsAndCursors (0.26s)\n"}
+{"Time":"2026-10-18T22:21:34.979881194+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestKunCompareBoundsAndCursors","Elapsed":0.26}
+{"Time":"2026-10-18T22:21:34.979887882+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestKunProjectionDedupGapAndCursor"}
+{"Time":"2026-10-18T22:21:34.979891447+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestKunProjectionDedupGapAndCursor","Output":"=== RUN   TestKunProjectionDedupGapAndCursor\n"}
+{"Time":"2026-10-18T22:21:34.98866501+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestKunProjectionDedupGapAndCursor","Output":"--- PASS: TestKunProjectionDedupGapAndCursor (0.01s)\n"}
+{"Time":"2026-10-18T22:21:34.988684796+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestKunProjectionDedupGapAndCursor","Elapsed":0.01}
+{"Time":"2026-10-18T22:21:34.988698518+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestTraceSnapshotSizeLimitHonorsFrozenScope"}
+{"Time":"2026-10-18T22:21:34.988701171+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestTraceSnapshotSizeLimitHonorsFrozenScope","Output":"=== RUN   TestTraceSnapshotSizeLimitHonorsFrozenScope\n"}
+{"Time":"2026-10-18T22:21:35.037674364+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestTraceSnapshotSizeLimitHonorsFrozenScope","Output":"--- PASS: TestTraceSnapshotSizeLimitHonorsFrozenScope (0.05s)\n"}
+{"Time":"2026-10-18T22:21:35.037709767+11:00","Action":"pass","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestTraceSnapshotSizeLimitHonorsFrozenScope","Elapsed":0.05}
+{"Time":"2026-10-18T22:21:35.03771966+11:00","Action":"run","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestTraceSnapshotRetainsLargeObservationBytes"}
+{"Time":"2026-10-18T22:21:35.037722714+11:00","Action":"output","Package":"github.com/shengjuntu/rundesk/internal/store","Test":"TestTraceSnapshotRetainsLargeObservationBytes","Output":"=== RUN   TestTraceSnapshotRetainsLargeObservationBytes\n"}

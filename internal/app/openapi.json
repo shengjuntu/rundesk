@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Control API (RDCA)",
-    "version": "0.49.4",
+    "version": "0.49.5",
     "description": "RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter，当前未实现或声明 UHP 兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。当前应用接入、错误、幂等及示例见 docs/API-V1.md。"
   },
   "servers": [
@@ -27368,6 +27368,21 @@
               },
               "ffprobeVersion": {
                 "type": "string"
+              },
+              "hyperframesVersion": {
+                "type": "string"
+              },
+              "gsapVersion": {
+                "type": "string"
+              },
+              "nodeVersion": {
+                "type": "string"
+              },
+              "browserVersion": {
+                "type": "string"
+              },
+              "hasVideoUse": {
+                "type": "boolean"
               }
             }
           },

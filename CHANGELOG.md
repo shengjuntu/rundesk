@@ -1,3 +1,12 @@
+# 0.49.5
+
+- Update video-build to 1.4.0: HyperFrames 0.8.87, GSAP 3.15.0, Node.js, FFmpeg and fonts are the default animation toolchain. Pinned MIT video-use and adapter contract 2 remain an explicit optional compatibility path.
+- Ship original Codex-directed production guidance for Video App 0.23: autonomous storyboarding, asset selection/generation, TTS, HTML/CSS/JavaScript animation and actual output review. Stage artifacts do not add repeated approval gates.
+- Keep App MCP authoring/rendering separate from the managed tool image; the HyperFrames main path requires no shared production directory. Old video_use exchange and archived EDLs retain their own prerequisites.
+- Add offline HyperFrames media checks and explicit profile dependency reporting. Installation, PNG transport and local smoke evidence do not prove real model production or visual understanding.
+- Retain the independent Kun 0.17.0 boundary, worker protocol 16, native Codex adapter and default-off HTTP observation. RunDesk Control API (RDCA) retains /api/v1; UHP compatibility remains planned and unimplemented.
+- Preserve validation scope by release; earlier 0.49.4 checks are historical evidence, not 0.49.5 full race acceptance.
+
 # 0.49.4
 
 - Extract Kun 0.17.0 into an independently buildable project. RunDesk no longer contains or builds `cmd/kun` or the Kun execution kernel; it links a checked lightweight SDK snapshot under `third_party/kun-sdk`.

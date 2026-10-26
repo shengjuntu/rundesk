@@ -43,6 +43,33 @@ def main():
         for argv in (["ffmpeg", "-version"], ["ffprobe", "-version"], ["fc-match", "Noto Sans CJK SC"]):
             checks.append({"name": argv[0], **run(argv)})
     if profile["id"] == "video-build":
+        hyper = config["dependencies"]["hyperframes"]
+        runtime = Path(os.environ.get("RUNDESK_HYPERFRAMES_ROOT", "/opt/hyperframes"))
+        for package, expected in hyper["npm"].items():
+            try:
+                installed = json.loads((runtime / "node_modules" / package / "package.json").read_text()).get("version")
+                checks.append({"name": package + " package", "ok": installed == expected, "version": installed, "expected": expected})
+            except (OSError, ValueError) as exc:
+                checks.append({"name": package + " package", "ok": False, "error": str(exc)})
+        node = run(["node", "-p", "process.versions.node.split('.')[0]"])
+        node["ok"] = node["ok"] and node.get("output", "").strip().isdigit() and int(node["output"].strip()) >= hyper["nodeMajorMinimum"]
+        checks.append({"name": "hyperframes-node-22-minimum", **node})
+        browser = os.environ.get("HYPERFRAMES_BROWSER_PATH", "/usr/bin/chromium")
+        checks.append({"name": "hyperframes-browser", **run([browser, "--version"])})
+        with tempfile.TemporaryDirectory(prefix="rundesk-hyperframes-doctor-") as tmp:
+            command = [sys.executable, str(Path(__file__).with_name("hyperframes_smoke.py")), "--runtime", str(runtime), "--out", str(Path(tmp) / "run")]
+            try:
+                p = subprocess.run(command, capture_output=True, text=True, timeout=240)
+                checks.append({"name": "hyperframes-html-gsap-render", "ok": p.returncode == 0, "output": (p.stdout + p.stderr)[-4000:]})
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                checks.append({"name": "hyperframes-html-gsap-render", "ok": False, "error": str(exc)})
+        with tempfile.TemporaryDirectory(prefix="rundesk-ffmpeg-doctor-") as tmp:
+            command = [sys.executable, str(Path(__file__).with_name("video_smoke.py")), "--out", str(Path(tmp) / "run")]
+            try:
+                p = subprocess.run(command, capture_output=True, text=True, timeout=80)
+                checks.append({"name": "ffmpeg-video-audio-render", "ok": p.returncode == 0, "output": (p.stdout + p.stderr)[-2000:]})
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                checks.append({"name": "ffmpeg-video-audio-render", "ok": False, "error": str(exc)})
         vendor = Path("/opt/video-use")
         expected = config["dependencies"]["videoUse"]["commit"]
         adapter = run([sys.executable, "-I", str(Path(__file__).with_name("video_use_adapter.py")), "--version"])
@@ -52,24 +79,25 @@ def main():
         except (ValueError, TypeError):
             adapter["ok"] = False
         checks.append({"name": "video-use-adapter-contract", **adapter})
-        try:
-            pin = json.loads((vendor / "RUNDESK_PIN.json").read_text())
-            checks.append({"name": "video-use-source-pin", "ok": pin["commit"] == expected and (vendor / "LICENSE").is_file() and (vendor / "helpers/render.py").is_file(), "commit": pin.get("commit")})
-        except (OSError, ValueError, KeyError) as e:
-            checks.append({"name": "video-use-source-pin", "ok": False, "error": str(e)})
-        for package, expected in config["dependencies"]["videoUse"]["python"].items():
+        if selection.get("videoUse", True):
             try:
-                installed = importlib.metadata.version(package)
-                checks.append({"name": "video-use " + package, "ok": installed == expected, "version": installed, "expected": expected})
-            except importlib.metadata.PackageNotFoundError:
-                checks.append({"name": "video-use " + package, "ok": False, "error": "not installed"})
-        with tempfile.TemporaryDirectory(prefix="rundesk-video-use-doctor-") as tmp:
-            command = [sys.executable, str(Path(__file__).with_name("video_use_smoke.py")), "--out", str(Path(tmp) / "run")]
-            try:
-                p = subprocess.run(command, capture_output=True, text=True, timeout=120)
-                checks.append({"name": "video-use-script-media-render", "ok": p.returncode == 0, "output": (p.stdout + p.stderr)[-4000:]})
-            except (OSError, subprocess.TimeoutExpired) as e:
-                checks.append({"name": "video-use-script-media-render", "ok": False, "error": str(e)})
+                pin = json.loads((vendor / "RUNDESK_PIN.json").read_text())
+                checks.append({"name": "video-use-source-pin", "ok": pin["commit"] == expected and (vendor / "LICENSE").is_file() and (vendor / "helpers/render.py").is_file(), "commit": pin.get("commit")})
+            except (OSError, ValueError, KeyError) as e:
+                checks.append({"name": "video-use-source-pin", "ok": False, "error": str(e)})
+            for package, expected in config["dependencies"]["videoUse"]["python"].items():
+                try:
+                    installed = importlib.metadata.version(package)
+                    checks.append({"name": "video-use " + package, "ok": installed == expected, "version": installed, "expected": expected})
+                except importlib.metadata.PackageNotFoundError:
+                    checks.append({"name": "video-use " + package, "ok": False, "error": "not installed"})
+            with tempfile.TemporaryDirectory(prefix="rundesk-video-use-doctor-") as tmp:
+                command = [sys.executable, str(Path(__file__).with_name("video_use_smoke.py")), "--out", str(Path(tmp) / "run")]
+                try:
+                    p = subprocess.run(command, capture_output=True, text=True, timeout=120)
+                    checks.append({"name": "video-use-script-media-render", "ok": p.returncode == 0, "output": (p.stdout + p.stderr)[-4000:]})
+                except (OSError, subprocess.TimeoutExpired) as e:
+                    checks.append({"name": "video-use-script-media-render", "ok": False, "error": str(e)})
     skill = Path("/etc/codex/skills") / profile["skill"] / "SKILL.md"
     checks.append({"name": "admin-skill", "ok": skill.is_file(), "path": str(skill)})
     try:
@@ -90,7 +118,7 @@ def main():
         # This only reads configuration; 'mcporter list' would contact servers.
         checks.append({"name": "exa-cli-configuration", **run(["mcporter", "config", "get", "exa", "--json"])})
     result = {"schemaVersion": 1, "profileId": profile["id"], "ready": all(c["ok"] for c in checks), "checks": checks,
-              "scope": "offline executable, dependencies, skill path and writable-home checks", "modelTested": False, "networkTested": False,
+              "scope": "offline executable, dependencies, local animation/audio render, skill path and writable-home checks", "modelTested": False, "networkTested": False,
               "notes": ["Does not prove Codex skill discovery, MCP handshake, model downloads, auth or live search quality."]}
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if result["ready"] else 1

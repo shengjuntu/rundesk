@@ -39,6 +39,11 @@ type diagnosticRuntime struct {
 	ProfileVersion         string            `json:"profileVersion"`
 	AdapterContractVersion int               `json:"adapterContractVersion"`
 	VideoUseCommit         string            `json:"videoUseCommit"`
+	HasVideoUse            bool              `json:"hasVideoUse"`
+	HyperframesVersion     string            `json:"hyperframesVersion,omitempty"`
+	GSAPVersion            string            `json:"gsapVersion,omitempty"`
+	NodeVersion            string            `json:"nodeVersion,omitempty"`
+	BrowserVersion         string            `json:"browserVersion,omitempty"`
 	PythonVersion          string            `json:"pythonVersion"`
 	FFmpegVersion          string            `json:"ffmpegVersion"`
 	FFprobeVersion         string            `json:"ffprobeVersion"`

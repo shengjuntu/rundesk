@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "engine": "hyperframes",
+  "passed": true,
+  "modelTested": false,
+  "networkRequired": false,
+  "browserPath": "/workspace/scratch/80b35bf25fcc/browser/chrome-headless-shell-linux64/chrome-headless-shell",
+  "runtime": "/workspace/scratch/62bf478f3a8e/project/rundesk-video-app-v0.19.0/runtime",
+  "commands": [
+    {
+      "argv": [
+        "node",
+        "/workspace/scratch/62bf478f3a8e/project/rundesk-video-app-v0.19.0/runtime/node_modules/hyperframes/bin/hyperframes.mjs",
+        "--version"
+      ],
+      "exitCode": 0,
+      "output": "0.8.87\n"
+    },
+    {
+      "argv": [
+        "node",
+        "/workspace/scratch/62bf478f3a8e/project/rundesk-video-app-v0.19.0/runtime/node_modules/hyperframes/bin/hyperframes.mjs",
+        "check",
+        "/workspace/scratch/62bf478f3a8e/validation/hyperframes-profile-1.4.0-2/project",
+        "--json",
+        "--samples",
+        "2"
+      ],
+      "exitCode": 0,
+      "output": "{\n  \"ok\": true,\n  \"strict\": false,\n  \"lint\": {\n    \"ok\": true,\n    \"errorCount\": 0,\n    \"warningCount\": 0,\n    \"infoCount\": 0,\n    \"findings\": [],\n    \"filesScanned\": 1\n  },\n  \"runtime\": {\n    \"ok\": true,\n    \"errorCount\": 0,\n    \"warningCount\": 0,\n    \"infoCount\": 0,\n    \"findings\": []\n  },\n  \"layout\": {\n    \"ok\": true,\n    \"errorCount\": 0,\n    \"warningCount\": 0,\n    \"infoCount\": 0,\n    \"findings\": [],\n    \"duration\": 1,\n    \"samples\": [\n      0.25,\n      0.75\n    ],\n    \"transitionSamples\": [],\n    \"transitionSamplesDropped\": 0,\n    \"tolerance\": 2,\n    \"totalIssueCount\": 0,\n    \"truncated\": false\n  },\n  \"motion\": {\n    \"ok\": true,\n    \"errorCount\": 0,\n    \"warningCount\": 0,\n    \"infoCount\": 0,\n    \"findings\": [],\n    \"enabled\": false,\n    \"samples\": 0\n  },\n  \"contrast\": {\n    \"ok\": true,\n    \"errorCount\": 0,\n    \"warningCount\": 0,\n    \"infoCount\": 0,\n    \"findings\": [],\n    \"enabled\": true,\n    \"samples\": [\n      0.25,\n      0.75\n    ],\n    \"checked\": 2,\n    \"passed\": 2\n  },\n  \"hdr\": {\n    \"autoPromotion\": null,\n    \"inspection\": \"available\"\n  },\n  \"snapshots\": {\n    \"enabled\": false,\n    \"files\": [],\n    \"times\": [],\n    \"findingFiles\": []\n  },\n  \"_meta\": {\n    \"version\": \"0.8.87\",\n    \"updateAvailable\": false\n  }\n}\n[HyperFrames] Not inlining \"font.otf\" (15.7 MB exceeds the 2 MB inline limit). The bundle may not be self-contained.\n[HyperFrames] Not inlining \"font.otf\" (15.7 MB exceeds the 2 MB inline limit). The bundle may not be self-contained.\n[hyperframes] browserGpuMode probe → software (WebGL renderer vendor=\"Google Inc. (Mesa)\" renderer=\"ANGLE (Mesa, llvmpipe (LLVM 20.1.2 256 bits), OpenGL ES 3.2)\")\n[SystemMemory] cgroup memory limit detected: 8192 MiB — it governs memory-adaptive render behaviour instead of host RAM.\n"
+    },
+    {
+      "argv": [
+        "node",
+        "/workspace/scratch/62bf478f3a8e/project/rundesk-video-app-v0.19.0/runtime/node_modules/hyperframes/bin/hyperframes.mjs",
+        "render",
+        "/workspace/scratch/62bf478f3a8e/validation/hyperframes-profile-1.4.0-2/project",
+        "--output",
+        "/workspace/scratch/62bf478f3a8e/validation/hyperframes-profile-1.4.0-2/animation.mp4",
+        "--fps",
+        "10",
+        "--workers",
+        "1",
+        "--quality",
+        "draft",
+        "--no-browser-gpu",
+        "--no-best-effort",
+        "--strict"
+      ],
+      "exitCode": 0,
+      "output": "screenshot] GSAP proxy flush complete (161ms)\n[initSession:screenshot] pollHfReady complete (163ms)\n[initSession:screenshot] pollSubCompositionTimelines complete (ready) (168ms)\n[initSession:screenshot] applyVideoMetadataHints complete (168ms)\n[initSession:screenshot] media + fonts + tailwind ready (828ms)\n[initSession:screenshot] static-frame dedup: disabled (eligible) (843ms)\n  ███████░░░░░░░░░░░░░░░░░░  31%  Streaming frame 1/10\n  █████████████████░░░░░░░░  69%  Streaming frame 8/10\n  ████████████████████░░░░░  80%  Streaming frame 10/10\n  ██████████████████████░░░  90%  Assembling final video\n  █████████████████████████  100%  Render complete\n\n◇  /workspace/scratch/62bf478f3a8e/validation/hyperframes-profile-1.4.0-2/animation.mp4\n   5.4 KB · 1.0s video · rendered in 1.9s\n   screenshot capture · software gpu · compile 0.1s · extract 0.0s · audio 0.0s · probe 0.0s · setup 0.0s · capture 1.7s · encode (during capture) 1.7s · assemble 0.1s\nfatal library error, lookup self\nfatal library error, lookup self\n[SystemMemory] cgroup memory limit detected: 8192 MiB — it governs memory-adaptive render behaviour instead of host RAM.\n[INFO] [Render] Pipeline started {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"platform\":\"linux\",\"arch\":\"x64\",\"nodeVersion\":\"v24.19.0\",\"fps\":{\"num\":10,\"den\":1},\"format\":\"mp4\",\"quality\":\"draft\",\"browserGpuMode\":\"software\",\"forceScreenshot\":true,\"protocolTimeout\":300000,\"browserTimeout\":120000,\"pageNavigationTimeout\":60000,\"playerReadyTimeout\":45000}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"pipeline\",\"status\":\"checkpoint\",\"elapsedMs\":5,\"message\":\"started\",\"format\":\"mp4\",\"quality\":\"draft\",\"browserGpuMode\":\"software\",\"forceScreenshot\":true,\"protocolTimeoutMs\":300000,\"pageNavigationTimeoutMs\":60000,\"playerReadyTimeoutMs\":45000,\"requestedWorkers\":1}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"compile\",\"status\":\"start\",\"elapsedMs\":7,\"needsAlpha\":false}\n[INFO] [Compiler] Kept large local font file-backed: font.otf (> 5.0 MB)\n[INFO] Compiled composition metadata {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"entryFile\":\"index.html\",\"staticDuration\":1,\"width\":320,\"height\":240,\"videoCount\":0,\"audioCount\":0,\"renderModeHints\":{\"recommendScreenshot\":false,\"reasons\":[]}}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"compile\",\"status\":\"end\",\"elapsedMs\":59,\"durationMs\":52,\"needsAlpha\":false}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"compile\",\"status\":\"checkpoint\",\"elapsedMs\":60,\"message\":\"composition metadata resolved\",\"width\":320,\"height\":240,\"videoCount\":0,\"audioCount\":0,\"imageCount\":0,\"deviceScaleFactor\":1,\"forceScreenshot\":true,\"compositionHash\":\"363c039d90099414\"}\n[INFO] [Render] Low-memory render profile active — screenshot capture, auto-worker calibration skipped. Override with --no-low-memory-mode or PRODUCER_LOW_MEMORY_MODE=false. {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"totalMemMb\":8192,\"thresholdMb\":8192}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"browser_probe\",\"status\":\"start\",\"elapsedMs\":60,\"forceScreenshot\":true,\"stagePhase\":\"calibrating\"}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"browser_probe\",\"status\":\"end\",\"elapsedMs\":69,\"durationMs\":8,\"forceScreenshot\":true,\"stagePhase\":\"calibrating\"}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"browser_probe\",\"status\":\"checkpoint\",\"elapsedMs\":70,\"message\":\"duration resolved\",\"durationSeconds\":1,\"totalFrames\":10,\"compositionHash\":\"363c039d90099414\",\"beginFrameStalled\":false}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"video_extract\",\"status\":\"start\",\"elapsedMs\":70,\"videoCount\":0}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"video_extract\",\"status\":\"end\",\"elapsedMs\":70,\"durationMs\":0,\"videoCount\":0}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"video_extract\",\"status\":\"checkpoint\",\"elapsedMs\":71,\"message\":\"frames resolved\",\"videoCount\":0,\"extractedVideoCount\":0,\"totalFramesExtracted\":0,\"maxFramesPerVideo\":0,\"avgFramesPerExtractedVideo\":null,\"vfrPreflightCount\":null,\"vfrPreflightMs\":null,\"cacheHits\":null,\"cacheMisses\":null,\"transientRetries\":null,\"minVideoFrameCoverageRatio\":null,\"authoredTimedClipCount\":1}\n[INFO] [Render] No HDR sources detected — rendering SDR {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\"}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"hdr_detection\",\"status\":\"checkpoint\",\"elapsedMs\":71,\"message\":\"resolved\",\"requestedHdrMode\":\"auto\",\"effectiveHdr\":\"sdr\",\"nativeHdrVideoCount\":0,\"nativeHdrImageCount\":0}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"audio_process\",\"status\":\"start\",\"elapsedMs\":71,\"audioCount\":0}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"audio_process\",\"status\":\"end\",\"elapsedMs\":72,\"durationMs\":1,\"audioCount\":0}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"file_server\",\"status\":\"start\",\"elapsedMs\":72,\"reused\":false}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"file_server\",\"status\":\"end\",\"elapsedMs\":82,\"durationMs\":10}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"capture_calibration\",\"status\":\"checkpoint\",\"elapsedMs\":84,\"message\":\"skipped\",\"requestedWorkers\":1,\"totalFrames\":10,\"htmlInCanvasDetected\":false,\"lowMemoryMode\":true,\"deInversionEligible\":false,\"deParallelRouterEligible\":false}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"worker_resolution\",\"status\":\"checkpoint\",\"elapsedMs\":86,\"message\":\"resolved\",\"workerCount\":1}\n[INFO] streaming-encode gate {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"enabled\":true,\"reason\":\"single_worker\",\"configFlag\":true,\"durationCapEnabled\":false,\"outputFormat\":\"mp4\",\"workerCount\":1,\"durationSeconds\":1,\"maxDurationSeconds\":240}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"capture_strategy\",\"status\":\"checkpoint\",\"elapsedMs\":86,\"message\":\"resolved\",\"workerCount\":1,\"forceScreenshot\":true,\"captureBeyondViewport\":null,\"useStreamingEncode\":true,\"useLayeredComposite\":false,\"usePageSideCompositing\":false,\"hasHdrContent\":false,\"hasShaderTransitions\":false,\"isPngSequence\":false}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"capture_streaming\",\"status\":\"start\",\"elapsedMs\":87,\"stagePhase\":\"capturing\",\"workerCount\":1,\"forceScreenshot\":true,\"totalFrames\":10,\"framesCompleted\":0,\"captureMode\":\"screenshot\",\"captureOperation\":\"captureScreenshot\"}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"capture_streaming\",\"status\":\"end\",\"elapsedMs\":1744,\"durationMs\":1657,\"stagePhase\":\"capturing\",\"workerCount\":1,\"forceScreenshot\":true,\"totalFrames\":10,\"framesCompleted\":10,\"captureMode\":\"screenshot\",\"captureOperation\":\"encode\"}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"assemble\",\"status\":\"start\",\"elapsedMs\":1745,\"stagePhase\":\"capturing\",\"hasAudio\":false,\"workerCount\":1,\"forceScreenshot\":true,\"totalFrames\":10,\"framesCompleted\":10,\"captureMode\":\"screenshot\",\"captureOperation\":\"encode\"}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"assemble\",\"status\":\"end\",\"elapsedMs\":1815,\"durationMs\":69,\"stagePhase\":\"capturing\",\"hasAudio\":false,\"workerCount\":1,\"forceScreenshot\":true,\"totalFrames\":10,\"framesCompleted\":10,\"captureMode\":\"screenshot\",\"captureOperation\":\"encode\"}\n[INFO] [Render:trace] {\"renderJobId\":\"52ce2470-a355-4ac3-ba8b-ff7ccf1c5854\",\"phase\":\"pipeline\",\"status\":\"checkpoint\",\"elapsedMs\":1876,\"message\":\"artifact validated\",\"totalElapsedMs\":1876}\n"
+    },
+    {
+      "argv": [
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_streams",
+        "-show_format",
+        "-of",
+        "json",
+        "/workspace/scratch/62bf478f3a8e/validation/hyperframes-profile-1.4.0-2/animation.mp4"
+      ],
+      "exitCode": 0,
+      "output": "{\n    \"streams\": [\n        {\n            \"index\": 0,\n            \"codec_name\": \"h264\",\n            \"codec_long_name\": \"H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10\",\n            \"profile\": \"Constrained Baseline\",\n            \"codec_type\": \"video\",\n            \"codec_tag_string\": \"avc1\",\n            \"codec_tag\": \"0x31637661\",\n            \"width\": 320,\n            \"height\": 240,\n            \"coded_width\": 320,\n            \"coded_height\": 240,\n            \"closed_captions\": 0,\n            \"film_grain\": 0,\n            \"has_b_frames\": 0,\n            \"sample_aspect_ratio\": \"1:1\",\n            \"display_aspect_ratio\": \"4:3\",\n            \"pix_fmt\": \"yuv420p\",\n            \"level\": 11,\n            \"color_range\": \"tv\",\n            \"color_space\": \"bt709\",\n            \"color_transfer\": \"bt709\",\n            \"color_primaries\": \"bt709\",\n            \"chroma_location\": \"center\",\n            \"field_order\": \"progressive\",\n            \"refs\": 1,\n            \"is_avc\": \"true\",\n            \"nal_length_size\": \"4\",\n            \"id\": \"0x1\",\n            \"r_frame_rate\": \"10/1\",\n            \"avg_frame_rate\": \"10/1\",\n            \"time_base\": \"1/10240\",\n            \"start_pts\": 0,\n            \"start_time\": \"0.000000\",\n            \"duration_ts\": 10240,\n            \"duration\": \"1.000000\",\n            \"bit_rate\": \"34264\",\n            \"bits_per_raw_sample\": \"8\",\n            \"nb_frames\": \"10\",\n            \"extradata_size\": 42,\n            \"disposition\": {\n                \"default\": 1,\n                \"dub\": 0,\n                \"original\": 0,\n                \"comment\": 0,\n                \"lyrics\": 0,\n                \"karaoke\": 0,\n                \"forced\": 0,\n                \"hearing_impaired\": 0,\n                \"visual_impaired\": 0,\n                \"clean_effects\": 0,\n                \"attached_pic\": 0,\n                \"timed_thumbnails\": 0,\n                \"non_diegetic\": 0,\n                \"captions\": 0,\n                \"descriptions\": 0,\n                \"metadata\": 0,\n                \"dependent\": 0,\n                \"still_image\": 0\n            },\n            \"tags\": {\n                \"language\": \"und\",\n                \"handler_name\": \"VideoHandler\",\n                \"vendor_id\": \"[0][0][0][0]\",\n                \"encoder\": \"Lavc60.31.102 libx264\"\n            }\n        }\n    ],\n    \"format\": {\n        \"filename\": \"/workspace/scratch/62bf478f3a8e/validation/hyperframes-profile-1.4.0-2/animation.mp4\",\n        \"nb_streams\": 1,\n        \"nb_programs\": 0,\n        \"format_name\": \"mov,mp4,m4a,3gp,3g2,mj2\",\n        \"format_long_name\": \"QuickTime / MOV\",\n        \"start_time\": \"0.000000\",\n        \"duration\": \"1.000000\",\n        \"size\": \"5508\",\n        \"bit_rate\": \"44064\",\n        \"probe_score\": 100,\n        \"tags\": {\n            \"minor_version\": \"512\",\n            \"major_brand\": \"isom\",\n            \"compatible_brands\": \"isomiso2avc1mp41\",\n            \"hyperframes_version\": \"0.8.87\",\n            \"hyperframes_renderer\": \"hyperframes\",\n            \"encoder\": \"Lavf60.16.100\"\n        }\n    }\n}\n"
+    },
+    {
+      "argv": [
+        "ffmpeg",
+        "-nostdin",
+        "-v",
+        "error",
+        "-i",
+        "/workspace/scratch/62bf478f3a8e/validation/hyperframes-profile-1.4.0-2/animation.mp4",
+        "-map",
+        "0:v:0",
+        "-f",
+        "framemd5",
+        "-"
+      ],
+      "exitCode": 0,
+      "output": "#format: frame checksums\n#version: 2\n#hash: MD5\n#software: Lavf60.16.100\n#tb 0: 1/10\n#media_type 0: video\n#codec_id 0: rawvideo\n#dimensions 0: 320x240\n#sar 0: 1/1\n#stream#, dts,        pts, duration,     size, hash\n0,          0,          0,        1,   115200, d1b530f03e853f0d58122b843aead7e7\n0,          1,          1,        1,   115200, b8ed0c0d68aa5814f4b2cd3f7188774e\n0,          2,          2,        1,   115200, ddd07066cee9197bb7c80423a9195b8d\n0,          3,          3,        1,   115200, 67f62b7513a6dc2434c1d5d9f534d155\n0,          4,          4,        1,   115200, 683ee5bae239f058b1308ddbd93ca7b4\n0,          5,          5,        1,   115200, bd1c87708844ca4ef05909e8a3bffdba\n0,          6,          6,        1,   115200, 70672fa27cc8c50d467a87a74229e4f2\n0,          7,          7,        1,   115200, a1158c71e9d9657d032022a5c5117612\n0,          8,          8,        1,   115200, 80826119aab047857ee5e622424207fe\n0,          9,          9,        1,   115200, 2168dddda4ec555f468308684439f721\n"
+    }
+  ],
+  "versions": {
+    "hyperframes": "0.8.87",
+    "gsap": "3.15.0"
+  },
+  "fontFile": "/workspace/scratch/80b35bf25fcc/browser/fonts/NotoSansCJKsc-Regular.otf",
+  "duration": 1.0,
+  "width": 320,
+  "height": 240,
+  "videoCodec": "h264",
+  "frameCount": 10,
+  "distinctFrames": 10,
+  "sha256": "890f6bb5d66b85e70cc039dff583a68a06bf60f3beda98d964872db854d50bbc"
+}

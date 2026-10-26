@@ -785,6 +785,7 @@ schemas.update({'ApplicationRuntimeDiagnosticsInput': {'type': 'object',
                                                                                     'code': {'type': 'string'}}},
                                                   'errors': {'type': 'object', 'additionalProperties': {'type': 'string'}}}}})
 schemas['ApplicationRuntimeDiagnostics']['properties']['runtime']['properties']['ffprobeVersion'] = st()
+schemas['ApplicationRuntimeDiagnostics']['properties']['runtime']['properties'].update({'hyperframesVersion': st(), 'gsapVersion': st(), 'nodeVersion': st(), 'browserVersion': st(), 'hasVideoUse': bool_})
 schemas['ApplicationRuntimeDiagnostics']['properties'].update({'probed': bool_, 'accountReady': bool_, 'servers': {'type':'object','additionalProperties':arr(st())}})
 schemas['ApplicationRuntimeDiagnostics']['required'] += ['probed', 'accountReady', 'servers']
 paths['/applications/{appId}/runtime/diagnostics'] = {'post': {'operationId': 'post_applications_appId_runtime_diagnostics',

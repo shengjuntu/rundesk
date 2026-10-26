@@ -1,54 +1,38 @@
-# Video App 与 RunDesk：视频 Docker 与联调
+# Video App 与 RunDesk：自主导演和部署
 
-配套版本：RunDesk 0.48.1、Video App 0.7.0、news2douyin 0.15.0。RunDesk 0.48.0 已具备所需 API，可继续使用；0.48.1 增加入口、说明和通用错误措辞。
+配套版本：RunDesk 0.49.5、Video App 0.23.0、video-build 1.4.0。RunDesk 保持独立的控制平台与 RDCA，Video App 提供制作工具和专业审阅，Codex 自主分镜、选材、生成、动画和检查。OpenMontage 只作设计参考，没有引入其代码、Schema 或 Skill。
 
-## 两个镜像，各准备一次
+| 组件 | 职责与持久数据 |
+| --- | --- |
+| RunDesk | 应用、环境、会话、配置、任务与轨迹；原 RunDesk data |
+| video-build 工具容器 | Codex、HyperFrames/GSAP、FFmpeg、Pillow、字体与原创 Skill；工作区及 Codex home |
+| Video App | HTTP MCP、素材/工程/输出、HyperFrames 渲染与多轨审阅；独立 App data |
+| 可选生成服务 | IndexTTS、图像/视频生成；独立配置、模型和凭据 |
 
-| 部件 | 运行位置 | 职责 | 持久数据 |
-|---|---|---|---|
-| RunDesk | Linux 宿主机 | 应用注册、Codex 生命周期、会话、审批、轨迹 | 原 RunDesk data |
-| `rundesk-video-build` | RunDesk 托管 Docker | Codex、FFmpeg/Pillow 工具、视频制作 Skill；通过 `video_project` MCP 操作业务 | RunDesk 工作区、Codex home |
-| `rundesk-video-app:0.7.0` | 独立 Compose 容器 | WebUI、项目、HTTP MCP、HyperFrames 0.8.87、GSAP 3.15.0、Chromium、FFmpeg、Noto CJK、eSpeak NG | 宿主目录挂到 `/data` |
+## 主制作路径
 
-Codex 发起 `video_render_start`，实际渲染由 App 容器执行。不是在 Codex 容器里启动第二个 App；不要向 App 挂载 Docker socket。App 数据与 Codex 工作目录不共用，素材由 App 按 assetId 读取。视频不要求 Exa/Agent-Reach；新闻搜索继续在 news2douyin 研究环境完成，已审核制作包携带素材交接。
+App 保存主播正文、素材与要求，一键提交原有 RunDesk 专用会话。Codex 使用 video_project MCP 获取项目、能力、真实素材与配音，再自行制作原创 HyperFrames HTML/CSS/JavaScript/GSAP。通过 App 工具保存工程、检查并提交完整渲染；返回真实输出及检查记录。
 
-## 升级、构建、启动
+素材准备与对齐、剪辑、精修是可查看产物，阶段可交错并局部返回，不逐镜头重复确认。文字为内容依据，禁止用示意图冒充现场事实。完整模型交互、工具参数、异常定位和轨迹问答保留在 RunDesk；视频、配音、字幕、音乐的专业审阅在 App。
 
-1. 停止旧 RunDesk，备份 data；解压源码、`make build`，沿用原 `--data` 启动。不要清空 data 或创建第二份同名应用安装。
-2. 在 RunDesk 初始化/运行环境页选择 `video-build`，填写已安装 Codex 的精确版本，准备镜像一次。可以从已有本地镜像或受信仓库拉取；应用注册和任务开始不触发构建。
-3. 解压 Video App 0.7.0。若从 0.6.0 升级，先停旧 App、备份整个 data，在 Docker 配置中令 `VIDEO_HOST_DATA` 指向该目录。保留 access-token、config.json、rundesk-requests、projects，避免安装身份、会话和回执丢失。
-4. 执行 App 包的 `bash scripts/docker.sh init`。编辑生成的 `docker/.env`：填 RunDesk Token，核对 UID/GID、数据目录、浏览器入口与 MCP 回调地址。
-5. `bash scripts/docker.sh build` 显式构建渲染镜像；`bash scripts/docker.sh up` 只启动已有镜像。镜像内已安装所有渲染依赖，启动不再执行 npm/apt 或浏览器下载。
-6. `bash scripts/docker.sh token` 获取 App 登录 Token，打开 `http://127.0.0.1:3220`。远程访问需把 `VIDEO_APP_PUBLIC_URL` 改为浏览器可访问地址。
-7. 在 App 创建/导入项目，点“连接 RunDesk”。转到 RunDesk 对应应用，选择已准备的 `video-build` Docker 镜像，完成该容器 Codex 认证；首次切换 Docker 时在当前容器安装 `integrations/video-project/SKILL.md`，添加 HTTP MCP `video_project`，URL 为 `VIDEO_APP_MCP_URL`，HTTP Header 为 `Authorization: Bearer <App Token>`。此配置位于容器独立 Codex home，原本机配置不会自动迁移。模型、权限和审批由 RunDesk 管理。
-8. 回 App 点击“重新配置工具”以重连（空会话自动更换到 Docker）；若已有本机对话，点击“新建当前环境对话”，旧历史保留。再打开“环境准备 → 启动并检查 Codex 容器”，确认运行、认证、10 个视频 MCP 工具可发现；发送新任务也自动做该检查。检查通过不代表真实模型调用已验收。
+主流程不要求 App 与 Codex 共享私人项目目录，也不依赖 video-use。素材用真实 assetId 映射到工程相对路径，由 App 冻结与渲染；Agent 不需要读写 project.json。可在工具容器做本地 HyperFrames 动画实验，App 成片仍以实际保存的工程和独立渲染输出为准。
 
-也可在 RunDesk 目录统一操作：设置 `VIDEO_APP_DIR` 后执行 `bash examples/video-build/run-app.sh <init|build|up|doctor|smoke|logs|stop>`。
+## 升级与运行
 
-## Linux 网络约定
+1. 备份并保留两边 data、App access-token、RunDesk 身份/会话、Codex HOME/认证与服务配置，等待活动任务结束。
+2. 更新 RunDesk 0.49.5。准备 video-build 1.4.0，填写 Codex 精确版本，构建或选择真实已有镜像，再明确更新运行环境；不会在任务开始时自动构建。
+3. 更新 Video App 0.23.0 或重建其独立镜像，旧 docker/.env 显式更新 App 镜像标签；保持已有数据挂载。
+4. 在 App 连接/更新本版工具，核对当前运行环境实际启用的版本化 Skill、video_project MCP 和模型认证。MCP 地址为可达的 App /api/mcp，Authorization Header 使用 App Token，凭据不写入工程。
+5. 用短稿与已有图片做完整制作和局部修改，查看真实工具轨迹、revision、输出和审阅记录。依赖诊断、图片传输和离线烟测分别证明自己的检查范围，不证明模型已理解图像或完成自主制作。
 
-App Compose 默认 `network_mode: host`，可访问宿主 `127.0.0.1:3210` 的 RunDesk。App 监听 `0.0.0.0:3220`，让 RunDesk 默认 bridge 容器通过内置 `host.docker.internal:host-gateway` 访问回调。
+工具镜像默认 HyperFrames 0.8.87、GSAP 3.15.0，不内置图像/视频/TTS 模型或密钥。App 渲染镜像与 Codex 工具镜像分别更新，仅替换源码包或标签不会更换运行中的容器。Profile 使用与本地离线检查见 [video-build](../examples/video-build/README.md)。
 
-- `VIDEO_APP_PUBLIC_URL=http://127.0.0.1:3220`：浏览器入口；远程使用改成服务域名或宿主 IP。
-- `VIDEO_APP_MCP_URL=http://host.docker.internal:3220/api/mcp`：Codex 容器回调，含完整 `/api/mcp` 路径。
-- `RUNDESK_URL=http://127.0.0.1:3210`：App 到 RunDesk。
+旧 native/video_use/镜头项目不自动切换。video_use 兼容工程需要保留带可选 video-use 的镜像、adapter contract 2 及原有专用共享生产工作目录，按原冻结/渲染/归档流程使用；该目录不是 App 私人数据库。新 HyperFrames 路径不用添加这类挂载。
 
-此 Compose 面向 Linux Docker Engine；Windows/macOS Docker Desktop 需另行启用受支持的 host networking 或调整网络与地址。宿主防火墙应允许 Docker 网桥到 3220；App 使用 Token，公网部署应置于 HTTPS 反向代理后。
+## 网络与检查
 
-已有安装只在首次注册写入默认 MCP/Skill。升级时，在 RunDesk 确认 MCP URL、Authorization Header 和 `video-project` Skill：**重连不会覆盖管理员配置**。App 新的业务任务会说明素材与渲染边界，旧 Skill 中“本地 assets 路径”的描述应更新。不要清空配置来强制重新注册。
+沿用现有 Linux host/bridge 网络与回调地址：App 到 RunDesk 通常使用 http://127.0.0.1:3210；Codex 容器通过 http://host.docker.internal:3220/api/mcp 回调 App。远程浏览器入口、端口或网络改变时配置真实可达地址，不把示例当成所有部署通用值。App 无需 Docker socket。
 
-## 验收
+video-build 的离线 doctor/smoke 可以验证本地依赖与真实短动画渲染；不调用模型。App check 是冻结源工程后的浏览器校验，完整渲染再验证实际媒体。多轨是同一工程/输出的审阅，HyperFrames 时间线为作者声明，并非解析动画或实测音频。实际质量仍需播放、抽帧及人审，最终记录绑定具体完整输出。
 
-- `doctor`：检查 App、依赖、RunDesk 与已绑定运行环境，只读，不调用模型。
-- `smoke`：创建标记为验收的两秒中文标题项目，合成测试音，真实调用 App → HyperFrames/Chromium → FFmpeg，检查 1080×1920 H.264/AAC 和时长；不调用模型。
-- 导入 news2douyin 0.15.0 已审核脚本 ZIP：检查语言、原稿、证据和图片候选；图片进入素材库，由用户选入分镜，不自动判定使用权。
-- 发送“读取项目并保存分镜，按当前素材制作视频”，检查 RunDesk 轨迹中真实 MCP 调用、App 项目 revision、渲染进度与成片。播放检查中文、图像、字幕和音频。
-- `stop` → `up` 后核对项目、成片、Token 与连接仍在；重试未知结果沿用原请求，不重复建会话。
-
-短脚本的文字语言由 news2douyin 指定并随制作包保留；eSpeak NG 是机械预览配音，不代表专业 TTS。当前渲染固定竖屏 1080×1920/30fps，未引入生成视频模型。
-
-## 升级与镜像分发
-
-镜像可由 CI/维护者提前构建并推送到自己的 GHCR/Docker Hub，部署配置引用版本标签或 digest 后拉取即可。当前包没有已发布镜像地址；不要把示例标签当成远程可下载镜像。App 镜像构建上下文采用白名单，不包含 `.env`、data、Token、日志或旧二进制。发布前运行 smoke、记录 digest；同时保留镜像的第三方许可。
-
-Node/Debian 基础标签和 apt 仓库随时间更新；需要字节级复现时传入带 digest 的 `GO_IMAGE`/`NODE_IMAGE` 并使用自己的 apt 快照。npm 依赖使用 package-lock.json + npm ci；镜像记录 runtime-versions.json 和 debian-packages.txt。
+本次实际执行过的检查见发布验证记录，未执行的 Docker、远端生成和真实模型验收不得由文档推定通过。历史版本技术说明见 Video App 对应版本文档。

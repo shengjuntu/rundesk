@@ -51,7 +51,7 @@ class ProfilesTest(unittest.TestCase):
         for name in profiles.PROFILE_IDS:
             p = profiles.load_profile(name)
             for backend in p["searchBackends"]:
-                for agent in ([False, True] if p["optionalComponents"] else [False]):
+                for agent in ([False, True] if "agent-reach" in p["optionalComponents"] else [False]):
                     dest = self.root / (name + backend + str(agent)); dest.mkdir()
                     profiles.render(p, profiles.resolve(p, backend, agent), "0.144.6", "node:22-bookworm-slim", dest)
                     config = tomllib.loads((dest / "seed/config.toml").read_text())
@@ -80,18 +80,54 @@ class ProfilesTest(unittest.TestCase):
         code, _, _ = self.cli("pack", "news2douyin", "--codex-version", "0.144.6", "--output", str(archives[0]))
         self.assertEqual(code, 2); self.assertEqual(archives[0].read_bytes(), original)
 
-    def test_video_build_context_pins_adapter_contract(self):
+    def test_video_build_defaults_to_pinned_hyperframes_without_video_use(self):
         profile = profiles.load_profile("video-build")
-        self.assertEqual(profile["version"], "1.3.0")
+        self.assertEqual(profile["version"], "1.4.0")
         target = self.root / "video-context"; target.mkdir()
         profiles.render(profile, profiles.resolve(profile), "0.144.6", "node:22-bookworm-slim", target)
         docker = (target / "Dockerfile").read_text()
-        self.assertIn('io.rundesk.video-use.adapter="2"', docker)
+        self.assertIn('io.rundesk.hyperframes.version="0.8.87"', docker)
+        self.assertIn('io.rundesk.gsap.version="3.15.0"', docker)
+        self.assertIn('io.rundesk.video-use.enabled="false"', docker)
+        self.assertIn('HYPERFRAMES_BROWSER_PATH=/usr/bin/chromium', docker)
+        self.assertIn(' chromium ', docker)
+        self.assertIn('npm ci --prefix /opt/hyperframes', docker)
+        self.assertNotIn('COPY vendor/video-use', docker)
+        self.assertNotIn('librosa', (target / "requirements.txt").read_text())
+        self.assertFalse((target / "vendor").exists())
+        for reference in profile["skillFiles"]:
+            self.assertEqual((target / "skills/build-video-artifacts" / reference).read_bytes(), (ROOT / "examples/video-build/skills/build-video-artifacts" / reference).read_bytes())
         lock = json.loads((target / "profile.lock.json").read_text())
+        self.assertFalse(lock["selection"]["videoUse"])
+        self.assertEqual(hashlib.sha256((target / "hyperframes/package-lock.json").read_bytes()).hexdigest(), lock["dependencies"]["hyperframes"]["npmLockSHA256"])
+        self.assertIn("hyperframes-html-gsap-render", (target / "tools/profile_doctor.py").read_text())
+        self.assertIn("distinctFrames", (target / "tools/hyperframes_smoke.py").read_text())
+        # Diagnostic protocol 2 and old archive readers remain available without installing the old editor.
         actual = json.loads(subprocess.check_output([sys.executable, "-I", str(target / "tools/video_use_adapter.py"), "--version"]))
         self.assertEqual(actual, {"schemaVersion": 1, "adapterVersion": 2, "upstreamCommit": lock["dependencies"]["videoUse"]["commit"]})
-        self.assertIn("textRefs", (target / "skills/build-video-artifacts/SKILL.md").read_text())
-        self.assertIn("video-use-adapter-contract", (target / "tools/profile_doctor.py").read_text())
+
+    def test_video_use_is_explicit_compatibility_component(self):
+        target = self.root / "video-compatible"
+        code, _, error = self.cli("prepare", "video-build", "--with-video-use", "--codex-version", "0.144.6", "--output", str(target))
+        self.assertEqual(code, 0, error)
+        docker = (target / "Dockerfile").read_text()
+        self.assertIn('io.rundesk.video-use.enabled="true"', docker)
+        self.assertIn('io.rundesk.video-use.adapter="2"', docker)
+        self.assertIn('COPY vendor/video-use.tar.gz', docker)
+        self.assertIn('--no-deps', docker)
+        self.assertTrue((target / "vendor/video-use.tar.gz").is_file())
+        self.assertIn('librosa==', (target / "requirements.txt").read_text())
+        self.assertEqual(self.cli("validate", "news2douyin", "--with-video-use")[0], 2)
+
+    def test_hyperframes_rejects_tampered_dependency_lock(self):
+        copy = self.root / "examples"
+        shutil.copytree(ROOT / "examples", copy, ignore=shutil.ignore_patterns("__pycache__"))
+        lock = copy / "_shared/hyperframes/package-lock.json"
+        lock.write_bytes(lock.read_bytes() + b" ")
+        with patch.object(profiles, "ROOT", copy):
+            code, _, error = self.cli("validate", "video-build")
+        self.assertEqual(code, 2)
+        self.assertIn("HyperFrames npm lock digest mismatch", json.loads(error)["error"])
 
     def test_invalid_versions_backends_and_injection(self):
         for version in ("latest", "", "0.1.0\nRUN echo injected", "$(touch pwned)"):
@@ -111,6 +147,22 @@ class ProfilesTest(unittest.TestCase):
             self.assertEqual(code, 0, err); self.assertFalse(list(target.rglob("auth.json")))
             skill = secret.parent / "SKILL.md"; skill.unlink(); skill.symlink_to(secret)
             self.assertEqual(self.cli("validate", "news2douyin")[0], 2)
+
+    def test_declared_skill_rejects_traversal_and_nested_symlink(self):
+        copy = self.root / "examples"
+        shutil.copytree(ROOT / "examples", copy, ignore=shutil.ignore_patterns("__pycache__"))
+        manifest = copy / "video-build/profile.json"
+        original = json.loads(manifest.read_text())
+        invalid = dict(original, skillFiles=original["skillFiles"] + ["references/../SKILL.md"])
+        manifest.write_text(json.dumps(invalid))
+        with patch.object(profiles, "ROOT", copy):
+            self.assertEqual(self.cli("validate", "video-build")[0], 2)
+            manifest.write_text(json.dumps(original))
+            skill = copy / "video-build/skills/build-video-artifacts"
+            refs = skill / "references"
+            refs.rename(skill / "hidden-reference-target")
+            refs.symlink_to(skill / "hidden-reference-target", target_is_directory=True)
+            self.assertEqual(self.cli("validate", "video-build")[0], 2)
 
     def test_invalid_manifest_types_are_structured_errors(self):
         copy = self.root / "examples"

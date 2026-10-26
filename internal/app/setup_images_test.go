@@ -75,14 +75,44 @@ func TestRuntimeImageEmbeddedContext(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		videoFiles := map[string]bool{}
 		for _, f := range z.File {
+			videoFiles[f.Name] = true
 			r, _ := f.Open()
 			b, _ := io.ReadAll(r)
 			r.Close()
+			if profile == "video-build" && f.Name == "profile.lock.json" {
+				var lock struct {
+					Profile struct {
+						Version string `json:"version"`
+					} `json:"profile"`
+					Selection struct {
+						VideoUse bool `json:"videoUse"`
+					} `json:"selection"`
+					Dependencies struct {
+						Hyperframes struct {
+							NPMLockSHA256 string `json:"npmLockSHA256"`
+						} `json:"hyperframes"`
+					} `json:"dependencies"`
+				}
+				if json.Unmarshal(b, &lock) != nil || lock.Profile.Version != "1.4.0" || lock.Selection.VideoUse || lock.Dependencies.Hyperframes.NPMLockSHA256 != runtimeHyperframesLockSHA256 {
+					t.Fatal("embedded default and image-label contract differ", string(b))
+				}
+			}
 			if f.Name == "Dockerfile" {
-				if bytes.Contains(b, []byte("0.0.0")) || bytes.Contains(b, []byte("wigolo")) || bytes.Contains(b, []byte("chromium")) || !bytes.Contains(b, []byte("ARG CODEX_VERSION=0.144.6")) {
+				if bytes.Contains(b, []byte("0.0.0")) || bytes.Contains(b, []byte("wigolo")) || (profile != "video-build" && bytes.Contains(b, []byte("chromium"))) || !bytes.Contains(b, []byte("ARG CODEX_VERSION=0.144.6")) {
 					t.Fatal(string(b))
 				}
+			}
+		}
+		if profile == "video-build" {
+			for _, name := range []string{"hyperframes/package-lock.json", "hyperframes/LICENSES/Apache-2.0.txt", "skills/build-video-artifacts/references/hyperframes-authoring.md", "skills/build-video-artifacts/references/backend-compatibility.md"} {
+				if !videoFiles[name] {
+					t.Fatal("missing authoring runtime resource", name)
+				}
+			}
+			if videoFiles["vendor/video-use.tar.gz"] {
+				t.Fatal("default unexpectedly installs legacy editor")
 			}
 		}
 	}

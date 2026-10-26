@@ -1,5 +1,3 @@
-视频制作环境：video-build1.3.0使用adapter协议2，保留固定MIT video-use源码、连续外部配音和离线烟测；EDL镜头可选精确textRefs，配合Video App0.22按文字定位与局部调整，旧无引用EDL继续兼容。新增运行诊断仅检查已选运行容器、共享目录双向读写及当前MCP配置的真实PNG传输，不调用模型、不证明模型理解图片、不自动重建环境。需要重建工具镜像、在RunDesk选择并明确更新应用执行环境；保留原工作区与模型认证。详见[视频制作环境](examples/video-build/README.md)。
-
 # RunDesk
 
 [English](README.md) · [文档导航](docs/README.md)
@@ -8,7 +6,7 @@ RunDesk 是面向应用的 Agent 执行平台，通过一套 API 接入 Kun 与 
 
 ## 当前版本
 
-**RunDesk 0.49.4 · 外部 Kun 0.17.0 · worker 协议 16**。Kun 已拆为独立工程、独立构建；RunDesk 只链接轻量 SDK 快照，通过 JSONL 连接所选可执行文件。Kun 管执行日志，RunDesk 管平台数据和统一调试工作台。既有 video-build 和 Codex HTTP 采集默认关闭的行为保留。见 [拆分与兼容说明](docs/KUN-SEPARATION.md)。
+**RunDesk 0.49.5 · 外部 Kun 0.17.0 · worker 协议 16**。Kun 已拆为独立工程、独立构建；RunDesk 只链接轻量 SDK 快照，通过 JSONL 连接所选可执行文件。Kun 管执行日志，RunDesk 管平台数据和统一调试工作台。本版将 video-build 更新为 1.4.0，保留独立 Kun 边界及 Codex HTTP 采集默认关闭的行为。见 [拆分与兼容说明](docs/KUN-SEPARATION.md)。
 
 - 应用环境：按绑定启动/复用容器，检查认证和工具；开始研究不改镜像，不断开现有活动会话。
 - 应用接入：独立凭据、项目与操作范围、持久任务队列、会话、事件订阅、文件与幂等回执。
@@ -35,7 +33,7 @@ HTTP 采集默认关闭。`--observe-http=true` 只设置新建 Codex 会话的�
 
 [examples](examples/README.md) 提供 news2douyin、people-search、video-build 三套配置和统一 CLI，可生成现有构建页可用的 ZIP；初始化向导可直接选配置并后台构建、拉取或检查镜像；研究配置默认包含 Exa 与固定版本 Agent-Reach 工具链。
 
-视频环境与联调见 [VIDEO-APP](docs/VIDEO-APP.md)。
+视频环境配套 Video App 0.23.0 和 video-build 1.4.0，默认提供 HyperFrames 0.8.87、GSAP 3.15.0、FFmpeg 与字体，由 Codex 自主分镜、取材、生成和动画。主流程通过 App MCP 保存/渲染工程，不要求共享生产目录。固定 MIT video-use 与 adapter 协议 2 改为显式可选，供旧 EDL 工程继续使用。App 渲染镜像与 Codex 工具镜像分别更新；需重建、选择并明确更新运行环境，保留工作区和认证。离线渲染与诊断不证明真实模型已完成制作或理解图片。见 [VIDEO-APP](docs/VIDEO-APP.md) 和 [video-build](examples/video-build/README.md)。
 
 ## 应用接入与架构
 

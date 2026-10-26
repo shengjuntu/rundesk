@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "version": "1.3.0",
+  "version": "1.4.0",
   "runtime": "codex-docker",
   "id": "video-build",
   "title": "文字驱动视频制作",
-  "description": "素材准备与对齐、剪辑、精修；提供固定版本 video-use、脚本素材适配器、FFmpeg 和中文字体。TTS/图片生成/视频生成由 Video App MCP 服务提供。",
+  "description": "Codex自主分镜、选材与动画制作；默认HyperFrames、GSAP、Chromium、FFmpeg与中文字体。TTS、图片/视频生成及工程提交/检查/渲染由Video App MCP提供；video-use为可选旧项目兼容。",
   "searchBackends": [
     "none"
   ],
@@ -12,7 +12,8 @@
   "aptPackages": [
     "ffmpeg",
     "fonts-noto-cjk",
-    "fontconfig"
+    "fontconfig",
+    "chromium"
   ],
   "pythonPackages": [
     "Pillow"
@@ -20,7 +21,7 @@
   "skill": "build-video-artifacts",
   "tools": [
     "Python 3",
-    "Node.js",
+    "Node.js 22+",
     "Git",
     "curl",
     "ripgrep",
@@ -28,13 +29,13 @@
     "ffprobe",
     "Pillow",
     "Noto CJK",
-    "video-use 0.1.0",
-    "script-media adapter"
+    "Chromium",
+    "HyperFrames 0.8.87",
+    "GSAP 3.15.0"
   ],
   "outputs": [
-    "completion.json",
+    "hyperframes-project",
     "final.mp4",
-    "edl.json",
     "validation.json"
   ],
   "resources": {
@@ -42,5 +43,13 @@
     "memoryMB": 4096,
     "network": "bridge"
   },
-  "optionalComponents": []
+  "optionalComponents": [
+    "video-use"
+  ],
+  "skillFiles": [
+    "SKILL.md",
+    "agents/openai.yaml",
+    "references/hyperframes-authoring.md",
+    "references/backend-compatibility.md"
+  ]
 }

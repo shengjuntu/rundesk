@@ -1,294 +1,76 @@
 {
   "schemaVersion": 1,
-  "checkedAt": "2026-10-17",
-  "pythonTarget": "3.11",
-  "platformTarget": "Linux x86_64",
-  "pipVersion": "26.2.1",
-  "resolverPassed": true,
-  "lockedWheelSelectionPassed": true,
-  "installedOrImported": false,
+  "checkedAt": "2026-10-18",
+  "profileVersion": "1.4.0",
+  "defaultEngine": "hyperframes",
+  "versions": {
+    "node": "v24.19.0",
+    "python": "3.12.14",
+    "hyperframes": "0.8.87",
+    "gsap": "3.15.0",
+    "browser": "Chrome Headless Shell 155.0.8059.84"
+  },
+  "npmLockSHA256": "b3f48e9687cd27dea097203e928e6e7fd84344b88122ab2bb546d38b48705de1",
+  "profileContractTests": {
+    "command": "python3 scripts/test_profiles.py",
+    "passed": true,
+    "tests": 15,
+    "report": "validation/profile-contract-tests.log",
+    "sha256": "513343e162692d8c5136774b526a022d63f1c96d39feaeb362589288def686c3"
+  },
+  "hyperframesLocalRender": {
+    "passed": true,
+    "report": "validation/hyperframes-render.json",
+    "probe": "validation/hyperframes-probe.json",
+    "video": "validation/hyperframes-animation.mp4",
+    "width": 320,
+    "height": 240,
+    "duration": 1.0,
+    "frameCount": 10,
+    "distinctFrames": 10,
+    "sha256": "890f6bb5d66b85e70cc039dff583a68a06bf60f3beda98d964872db854d50bbc"
+  },
+  "ffmpegLocalVideoAudioRender": {
+    "passed": true,
+    "report": "validation/ffmpeg-render.json",
+    "probe": "validation/ffmpeg-probe.json"
+  },
+  "legacyCompatibility": {
+    "optional": true,
+    "diagnosticAdapterVersion": 2,
+    "sourceLockValidationRetained": true,
+    "earlierPythonResolutionReport": "dependency-validation-video-use-1.3.0.json",
+    "legacyRenderRerunThisRelease": false
+  },
   "dockerImageBuilt": false,
+  "dockerRuntimeTested": false,
+  "modelTested": false,
+  "liveGenerationTested": false,
   "notes": [
-    "Actual pip dry-run resolution and exact-lock binary wheel selection both succeeded.",
-    "Host Python is 3.12; --python-version 3.11 selects compatible cp311 wheels but environment markers are still host evaluated. No Python3.11 executable or Docker CLI was available for an installed pip check.",
-    "Docker build installs --no-deps then runs pip check. Base Debian/bookworm supplies Python3.11.",
-    "Other architectures and full image deployment remain unverified."
+    "Docker CLI was unavailable. This local render used existing Node24 and Chrome Headless Shell, not the generated Node22 Debian Chromium image.",
+    "The CLI package versions and lock integrity were checked; no fresh npm installation was performed by this validation.",
+    "A local Noto Sans CJK SC font was provided explicitly; default fontconfig Noto resolution requires the fonts-noto-cjk package in the image.",
+    "HyperFrames check reported no lint, runtime, layout or contrast failures. Render exited zero and the output decoded correctly; raw stderr warnings remain in the report.",
+    "Base image, Debian apt packages and Chromium are not exact-version pinned.",
+    "No OpenMontage files were used."
   ],
-  "commands": [
-    "python3 -m pip install --dry-run --ignore-installed --only-binary=:all: --python-version 3.11 --report video-use-pip-report.json requests==2.32.5 librosa==0.11.0 matplotlib==3.10.8 numpy==2.2.6 Pillow==12.3.0",
-    "python3 -m pip install --dry-run --ignore-installed --no-deps --only-binary=:all: --python-version 3.11 --report video-use-locked-cp311-report.json -r examples/video-build/video-use-requirements.txt"
-  ],
-  "reports": {
-    "resolutionSHA256": "c258d310234ba6fbd961b808809309e01f3de4557626aa2b2d66de7cccd20263",
-    "lockedSelectionSHA256": "9d80610c206f7529298d1e60d97d9faaced04d06930170785dcbaef9a0560a78"
-  },
-  "packages": [
-    {
-      "name": "audioread",
-      "version": "3.1.0",
-      "requiresPython": ">=3.9",
-      "wheel": "audioread-3.1.0-py3-none-any.whl",
-      "wheelSHA256": "b30d1df6c5d3de5dcef0fb0e256f6ea17bdcf5f979408df0297d8a408e2971b4"
-    },
-    {
-      "name": "certifi",
-      "version": "2026.7.22",
-      "requiresPython": ">=3.7",
-      "wheel": "certifi-2026.7.22-py3-none-any.whl",
-      "wheelSHA256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775"
-    },
-    {
-      "name": "cffi",
-      "version": "2.1.1",
-      "requiresPython": ">=3.10",
-      "wheel": "cffi-2.1.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
-      "wheelSHA256": "34e261f78cb6ceaaa36f42f2613f4380d94d9c759a9c73c769ee6e0247364632"
-    },
-    {
-      "name": "charset-normalizer",
-      "version": "3.5.2",
-      "requiresPython": ">=3.7",
-      "wheel": "charset_normalizer-3.5.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
-      "wheelSHA256": "211d5a3eb6af8f513b8d4ca19a8c1b7accab1b5f0d3175f9826b03c1a920dc1f"
-    },
-    {
-      "name": "cloudpickle",
-      "version": "3.1.2",
-      "requiresPython": ">=3.8",
-      "wheel": "cloudpickle-3.1.2-py3-none-any.whl",
-      "wheelSHA256": "9acb47f6afd73f60dc1df93bb801b472f05ff42fa6c84167d25cb206be1fbf4a"
-    },
-    {
-      "name": "contourpy",
-      "version": "1.3.3",
-      "requiresPython": ">=3.11",
-      "wheel": "contourpy-1.3.3-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
-      "wheelSHA256": "51e79c1f7470158e838808d4a996fa9bac72c498e93d8ebe5119bc1e6becb0db"
-    },
-    {
-      "name": "cycler",
-      "version": "0.12.1",
-      "requiresPython": ">=3.8",
-      "wheel": "cycler-0.12.1-py3-none-any.whl",
-      "wheelSHA256": "85cef7cff222d8644161529808465972e51340599459b8ac3ccbac5a854e0d30"
-    },
-    {
-      "name": "decorator",
-      "version": "5.3.1",
-      "requiresPython": ">=3.8",
-      "wheel": "decorator-5.3.1-py3-none-any.whl",
-      "wheelSHA256": "f47fe6fdbd2edd623ecfe36875d37aba411624e2670dd395dddae1358689bb3c"
-    },
-    {
-      "name": "fonttools",
-      "version": "4.67.0",
-      "requiresPython": ">=3.11",
-      "wheel": "fonttools-4.67.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
-      "wheelSHA256": "59f44309ce78851c9621ee88e3f667ca3fbcc89dc0e8641336be3f12ba06bfd4"
-    },
-    {
-      "name": "idna",
-      "version": "3.20",
-      "requiresPython": ">=3.9",
-      "wheel": "idna-3.20-py3-none-any.whl",
-      "wheelSHA256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c"
-    },
-    {
-      "name": "joblib",
-      "version": "1.6.0",
-      "requiresPython": ">=3.10",
-      "wheel": "joblib-1.6.0-py3-none-any.whl",
-      "wheelSHA256": "3dbbf9f6e4b592a2357b854608e980fe6390d131d7a82f011a377ef2ebef7aba"
-    },
-    {
-      "name": "kiwisolver",
-      "version": "1.5.1",
-      "requiresPython": ">=3.10",
-      "wheel": "kiwisolver-1.5.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
-      "wheelSHA256": "95a02752aa032eef4aed01cda6d9b687c669bd0396bf4519eef8bba22a286720"
-    },
-    {
-      "name": "lazy-loader",
-      "version": "0.6",
-      "requiresPython": ">=3.9",
-      "wheel": "lazy_loader-0.6-py3-none-any.whl",
-      "wheelSHA256": "77253be3391b06124a0e16105bd663b6c54470af1a9ca8e1cf026f38d58ed056"
-    },
-    {
-      "name": "librosa",
-      "version": "0.11.0",
-      "requiresPython": ">=3.8",
-      "wheel": "librosa-0.11.0-py3-none-any.whl",
-      "wheelSHA256": "0b6415c4fd68bff4c29288abe67c6d80b587e0e1e2cfb0aad23e4559504a7fa1"
-    },
-    {
-      "name": "llvmlite",
-      "version": "0.50.0",
-      "requiresPython": ">=3.10",
-      "wheel": "llvmlite-0.50.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
-      "wheelSHA256": "a6ffde00d4be8772a24e3e8b3af6bf86a79e7cf066d944ef56136b3957d707dc"
-    },
-    {
-      "name": "matplotlib",
-      "version": "3.10.8",
-      "requiresPython": ">=3.10",
-      "wheel": "matplotlib-3.10.8-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
-      "wheelSHA256": "efb30e3baaea72ce5928e32bab719ab4770099079d66726a62b11b1ef7273be4"
-    },
-    {
-      "name": "msgpack",
-      "version": "1.2.3",
-      "requiresPython": ">=3.10",
-      "wheel": "msgpack-1.2.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
-      "wheelSHA256": "382b219de3d436de3baba0f4b0c6d4336e8f5858d0eb047918b13b69a71c6c55"
-    },
-    {
-      "name": "narwhals",
-      "version": "2.27.1",
-      "requiresPython": ">=3.10",
-      "wheel": "narwhals-2.27.1-py3-none-any.whl",
-      "wheelSHA256": "d057df13f5852b8e157596e82eb5e955fad267425df5e420e0ee9863da483b31"
-    },
-    {
-      "name": "numba",
-      "version": "0.68.0",
-      "requiresPython": ">=3.10",
-      "wheel": "numba-0.68.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
-      "wheelSHA256": "68f92839637a2aaca8ae124c3abf91f648d2fade50953ea8e81ec604ac05a771"
-    },
-    {
-      "name": "numpy",
-      "version": "2.2.6",
-      "requiresPython": ">=3.10",
-      "wheel": "numpy-2.2.6-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
-      "wheelSHA256": "ba10f8411898fc418a521833e014a77d3ca01c15b0c6cdcce6a0d2897e6dbbdf"
-    },
-    {
-      "name": "packaging",
-      "version": "26.3",
-      "requiresPython": ">=3.9",
-      "wheel": "packaging-26.3-py3-none-any.whl",
-      "wheelSHA256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"
-    },
-    {
-      "name": "pillow",
-      "version": "12.3.0",
-      "requiresPython": ">=3.10",
-      "wheel": "pillow-12.3.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
-      "wheelSHA256": "23d27a3e0307ec2244cc51e7287b919aa68d097504ebe19df4e76a98a3eea5bd"
-    },
-    {
-      "name": "platformdirs",
-      "version": "4.13.4",
-      "requiresPython": ">=3.11",
-      "wheel": "platformdirs-4.13.4-py3-none-any.whl",
-      "wheelSHA256": "502ce08e9d36cf90579ee44e1e764838842fa658e4975ef47344fd053011d2c8"
-    },
-    {
-      "name": "pooch",
-      "version": "1.9.0",
-      "requiresPython": ">=3.9",
-      "wheel": "pooch-1.9.0-py3-none-any.whl",
-      "wheelSHA256": "f265597baa9f760d25ceb29d0beb8186c243d6607b0f60b83ecf14078dbc703b"
-    },
-    {
-      "name": "pycparser",
-      "version": "3.11",
-      "requiresPython": ">=3.10",
-      "wheel": "pycparser-3.11-py3-none-any.whl",
-      "wheelSHA256": "51d5a8ba2be0bbe440b99d2112604c95bbbc3c2748a64260186c541e1729cd80"
-    },
-    {
-      "name": "pyparsing",
-      "version": "3.3.3",
-      "requiresPython": ">=3.9",
-      "wheel": "pyparsing-3.3.3-py3-none-any.whl",
-      "wheelSHA256": "ece8c00a69cf01b45d0b1dedabb469c90d8caf996d4fda40f147627a122849a4"
-    },
-    {
-      "name": "python-dateutil",
-      "version": "2.9.0.post0",
-      "requiresPython": "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7",
-      "wheel": "python_dateutil-2.9.0.post0-py2.py3-none-any.whl",
-      "wheelSHA256": "a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427"
-    },
-    {
-      "name": "requests",
-      "version": "2.32.5",
-      "requiresPython": ">=3.9",
-      "wheel": "requests-2.32.5-py3-none-any.whl",
-      "wheelSHA256": "2462f94637a34fd532264295e186976db0f5d453d1cdd31473c85a6a161affb6"
-    },
-    {
-      "name": "scikit-learn",
-      "version": "1.9.1",
-      "requiresPython": ">=3.11",
-      "wheel": "scikit_learn-1.9.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
-      "wheelSHA256": "52a0703bbc07ad27f560fa63fa68e4c54dd735bfbbf65b4dd3c225dc7547b6df"
-    },
-    {
-      "name": "scipy",
-      "version": "1.17.1",
-      "requiresPython": ">=3.11",
-      "wheel": "scipy-1.17.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
-      "wheelSHA256": "43af8d1f3bea642559019edfe64e9b11192a8978efbd1539d7bc2aaa23d92de4"
-    },
-    {
-      "name": "six",
-      "version": "1.17.0",
-      "requiresPython": ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*",
-      "wheel": "six-1.17.0-py2.py3-none-any.whl",
-      "wheelSHA256": "4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"
-    },
-    {
-      "name": "soundfile",
-      "version": "0.14.0",
-      "requiresPython": ">=3.10",
-      "wheel": "soundfile-0.14.0-py2.py3-none-manylinux_2_28_x86_64.whl",
-      "wheelSHA256": "1e38bac1853412871318e82a1ba69a8be677619b56025bbfcccdb41b6cafe82d"
-    },
-    {
-      "name": "soxr",
-      "version": "1.1.0",
-      "requiresPython": ">=3.9",
-      "wheel": "soxr-1.1.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
-      "wheelSHA256": "3da87e3ffa3e41823d873b051c7ecb2acebd8d1b6b46b752f5facf10a0d84ab9"
-    },
-    {
-      "name": "threadpoolctl",
-      "version": "3.7.0",
-      "requiresPython": ">=3.9",
-      "wheel": "threadpoolctl-3.7.0-py3-none-any.whl",
-      "wheelSHA256": "cd8b60b5641b45c67bbf73c64c843235fc2d8a480c87389f52f5dbee893b86be"
-    },
-    {
-      "name": "typing_extensions",
-      "version": "4.16.0",
-      "requiresPython": ">=3.9",
-      "wheel": "typing_extensions-4.16.0-py3-none-any.whl",
-      "wheelSHA256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8"
-    },
-    {
-      "name": "urllib3",
-      "version": "2.8.0",
-      "requiresPython": ">=3.10",
-      "wheel": "urllib3-2.8.0-py3-none-any.whl",
-      "wheelSHA256": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3"
-    }
-  ],
-  "python311MarkerClosurePassed": true,
-  "evaluatedTargetEnvironment": {
-    "implementation_name": "cpython",
-    "implementation_version": "3.11.9",
-    "os_name": "posix",
-    "platform_machine": "x86_64",
-    "platform_release": "6.18.55",
-    "platform_system": "Linux",
-    "platform_version": "#1 SMP Wed Oct 14 19:45:18 UTC 2026",
-    "python_full_version": "3.11.9",
-    "platform_python_implementation": "CPython",
-    "python_version": "3.11",
-    "sys_platform": "linux"
-  },
-  "markerEvaluation": "For every locked package, Requires-Python and all Requires-Dist markers including propagated extras were independently evaluated for CPython3.11.9/Linuxx86_64; every active dependency exists at a compatible locked version."
+  "runtimeDiagnostics": {
+    "versionMetadataFields": [
+      "hyperframesVersion",
+      "gsapVersion",
+      "nodeVersion",
+      "browserVersion",
+      "hasVideoUse"
+    ],
+    "legacyProfile13Retained": true,
+    "defaultProfile14DoesNotRequireVideoUse": true,
+    "profile14OptionalCompatibilityRetained": true,
+    "fixtureScope": "The actual fixed Python probe runs against package/executable/source-pin fixtures; this is not a Docker or browser rendering test.",
+    "command": "go test ./internal/app -run '^Test(ApplicationRuntimeDiagnostics|DiagnosticPython|VideoBuildCurrentAdapterImageLabels|RuntimeImage)' -count=1 -v",
+    "passed": true,
+    "skipped": 0,
+    "topLevelTestsPassed": 17,
+    "report": "validation/runtime-diagnostics-tests.log",
+    "sha256": "717c707f725f8c1aad3c9550510a3963956b8ba6eb3c2d1ca34fd713df5813e3"
+  }
 }

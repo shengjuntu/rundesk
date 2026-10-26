@@ -14,7 +14,7 @@ import uuid
 import zipfile
 
 ROOT = Path(__file__).resolve().parent
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 PROFILE_IDS = tuple(sorted(p.parent.name for p in ROOT.glob("*/profile.json") if re.fullmatch(r"[a-z0-9-]+", p.parent.name)))
 EXACT = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?\Z")
 IMAGE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/:@-]{0,240}\Z")
@@ -40,7 +40,7 @@ def load_profile(name):
         raise ProfileError("Invalid profile identity or schema")
     if value.get("runtime") != "codex-docker":
         raise ProfileError("Unsupported runtime")
-    if set(value) != {"schemaVersion", "id", "version", "title", "description", "runtime", "searchBackends", "defaultSearchBackend", "aptPackages", "pythonPackages", "skill", "tools", "outputs", "resources", "optionalComponents"}:
+    if set(value) - {"skillFiles"} != {"schemaVersion", "id", "version", "title", "description", "runtime", "searchBackends", "defaultSearchBackend", "aptPackages", "pythonPackages", "skill", "tools", "outputs", "resources", "optionalComponents"}:
         raise ProfileError("Unknown or missing profile fields")
     for key in ("version", "title", "description", "skill", "defaultSearchBackend"):
         if not isinstance(value[key], str) or not value[key]:
@@ -48,7 +48,7 @@ def load_profile(name):
     for key in ("searchBackends", "aptPackages", "pythonPackages", "tools", "outputs", "optionalComponents"):
         if not isinstance(value[key], list) or not all(isinstance(x, str) and x for x in value[key]) or len(set(value[key])) != len(value[key]):
             raise ProfileError("Expected unique string list: " + key)
-    if not set(value["optionalComponents"]) <= {"agent-reach"}:
+    if not set(value["optionalComponents"]) <= {"agent-reach", "video-use"}:
         raise ProfileError("Unknown optional component")
     resource = value["resources"]
     if not isinstance(resource, dict) or set(resource) != {"cpus", "memoryMB", "network"}:
@@ -80,7 +80,27 @@ def load_profile(name):
         raise ProfileError("Agent-Reach needs an exact commit")
     if pins["agentReach"]["repository"] != "https://github.com/silently0801/agent-reach":
         raise ProfileError("Review a new Agent-Reach source before changing repository")
+    if "video-use" in value["optionalComponents"] and name != "video-build":
+        raise ProfileError("video-use compatibility is only offered by video-build")
     if name == "video-build":
+        hyper = pins.get("hyperframes", {})
+        if hyper.get("repository") != "https://github.com/heygen-com/hyperframes" or hyper.get("nodeMajorMinimum") != 22:
+            raise ProfileError("HyperFrames needs the reviewed source and Node 22+ runtime")
+        if not isinstance(hyper.get("npm"), dict) or set(hyper["npm"]) != {"hyperframes", "gsap"} or not all(EXACT.fullmatch(v) for v in hyper["npm"].values()):
+            raise ProfileError("HyperFrames and GSAP need exact npm versions")
+        rel = Path(hyper.get("npmLockFile", ""))
+        path = ROOT / "_shared" / rel
+        if rel.is_absolute() or ".." in rel.parts or not path.is_file() or path.is_symlink() or path.parent.is_symlink():
+            raise ProfileError("Missing or unsafe HyperFrames npm lock")
+        if hashlib.sha256(path.read_bytes()).hexdigest() != hyper.get("npmLockSHA256"):
+            raise ProfileError("HyperFrames npm lock digest mismatch")
+        lock = read_json(path)
+        package = read_json(path.with_name("package.json"))
+        if package.get("dependencies") != hyper["npm"] or lock["packages"][""].get("dependencies") != hyper["npm"]:
+            raise ProfileError("HyperFrames package/lock does not match dependency metadata")
+        for package_name, version in hyper["npm"].items():
+            if lock["packages"].get("node_modules/" + package_name, {}).get("version") != version:
+                raise ProfileError("HyperFrames npm lock has a mismatched direct version")
         vendor = pins.get("videoUse", {})
         if vendor.get("repository") != "https://github.com/browser-use/video-use" or not re.fullmatch(r"[0-9a-f]{40}", vendor.get("commit", "")):
             raise ProfileError("video-use must use a reviewed exact source commit")
@@ -99,9 +119,12 @@ def load_profile(name):
             raise ProfileError("video-use Python lock does not match dependency metadata")
     # Copy only declared skill files; never sweep credentials or a working tree.
     skill = ROOT / name / "skills" / value["skill"]
-    for rel in ("SKILL.md", "agents/openai.yaml"):
+    skill_files = value.get("skillFiles", ["SKILL.md", "agents/openai.yaml"])
+    if not isinstance(skill_files, list) or len(skill_files) > 64 or not all(isinstance(rel, str) and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,159}", rel) and ".." not in Path(rel).parts and Path(rel).as_posix() == rel for rel in skill_files) or len(set(skill_files)) != len(skill_files) or not {"SKILL.md", "agents/openai.yaml"} <= set(skill_files):
+        raise ProfileError("Invalid declared skill file list")
+    for rel in skill_files:
         path = skill / rel
-        if not path.is_file() or path.is_symlink() or any(p.is_symlink() for p in [skill, skill.parent, path.parent]):
+        if not path.is_file() or path.is_symlink() or any(parent.is_symlink() for parent in [skill.parent, skill, *[ancestor for ancestor in path.parents if skill in ancestor.parents]]):
             raise ProfileError("Missing file or symlink in skill: " + str(path))
     front = (skill / "SKILL.md").read_text(encoding="utf-8")
     if not front.startswith("---\nname: " + value["skill"] + "\n") or "\ndescription: " not in front:
@@ -109,7 +132,7 @@ def load_profile(name):
     return value
 
 
-def resolve(profile, backend=None, agent_reach=None):
+def resolve(profile, backend=None, agent_reach=None, video_use=False):
     backend = backend or profile["defaultSearchBackend"]
     if backend not in profile["searchBackends"]:
         raise ProfileError("Search backend is not supported by this profile")
@@ -117,7 +140,9 @@ def resolve(profile, backend=None, agent_reach=None):
         agent_reach = "agent-reach" in profile["optionalComponents"]
     if agent_reach and "agent-reach" not in profile["optionalComponents"]:
         raise ProfileError("Agent-Reach is not offered by this profile")
-    return {"searchBackend": backend, "agentReach": bool(agent_reach)}
+    if video_use and "video-use" not in profile["optionalComponents"]:
+        raise ProfileError("video-use compatibility is not offered by this profile")
+    return {"searchBackend": backend, "agentReach": bool(agent_reach), "videoUse": bool(video_use)}
 
 
 def write(path, text, executable=False):
@@ -146,7 +171,8 @@ def render(profile, selection, codex_version, base_image, destination):
     if selection["agentReach"]:
         pkgs += ["gh"]
     requirements = [p + "==" + pins["python"][p] for p in profile["pythonPackages"]]
-    video_use = pins.get("videoUse") if profile["id"] == "video-build" else None
+    hyperframes = pins.get("hyperframes") if profile["id"] == "video-build" else None
+    video_use = pins.get("videoUse") if selection.get("videoUse") else None
     if video_use:
         requirements = [p + "==" + v for p, v in sorted(video_use["python"].items(), key=lambda row: row[0].lower())]
     if selection["agentReach"]:
@@ -155,9 +181,9 @@ def render(profile, selection, codex_version, base_image, destination):
     write(destination / "requirements.txt", "\n".join(requirements) + "\n")
     write(destination / "seed/config.toml", seed_config(selection))
     skill = profile["skill"]
-    for rel in ("SKILL.md", "agents/openai.yaml"):
+    for rel in profile.get("skillFiles", ["SKILL.md", "agents/openai.yaml"]):
         write(destination / "skills" / skill / rel, (ROOT / profile["id"] / "skills" / skill / rel).read_text(encoding="utf-8"))
-    for filename in ("profile_doctor.py", "read_web.py", "video_smoke.py", "video_use_adapter.py", "video_use_smoke.py", "mcporter", "agent_reach_config.py"):
+    for filename in ("profile_doctor.py", "read_web.py", "video_smoke.py", "video_use_adapter.py", "video_use_smoke.py", "hyperframes_smoke.py", "mcporter", "agent_reach_config.py"):
         source = ROOT / "_shared" / filename
         write(destination / "tools" / filename, source.read_text(encoding="utf-8"), executable=True)
     resolved = {"schemaVersion": 1, "generatorVersion": VERSION, "profile": profile,
@@ -167,6 +193,10 @@ def render(profile, selection, codex_version, base_image, destination):
     if selection["agentReach"]:
         for filename in ("package.json", "package-lock.json"):
             write(destination / "agent-tools" / filename, (ROOT / "_shared/agent-tools" / filename).read_text())
+    if hyperframes:
+        for filename in ("package.json", "package-lock.json"):
+            write(destination / "hyperframes" / filename, (ROOT / "_shared/hyperframes" / filename).read_text())
+        write(destination / "hyperframes/LICENSES/Apache-2.0.txt", (ROOT / "_shared/hyperframes/LICENSES/Apache-2.0.txt").read_text())
     labels = {"org.opencontainers.image.title": "RunDesk " + profile["id"],
               "org.opencontainers.image.version": profile["version"],
               "io.rundesk.profile": profile["id"], "io.rundesk.profile.schema": "1",
@@ -175,6 +205,8 @@ def render(profile, selection, codex_version, base_image, destination):
               "io.rundesk.capabilities.tools": ", ".join(profile["tools"] + (["agent-reach"] if selection["agentReach"] else [])),
               "io.rundesk.capabilities.skills": skill,
               "io.rundesk.capabilities.mcp": selection["searchBackend"]}
+    if hyperframes:
+        labels.update({"io.rundesk.hyperframes.version": hyperframes["npm"]["hyperframes"], "io.rundesk.gsap.version": hyperframes["npm"]["gsap"], "io.rundesk.hyperframes.lock": hyperframes["npmLockSHA256"], "io.rundesk.video-use.enabled": str(bool(video_use)).lower()})
     if video_use:
         labels.update({"io.rundesk.video-use.commit": video_use["commit"], "io.rundesk.video-use.adapter": "2"})
         archive = ROOT / profile["id"] / video_use["sourceArchive"]
@@ -196,6 +228,11 @@ def render(profile, selection, codex_version, base_image, destination):
                   "RUN echo '" + video_use["sourceSHA256"] + "  /opt/rundesk-profile/video-use.tar.gz' | sha256sum -c - && mkdir -p /opt/video-use && tar -xzf /opt/rundesk-profile/video-use.tar.gz --strip-components=1 -C /opt/video-use && rm /opt/rundesk-profile/video-use.tar.gz",
                   "COPY vendor/video-use-pin.json /opt/video-use/RUNDESK_PIN.json",
                   "RUN chmod -R a+rX /opt/video-use && test -f /opt/video-use/LICENSE && test -f /opt/video-use/helpers/render.py"]
+    if hyperframes:
+        lines += ["COPY hyperframes/ /opt/hyperframes/",
+                  "RUN npm ci --prefix /opt/hyperframes --omit=dev --no-audit --no-fund && npm cache clean --force",
+                  'ENV PATH="/opt/hyperframes/node_modules/.bin:${PATH}" HYPERFRAMES_BROWSER_PATH=/usr/bin/chromium HYPERFRAMES_NO_TELEMETRY=1 DO_NOT_TRACK=1',
+                  "RUN hyperframes --version && chromium --version && node -e \"if (Number(process.versions.node.split('.')[0]) < 22) process.exit(1)\""]
     if selection["agentReach"]:
         lines += ["COPY agent-tools/ /opt/agent-tools/",
                   "RUN npm ci --prefix /opt/agent-tools --omit=dev --no-audit --no-fund && npm cache clean --force",
@@ -214,7 +251,7 @@ def render(profile, selection, codex_version, base_image, destination):
               *( ["COPY tools/mcporter /usr/local/bin/mcporter", "ENV PATH=\"/usr/local/bin:${PATH}\""] if selection["agentReach"] else [] ),
               "USER node", "WORKDIR /home/node", 'CMD ["codex", "app-server"]', ""]
     write(destination / "Dockerfile", "\n".join(lines))
-    write(destination / ".dockerignore", "**\n!Dockerfile\n!requirements.txt\n!profile.lock.json\n!THIRD_PARTY.md\n!seed/\n!seed/**\n!skills/\n!skills/**\n!tools/\n!tools/**\n!agent-tools/\n!agent-tools/**\n!vendor/\n!vendor/**\n")
+    write(destination / ".dockerignore", "**\n!Dockerfile\n!requirements.txt\n!profile.lock.json\n!THIRD_PARTY.md\n!seed/\n!seed/**\n!skills/\n!skills/**\n!tools/\n!tools/**\n!agent-tools/\n!agent-tools/**\n!vendor/\n!vendor/**\n!hyperframes/\n!hyperframes/**\n")
     write(destination / "THIRD_PARTY.md", (ROOT / "_shared/THIRD_PARTY.md").read_text(encoding="utf-8"))
     write(destination / "README.md", "# " + profile["title"] + "\n\n" + profile["description"] + "\n\n"
           "This is a generated Docker build context, not a built image. Dependencies are downloaded during build.\n"
@@ -224,7 +261,7 @@ def render(profile, selection, codex_version, base_image, destination):
           "Use a new environment or apply the selected MCP configuration explicitly. Configure Codex authentication at runtime.\n"
           "Run python3 /opt/rundesk-profile/tools/profile_doctor.py --json inside the deployed container.\n"
           "Agent-Reach includes gh, mcporter, bird, undici and its Codex skill; mcporter seeds Exa into the runtime HOME on first use.\n"
-          "Cookies, proxies and optional external platform MCP services are configured at runtime; no browser or Docker socket is bundled.\n"
+          "Cookies, proxies and optional external platform MCP services are configured at runtime; no Docker socket is bundled. video-build includes system Chromium for local HyperFrames checks.\n"
           "Run agent-reach doctor after startup to check live channels; it is not a model or research acceptance test.\n")
     files = sorted(p for p in destination.rglob("*") if p.is_file())
     write(destination / "SHA256SUMS", "".join(hashlib.sha256(p.read_bytes()).hexdigest() + "  " + p.relative_to(destination).as_posix() + "\n" for p in files))
@@ -267,7 +304,7 @@ def doctor(profile, image=None):
             return result
         name = "rundesk-profile-check-" + uuid.uuid4().hex
         try:
-            result["checks"].append({"name": "image-runtime", **command(prefix + ["run", "--name", name, "--rm", "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true", "--user", "1000:1000", "--tmpfs", "/tmp:rw,nosuid,nodev,size=512m,mode=1777", "--env", "HOME=/tmp", "--env", "CODEX_HOME=/tmp/codex", "--entrypoint", "python3", image, "/opt/rundesk-profile/tools/profile_doctor.py", "--json"], 120)})
+            result["checks"].append({"name": "image-runtime", **command(prefix + ["run", "--name", name, "--rm", "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true", "--user", "1000:1000", "--tmpfs", "/tmp:rw,nosuid,nodev,size=512m,mode=1777", "--env", "HOME=/tmp", "--env", "CODEX_HOME=/tmp/codex", "--entrypoint", "python3", image, "/opt/rundesk-profile/tools/profile_doctor.py", "--json"], 420)})
         finally:
             # Only this invocation's uniquely named probe; also clean up after
             # a client timeout, which alone does not stop a daemon-side container.
@@ -287,6 +324,9 @@ def parser():
         component = s.add_mutually_exclusive_group()
         component.add_argument("--with-agent-reach", action="store_true", dest="agent_reach", default=None)
         component.add_argument("--without-agent-reach", action="store_false", dest="agent_reach")
+        compatibility = s.add_mutually_exclusive_group()
+        compatibility.add_argument("--with-video-use", action="store_true", dest="video_use", default=False)
+        compatibility.add_argument("--without-video-use", action="store_false", dest="video_use")
         if verb in ("prepare", "pack", "build"):
             s.add_argument("--codex-version", required=True)
             s.add_argument("--base-image", default="node:22-bookworm-slim")
@@ -308,7 +348,7 @@ def main(argv=None, default_profile=None):
         if args.command == "list":
             dump({"schemaVersion": 1, "generatorVersion": VERSION, "items": [load_profile(x) for x in PROFILE_IDS]}); return 0
         profile = load_profile(args.profile)
-        selection = resolve(profile, args.search_backend, args.agent_reach)
+        selection = resolve(profile, args.search_backend, args.agent_reach, args.video_use)
         if args.command == "inspect":
             dump({"schemaVersion": 1, "profile": profile, "selection": selection, "dependencies": read_json(ROOT / "_shared/dependencies.json")}); return 0
         if args.command == "validate":

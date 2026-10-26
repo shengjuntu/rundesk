@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
@@ -477,7 +478,7 @@ func TestDiagnosticPythonActualRuntimeMetadata(t *testing.T) {
 	if e = json.Unmarshal(raw, &actual); e != nil {
 		t.Fatal(e, string(raw))
 	}
-	if actual.Runtime.Status != "ready" || actual.Runtime.ProfileVersion != "1.3.0" || actual.Runtime.AdapterContractVersion != 2 || actual.Runtime.VideoUseCommit != pin || actual.Runtime.Checks["sourcePin"] != "ready" || actual.Runtime.Checks["pythonDependencies"] != "ready" || actual.Runtime.PythonVersion == "" || actual.Runtime.FFmpegVersion == "" || actual.Runtime.FFprobeVersion == "" {
+	if actual.Runtime.Status != "ready" || !actual.Runtime.HasVideoUse || actual.Runtime.ProfileVersion != "1.3.0" || actual.Runtime.AdapterContractVersion != 2 || actual.Runtime.VideoUseCommit != pin || actual.Runtime.Checks["sourcePin"] != "ready" || actual.Runtime.Checks["pythonDependencies"] != "ready" || actual.Runtime.PythonVersion == "" || actual.Runtime.FFmpegVersion == "" || actual.Runtime.FFprobeVersion == "" {
 		t.Fatal(actual)
 	}
 	lock = strings.Replace(lock, strings.TrimSpace(string(installed)), "0.0.0-missing", 1)
@@ -495,12 +496,138 @@ func TestDiagnosticPythonActualRuntimeMetadata(t *testing.T) {
 func TestVideoBuildCurrentAdapterImageLabels(t *testing.T) {
 	build := ImageBuild{ProfileID: "video-build", CodexVersion: "0.99.0"}
 	var image imageInspection
-	image.Config.Labels = map[string]string{"io.rundesk.profile": "video-build", "org.opencontainers.image.version": "1.3.0", "io.rundesk.agent-reach": "false", "io.rundesk.codex.version": "0.99.0", "io.rundesk.video-use.commit": "43cfc566833548093455c9d4a46bd69913b7e552", "io.rundesk.video-use.adapter": "2"}
+	image.Config.Labels = map[string]string{"io.rundesk.profile": "video-build", "org.opencontainers.image.version": "1.4.0", "io.rundesk.agent-reach": "false", "io.rundesk.codex.version": "0.99.0", "io.rundesk.hyperframes.version": "0.8.87", "io.rundesk.gsap.version": "3.15.0", "io.rundesk.hyperframes.lock": runtimeHyperframesLockSHA256, "io.rundesk.video-use.enabled": "false"}
 	if !runtimeImageMatches(build, image) {
-		t.Fatal("current adapter rejected")
+		t.Fatal("current independent HyperFrames image rejected")
 	}
-	image.Config.Labels["io.rundesk.video-use.adapter"] = "1"
+	for _, label := range []string{"io.rundesk.hyperframes.version", "io.rundesk.gsap.version", "io.rundesk.hyperframes.lock", "io.rundesk.video-use.enabled"} {
+		original := image.Config.Labels[label]
+		image.Config.Labels[label] = "missing-fixture"
+		if runtimeImageMatches(build, image) {
+			t.Fatal("invalid required label accepted", label)
+		}
+		image.Config.Labels[label] = original
+	}
+	image.Config.Labels["io.rundesk.video-use.enabled"] = "true"
 	if runtimeImageMatches(build, image) {
-		t.Fatal("old adapter blessed as current")
+		t.Fatal("unverified legacy compatibility accepted")
+	}
+	image.Config.Labels["io.rundesk.video-use.commit"] = "43cfc566833548093455c9d4a46bd69913b7e552"
+	image.Config.Labels["io.rundesk.video-use.adapter"] = "2"
+	if !runtimeImageMatches(build, image) {
+		t.Fatal("current optional legacy compatibility rejected")
+	}
+	image.Config.Labels["org.opencontainers.image.version"] = "1.3.0"
+	if runtimeImageMatches(build, image) {
+		t.Fatal("old profile blessed as the new default")
+	}
+}
+
+// These execute the real fixed Python probe against package, executable and pin
+// fixtures. They do not stand in for a Docker, Chromium rendering or model test.
+func TestDiagnosticPythonHyperframesMetadataFixtures(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		legacy     bool
+		change     string
+		wantStatus string
+		wantCheck  string
+	}{
+		{"default_without_legacy", false, "", "ready", ""},
+		{"explicit_legacy_compatibility", true, "", "ready", ""},
+		{"missing_hyperframes", false, "hyperframes", "incomplete", "hyperframes"},
+		{"mismatched_gsap", false, "gsap", "incomplete", "gsap"},
+		{"old_node", false, "node", "incomplete", "node"},
+		{"missing_browser", false, "browser", "incomplete", "browser"},
+		{"tampered_npm_lock", false, "lock", "incomplete", "hyperframesLock"},
+		{"required_legacy_missing", true, "legacy", "incomplete", "sourcePin"},
+		{"invalid_selection", false, "selection", "incomplete", "profile"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			profile, vendor, hyper, bin := filepath.Join(root, "profile"), filepath.Join(root, "vendor"), filepath.Join(root, "hyperframes"), filepath.Join(root, "bin")
+			write := func(path, value string, mode os.FileMode) {
+				t.Helper()
+				if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(path, []byte(value), mode); err != nil {
+					t.Fatal(err)
+				}
+			}
+			pin := "43cfc566833548093455c9d4a46bd69913b7e552"
+			lockBytes := `{"lockfileVersion":3,"packages":{}}`
+			lock := map[string]any{
+				"profile":   map[string]any{"id": "video-build", "version": "1.4.0"},
+				"selection": map[string]any{"videoUse": test.legacy},
+				"dependencies": map[string]any{
+					"hyperframes": map[string]any{"npm": map[string]string{"hyperframes": "0.8.87", "gsap": "3.15.0"}, "npmLockSHA256": fmt.Sprintf("%x", sha256.Sum256([]byte(lockBytes)))},
+					"videoUse":    map[string]any{"python": map[string]string{"pip": "missing-fixture-version"}},
+				},
+			}
+			if test.legacy {
+				installed, err := exec.Command("python3", "-I", "-c", "import importlib.metadata; print(importlib.metadata.version('pip'))").Output()
+				if err != nil {
+					t.Skip("pip metadata required for legacy fixture")
+				}
+				lock["dependencies"].(map[string]any)["videoUse"] = map[string]any{"python": map[string]string{"pip": strings.TrimSpace(string(installed))}}
+				if test.change != "legacy" {
+					write(filepath.Join(vendor, "RUNDESK_PIN.json"), `{"commit":"`+pin+`"}`, 0600)
+					write(filepath.Join(vendor, "LICENSE"), "fixture license", 0600)
+					write(filepath.Join(vendor, "helpers/render.py"), "# fixture", 0600)
+				}
+			}
+			if test.change == "selection" {
+				lock["selection"].(map[string]any)["videoUse"] = "false"
+			}
+			encoded, _ := json.Marshal(lock)
+			write(filepath.Join(profile, "profile.lock.json"), string(encoded), 0600)
+			write(filepath.Join(profile, "tools/video_use_adapter.py"), "print('{\"schemaVersion\":1,\"adapterVersion\":2,\"upstreamCommit\":\""+pin+"\"}')", 0600)
+			if test.change != "hyperframes" {
+				write(filepath.Join(hyper, "node_modules/hyperframes/package.json"), `{"version":"0.8.87"}`, 0600)
+			}
+			gsap := "3.15.0"
+			if test.change == "gsap" {
+				gsap = "3.14.0"
+			}
+			write(filepath.Join(hyper, "node_modules/gsap/package.json"), `{"version":"`+gsap+`"}`, 0600)
+			if test.change == "lock" {
+				lockBytes += " "
+			}
+			write(filepath.Join(hyper, "package-lock.json"), lockBytes, 0600)
+			node := "v22.1.0"
+			if test.change == "node" {
+				node = "v20.1.0"
+			}
+			write(filepath.Join(bin, "node"), "#!/bin/sh\nif [ \"$1\" = --version ]; then echo "+node+"; else echo 0.8.87; fi\n", 0700)
+			browser := filepath.Join(bin, "chromium")
+			if test.change != "browser" {
+				write(browser, "#!/bin/sh\necho 'Chromium 140.0.7339.80 built on Debian GNU/Linux 12'\n", 0700)
+			}
+			program := strings.NewReplacer("/opt/rundesk-profile", profile, "/opt/video-use", vendor, "/opt/hyperframes", hyper, "/usr/bin/chromium", browser).Replace(applicationRuntimeProbe)
+			command := exec.Command("python3", "-I", "-c", program)
+			command.Env = append(os.Environ(), "PATH="+bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+			command.Stdin = strings.NewReader(`{"nonce":"` + fixtureDiagnosticNonce + `"}`)
+			raw, err := command.CombinedOutput()
+			var actual struct {
+				Runtime diagnosticRuntime `json:"runtime"`
+			}
+			if err != nil || json.Unmarshal(raw, &actual) != nil {
+				t.Fatal(err, string(raw))
+			}
+			value := actual.Runtime
+			if value.Status != test.wantStatus || value.ProfileVersion != "1.4.0" || value.AdapterContractVersion != 2 || value.VideoUseCommit != pin {
+				t.Fatal(value)
+			}
+			if test.wantCheck != "" && value.Checks[test.wantCheck] == "ready" {
+				t.Fatal("broken required component was accepted", value)
+			}
+			if !test.legacy && test.change != "selection" && (value.HasVideoUse || value.Checks["sourcePin"] != "not_required" || value.Checks["pythonDependencies"] != "not_required") {
+				t.Fatal("default unexpectedly required legacy tools", value)
+			}
+			if test.wantStatus == "ready" && (value.HyperframesVersion != "0.8.87" || value.GSAPVersion != "3.15.0" || value.NodeVersion != "v22.1.0" || value.BrowserVersion != "140.0.7339.80" || value.HasVideoUse != test.legacy) {
+				t.Fatal(value)
+			}
+		})
 	}
 }
