@@ -1,0 +1,61 @@
+{
+  "version": "0.17.0",
+  "protocolVersion": 16,
+  "coreRace": {
+    "passed": true,
+    "packages": [
+      "cmd/kun",
+      "internal/engine",
+      "internal/mcp",
+      "internal/servicelock"
+    ],
+    "record": "tests-0.17-core-race.log",
+    "note": "No verbose/JSON output; exact test/subtest/skip counts not reported."
+  },
+  "sdkRace": {
+    "passed": true,
+    "topLevelTestsReported": 20,
+    "packages": [
+      "client",
+      "protocol",
+      "validation"
+    ]
+  },
+  "goVet": true,
+  "builds": {
+    "linuxAmd64": "actual CLI and host integration",
+    "windowsAmd64": "cross-compiled only"
+  },
+  "boundary": {
+    "importsRunDesk": false,
+    "readsRunDeskDatabase": false,
+    "sdkImportsExecutionEngine": false,
+    "sdkThirdPartyDependencies": []
+  },
+  "compatibilityTests": [
+    "actual 0.16 journal reopen and checkpoint/fork restore; exact original manifest hashes retained",
+    "unsupported capability is not dispatched",
+    "missing or closed worker does not silently switch runtime",
+    "fixed-source/cursor scoped diagnostic MCP provider instead of host DB schema",
+    "exact 8 MiB JSONL frame accepted, oversized frame rejected",
+    "concurrent client response correlation and canceled late response isolation"
+  ],
+  "notTested": [
+    "real provider model services",
+    "Windows native execution",
+    "remote Kun or managed Kun Docker",
+    "HarnessRouter/UHP integration"
+  ],
+  "upstream": {
+    "newPiGCodeAdded": false,
+    "existingPiGNoticesPreserved": true
+  },
+  "actualLegacyBinaryCompatibility": {
+    "passed": true,
+    "report": "legacy-binary-compat-0.17.json",
+    "oldVersion": "0.16.0",
+    "newVersion": "0.17.0",
+    "unchangedJournalAndManifests": true,
+    "firstCompletedWriteNotRepeated": true
+  }
+}

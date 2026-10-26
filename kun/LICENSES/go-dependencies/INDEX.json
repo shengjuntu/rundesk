@@ -1,0 +1,82 @@
+[
+  {
+    "module": "github.com/dustin/go-humanize",
+    "version": "v1.0.1",
+    "files": {
+      "LICENSE": "a973b4498c13eb74baa2a8e5c351426a6826f2fcdd909916dbe53ee2e755fd71"
+    }
+  },
+  {
+    "module": "github.com/google/uuid",
+    "version": "v1.6.0",
+    "files": {
+      "LICENSE": "0a8d61ed3cbfd5312326e8126c31ce9c627a283adc99131b56896d29ada04b2d"
+    }
+  },
+  {
+    "module": "github.com/mattn/go-isatty",
+    "version": "v0.0.24",
+    "files": {
+      "LICENSE": "08eab1118c80885fa1fa6a6dd7303f65a379fcb3733e063d20d1bbc2c76e6fa1"
+    }
+  },
+  {
+    "module": "github.com/ncruces/go-strftime",
+    "version": "v1.0.0",
+    "files": {
+      "LICENSE": "38ae43959daf953a393a585b2988672cb65a5a541aca0d0be5e72595a0a16883"
+    }
+  },
+  {
+    "module": "github.com/remyoudompheng/bigfft",
+    "version": "v0.0.0-20230129092748-24d4a6f8daec",
+    "files": {
+      "LICENSE": "dd26a7abddd02e2d0aba97805b31f248ef7835d9e10da289b22e3b8ab78b324d"
+    }
+  },
+  {
+    "module": "golang.org/x/sys",
+    "version": "v0.47.0",
+    "files": {
+      "LICENSE": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad"
+    }
+  },
+  {
+    "module": "modernc.org/libc",
+    "version": "v1.75.7",
+    "files": {
+      "AUTHORS": "40224528f3c7363534f59521d803a4eb627966b334d732bfc68a788655cb2545",
+      "LICENSE": "95ff867eb55a56935fa7492406cfa953fb7c13ca73f4c0a86ae05756b4605600",
+      "LICENSE-3RD-PARTY.md": "f597097efe3d97021f89170746bd3a0fb9a8b6fb26b82043ed68a4e0283bee6c"
+    }
+  },
+  {
+    "module": "modernc.org/mathutil",
+    "version": "v1.7.1",
+    "files": {
+      "AUTHORS": "51fcdd68bb605f080283bb6eabb72452591289650599d3d67603381834e536af",
+      "LICENSE": "bfa9bf72a72ca009fd62a8f84fca3dca67e51d93af96352723646599898b6cf5"
+    }
+  },
+  {
+    "module": "modernc.org/memory",
+    "version": "v1.12.1",
+    "files": {
+      "AUTHORS": "df1f424436f279309de85b82e494d548297a2570e9b5794630d7e72c9eb50b6a",
+      "LICENSE": "59895e669f48f168b6b858358f6005779cdf40a265f7828813061b56af67b496",
+      "LICENSE-GO": "2d36597f7117c38b006835ae7f537487207d8ec407aa9d9980794b2030cbc067",
+      "LICENSE-LOGO": "5ae5bee3072a841376451b48d8cfcec7188e10543926d5870828d36c8a750dc5",
+      "LICENSE-MMAP-GO": "c2eba69f20d05414538c3a5df7694dde392e065ff70882e1625e90f5d6659fff"
+    }
+  },
+  {
+    "module": "modernc.org/sqlite",
+    "version": "v1.59.0",
+    "files": {
+      "AUTHORS": "6bff0356ad7a2aee1961df765de4c5beef4b1d0a00fa2d8704ecb6b6043b4922",
+      "LICENSE": "c6fe05491a60ae13bcd223088d2705e36dede24e5587226231d2459ada5c4822",
+      "LICENSE-SQLITE": "8438c9c89b849131ead81d5435cb97fcf052df5b0b286dda8a2d4c29e6cb3fd0",
+      "LICENSE-SQLITE_VEC": "6ce72bbe12d975bd5286e5ab0a064c069693300c47bccbc57bec18485f1621ea"
+    }
+  }
+]

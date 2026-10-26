@@ -1,0 +1,144 @@
+package main
+
+import (
+	"bufio"
+	"encoding/json"
+	"flag"
+	"fmt"
+	k "github.com/your-org/kun/internal/engine"
+	"github.com/your-org/kun/internal/servicelock"
+	p "github.com/your-org/kun/sdk/protocol"
+	"io"
+	"log"
+	"os"
+	"path/filepath"
+	"strconv"
+)
+
+func main() {
+	data := flag.String("data", "", "session execution directory")
+	version := flag.Bool("version", false, "print version")
+	flag.Parse()
+	if *version {
+		fmt.Println("Kun " + p.EngineVersion)
+		return
+	}
+	if *data == "" {
+		log.Fatal("--data is required")
+	}
+	if err := os.MkdirAll(*data, 0700); err != nil {
+		log.Fatal(err)
+	}
+	lock, err := servicelock.Acquire(filepath.Join(*data, "worker.lock"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer lock.Close()
+	engine, err := k.Open(filepath.Join(*data, "state.db"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer engine.Close()
+	served := make(chan error, 1)
+	go func() { served <- serve(engine, os.Stdin, os.Stdout) }()
+	select {
+	case err = <-served:
+	case err = <-engine.Fatal():
+	}
+	if err != nil {
+		log.Print(err)
+	}
+}
+func serve(e *k.Engine, input io.Reader, output io.Writer) error {
+	scanner := bufio.NewScanner(input)
+	scanner.Buffer(make([]byte, 65536), p.MaxMessage+2)
+	enc := json.NewEncoder(output)
+	for scanner.Scan() {
+		if len(scanner.Bytes()) > p.MaxMessage {
+			return fmt.Errorf("protocol message exceeds %d bytes", p.MaxMessage)
+		}
+		var in p.Envelope
+		if err := json.Unmarshal(scanner.Bytes(), &in); err != nil {
+			return fmt.Errorf("invalid protocol JSON: %w", err)
+		}
+		out := p.Envelope{Version: p.Version, ID: in.ID}
+		var value any
+		var err error
+		if in.Version != p.Version {
+			err = fmt.Errorf("unsupported protocol version %d", in.Version)
+		} else {
+			switch in.Method {
+			case "fork.points":
+				var v struct {
+					Offset int `json:"offset"`
+					Limit  int `json:"limit"`
+				}
+				err = json.Unmarshal(in.Params, &v)
+				if err == nil {
+					value, err = e.ForkPoints(v.Offset, v.Limit)
+				}
+			case "fork.export":
+				var v p.ForkExport
+				err = json.Unmarshal(in.Params, &v)
+				if err == nil {
+					value, err = e.ExportFork(v)
+				}
+			case "hello":
+				value = p.Hello{Engine: "kun", EngineVersion: p.EngineVersion, ProtocolVersion: p.Version, PID: os.Getpid(), Capabilities: map[string]bool{"diagnosticProvider": true, "state": true, "start": true, "control": true, "events": true, "snapshot": true, "checkpoint": true, "bash": true, "codingTools": true, "workspaceFixtures": true, "artifactRules": true, "fastPath": true, "fastGuards": true, "fastFallback": true, "inspect": true, "pause": true, "step": true, "steer": true, "replayEvents": true, "resumeCheckpoint": true, "fork": true, "forkHybrid": true, "forkHypothesis": true, "forkLive": true, "mcp": true, "mcpApproval": true, "modules": true, "harnessComposition": true, "runtimeHarness": true, "planAct": true, "budgets": true, "argumentValidation": true, "conditionalBreakpoints": true, "debugQueries": true, "snapshotDiff": true, "eventEvidence": true, "diagnosticSession": true}}
+			case "start":
+				var v p.Start
+				err = json.Unmarshal(in.Params, &v)
+				if err == nil {
+					value, err = e.Start(v)
+				}
+			case "checkpoint":
+				var v p.Start
+				err = json.Unmarshal(in.Params, &v)
+				if err == nil {
+					value, err = e.CheckpointFor(v)
+				}
+			case "query":
+				var v p.DebugQuery
+				err = json.Unmarshal(in.Params, &v)
+				if err == nil {
+					value, err = e.Query(v)
+				}
+			case "state":
+				value = e.State()
+			case "control":
+				var v p.Control
+				err = json.Unmarshal(in.Params, &v)
+				if err == nil {
+					value, err = e.Control(v)
+				}
+			case "events":
+				var v struct {
+					After int64 `json:"after"`
+				}
+				err = json.Unmarshal(in.Params, &v)
+				if err == nil {
+					value, err = e.Events(v.After)
+				}
+			case "snapshot":
+				var v struct {
+					Sequence int64 `json:"sequence"`
+				}
+				err = json.Unmarshal(in.Params, &v)
+				if err == nil {
+					value, err = e.Snapshot(v.Sequence)
+				}
+			default:
+				err = fmt.Errorf("unsupported method %s", strconv.Quote(in.Method))
+			}
+		}
+		if err != nil {
+			out.Error = err.Error()
+		} else {
+			out.Result = p.JSON(value)
+		}
+		if err = enc.Encode(out); err != nil {
+			return err
+		}
+	}
+	return scanner.Err()
+}

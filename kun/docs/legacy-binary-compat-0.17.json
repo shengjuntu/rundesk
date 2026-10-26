@@ -1,0 +1,265 @@
+{
+  "schemaVersion": 1,
+  "oldBinary": "/workspace/scratch/62bf478f3a8e/build-022/kun",
+  "newBinary": "/workspace/scratch/62bf478f3a8e/project/kun/bin/kun",
+  "oldBinarySHA256": "1111b1a92c2b304f0d375f4678641e75b9d7955a6f05a029bff8ad2d628d4a9a",
+  "newBinarySHA256": "62b688135919659403c817d8edcc6d596581b0249880e3577764d004a9aa98fc",
+  "status": "passed",
+  "fixtureOnly": true,
+  "oldHello": {
+    "capabilities": {
+      "argumentValidation": true,
+      "artifactRules": true,
+      "bash": true,
+      "budgets": true,
+      "codingTools": true,
+      "conditionalBreakpoints": true,
+      "debugQueries": true,
+      "diagnosticSession": true,
+      "eventEvidence": true,
+      "fastFallback": true,
+      "fastGuards": true,
+      "fastPath": true,
+      "fork": true,
+      "forkHybrid": true,
+      "forkHypothesis": true,
+      "forkLive": true,
+      "harnessComposition": true,
+      "inspect": true,
+      "mcp": true,
+      "mcpApproval": true,
+      "modules": true,
+      "pause": true,
+      "planAct": true,
+      "replayEvents": true,
+      "resumeCheckpoint": true,
+      "runtimeHarness": true,
+      "snapshotDiff": true,
+      "steer": true,
+      "step": true,
+      "workspaceFixtures": true
+    },
+    "engine": "kun",
+    "engineVersion": "0.16.0",
+    "pid": 7,
+    "protocolVersion": 16
+  },
+  "newHello": {
+    "engine": "kun",
+    "engineVersion": "0.17.0",
+    "protocolVersion": 16,
+    "pid": 16,
+    "capabilities": {
+      "argumentValidation": true,
+      "artifactRules": true,
+      "bash": true,
+      "budgets": true,
+      "checkpoint": true,
+      "codingTools": true,
+      "conditionalBreakpoints": true,
+      "control": true,
+      "debugQueries": true,
+      "diagnosticProvider": true,
+      "diagnosticSession": true,
+      "eventEvidence": true,
+      "events": true,
+      "fastFallback": true,
+      "fastGuards": true,
+      "fastPath": true,
+      "fork": true,
+      "forkHybrid": true,
+      "forkHypothesis": true,
+      "forkLive": true,
+      "harnessComposition": true,
+      "inspect": true,
+      "mcp": true,
+      "mcpApproval": true,
+      "modules": true,
+      "pause": true,
+      "planAct": true,
+      "replayEvents": true,
+      "resumeCheckpoint": true,
+      "runtimeHarness": true,
+      "snapshot": true,
+      "snapshotDiff": true,
+      "start": true,
+      "state": true,
+      "steer": true,
+      "step": true,
+      "workspaceFixtures": true
+    }
+  },
+  "sameDataAndWorkspacePaths": true,
+  "journalModifiedByTest": false,
+  "legacyPausedState": {
+    "runId": "legacy-source-run",
+    "status": "paused",
+    "phase": "before_tool",
+    "revision": 13,
+    "step": 1,
+    "budget": {
+      "toolCalls": 1,
+      "reportedTokens": 7,
+      "unreportedModelCalls": 0,
+      "consecutiveFailures": 0,
+      "activeMillis": 11,
+      "waitMillis": 24
+    },
+    "actions": {
+      "legacy-first-write": "succeeded",
+      "legacy-pending-write": "prepared"
+    },
+    "manifest": {
+      "engineVersion": "0.16.0",
+      "workspace": "/tmp/kun-legacy-compat-egv6jmc2/workspace",
+      "configHash": "374df5dc725a030676f8709b16257c935e94dd1571772c4e7d4a2e39d59f419f",
+      "mcpHash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "skillsHash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "harnessHash": "5a9aa56b2cf520bbc724eed0f88ec9b35d762ff823afd954c1c1a557ad20de46",
+      "contextRevision": "legacy-compat-fixture-v1"
+    },
+    "resumedFrom": null,
+    "pendingCallIds": [
+      "legacy-pending-write"
+    ]
+  },
+  "newEngineOpenedLegacyJournal": {
+    "runId": "legacy-source-run",
+    "status": "interrupted",
+    "phase": "before_tool",
+    "revision": 14,
+    "step": 1,
+    "budget": {
+      "toolCalls": 1,
+      "reportedTokens": 7,
+      "unreportedModelCalls": 0,
+      "consecutiveFailures": 0,
+      "activeMillis": 11,
+      "waitMillis": 33
+    },
+    "actions": {
+      "legacy-first-write": "succeeded",
+      "legacy-pending-write": "cancelled"
+    },
+    "manifest": {
+      "engineVersion": "0.16.0",
+      "workspace": "/tmp/kun-legacy-compat-egv6jmc2/workspace",
+      "configHash": "374df5dc725a030676f8709b16257c935e94dd1571772c4e7d4a2e39d59f419f",
+      "mcpHash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "skillsHash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "harnessHash": "5a9aa56b2cf520bbc724eed0f88ec9b35d762ff823afd954c1c1a557ad20de46",
+      "contextRevision": "legacy-compat-fixture-v1"
+    },
+    "resumedFrom": null,
+    "pendingCallIds": []
+  },
+  "legacyForkPoints": 11,
+  "legacyForkExport": {
+    "schema": 3,
+    "mode": "hybrid",
+    "recordCount": 1,
+    "manifestEngineVersion": "0.16.0"
+  },
+  "checkpoint": {
+    "eligible": true,
+    "reason": "safe_checkpoint",
+    "selection": {
+      "sourceRunId": "legacy-source-run",
+      "sequence": 13,
+      "expectedStateRevision": 14,
+      "workerEpoch": "2bbbec77ca12e0cc357f4fcff0f65d27"
+    },
+    "phase": "before_tool",
+    "step": 1,
+    "pending": 1,
+    "budget": {
+      "toolCalls": 1,
+      "reportedTokens": 7,
+      "unreportedModelCalls": 0,
+      "consecutiveFailures": 0,
+      "activeMillis": 11,
+      "waitMillis": 33
+    }
+  },
+  "recoveredPendingState": {
+    "runId": "new-engine-resumed-run",
+    "status": "paused",
+    "phase": "before_tool",
+    "revision": 17,
+    "step": 1,
+    "budget": {
+      "toolCalls": 1,
+      "reportedTokens": 7,
+      "unreportedModelCalls": 0,
+      "consecutiveFailures": 0,
+      "activeMillis": 14,
+      "waitMillis": 33
+    },
+    "actions": {
+      "legacy-first-write": "succeeded",
+      "legacy-pending-write": "prepared"
+    },
+    "manifest": {
+      "engineVersion": "0.16.0",
+      "workspace": "/tmp/kun-legacy-compat-egv6jmc2/workspace",
+      "configHash": "374df5dc725a030676f8709b16257c935e94dd1571772c4e7d4a2e39d59f419f",
+      "mcpHash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "skillsHash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "harnessHash": "5a9aa56b2cf520bbc724eed0f88ec9b35d762ff823afd954c1c1a557ad20de46",
+      "contextRevision": "legacy-compat-fixture-v1"
+    },
+    "resumedFrom": {
+      "sourceRunId": "legacy-source-run",
+      "sequence": 13,
+      "expectedStateRevision": 14,
+      "workerEpoch": "2bbbec77ca12e0cc357f4fcff0f65d27"
+    },
+    "pendingCallIds": [
+      "legacy-pending-write"
+    ]
+  },
+  "completedState": {
+    "runId": "new-engine-resumed-run",
+    "status": "completed",
+    "phase": "after_model",
+    "revision": 27,
+    "step": 2,
+    "budget": {
+      "toolCalls": 2,
+      "reportedTokens": 14,
+      "unreportedModelCalls": 0,
+      "consecutiveFailures": 0,
+      "activeMillis": 28,
+      "waitMillis": 63
+    },
+    "actions": {
+      "legacy-first-write": "succeeded",
+      "legacy-pending-write": "succeeded"
+    },
+    "manifest": {
+      "engineVersion": "0.16.0",
+      "workspace": "/tmp/kun-legacy-compat-egv6jmc2/workspace",
+      "configHash": "374df5dc725a030676f8709b16257c935e94dd1571772c4e7d4a2e39d59f419f",
+      "mcpHash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "skillsHash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "harnessHash": "5a9aa56b2cf520bbc724eed0f88ec9b35d762ff823afd954c1c1a557ad20de46",
+      "contextRevision": "legacy-compat-fixture-v1"
+    },
+    "resumedFrom": {
+      "sourceRunId": "legacy-source-run",
+      "sequence": 13,
+      "expectedStateRevision": 14,
+      "workerEpoch": "2bbbec77ca12e0cc357f4fcff0f65d27"
+    },
+    "pendingCallIds": []
+  },
+  "modelHTTPRequests": 2,
+  "completedWritePreserved": true,
+  "pendingWriteExecuted": true,
+  "toolsRunTotal": 2,
+  "legacyEventsReadable": 27,
+  "limitations": [
+    "Local model HTTP fixture; no real model or RunDesk/Docker deployment.",
+    "One safe pending checkpoint and hybrid fork export were exercised; not every historical journal shape."
+  ]
+}
