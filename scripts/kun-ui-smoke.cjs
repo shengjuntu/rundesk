@@ -19,7 +19,7 @@ const pictures=path.join(root,'docs/screenshots/0.49.0');fs.mkdirSync(pictures,{
  });
  try{
   await new Promise(r=>model.listen(0,'127.0.0.1',r));
-  server=spawn(root+'/bin/rundesk',['--data',scratch+'/kun-ui-data2','--listen','127.0.0.1:38730'],{env:{...process.env,CODEX_HOME:scratch+'/kun-ui-home2'},stdio:['ignore','ignore','pipe']});
+  server=spawn(process.env.RUNDESK_TEST_HOST || root+'/bin/rundesk',[...(process.env.RUNDESK_TEST_KUN?['--kun',process.env.RUNDESK_TEST_KUN]:[]),'--data',scratch+'/kun-ui-data2','--listen','127.0.0.1:38730'],{env:{...process.env,CODEX_HOME:scratch+'/kun-ui-home2'},stdio:['ignore','ignore','pipe']});
   await new Promise((res,rej)=>{server.stderr.once('data',res);server.once('error',rej)});
   browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH,headless:true,args:['--no-sandbox']});
   const page=await browser.newPage({viewport:{width:1440,height:1000}});

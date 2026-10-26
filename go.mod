@@ -16,3 +16,7 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 )
+
+require github.com/your-org/kun/sdk v0.17.0
+
+replace github.com/your-org/kun/sdk => ./third_party/kun-sdk

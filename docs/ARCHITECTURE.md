@@ -1,6 +1,8 @@
 # RunDesk 系统架构
 
-RunDesk 向应用提供持久任务与可检查的 Agent 执行过程。Kun 和 Codex 是两个后端；模型 Provider、Kun 内部循环策略和操作系统执行环境分别建模。
+RunDesk 向应用提供持久任务与可检查的 Agent 执行过程。外部独立项目 Kun 和 Codex 是两个后端；模型 Provider、Kun 内部循环策略和操作系统执行环境分别建模。
+
+平台保持独立，自身接口命名为 **RunDesk Control API（RDCA）**，现有入口为 `/api/v1`。后续 UHP 服务入口与 RDCA 复用同一运行和调试核心，供原接其他 UHP 服务的应用切换到 RunDesk；不以 HarnessRouter 为依赖。该入口尚未实现，见 [API 定位与兼容计划](API-STRATEGY.md)。
 
 ## 当前分层
 
@@ -25,8 +27,9 @@ flowchart TD
 | 后端入口 | 注册内置后端、能力描述、运行和停止分派 | `internal/app/backends.go` |
 | Codex 连接 | App Server JSON-RPC、原生线程/轮次、恢复和事件 | `internal/rpc`、`internal/app/manager.go` |
 | HTTP 观测 | 原协议直通、旁路字节副本、有界队列与采集完整性 | `internal/observeproxy`、`internal/app/observation.go` |
-| Kun 连接 | worker 启动、协议握手、请求关联、事件补取 | `internal/adapters/kun`、`internal/app/kun.go` |
-| Kun 执行内核 | 模型/工具循环、控制、快照、动作账本、回放、Skill 快速路径 | `internal/kun`、`cmd/kun` |
+| Kun 连接 | 外部 worker 启动、真实版本/能力握手、请求关联、事件补取 | SDK `client`、`internal/app/kun.go` |
+| Kun 公共契约 | 消息、客户端与纯校验；不链接执行内核 | `third_party/kun-sdk` |
+| 外部 Kun 执行内核 | 模型/工具循环、控制、快照、动作账本、回放、Skill 快速路径 | 独立 Kun 项目 `internal/engine`、`cmd/kun` |
 | 执行环境 | 本机进程、Codex 容器与挂载/租约 | `internal/app/execution.go` 及 environment 文件 |
 | 界面与调试 | 统一工作台、轨迹/模型交互、只读问答工具和 Kun 高级面板 | `internal/web`、`internal/debugapi`、`internal/tracequery` |
 
@@ -58,6 +61,8 @@ HTTP 采集默认关闭，`Session.observeHTTP` 保存会话偏好，服务启�
 
 Hybrid 重算只回放录制工具结果；Live 分叉使用当前工具真实执行。K4 受限快速路径复用审批、预算和账本，守卫失败保留已完成结果后回退。结果未知的副作用不会自动重发，取消不等于回滚。详见 [调试](DEBUG.md)。
 
+Kun 自然语言诊断使用宿主提供的 `__trace_mcp` 只读证据桥，固定来源与事件上界由宿主约束；Kun 不导入 RunDesk 数据库或轨迹查询实现。SDK 独立版本、协议版本和引擎版本分别管理，详见 [拆分与兼容](KUN-SEPARATION.md)。
+
 ## 进程与持久化
 
 Go 主服务嵌入 WebUI，SQLite 保存平台对象与事件。每个加载的 Kun 会话使用独立 worker 和执行数据库，通过序号补取与去重关联宿主投影；两库没有跨进程原子事务。默认全局并发 4，队列、直接会话与恢复共用额度，等待审批也占额度。
@@ -66,4 +71,4 @@ Go 主服务嵌入 WebUI，SQLite 保存平台对象与事件。每个加载的 
 
 ## 参考项目
 
-[HarnessRouter](https://github.com/HarnessRouter/harnessrouter) / [UHP](https://unifiedharnessprotocol.org/) 提供应用驱动完整 Agent 运行时、可复用后端配置和契约测试的参考。RunDesk 保持独立 Go 平台与 Kun 内核；当前没有引入其源码，也没有实现或声明 UHP 兼容入口。采用的设计参考与 PiG 来源统一登记在 [UPSTREAM](UPSTREAM.md)。
+[HarnessRouter](https://github.com/HarnessRouter/harnessrouter) / [UHP](https://unifiedharnessprotocol.org/) 提供应用驱动完整 Agent 运行时、可复用后端配置和契约测试的参考。RunDesk 保持独立 Go 平台，Kun 是外部独立引擎；当前没有引入其源码，也没有实现或声明 UHP 兼容入口。后续兼容的是 RunDesk 对外提供服务的协议，不是向下依赖 HarnessRouter。采用的设计参考与 PiG 来源统一登记在 [UPSTREAM](UPSTREAM.md)。

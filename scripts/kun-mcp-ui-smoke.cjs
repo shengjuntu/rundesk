@@ -23,7 +23,7 @@ const {spawn}=require('node:child_process'),fs=require('node:fs'),os=require('no
  try{
   await new Promise(r=>fixture.listen(0,'127.0.0.1',r));await new Promise(r=>model.listen(0,'127.0.0.1',r));
   const port=38731,base=`http://127.0.0.1:${port}`;
-  server=spawn(root+'/bin/rundesk',['--data',temp+'/data','--listen',`127.0.0.1:${port}`],{env:{...process.env,RUNDESK_TOKEN:'',CODEX_HOME:temp+'/codex-home'},stdio:['ignore','ignore','pipe']});
+  server=spawn(process.env.RUNDESK_TEST_HOST || root+'/bin/rundesk',[...(process.env.RUNDESK_TEST_KUN?['--kun',process.env.RUNDESK_TEST_KUN]:[]),'--data',temp+'/data','--listen',`127.0.0.1:${port}`],{env:{...process.env,RUNDESK_TOKEN:'',CODEX_HOME:temp+'/codex-home'},stdio:['ignore','ignore','pipe']});
   const api=async(p,method='GET',body)=>{const r=await fetch(base+'/api/v1'+p,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});assert(r.ok,await r.clone().text());return r.json()};
   for(let n=0;n<100;n++){try{await api('/meta');break}catch{}await new Promise(r=>setTimeout(r,80))}
   browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH,headless:true,args:['--no-sandbox']});

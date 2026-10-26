@@ -10,7 +10,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	p "github.com/shengjuntu/rundesk/internal/kunproto"
+	p "github.com/your-org/kun/sdk/protocol"
 )
 
 const Schema = 1

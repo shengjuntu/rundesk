@@ -3,7 +3,7 @@ package app
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/shengjuntu/rundesk/internal/kunproto"
+	"github.com/your-org/kun/sdk/protocol"
 	"io"
 	"net/http"
 	"strings"

@@ -1,6 +1,8 @@
 # Kun 运行与调试
 
-Kun 0.16.0 是独立进程的 Agent 执行内核，与 RunDesk 0.45.0 使用 worker 协议 16。当前包含模型/工具循环、MCP 与审批、七类编程工具、执行轨迹、单步与断点、快照、Hybrid/Live 分叉、规则评测和经过独立验证的 Skill 复用。
+Kun 0.17.0 是独立项目、独立进程的 Agent 执行内核，与 RunDesk 0.49.4 使用 worker 协议 16。RunDesk 只链接轻量 SDK，通过 `--kun` 选择外部程序；普通核心方法与既有协议兼容，诊断新增 provider 能力守卫。当前包含模型/工具循环、MCP 与审批、七类编程工具、执行轨迹、单步与断点、快照、Hybrid/Live 分叉、规则评测和经过独立验证的 Skill 复用。
+
+工程拆分、独立构建与 0.16.0 检查点/分叉兼容规则见 [KUN-SEPARATION](KUN-SEPARATION.md)。
 
 首次使用见 [启动向导](SETUP.md)，功能差异见 [后端能力](BACKENDS.md)，完整进程关系见 [架构](ARCHITECTURE.md)。
 

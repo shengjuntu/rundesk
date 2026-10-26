@@ -1,3 +1,11 @@
+# 0.49.4
+
+- Extract Kun 0.17.0 into an independently buildable project. RunDesk no longer contains or builds `cmd/kun` or the Kun execution kernel; it links a checked lightweight SDK snapshot under `third_party/kun-sdk`.
+- Keep JSONL protocol 16 core methods, negotiate the selected engine version and actual capabilities, and report missing/incompatible workers explicitly without falling back to Codex.
+- Move diagnostic evidence access to the existing host-provided `__trace_mcp` read-only bridge. Kun no longer knows the RunDesk trace database schema. Old host/core compatibility and the diagnostic provider requirement are documented separately.
+- Preserve execution-directory layout and explicit 0.16.0 checkpoint/fork compatibility in Kun 0.17.0. No manifest editing or blanket migration is performed.
+- Retain PiG/Pi acknowledgements, source notices and original MIT license texts. This release adds no new PiG modules, provider, HTTP service or multimodal capability.
+
 # 0.49.3
 
 - 新增应用范围的runtime/diagnostics：仅探测已选且运行中的Codex Docker容器，核对绑定与实际环境，不自动启动、重建、换镜像或回退宿主机。

@@ -11,8 +11,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	p "github.com/your-org/kun/sdk/protocol"
 	x "github.com/shengjuntu/rundesk/internal/experiment"
-	p "github.com/shengjuntu/rundesk/internal/kunproto"
 	"github.com/shengjuntu/rundesk/internal/store"
 )
 

@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
+	p "github.com/your-org/kun/sdk/protocol"
 	d "github.com/shengjuntu/rundesk/internal/debugapi"
 	"github.com/shengjuntu/rundesk/internal/debugmcp"
-	p "github.com/shengjuntu/rundesk/internal/kunproto"
 	"github.com/shengjuntu/rundesk/internal/store"
 )
 

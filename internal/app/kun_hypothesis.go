@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	p "github.com/shengjuntu/rundesk/internal/kunproto"
+	p "github.com/your-org/kun/sdk/protocol"
 	"github.com/shengjuntu/rundesk/internal/redaction"
 	"github.com/shengjuntu/rundesk/internal/store"
 )
@@ -45,7 +45,7 @@ func (m *Manager) hypothesisParent(id string) (kunForkDraft, error) {
 	if d.Bundle.Mode != "hybrid" || d.Preview.Origin.Mode != "hybrid" || d.Bundle.Hypothesis != nil {
 		return d, failure(409, "hypothesis_parent_invalid", "请选择未修改工具结果的 Hybrid 预览；不支持 Live 或叠加替换")
 	}
-	if d.Bundle.Schema != p.ForkSchema || d.Bundle.State.Manifest == nil || d.Bundle.State.Manifest.EngineVersion != p.EngineVersion {
+	if d.Bundle.Schema != p.ForkSchema || d.Bundle.State.Manifest == nil || !p.CompatibleEngineVersion(d.Bundle.State.Manifest.EngineVersion) {
 		return d, failure(409, "fork_runtime_incompatible", "旧版本预览仅供查看；请用当前 Kun 重新运行来源并创建预览")
 	}
 	return d, nil

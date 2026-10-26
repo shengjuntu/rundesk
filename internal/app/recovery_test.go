@@ -222,6 +222,24 @@ func TestRecoveryProcessExitUsesSavedHistory(t *testing.T) {
 	h.mu.Unlock()
 	c.Close()
 	<-c.Done()
+	// Done closes before the host exit watcher finishes updating the session.
+	// Wait for detachment, then synchronize with that watcher's h.op before
+	// preparing a revision-bound recovery plan. Never retry the recovery turn.
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		h.mu.Lock()
+		detached := h.client != c
+		h.mu.Unlock()
+		if detached {
+			h.op.Lock()
+			h.op.Unlock()
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("host did not finish observing process exit")
+		}
+		time.Sleep(time.Millisecond)
+	}
 	p := prepare(t, m, s)
 	if !p.CanContinue || p.Native.TurnID != s.TurnID {
 		t.Fatalf("%+v", p)

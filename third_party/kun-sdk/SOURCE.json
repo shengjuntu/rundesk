@@ -1,0 +1,32 @@
+{
+  "files": {
+    "LICENSE": "b214808273e41a2c3f4a6b0945de5ad24935ee9254c4b279aa2e9a44d7c6c99f",
+    "README.md": "6e95b397a2fc3a7ca2172bffa21f299e1ccb14dd9c20f2232979268645b37f8b",
+    "client/client.go": "dd1d0fdb13edef59feafc017700a19994d3bab6529879628ef1009832296a17b",
+    "client/client_test.go": "8af185a3e2c61e16ffe3731cfbeaa779b72de0d824d438acd941980f27a3f8d5",
+    "go.mod": "ee15542b059806ac3f0fad90e549930259c13b9c9c6a4e89383c34192bcd1557",
+    "protocol/artifacts.go": "2734526c4d7e21407f6c82873912e7d13d0a0dfe092847f95bf85e53c5d7311a",
+    "protocol/artifacts_test.go": "ff78ee79d3866a311b387c9c4cec4b097913078662f683da77e7cf9211acea00",
+    "protocol/checkpoint.go": "0b3d0fcc20e97a4f3bdd40b5b5391a7fbcd8c07c9be03afa9c05eae73e1d5875",
+    "protocol/compatibility_test.go": "b9d0935e159dbd22e039d7fe6fab8a7794e6fbb33cdfdb2b7ea1382c3f814ceb",
+    "protocol/debug.go": "cf3e9e40b1decab3032ce296426e082395a8f31d85b0753e78a60807cfb2529b",
+    "protocol/fast.go": "34fe0b0012183376ff044c25f84694cf1e0cce7e3b1ddd7b6f65042c882223de",
+    "protocol/fixtures.go": "d0818607be3adbbc758cd06e82872255cab28e099ac43f3c8830eb27e685ef08",
+    "protocol/fixtures_test.go": "7bbb3bc9522394445b78147820930072347b9da327abaf24356802687e1f8947",
+    "protocol/fork.go": "f32abdea75021c4383da8e4a0e169ac821574486143dac87ac8607bf32551466",
+    "protocol/harness.go": "36a2f471c1836f341158649c2398ba93f0583e8d7a22020a1caa7c8621d2f08d",
+    "protocol/hypothesis.go": "ef29ad5405fba5f66d84895d94dcb1b2a3e11d109251e66b18cd9ca30a81e1e8",
+    "protocol/hypothesis_test.go": "958be2e649f964ddb1b35b46f9d32dfabb0c510e59df23b030e7280575385aef",
+    "protocol/mcp.go": "c74ad50b14abc68886bd6eede5eeb211364ac922ed415c1a4df4a74e8be236e0",
+    "protocol/modules.go": "f6c7edf46798316f8d8f713bae32b6e1ef483319c265f5929706091242124398",
+    "protocol/protocol.go": "1c42004a365e393cf3cd88b5f6242511d36beb152a1bb45ed26f6f32c234a62c",
+    "validation/fast.go": "0dfb381330d2a7928e0505e45839c2d09544b3d75cd2077e9f6128b7c157f1fa",
+    "validation/fingerprint.go": "620f8e794aaab35bb4dcf74f22adb82475a03ab2368f0f2d20721dbb2f7b0caf",
+    "validation/public_test.go": "2ded60341ec4e14dc8932e1efcaa5e56d0c07da3d70d67a908d372d9e3338acf",
+    "validation/schema.go": "bb67bb32c1cd46b9561d809f161fd50a30883a1c23c22c26d1725b6dfc2f5aaa",
+    "validation/schema_test.go": "a9188b0a4eac539fb9ef33da401795c9b4293d84b694feb60182796c88ecd743"
+  },
+  "module": "github.com/your-org/kun/sdk",
+  "source": "Kun standalone release, sdk/",
+  "version": "0.17.0"
+}

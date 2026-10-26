@@ -1,0 +1,80 @@
+{
+  "version": "0.49.4",
+  "checkedAt": "2026-10-18T02:23:28.204658+00:00",
+  "goTests": {
+    "passed": 411,
+    "skipped": 0,
+    "failures": []
+  },
+  "goVet": true,
+  "externalKunVersion": "0.17.0",
+  "workerProtocol": 16,
+  "sdkVersion": "0.17.0",
+  "sdkSnapshotMatchesIndependentSource": true,
+  "dependencyBoundaryVerified": true,
+  "realSeparateBinaryHttpChecks": {
+    "coding": true,
+    "fastSkillAndEvaluation": true,
+    "modelCalls": {
+      "codingFixture": 7,
+      "k4Fixture": 48
+    },
+    "records": [
+      "kun-coding-http-0.49.4.json",
+      "kun-k4-http-0.49.4.json"
+    ]
+  },
+  "actualLegacyBinaryJournalCompatibility": {
+    "oldKun": "0.16.0",
+    "newKun": "0.17.0",
+    "passed": true,
+    "record": "companion Kun docs/legacy-binary-compat-0.17.json"
+  },
+  "raceVerification": {
+    "independentKunAllPackages": true,
+    "independentSdkAllPackages": true,
+    "changedHostBoundaryTests": true,
+    "diagnosticReviewLifecycleAfterFixtureUpdate": true,
+    "processExitRecoveryAfterWatcherSynchronization": {
+      "passed": true,
+      "repetitions": 10
+    },
+    "largeTraceIsolated": true,
+    "fullHostAttempts": [
+      {
+        "record": "tests-0.49.4-race-first-attempt.jsonl",
+        "passed": 409,
+        "failed": 2,
+        "causes": [
+          "fixture classified diagnostics by former RunDesk-branded prompt",
+          "large-body trace timed out under concurrent load"
+        ]
+      },
+      {
+        "record": "tests-0.49.4-race-second-attempt.jsonl",
+        "passed": 410,
+        "failed": 1,
+        "causes": [
+          "pre-existing recovery fixture prepared a revision-bound plan before the exit watcher finished"
+        ]
+      }
+    ],
+    "note": "Do not describe either full-host race attempt as an all-pass run. Fixtures were corrected; latest full ordinary Go regression passed all 411 tests. Production timeout limits were unchanged."
+  },
+  "builds": {
+    "rundeskLinuxAmd64": true,
+    "kunLinuxAmd64": true,
+    "kunWindowsAmd64": "cross-compiled only"
+  },
+  "notImplementedThisRelease": [
+    "HarnessRouter/UHP adapter",
+    "shared resource catalog and plugin configuration UI",
+    "new PiG providers or multimodal messages",
+    "managed Kun Docker or remote worker"
+  ],
+  "notTested": [
+    "real external model services",
+    "Windows native runtime",
+    "deployment on user server"
+  ]
+}

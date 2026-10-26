@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
@@ -10,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	p "github.com/shengjuntu/rundesk/internal/kunproto"
+	p "github.com/your-org/kun/sdk/protocol"
 )
 
 type EnvironmentCheck struct {
@@ -119,7 +120,7 @@ func (m *Manager) setupEnvironment(iid, wid string) (SetupEnvironment, error) {
 		} else {
 			add("credential", true, "ready", cfg.APIKeyEnv+" is set")
 		}
-		add("workerProtocol", false, "unchecked", "Requires Kun "+p.EngineVersion+"; use the worker check to inspect its version")
+		add("workerProtocol", false, "unchecked", "Requires Kun JSONL protocol "+fmt.Sprint(p.Version)+"; the worker handshake records its actual version and optional capabilities")
 	} else {
 		add("authentication", false, "unchecked", "Use the account check; local executable discovery does not prove authentication")
 	}

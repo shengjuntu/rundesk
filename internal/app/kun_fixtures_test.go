@@ -1,7 +1,7 @@
 package app
 
 import (
-	p "github.com/shengjuntu/rundesk/internal/kunproto"
+	p "github.com/your-org/kun/sdk/protocol"
 	"github.com/shengjuntu/rundesk/internal/store"
 	"strings"
 	"testing"

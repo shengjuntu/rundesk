@@ -18,7 +18,7 @@ const {spawn}=require('node:child_process'),http=require('node:http'),fs=require
    else{finish_reason='stop';message={role:'assistant',content:'已记录事实：来源在模型调用前暂停。推断：可能是预设断点。建议尚未执行，请审核来源事件。'}}
    res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({choices:[{message,finish_reason}],usage:{prompt_tokens:10,completion_tokens:5,total_tokens:15}}));
   });await new Promise(r=>model.listen(0,'127.0.0.1',r));
-  host=spawn(root+'/bin/rundesk',['--data',temp+'/data','--listen','127.0.0.1:38735'],{env:{...process.env,RUNDESK_TOKEN:'',CODEX_HOME:temp+'/codex-home'},stdio:['ignore','ignore','pipe']});
+  host=spawn(process.env.RUNDESK_TEST_HOST || root+'/bin/rundesk',[...(process.env.RUNDESK_TEST_KUN?['--kun',process.env.RUNDESK_TEST_KUN]:[]),'--data',temp+'/data','--listen','127.0.0.1:38735'],{env:{...process.env,RUNDESK_TOKEN:'',CODEX_HOME:temp+'/codex-home'},stdio:['ignore','ignore','pipe']});
   for(let n=0;n<100;n++){try{await api('/meta');break}catch{}await pause(100)}
   const i=(await api('/instances'))[0],workspace=(await api('/workspaces'))[0];
   await api('/instances/'+i.id+'/agent-runtime',{revision:i.revision,config:{kind:'kun',endpoint:'http://127.0.0.1:'+model.address().port+'/v1',model:'diagnostic-fixture',allowWrite:true,pauseBeforeModel:true,maxSteps:5,timeoutSeconds:10,systemPrompt:'BUSINESS-SYSTEM'}},'PUT');

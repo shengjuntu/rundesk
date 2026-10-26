@@ -3,7 +3,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
-	p "github.com/shengjuntu/rundesk/internal/kunproto"
+	p "github.com/your-org/kun/sdk/protocol"
 	"net/http"
 	"net/http/httptest"
 	"strings"

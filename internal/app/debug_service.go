@@ -11,9 +11,9 @@ import (
 	"net/url"
 	"path/filepath"
 
-	kc "github.com/shengjuntu/rundesk/internal/adapters/kun"
+	kc "github.com/your-org/kun/sdk/client"
+	p "github.com/your-org/kun/sdk/protocol"
 	d "github.com/shengjuntu/rundesk/internal/debugapi"
-	p "github.com/shengjuntu/rundesk/internal/kunproto"
 	"github.com/shengjuntu/rundesk/internal/redaction"
 )
 
@@ -29,12 +29,14 @@ func (s DebugService) Capabilities(sid string) (d.Capabilities, error) {
 	backend := runtimeKind(session.RuntimeKind)
 	out := d.Capabilities{SessionID: sid, Backend: backend, ReadOnly: true, Queries: map[string]d.Capability{}, HostEventCursor: "host event id; retain through from the first page, including zero", WorkerSequence: "Kun sequence only; never a host event id"}
 	online := false
+	var observedInfo p.Hello
 	if backend == "kun" {
 		if c, e := s.manager.kunClient(sid); e == nil {
 			select {
 			case <-c.Done():
 			default:
 				online = true
+				observedInfo = c.Info()
 			}
 		}
 	}
@@ -54,6 +56,8 @@ func (s DebugService) Capabilities(sid string) (d.Capabilities, error) {
 			} else if !online {
 				v.Available = false
 				v.Reason = "Kun worker is offline; inspection will not start or recover it"
+			} else if capability := kunDebugCapability(kind); !kunHasCapability(observedInfo, capability) {
+				v = d.Capability{Reason: "Connected Kun does not advertise " + capability}
 			}
 		}
 		out.Queries[kind] = v
@@ -175,6 +179,9 @@ func (s DebugService) Query(ctx context.Context, sid string, q d.Query) (d.Resul
 		if e != nil {
 			return out, e
 		}
+		if e = requireKunCapabilities(c, kunDebugCapability("snapshot")); e != nil {
+			return out, failure(409, "debug_unsupported", e.Error())
+		}
 		var snap p.Snapshot
 		e = c.Call(ctx, "snapshot", map[string]int64{"sequence": q.Sequence}, &snap)
 		if e != nil {
@@ -206,9 +213,27 @@ func (m *Manager) kunDebugQuery(ctx context.Context, sid string, q p.DebugQuery)
 	if e != nil {
 		return result, e
 	}
+	if e = requireKunCapabilities(c, kunDebugCapability(q.Kind)); e != nil {
+		return result, failure(409, "debug_unsupported", e.Error())
+	}
 	e = c.Call(ctx, "query", q, &result)
 	return result, debugWorkerError(e)
 }
+
+// Shared debug queries preserve backend-specific capability availability.
+func kunDebugCapability(kind string) string {
+	switch kind {
+	case "snapshot":
+		return "snapshot"
+	case "evidence":
+		return "eventEvidence"
+	case "diff":
+		return "snapshotDiff"
+	default:
+		return "debugQueries"
+	}
+}
+
 func debugWorkerError(err error) error {
 	var remote *kc.RemoteError
 	if errors.As(err, &remote) {

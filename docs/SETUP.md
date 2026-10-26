@@ -1,27 +1,29 @@
 # 启动与部署
 
-当前组合：RunDesk 0.45.0、Kun 0.16.0、worker 协议 16。
+当前组合：RunDesk 0.49.4、独立 Kun 0.17.0、worker 协议 16。两者分别构建与发布，接口和旧版本兼容规则见 [Kun 拆分](KUN-SEPARATION.md)。
 
 ## 构建
 
-安装 Go 1.25.12 或兼容版本，然后 `make build`。只使用 Kun 不需要 Node.js、npm 或 Codex。部署时需要 `bin/rundesk`、`bin/kun`，前端已嵌入。
+安装 Go 1.25.12 或兼容版本，在 RunDesk 目录执行 `make build`，只生成 `bin/rundesk`。在独立 Kun 目录执行 `make build`，或 `go build -buildvcs=false -trimpath -o bin/kun ./cmd/kun`。使用 Kun 不需要 Node.js、npm 或 Codex；前端已嵌入 RunDesk。宿主只通过附带的轻量 SDK 编译，不需要相邻 Kun 源码目录或公开模块仓库。
 
 Windows PowerShell：
 
 ```powershell
 $env:CGO_ENABLED = "0"
 go build -buildvcs=false -trimpath -o bin/rundesk.exe ./cmd/rundesk
+# 切换到独立 Kun 项目目录后构建
 go build -buildvcs=false -trimpath -o bin/kun.exe ./cmd/kun
-.\bin\rundesk.exe --data .\data
+# 回到 RunDesk 项目目录
+.\bin\rundesk.exe --data .\data --kun C:\absolute\path\to\kun\bin\kun.exe
 ```
 
 Linux/macOS：
 
 ```bash
-./bin/rundesk --data ./data
+./bin/rundesk --data ./data --kun /absolute/path/to/kun/bin/kun
 ```
 
-默认 http://127.0.0.1:3210。`--kun /absolute/path/to/kun` 指定 worker；否则在 RunDesk 可执行文件旁查找。路径属于服务器。`--data` 在启动时确定，向导不迁移数据。
+默认 http://127.0.0.1:3210。`--kun /absolute/path/to/kun` 指定 worker；否则在 RunDesk 可执行文件旁查找。路径属于服务器。缺少或协议不兼容时明确报错，不改用 Codex。`--data` 在启动时确定，向导不迁移数据。已有 Kun 执行目录不需要搬迁；替换二进制前先停止相关执行，保持原数据目录。
 
 ## 环境向导
 

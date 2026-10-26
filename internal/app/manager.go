@@ -15,8 +15,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	kc "github.com/shengjuntu/rundesk/internal/adapters/kun"
-	p "github.com/shengjuntu/rundesk/internal/kunproto"
+	kc "github.com/your-org/kun/sdk/client"
+	p "github.com/your-org/kun/sdk/protocol"
 	"github.com/shengjuntu/rundesk/internal/observeproxy"
 	"github.com/shengjuntu/rundesk/internal/redaction"
 	"github.com/shengjuntu/rundesk/internal/rpc"

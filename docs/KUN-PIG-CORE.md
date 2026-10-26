@@ -1,8 +1,8 @@
 # Kun 与 PiG 核心功能对齐
 
-RunDesk 0.45.0 / Kun 0.16.0 / worker v16。沿用已确认方向：分进程、同仓库、选择性参考 PiG，并独立发展 Kun。七类编程动作已覆盖，PiG 的完整行为、配置、会话格式和扩展生态不作为已完成项。
+RunDesk 0.49.4 / 独立 Kun 0.17.0 / worker v16。Kun 已分为独立项目，通过轻量 SDK 和原生 JSONL 接入宿主；保留既有选择性 PiG 来源，本次不新增 PiG 代码。七类编程动作已覆盖，PiG 的完整行为、配置、会话格式和扩展生态不作为已完成项。
 
-代码对照基线为 [MichaelKinsy/PiG](https://github.com/MichaelKinsy/PiG) 的 `827932db70e545b34c3f1d9c04f58a70eacd3b28`；逐文件来源与 MIT 许可见 [UPSTREAM](UPSTREAM.md)。原来已有两份 SSE 实现和一个选取测试的来源说明及许可，本版另在中英文 README 明确致谢。新增工具由 Kun 独立实现，没有把行为参考误记为复制代码。
+代码对照基线为 [MichaelKinsy/PiG](https://github.com/MichaelKinsy/PiG) 的 `827932db70e545b34c3f1d9c04f58a70eacd3b28`；逐文件来源与 MIT 许可见 [UPSTREAM](UPSTREAM.md)。原来已有两份 SSE 实现和一个选取测试的来源说明及许可，本版另在中英文 README 明确致谢。既有七类工具由 Kun 独立实现，没有把行为参考误记为复制代码。独立项目和兼容规则见 [拆分说明](KUN-SEPARATION.md)。
 
 ## 核心工具对照
 

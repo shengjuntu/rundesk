@@ -1,6 +1,6 @@
 # Kun upstream provenance
 
-Kun is developed in the RunDesk repository and runs as a separate process. This repository is not a fork or a complete distribution of PiG.
+Since RunDesk 0.49.4, Kun 0.17.0 is an independent project consumed through a lightweight SDK snapshot under `third_party/kun-sdk` and an external executable. RunDesk no longer distributes the Kun engine source. The PiG-derived MCP SSE decoder retained by the host is listed below; the extracted engine has its own current ledger and preserves the original notices. This repository is not a fork or a complete distribution of PiG.
 
 ## PiG source actually incorporated
 
@@ -12,9 +12,9 @@ Kun is developed in the RunDesk repository and runs as a separate process. This 
 
 | Original path | Original SHA-256 | Local path / scope |
 | --- | --- | --- |
-| `ai/sse.go` | `8fea8c49a7ead126ce93542465b380c2d98dc4d01b65040242e20f783b8f3e38` | `internal/kun/sse.go`; SSE decoder and stream-error helpers |
+| `ai/sse.go` | `8fea8c49a7ead126ce93542465b380c2d98dc4d01b65040242e20f783b8f3e38` | Extracted to independent Kun `internal/engine/sse.go`; no longer in this host source |
 | `mcp/sse.go` | `258ebec94ca2e9c74ed1360ffd1fc0e7297e1a383260ad9189cf908599b33f5d` | `internal/mcp/sse.go`; MCP SSE decoder |
-| `ai/sse_parity_test.go` | `6f67137fd03a985700dd311726b0f73b0bb3ab94b6250f11000e608427bd532d` | `internal/kun/sse_upstream_test.go`; only `TestSSEDecoderAcceptsSSELineEndingsAndDispatchesAtEOF` |
+| `ai/sse_parity_test.go` | `6f67137fd03a985700dd311726b0f73b0bb3ab94b6250f11000e608427bd532d` | Extracted to independent Kun `internal/engine/sse_upstream_test.go`; only `TestSSEDecoderAcceptsSSELineEndingsAndDispatchesAtEOF` |
 
 The test hash identifies the complete original file, not the extracted function. Source headers carry attribution; original license text is redistributed. PiG's repository-level provenance identifies its `ai/` and `mcp/` families as translating/adapting Pi; both copyright notices are retained.
 
@@ -30,7 +30,7 @@ PiG's TUI, extension/Node runtime, providers/model catalogue, tools, full MCP cl
 
 ## Verification
 
-SSE newline / EOF parity tests run in `go test ./internal/kun`; MCP chunking, bounds, callback stop and transport tests run in `go test ./internal/mcp`. Kun's own tests separately cover tool-call fragment assembly, incomplete streams, write boundaries, snapshots, request deduplication, pause/step/steer, cancellation and interrupted-action recovery. RunDesk integration tests build and launch the actual worker against a local model fixture.
+In this host, MCP chunking, bounds, callback stop and transport tests run in `go test ./internal/mcp`. In the independent Kun project, SSE parity tests run in `go test ./internal/engine`; its engine tests cover fragment assembly, incomplete streams, write boundaries, snapshots, deduplication, controls and interrupted-action recovery. RunDesk integration tests launch an explicitly selected external Kun against a local model fixture; they no longer build a hidden engine from host sources.
 
 ## Core tool behavior references in 0.44.0
 
@@ -53,6 +53,8 @@ PiG's published [security documentation](https://pi-in-go.dev/docs/latest/securi
 Thanks to [HarnessRouter](https://github.com/HarnessRouter/harnessrouter) and its contributors. Its README and the [Unified Harness Protocol](https://unifiedharnessprotocol.org/) were consulted on 2026-10-11 for the boundary between applications and complete agent runtimes, configured-backend discovery, and capability/conformance documentation. The protocol site identified version 2026-10-04 as a draft standard at review time.
 
 RunDesk 0.45.0 introduces its own Go host lifecycle interface and capability catalog. No HarnessRouter source, schemas, assets, or conformance code were incorporated. This is a design reference, not an implementation dependency, fork, endorsement, or UHP compatibility claim. Any future source incorporation must separately record the exact commit, files, license, notices, and modifications.
+
+The public README and UHP architecture, tasks, governance and conformance pages were reviewed again on 2026-10-18. RunDesk's own contract is named RunDesk Control API (RDCA). The accepted direction is an independent RunDesk platform with a future UHP server interface, sharing its own task and trace core; HarnessRouter is not a required service or backend. A downstream application's migration is a client integration goal, not automatic portability of the original service's sessions, credentials or execution state. See [API strategy](API-STRATEGY.md). No upstream materials were copied for this documentation decision.
 
 ## Runtime profiles in 0.46.0
 

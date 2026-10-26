@@ -1,10 +1,21 @@
 package app
 
 import (
-	p "github.com/shengjuntu/rundesk/internal/kunproto"
+	p "github.com/your-org/kun/sdk/protocol"
 	"os"
 	"path/filepath"
+	"strconv"
 )
+
+// The host owns the snapshot format. Kun only receives a scoped, read-only MCP
+// provider; its database schema is not part of the engine's diagnostic contract.
+var kunDiagnosticProviderExecutable = os.Executable
+
+var kunDiagnosticTools = []string{
+	"trace_list_runs", "trace_find_steps", "trace_get_step", "trace_read_event",
+	"trace_find_issues", "trace_propose", "trace_list_llm_requests",
+	"trace_read_llm_request", "trace_statistics",
+}
 
 func (m *Manager) kunDiagnosticRequest(s Session, w Workspace, in Input, cfg p.Config, key string) (p.Start, error) {
 	if len(in.Files) > 0 || len(in.Skills) > 0 || in.KunResume != nil {
@@ -31,6 +42,16 @@ func (m *Manager) kunDiagnosticRequest(s Session, w Workspace, in Input, cfg p.C
 	cfg.PauseBeforeModel = false
 	cfg.Debug = p.DebugPolicy{}
 	cfg.SystemPrompt = "" // No task-specific instructions or project notes in diagnostics.
-	request := p.Start{SessionID: s.ID, RunID: s.RunID, Workspace: workspace, Input: in.Text + traceAnalysisInstructions(origin), Config: cfg, APIKey: key, ApprovalPolicy: "never", Diagnostic: &p.DiagnosticSource{DiagnosticScope: p.DiagnosticScope{SessionID: origin.SessionID, RunID: origin.RunID, Through: origin.Through}, SnapshotPath: snapshot}}
+	executable, err := kunDiagnosticProviderExecutable()
+	if err != nil {
+		return p.Start{}, err
+	}
+	provider := &p.MCPServer{
+		Name: "rundesk_trace", Revision: forkDigest(origin), Command: executable,
+		Args:           []string{"__trace_mcp", snapshot, origin.SessionID, strconv.FormatInt(origin.Through, 10)},
+		StartupTimeout: 15, ToolTimeout: 30, Allowlist: true,
+		EnabledTools: append([]string(nil), kunDiagnosticTools...),
+	}
+	request := p.Start{SessionID: s.ID, RunID: s.RunID, Workspace: workspace, Input: in.Text + traceAnalysisInstructions(origin), Config: cfg, APIKey: key, ApprovalPolicy: "never", Diagnostic: &p.DiagnosticSource{DiagnosticScope: p.DiagnosticScope{SessionID: origin.SessionID, RunID: origin.RunID, Through: origin.Through}, Provider: provider}}
 	return request, nil
 }

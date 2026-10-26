@@ -2,7 +2,7 @@ package app
 
 import (
 	"fmt"
-	p "github.com/shengjuntu/rundesk/internal/kunproto"
+	p "github.com/your-org/kun/sdk/protocol"
 	"path/filepath"
 )
 

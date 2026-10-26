@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"unicode/utf8"
 
-	p "github.com/shengjuntu/rundesk/internal/kunproto"
+	p "github.com/your-org/kun/sdk/protocol"
 	"github.com/shengjuntu/rundesk/internal/store"
 )
 

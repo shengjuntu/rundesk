@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	p "github.com/shengjuntu/rundesk/internal/kunproto"
+	p "github.com/your-org/kun/sdk/protocol"
 )
 
 func TestSetupKunIndependentAndAtomic(t *testing.T) {

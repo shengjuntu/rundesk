@@ -15,8 +15,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	kc "github.com/shengjuntu/rundesk/internal/adapters/kun"
-	p "github.com/shengjuntu/rundesk/internal/kunproto"
+	kc "github.com/your-org/kun/sdk/client"
+	p "github.com/your-org/kun/sdk/protocol"
 	"github.com/shengjuntu/rundesk/internal/redaction"
 	"github.com/shengjuntu/rundesk/internal/store"
 )
@@ -142,6 +142,9 @@ func (m *Manager) forkSource(sid string, fn func(Session, Workspace, *kc.Client)
 func (m *Manager) KunForkPoints(sid string, offset, limit int) (p.ForkPoints, error) {
 	var out p.ForkPoints
 	err := m.forkSource(sid, func(s Session, w Workspace, c *kc.Client) error {
+		if err := requireKunCapabilities(c, "fork"); err != nil {
+			return err
+		}
 		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
 		defer cancel()
 		if err := c.Call(ctx, "fork.points", map[string]int{"offset": offset, "limit": limit}, &out); err != nil {
@@ -154,6 +157,15 @@ func (m *Manager) KunForkPoints(sid string, offset, limit int) (p.ForkPoints, er
 	})
 	return out, err
 }
+
+func kunForkCapabilities(mode string) []string {
+	caps := []string{"fork"}
+	if mode == "live" {
+		return append(caps, "forkLive")
+	}
+	return append(caps, "forkHybrid")
+}
+
 func (m *Manager) CreateKunFork(in KunForkInput) (KunForkPreview, error) {
 	var out KunForkPreview
 	if in.Mode == "" {
@@ -169,6 +181,9 @@ func (m *Manager) CreateKunFork(in KunForkInput) (KunForkPreview, error) {
 		return out, failure(400, "fork_instruction_too_long", "补充指令最多 16000 个字符")
 	}
 	err := m.forkSource(in.SessionID, func(s Session, w Workspace, c *kc.Client) error {
+		if err := requireKunCapabilities(c, kunForkCapabilities(in.Mode)...); err != nil {
+			return err
+		}
 		initialConfig, err := m.forkHostConfigHash(s, w)
 		if err != nil {
 			return err
@@ -309,7 +324,7 @@ func (m *Manager) StartKunFork(id, expected string, confirmLive bool) (Session, 
 	if err == nil && s.RunID != "" {
 		return s, nil
 	}
-	if d.Bundle.Schema != p.ForkSchema || d.Bundle.State.Manifest == nil || d.Bundle.State.Manifest.EngineVersion != p.EngineVersion {
+	if d.Bundle.Schema != p.ForkSchema || d.Bundle.State.Manifest == nil || !p.CompatibleEngineVersion(d.Bundle.State.Manifest.EngineVersion) {
 		return Session{}, failure(409, "fork_runtime_incompatible", "旧版本预览仅供查看；请用当前 Kun 重新运行来源并创建预览")
 	}
 	w, err := m.Workspace(d.Target.WorkspaceID)

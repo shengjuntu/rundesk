@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
-	p "github.com/shengjuntu/rundesk/internal/kunproto"
+	p "github.com/your-org/kun/sdk/protocol"
 	"net/http"
 	"time"
 )
@@ -66,6 +66,9 @@ func (m *Manager) checkKunCheckpoint(s Session, w Workspace, h *handle) (p.Check
 	h.mu.Unlock()
 	if c == nil {
 		return p.CheckpointCheck{}, nil, failure(409, "kun_offline", "请先检查恢复条件")
+	}
+	if err := requireKunCapabilities(c, "resumeCheckpoint"); err != nil {
+		return p.CheckpointCheck{}, nil, err
 	}
 	ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
 	defer cancel()

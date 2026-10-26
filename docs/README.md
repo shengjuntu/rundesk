@@ -1,11 +1,12 @@
 # RunDesk 文档
 
-当前版本 RunDesk 0.49.1 / Kun 0.16.0 / worker 协议 16。按当前实现维护使用说明；验证日志按实际测试版本保存，旧版本的结果不当作本轮验收。
+当前版本 RunDesk 0.49.4 / 外部 Kun 0.17.0 / worker 协议 16。按当前实现维护使用说明；验证日志按实际测试版本保存，旧版本的结果不当作本轮验收。
 
 | 需要了解 | 入口 |
 | --- | --- |
 | 安装、环境检测、可选 Codex 安装 | [启动与部署](SETUP.md) |
-| 应用如何接入 | [应用 API v1](API-V1.md) |
+| 应用如何接入 | [RunDesk Control API（RDCA）v1](API-V1.md) |
+| 独立 API 与未来 UHP 兼容 | [API 定位与兼容计划](API-STRATEGY.md) |
 | 系统分层与后端扩展 | [架构](ARCHITECTURE.md)、[能力矩阵](BACKENDS.md) |
 | 如何调试 Agent 执行轨迹 | [统一工作台与采集](UNIFIED_DEBUGGING.md)、[轨迹调试](DEBUG.md) |
 | 如何复用验证有效的轨迹 | [K4](KUN-K4.md) |

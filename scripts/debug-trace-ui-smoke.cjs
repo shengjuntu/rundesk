@@ -9,7 +9,7 @@ const {spawn}=require('node:child_process'),fs=require('node:fs'),os=require('no
  const api=async(p,body)=>{const r=await fetch(base+'/api/v1'+p,{method:body?'POST':'GET',headers:{'Content-Type':'application/json','Idempotency-Key':crypto.randomUUID()},body:body?JSON.stringify(body):undefined});assert(r.ok,await r.clone().text());return r.json()};
  const finish=async(sid)=>{for(let n=0;n<150;n++){const s=await api('/sessions/'+sid);if(s.status==='completed')return s;assert(!['failed','interrupted'].includes(s.status),JSON.stringify(s));await pause(100)}throw Error('demo turn did not finish')};
  try{
-  server=spawn(root+'/bin/rundesk',['--demo','--data',temp,'--listen','127.0.0.1:38732'],{env:{...process.env,RUNDESK_TOKEN:''},stdio:['ignore','ignore','pipe']});
+  server=spawn(process.env.RUNDESK_TEST_HOST || root+'/bin/rundesk',[...(process.env.RUNDESK_TEST_KUN?['--kun',process.env.RUNDESK_TEST_KUN]:[]),'--demo','--data',temp,'--listen','127.0.0.1:38732'],{env:{...process.env,RUNDESK_TOKEN:''},stdio:['ignore','ignore','pipe']});
   for(let n=0;n<100;n++){try{await api('/meta');break}catch{}await pause(100)}
   const work=(await api('/workspaces'))[0],session=await api('/sessions',{workspaceId:work.id,title:'Codex 只读调试 · 本地协议模拟'});
   for(let n=0;n<3;n++){await api(`/sessions/${session.id}/turns`,{text:`轨迹 告警 第 ${n+1} 轮 <img src=x onerror="window.debugXSS=true"> `+(n===0?'中'.repeat(10000):'')});await finish(session.id)}

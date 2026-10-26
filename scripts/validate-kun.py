@@ -2,6 +2,7 @@
 """Run local Kun checks with durable logs and atomic, per-step receipts.
 
 Requires Python 3, the Go version from go.mod, Node, and a C compiler for race.
+Builds the RunDesk host only; --kun selects a separately built external engine.
 No remote model credentials are required; HTTP uses the local model fixture.
 """
 import argparse
@@ -30,31 +31,55 @@ def now():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--go", default="go", help="Go executable or absolute path")
+    parser.add_argument("--kun", default=os.environ.get("RUNDESK_TEST_KUN", ""),
+                        help="external Kun executable (or RUNDESK_TEST_KUN); never built from this project")
     parser.add_argument("--output", default="validation/kun", help="new output directory (never overwrite an existing run)")
-    parser.add_argument("--checks", default="go-test,go-vet,go-race,build,windows,syntax,ui,http")
+    parser.add_argument("--checks", default="build,go-test,go-vet,go-race,sdk-test,sdk-vet,windows,syntax,ui,http")
     args = parser.parse_args()
     go = shutil.which(args.go)
     if not go:
         parser.error("Go not found; install the go.mod version or pass --go /path/to/go")
     version = re.search(r'const Version = "([^"]+)"', (ROOT / "internal/app/api_v1.go").read_text()).group(1)
     checks = args.checks.split(",")
-    known = ["go-test", "go-vet", "go-race", "build", "windows", "syntax", "ui", "http"]
+    known = ["build", "go-test", "go-vet", "go-race", "sdk-test", "sdk-vet", "windows", "syntax", "ui", "http"]
     if not checks or any(c not in known for c in checks) or len(checks) != len(set(checks)):
         parser.error("--checks must contain unique names from " + ",".join(known))
     if "http" in checks and "build" not in checks:
         parser.error("http requires build in this run so stale binaries cannot pass")
+    external = None
+    if args.kun:
+        candidate = Path(args.kun).expanduser().resolve()
+        if not candidate.is_file() or not os.access(candidate, os.X_OK):
+            parser.error("--kun must select an existing executable")
+        try:
+            engine_version = subprocess.check_output([str(candidate), "--version"], text=True,
+                                                     stderr=subprocess.STDOUT, timeout=5).strip()
+        except (OSError, subprocess.SubprocessError) as error:
+            parser.error("external Kun --version failed: " + str(error))
+        external = {"path": str(candidate), "sha256": hashlib.sha256(candidate.read_bytes()).hexdigest(),
+                    "versionOutput": engine_version}
+    if any(c in checks for c in ("go-test", "go-race", "http")) and external is None:
+        parser.error("engine integration checks require --kun /absolute/path/to/kun (or RUNDESK_TEST_KUN)")
+    host_binary = ROOT / "bin" / ("rundesk.exe" if os.name == "nt" else "rundesk")
+    if "build" not in checks:
+        host_binary = Path(os.environ.get("RUNDESK_TEST_HOST", str(host_binary))).expanduser().resolve()
+        if any(c in checks for c in ("go-test", "go-race")) and not host_binary.is_file():
+            parser.error("host integration checks need build in this run, or an existing RUNDESK_TEST_HOST")
     output = Path(args.output).resolve()
     output.mkdir(parents=True, exist_ok=False)
     env = os.environ.copy()
     env.setdefault("GOMAXPROCS", "4")
+    env["RUNDESK_TEST_HOST"] = str(host_binary)
+    if external:
+        env["RUNDESK_TEST_KUN"] = external["path"]
     sources = sorted([ROOT / "go.mod", ROOT / "go.sum", ROOT / "Makefile"] +
-                     [p for folder in ("cmd", "internal", "scripts") for p in (ROOT / folder).rglob("*")
+                     [p for folder in ("cmd", "internal", "scripts", "third_party/kun-sdk") for p in (ROOT / folder).rglob("*")
                       if p.is_file() and "__pycache__" not in p.parts])
     fingerprint = hashlib.sha256()
     for p in sources:
         fingerprint.update(p.relative_to(ROOT).as_posix().encode() + b"\0" + p.read_bytes() + b"\0")
     report = {"version": version, "startedAt": now(), "status": "running", "passed": False,
-              "sourceSHA256": fingerprint.hexdigest(), "selectedChecks": checks,
+              "sourceSHA256": fingerprint.hexdigest(), "selectedChecks": checks, "externalKun": external,
               "goVersion": subprocess.check_output([go, "version"], text=True).strip(), "checks": []}
 
     def save():
@@ -103,9 +128,11 @@ def main():
     commands = {
         "go-test": ([[go, "test", "./...", "-count=1", "-timeout=300s"]], 420, {}),
         "go-vet": ([[go, "vet", "./..."]], 180, {}),
-        "go-race": ([[go, "test", "-race", "./internal/app", "./internal/kun", "./internal/store", "-run", "TestSetup|TestKunEvaluation|TestKunCompar|TestKunHypothesis|TestKunTaskSet|TestKunCase|TestKunBenchmark|TestKunSkill|TestKunArtifact|TestKunFixture|TestBash|TestCoding|TestFast", "-count=1", "-timeout=180s"]], 300, {}),
-        "build": ([[go, "build", "-buildvcs=false", "-trimpath", "-o", "bin/" + binary, "./cmd/" + binary] for binary in ("rundesk", "kun")], 180, {"CGO_ENABLED": "0"}),
-        "windows": ([[go, "build", "-buildvcs=false", "-trimpath", "-o", "bin/" + binary + "-windows-amd64.exe", "./cmd/" + binary] for binary in ("rundesk", "kun")], 180, {"GOOS": "windows", "GOARCH": "amd64", "CGO_ENABLED": "0"}),
+        "go-race": ([[go, "test", "-race", "./internal/app", "./internal/store", "-run", "TestSetup|TestKunEvaluation|TestKunCompar|TestKunHypothesis|TestKunTaskSet|TestKunCase|TestKunBenchmark|TestKunSkill|TestKunArtifact|TestKunFixture|TestBash|TestCoding|TestFast", "-count=1", "-timeout=180s"]], 300, {}),
+        "sdk-test": ([[go, "-C", "third_party/kun-sdk", "test", "./...", "-count=1", "-timeout=180s"]], 240, {}),
+        "sdk-vet": ([[go, "-C", "third_party/kun-sdk", "vet", "./..."]], 180, {}),
+        "build": ([[go, "build", "-buildvcs=false", "-trimpath", "-o", str(host_binary), "./cmd/rundesk"]], 180, {"CGO_ENABLED": "0"}),
+        "windows": ([[go, "build", "-buildvcs=false", "-trimpath", "-o", "bin/rundesk-windows-amd64.exe", "./cmd/rundesk"]], 180, {"GOOS": "windows", "GOARCH": "amd64", "CGO_ENABLED": "0"}),
         "syntax": ([["node", "--check", str(p.relative_to(ROOT))] for folder in ("internal/web", "scripts") for p in sorted((ROOT / folder).rglob("*")) if p.suffix in (".js", ".cjs")], 30, {}),
         "ui": ([["node", "scripts/" + script] for script in UI], 60, {}),
         "http": ([["node", "scripts/kun-coding-http-test.cjs"], ["node", "scripts/kun-evaluation-http-test.cjs"], ["node", "scripts/kun-k4-http-test.cjs"], ["node", "scripts/kun-fixtures-http-test.cjs"]], 120, {}),
@@ -115,8 +142,8 @@ def main():
         for name in known:
             if name not in checks:
                 continue
-            if name == "http" and not any(r["name"] == "build" and r["status"] == "passed" for r in report["checks"]):
-                report["checks"].append({"name": name, "status": "blocked", "reason": "build did not pass"})
+            if name in ("go-test", "go-race", "http") and "build" in checks and not any(r["name"] == "build" and r["status"] == "passed" for r in report["checks"]):
+                report["checks"].append({"name": name, "status": "blocked", "reason": "host build did not pass"})
                 save()
                 continue
             run(name, *commands[name])

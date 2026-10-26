@@ -4,13 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	p "github.com/shengjuntu/rundesk/internal/kunproto"
+	p "github.com/your-org/kun/sdk/protocol"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -19,17 +17,38 @@ import (
 
 func buildKunTestBinary(t *testing.T) string {
 	t.Helper()
-	name := "kun"
-	if runtime.GOOS == "windows" {
-		name += ".exe"
+	binary := os.Getenv("RUNDESK_TEST_KUN")
+	if binary == "" {
+		t.Skip("external Kun integration requires RUNDESK_TEST_KUN=/absolute/path/to/kun")
 	}
-	binary := filepath.Join(t.TempDir(), name)
-	cmd := exec.Command(filepath.Join(runtime.GOROOT(), "bin", "go"), "build", "-buildvcs=false", "-o", binary, "./cmd/kun")
-	cmd.Dir = filepath.Join("..", "..")
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("build Kun: %v\n%s", err, out)
+	if !filepath.IsAbs(binary) {
+		t.Fatal("RUNDESK_TEST_KUN must be an absolute path")
+	}
+	info, err := os.Stat(binary)
+	if err != nil || !info.Mode().IsRegular() {
+		t.Fatalf("external Kun executable unavailable: %s (%v)", binary, err)
 	}
 	return binary
+}
+
+func init() {
+	// Production always uses its own RunDesk executable. Only test builds can
+	// substitute a separately built host binary for the __trace_mcp subprocess.
+	if executable := os.Getenv("RUNDESK_TEST_HOST"); executable != "" {
+		kunDiagnosticProviderExecutable = func() (string, error) {
+			if !filepath.IsAbs(executable) {
+				return "", fmt.Errorf("RUNDESK_TEST_HOST must be an absolute path")
+			}
+			info, err := os.Stat(executable)
+			if err != nil {
+				return "", err
+			}
+			if !info.Mode().IsRegular() {
+				return "", fmt.Errorf("RUNDESK_TEST_HOST is not a regular executable")
+			}
+			return executable, nil
+		}
+	}
 }
 func TestKunProcessConversationAndDebugHTTP(t *testing.T) {
 	t.Setenv("CODEX_HOME", t.TempDir())

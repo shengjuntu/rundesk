@@ -12,7 +12,7 @@
 | Capability | fixed-catalog-v1 | 固定本轮内置工具和已授权 MCP 工具，编译参数 schema，记录工具身份和 schema 哈希 |
 | Action | schema-action-v1 | 校验工具是否属于本轮目录及参数是否合法，返回声明式意图；模块自身不调用工具 |
 
-四模块、`LoopPolicy`、`Provider` 接口位于 `internal/kun/modules.go`。本轮只有 `tool-loop-v1`，实现选择由代码固定。`Harness` 保存 id/version/revision；每个模块保存 id/version/stateSchemaVersion、阶段和结构化状态，随现有 SQLite 快照持久化。
+四模块、`LoopPolicy`、`Provider` 接口位于 独立 Kun 项目的 `internal/engine/modules.go`。本轮只有 `tool-loop-v1`，实现选择由代码固定。`Harness` 保存 id/version/revision；每个模块保存 id/version/stateSchemaVersion、阶段和结构化状态，随现有 SQLite 快照持久化。
 
 内核控制执行顺序：校验 → 审批 → 再检查预算和取消 → 持久化 dispatched → 统一 `executeAction` → 记录结果。无效参数形成 rejected 工具结果供模型纠正，不弹出审批、不请求外部工具、不消耗实际工具调用次数；重复错误受连续失败上限约束。工具结果丢失仍为 outcome_unknown，不自动重试。
 
@@ -51,7 +51,7 @@ token 阈值是**依据已报告用量的后续动作门槛**，不是请求前�
 
 ## JSON Schema 支持范围
 
-实现位于 `internal/kun/schema.go`，无新运行依赖。默认按有界 JSON Schema 2020-12 子集处理；显式 `$schema` 只接受该 dialect。
+实现位于 独立 Kun 项目的 `internal/engine/schema.go`，无新运行依赖。默认按有界 JSON Schema 2020-12 子集处理；显式 `$schema` 只接受该 dialect。
 
 - 类型：object、array、string、number、integer、boolean、null 及类型数组。
 - 对象：properties、required、additionalProperties、patternProperties、propertyNames、min/maxProperties、dependentRequired、dependentSchemas。

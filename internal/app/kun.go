@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	kc "github.com/shengjuntu/rundesk/internal/adapters/kun"
-	p "github.com/shengjuntu/rundesk/internal/kunproto"
+	kc "github.com/your-org/kun/sdk/client"
+	p "github.com/your-org/kun/sdk/protocol"
 	"github.com/shengjuntu/rundesk/internal/store"
 	"io"
 	"net/http"
@@ -172,7 +172,30 @@ func (m *Manager) runKun(s Session, w Workspace, h *handle, in Input) {
 		m.finish(s.ID, "failed", "启动 Kun："+err.Error())
 		return
 	}
-	_ = m.Store.Put("runtime", s.ID, RuntimeStatus{ID: s.ID, InstanceID: s.InstanceID, WorkspaceID: s.WorkspaceID, ConnectionID: fmt.Sprint(client.PID()), ExecutionMode: "local", Live: true, ConnectedAt: store.Now(), Notices: []RuntimeNotice{}, UserAgent: "Kun/" + p.EngineVersion, Effective: map[string]any{"runtimeKind": "kun", "model": cfg.Model, "endpoint": cfg.Endpoint, "allowWrite": cfg.AllowWrite, "allowBash": cfg.AllowBash, "bashApproval": cfg.BashApproval}})
+	info := client.Info()
+	_ = m.Store.Put("runtime", s.ID, RuntimeStatus{ID: s.ID, InstanceID: s.InstanceID, WorkspaceID: s.WorkspaceID, ConnectionID: fmt.Sprint(client.PID()), ExecutionMode: "local", Live: true, ConnectedAt: store.Now(), Notices: []RuntimeNotice{}, UserAgent: "Kun/" + info.EngineVersion, Effective: map[string]any{"runtimeKind": "kun", "engineVersion": info.EngineVersion, "protocolVersion": info.ProtocolVersion, "capabilities": info.Capabilities, "model": cfg.Model, "endpoint": cfg.Endpoint, "allowWrite": cfg.AllowWrite, "allowBash": cfg.AllowBash, "bashApproval": cfg.BashApproval}})
+	if start.Diagnostic != nil {
+		if err := client.RequireCapabilities("diagnosticProvider"); err != nil {
+			m.finish(s.ID, "failed", "Kun 诊断需要支持 diagnosticProvider 的独立引擎："+err.Error())
+			return
+		}
+	}
+	if start.Resume != nil {
+		if err := requireKunCapabilities(client, "resumeCheckpoint"); err != nil {
+			m.finish(s.ID, "failed", err.Error())
+			return
+		}
+	}
+	if start.Fork != nil {
+		caps := kunForkCapabilities(start.Fork.Bundle.Mode)
+		if start.Fork.Bundle.Hypothesis != nil {
+			caps = append(caps, "forkHypothesis")
+		}
+		if err := requireKunCapabilities(client, caps...); err != nil {
+			m.finish(s.ID, "failed", err.Error())
+			return
+		}
+	}
 	h.mu.Lock()
 	canceled := h.canceled
 	h.mu.Unlock()
@@ -320,7 +343,52 @@ func (m *Manager) kunClient(sid string) (*kc.Client, error) {
 	if c == nil {
 		return nil, failure(409, "kun_offline", "Kun worker 尚未启动或已回收；历史记录仍可在轨迹中查看")
 	}
+	select {
+	case <-c.Done():
+		return nil, failure(409, "kun_offline", "Kun worker 已退出；历史记录仍可在轨迹中查看")
+	default:
+	}
 	return c, nil
+}
+
+func requireKunCapabilities(c *kc.Client, names ...string) error {
+	info := c.Info()
+	missing := []string{}
+	for _, name := range names {
+		if !kunHasCapability(info, name) {
+			missing = append(missing, name)
+		}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	if err := c.RequireCapabilities(missing...); err != nil {
+		return failure(409, "kun_capability_unsupported", err.Error())
+	}
+	return nil
+}
+
+func kunHasCapability(info p.Hello, name string) bool {
+	if info.Capabilities[name] {
+		return true
+	}
+	// Kun 0.16 exposed the stable snapshot method as "inspect". Only this
+	// explicitly known legacy release receives that capability alias.
+	return name == "snapshot" && info.EngineVersion == "0.16.0" && info.Capabilities["inspect"]
+}
+
+func kunControlCapability(operation string) string {
+	switch operation {
+	case "pause", "resume":
+		return "pause"
+	case "step", "steer":
+		return operation
+	case "set_breakpoints":
+		return "conditionalBreakpoints"
+	case "set_harness":
+		return "runtimeHarness"
+	}
+	return ""
 }
 func (m *Manager) stopKun(s Session, h *handle) {
 	h.mu.Lock()
@@ -353,6 +421,9 @@ func (m *Manager) steerKun(s Session, in SteerInput) (SteerReceipt, error) {
 	c, e := m.kunClient(s.ID)
 	if e != nil {
 		return receipt, e
+	}
+	if err := requireKunCapabilities(c, "steer"); err != nil {
+		return receipt, err
 	}
 	ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
 	defer cancel()
@@ -405,6 +476,12 @@ func (s *Server) kunRoutes(mux *http.ServeMux) {
 			respond(w, nil, failure(400, "revision_required", "调试控制需要当前状态版本"))
 			return
 		}
+		if capability := kunControlCapability(in.Operation); capability != "" {
+			if err := requireKunCapabilities(c, capability); err != nil {
+				respond(w, nil, err)
+				return
+			}
+		}
 		var result p.Receipt
 		e = c.Call(r.Context(), "control", in, &result)
 		var remote *kc.RemoteError
@@ -425,6 +502,10 @@ func (s *Server) kunRoutes(mux *http.ServeMux) {
 			return
 		}
 		var result p.Snapshot
+		if err := requireKunCapabilities(c, "snapshot"); err != nil {
+			respond(w, nil, err)
+			return
+		}
 		e = c.Call(r.Context(), "snapshot", map[string]any{"sequence": seq}, &result)
 		respond(w, redact(result), e)
 	})

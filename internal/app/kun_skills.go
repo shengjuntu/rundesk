@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/shengjuntu/rundesk/internal/kun"
-	p "github.com/shengjuntu/rundesk/internal/kunproto"
+	p "github.com/your-org/kun/sdk/protocol"
+	"github.com/your-org/kun/sdk/validation"
 	"github.com/shengjuntu/rundesk/internal/store"
 	"net/http"
 	"strings"
@@ -279,7 +279,7 @@ func (m *Manager) CreateKunSkill(in KunSkillInput) (KunSkill, error) {
 				return out, failure(409, "skill_source_failed_action", "来源包含非成功动作，不能提炼为候选")
 			}
 		}
-		guard := kun.FastGuardFor(state)
+		guard := validation.FastGuardFor(state)
 		for _, task := range set.Cases {
 			if p.FixtureMode(task.WorkspaceFixture) != guard.WorkspaceMode {
 				return out, failure(409, "skill_workspace_mode", "来源与全部验证案例必须使用相同的工作区模式")
@@ -301,7 +301,7 @@ func (m *Manager) CreateKunSkill(in KunSkillInput) (KunSkill, error) {
 		}
 		out.Sources = append(out.Sources, KunSkillSource{PlanID: id, SessionID: state.SessionID, RunID: state.RunID, InputHash: canonicalCaseInput(v.Preview.Case.Input), EvidenceHash: score.EvidenceHash, Through: score.Summary.Through})
 	}
-	if err = kun.ValidateFastProgram(out.Program); err != nil {
+	if err = validation.ValidateFastProgram(out.Program); err != nil {
 		return out, failure(400, "skill_ir_invalid", err.Error())
 	}
 	_ = json.Unmarshal(p.JSON(out), &out)
@@ -313,7 +313,7 @@ func (m *Manager) KunSkill(id string) (KunSkill, error) {
 	if err := m.Store.Get("kun_skill", id, &v); err != nil {
 		return v, failure(404, "skill_candidate_missing", "Skill 候选不存在")
 	}
-	if v.ID != id || v.Schema != 1 || v.Hash != skillHash(v) || kun.ValidateFastProgram(v.Program) != nil {
+	if v.ID != id || v.Schema != 1 || v.Hash != skillHash(v) || validation.ValidateFastProgram(v.Program) != nil {
 		return v, failure(409, "skill_candidate_integrity", "Skill 候选指纹不一致")
 	}
 	return v, nil
