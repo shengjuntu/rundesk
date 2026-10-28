@@ -17,6 +17,10 @@ func TestBuildCenterAndNativePluginsRemainAdministratorResources(t *testing.T) {
 		for _, prefix := range []string{"/api", "/api/v1"} {
 			for _, p := range []struct{ method, path string }{
 				{"GET", "/build-center/recipes"}, {"POST", "/build-center/recipes"},
+				{"GET", "/build-center/sources"}, {"PUT", "/build-center/sources"},
+				{"GET", "/build-center/recipes/builtin-news2douyin/sources"},
+				{"GET", "/build-center/recipes/builtin-news2douyin/dockerfile"},
+				{"GET", "/build-center/recipes/builtin-news2douyin/context.zip?codexVersion=0.157.1"},
 				{"GET", "/build-center/builds"}, {"POST", "/build-center/builds/aaaaaaaaaaaaaaaaaaaaaaaa/rebuild"},
 				{"GET", "/build-center/images"}, {"DELETE", "/build-center/images/aaaaaaaaaaaaaaaaaaaaaaaa"},
 				{"POST", "/build-center/images/aaaaaaaaaaaaaaaaaaaaaaaa/launch"},
@@ -46,6 +50,10 @@ func TestBuildMCPIsTheOnlyTaskCapabilityAuthenticationBoundary(t *testing.T) {
 			{"POST", "/build-center/mcp"}, {"GET", "/build-center/mcp"},
 			{"POST", "/build-center/mcp/extra"}, {"POST", "/build-center/assistant-runs"},
 			{"GET", "/build-center/images"}, {"GET", "/build-center/recipes"},
+			{"GET", "/build-center/sources"}, {"PUT", "/build-center/sources"},
+			{"GET", "/build-center/recipes/builtin-news2douyin/sources"},
+			{"GET", "/build-center/recipes/builtin-news2douyin/dockerfile"},
+			{"GET", "/build-center/recipes/builtin-news2douyin/context.zip?codexVersion=0.157.1"},
 		} {
 			req := httptest.NewRequest(p.method, "http://127.0.0.1:3210"+prefix+p.path, strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/list"}`))
 			req.Header.Set("Content-Type", "application/json")
@@ -74,7 +82,7 @@ func TestBuildCenterOpenAPIKeepsCapabilitySeparateFromAdministratorAPI(t *testin
 	}
 	spec := object(t, r)
 	paths := spec["paths"].(map[string]any)
-	for _, p := range []string{"/build-center/recipes", "/build-center/images", "/build-center/assistant-runs", "/plugins/inspect", "/instances/{iid}/plugins"} {
+	for _, p := range []string{"/build-center/recipes", "/build-center/sources", "/build-center/recipes/{rid}/sources", "/build-center/recipes/{rid}/dockerfile", "/build-center/recipes/{rid}/context.zip", "/build-center/images", "/build-center/assistant-runs", "/plugins/inspect", "/instances/{iid}/plugins"} {
 		ops, ok := paths[p].(map[string]any)
 		if !ok {
 			t.Fatalf("missing contract: %s", p)

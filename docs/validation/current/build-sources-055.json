@@ -1,0 +1,111 @@
+{
+  "checkedAt": "2026-10-27T06:39:04.667057+00:00",
+  "version": "0.55.0",
+  "scope": "External recipe files and editable international/china build source catalogs; source/config fixtures and local HTTP, no Docker build",
+  "catalog": {
+    "groups": [
+      "international",
+      "china"
+    ],
+    "defaultGroup": "international",
+    "types": [
+      "docker",
+      "apt",
+      "npm",
+      "pip",
+      "conda",
+      "yum",
+      "huggingface",
+      "github"
+    ],
+    "entries": 22,
+    "sha256": "0b779d47ce6e33c0d7fc5c7e65ad0461370f8e50f2892ad4d30e6bfe64f485e6",
+    "speedOrReachabilityTested": false
+  },
+  "checks": [
+    {
+      "command": "go test -json ./...",
+      "exitCode": 0,
+      "testEvents": {
+        "pass": 668,
+        "skip": 14
+      },
+      "note": "includes subtests; 14 external Kun tests skipped"
+    },
+    {
+      "command": "go test -race ./internal/app -run 'TestBuildSource' -count=1",
+      "exitCode": 0,
+      "scope": "catalog concurrent updates, typed public values, actual exec argv, source snapshots and frozen definition/rebuild; recorded by backend agent"
+    },
+    {
+      "command": "python3 scripts/test_profiles.py",
+      "exitCode": 0,
+      "testsPassed": 20,
+      "scope": "file Dockerfiles, variants, local vendored source, APT deb822/Signed-By and HTTPS CA prerequisite"
+    },
+    {
+      "command": "python3 scripts/test_upstream_profiles.py",
+      "exitCode": 0,
+      "testsPassed": 7
+    },
+    {
+      "command": "python3 scripts/embed-profiles.py --check",
+      "exitCode": 0,
+      "scope": "six profile directories plus generic template match compiler; no Go embedding"
+    },
+    {
+      "command": "python3 scripts/test_agent_reach_wheel.py",
+      "exitCode": 0,
+      "scope": "actual offline wheel build/install with no runtime dependency install; 7 guide/Skill resource files retained"
+    },
+    {
+      "command": "node internal/web/tests/build-center.cjs",
+      "exitCode": 0,
+      "scope": "actual shipped JS in JSDOM; groups, mixed selections, custom fields, extension types, default China, stale source editor, unsupported arguments, SHA submit and export"
+    },
+    {
+      "command": "compiled Linux binary over local HTTP",
+      "exitCode": 0,
+      "report": "build-sources-live-055.json"
+    },
+    {
+      "command": "real Chromium layout and shipped JS with HTTP fixtures",
+      "exitCode": 0,
+      "report": "build-sources-browser-055.json"
+    },
+    {
+      "command": "python3 scripts/check-docs.py",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    }
+  ],
+  "builds": [
+    {
+      "platform": "linux/amd64",
+      "exitCode": 0,
+      "cgo": false,
+      "bytes": 24415979,
+      "sha256": "26a91150e03245a81403bdec6a27b567a18930b4b41e64777293152b4e3c2a8d",
+      "executionScope": "version and local HTTP deployment fixture"
+    },
+    {
+      "platform": "windows/amd64",
+      "exitCode": 0,
+      "cgo": false,
+      "bytes": 24729088,
+      "sha256": "01ccb9277f9bc1057fdaa6dc9f2b608271e69c29a55f997278e8423a9e6a3c80",
+      "executionScope": "cross-compiled only"
+    }
+  ],
+  "limits": {
+    "dockerBuildTested": false,
+    "sourceSpeedTested": false,
+    "liveModelTested": false,
+    "windowsExecuted": false,
+    "fullOfflineBuild": false
+  },
+  "deployment": "Keep recipes/ (including generic/) and config/ beside the executable or set RUNDESK_RECIPES_DIR / RUNDESK_BUILD_SOURCES. Upgrade preserves saved sources and history."
+}

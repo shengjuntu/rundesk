@@ -82,6 +82,68 @@ class ProfilesTest(unittest.TestCase):
         code, _, _ = self.cli("pack", "news2douyin", "--codex-version", "0.144.6", "--output", str(archives[0]))
         self.assertEqual(code, 2); self.assertEqual(archives[0].read_bytes(), original)
 
+    def test_dockerfile_is_read_from_editable_file(self):
+        copy = self.root / "examples"
+        shutil.copytree(ROOT / "examples", copy, ignore=shutil.ignore_patterns("__pycache__"))
+        file = copy / "news2douyin/Dockerfile"
+        file.write_text(file.read_text().replace("USER node", "RUN echo external-file-change\nUSER node"))
+        with patch.object(profiles, "ROOT", copy):
+            target = self.root / "edited-context"
+            code, _, error = self.cli("prepare", "news2douyin", "--codex-version", "0.157.1", "--base-image", "registry.example.test/library/node:22-bookworm-slim", "--output", str(target))
+            self.assertEqual(code, 0, error)
+        docker = (target / "Dockerfile").read_text()
+        self.assertIn("RUN echo external-file-change", docker)
+        self.assertIn("ARG RD_BASE_IMAGE=registry.example.test/library/node:22-bookworm-slim", docker)
+        self.assertIn("FROM ${RD_BASE_IMAGE}", docker)
+
+    def test_source_arguments_apply_only_during_package_install(self):
+        for name in profiles.PROFILE_IDS:
+            with self.subTest(profile=name):
+                target = self.root / name; target.mkdir()
+                profile = profiles.load_profile(name)
+                profiles.render(profile, profiles.resolve(profile), "0.157.1", "node:22-bookworm-slim", target)
+                docker = (target / "Dockerfile").read_text()
+                for arg in ("RD_BASE_IMAGE", "RD_APT_MIRROR", "RD_APT_SECURITY_MIRROR", "RD_NPM_REGISTRY", "RD_PIP_INDEX_URL"):
+                    self.assertIn("ARG " + arg + "=", docker)
+                self.assertIn('npm_config_registry="${RD_NPM_REGISTRY}" npm install --global', docker)
+                self.assertFalse(any(line.startswith("ENV ") and ("RD_NPM_REGISTRY" in line or "RD_PIP_INDEX_URL" in line) for line in docker.splitlines()))
+                self.assertTrue((target / "tools/configure-apt.sh").is_file())
+                if name in ("news2douyin", "people-search", "video-build"):
+                    self.assertIn('PIP_INDEX_URL="${RD_PIP_INDEX_URL}" python3 -m pip install', docker)
+                else:
+                    self.assertIn('npm_config_registry="${RD_NPM_REGISTRY}" PIP_INDEX_URL="${RD_PIP_INDEX_URL}" sh /opt/rundesk-upstream/install.sh', docker)
+
+    def test_debian_apt_source_override_preserves_format_and_signature(self):
+        root = self.root / "apt-root"
+        etc = root / "etc"; sources = etc / "apt/sources.list.d"
+        sources.mkdir(parents=True)
+        (etc / "os-release").write_text('ID=debian\nVERSION_CODENAME=bookworm\n')
+        certificates = etc / "ssl/certs/ca-certificates.crt"
+        certificates.parent.mkdir(parents=True)
+        certificates.write_text("fixture: presence check only, no TLS connection")
+        path = sources / "debian.sources"
+        path.write_text("Types: deb\nURIs: http://deb.debian.org/debian\nSuites: bookworm bookworm-updates\nComponents: main\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n\nTypes: deb\nURIs: http://deb.debian.org/debian-security\nSuites: bookworm-security\nComponents: main\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n")
+        legacy = sources / "legacy.list"
+        legacy.write_text("deb [signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] https://deb.debian.org/debian bookworm main\ndeb https://third-party.example.test/repo stable main\n")
+        env = dict(os.environ, RD_APT_MIRROR="https://mirror.example.test/debian", RD_APT_SECURITY_MIRROR="https://mirror.example.test/debian-security")
+        script = ROOT / "examples/_shared/configure-apt.sh"
+        subprocess.run(["sh", str(script), str(root)], env=env, check=True)
+        content = path.read_text()
+        self.assertIn("URIs: https://mirror.example.test/debian\n", content)
+        self.assertIn("URIs: https://mirror.example.test/debian-security\n", content)
+        self.assertIn("Suites: bookworm bookworm-updates", content)
+        self.assertIn("Suites: bookworm-security", content)
+        self.assertEqual(content.count("Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg"), 2)
+        self.assertIn("https://third-party.example.test/repo stable main", legacy.read_text())
+        certificates.unlink()
+        result = subprocess.run(["sh", str(script), str(root)], env=env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 65)
+        self.assertIn("requires CA certificates", result.stderr)
+        (etc / "os-release").write_text("ID=alpine\n")
+        result = subprocess.run(["sh", str(script), str(root)], env=env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 64)
+        self.assertIn("only for Debian", result.stderr)
+
     def test_research_profiles_install_reviewed_local_agent_reach(self):
         for name in ("news2douyin", "people-search"):
             with self.subTest(profile=name):

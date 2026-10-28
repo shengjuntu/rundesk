@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Control API (RDCA)",
-    "version": "0.54.1",
+    "version": "0.55.0",
     "description": "RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter；附加 UHP /v1 入口共用任务核心，具体范围与限制见 docs/UHP.md，不声明完整规范兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。当前应用接入、错误、幂等及示例见 docs/API-V1.md。"
   },
   "servers": [
@@ -2223,6 +2223,12 @@
                     "type": "string",
                     "pattern": "^[a-f0-9]{24}$",
                     "description": "同一逻辑操作重试保持不变；更改参数需新值。"
+                  },
+                  "recipeSha": {
+                    "type": "string"
+                  },
+                  "buildSources": {
+                    "$ref": "#/components/schemas/BuildSourceOptions"
                   }
                 },
                 "required": [
@@ -3075,6 +3081,284 @@
         },
         "x-administrator-only": true,
         "description": "读取有界脱敏日志，游标针对脱敏后流。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
+      }
+    },
+    "/build-center/recipes/{rid}/dockerfile": {
+      "get": {
+        "operationId": "get_build_center_recipes_rid_dockerfile",
+        "summary": "管理员：预览外置或冻结配方的Dockerfile",
+        "parameters": [
+          {
+            "name": "rid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "codexVersion",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "内置配方可选精确Codex版本；省略时预览模板。自定义配方不可覆盖。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "dockerfile": {
+                      "type": "string"
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "template": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "dockerfile",
+                    "path",
+                    "template"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "预览外置或冻结配方的Dockerfile。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
+      }
+    },
+    "/build-center/recipes/{rid}/context.zip": {
+      "get": {
+        "operationId": "get_build_center_recipes_rid_context_zip",
+        "summary": "管理员：下载完整构建上下文ZIP",
+        "parameters": [
+          {
+            "name": "rid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "codexVersion",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "内置配方必须提供精确Codex版本；自定义配方按原快照导出。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "下载完整构建上下文ZIP。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
+      }
+    },
+    "/build-center/sources": {
+      "get": {
+        "operationId": "get_build_center_sources",
+        "summary": "管理员：读取外置下载源列表与可扩展参数类型",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildSourceCatalog"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "仅管理员。按构建节点读取运行列表；首次从发行文件复制到数据目录，之后修改无需重启。不承诺源的地域、速度或实际可达性。"
+      },
+      "put": {
+        "operationId": "put_build_center_sources",
+        "summary": "管理员：按revision更新外置源列表",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildSourceCatalog"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "仅管理员。须提交读取时的revision；不一致返回409并保留原列表。只接受公开地址，不接受URL凭据或查询参数；不改写既有构建快照。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuildSourceCatalog"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/build-center/recipes/{rid}/sources": {
+      "get": {
+        "operationId": "get_build_center_recipes_rid_sources",
+        "summary": "管理员：识别配方实际来源类型及已声明并使用的源参数",
+        "parameters": [
+          {
+            "name": "rid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "types": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BuildSourceCapability"
+                      }
+                    }
+                  },
+                  "required": [
+                    "types"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "识别配方实际来源类型及已声明并使用的源参数。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
       }
     },
     "/instances/{iid}/builds": {
@@ -28230,6 +28514,12 @@
           },
           "recipeSmoke": {
             "$ref": "#/components/schemas/RecipeSmokeSpec"
+          },
+          "buildSources": {
+            "$ref": "#/components/schemas/BuildSourceSnapshot"
+          },
+          "runtimeIdentity": {
+            "$ref": "#/components/schemas/RuntimeImageIdentity"
           }
         },
         "required": [
@@ -31004,6 +31294,286 @@
           "compatibility",
           "unknownFields",
           "warnings"
+        ],
+        "additionalProperties": false
+      },
+      "BuildSourceField": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "argument": {
+            "type": "string",
+            "pattern": "^RD_[A-Z0-9_]+$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "url",
+              "urls",
+              "image"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "argument"
+        ],
+        "additionalProperties": false
+      },
+      "BuildSourceType": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuildSourceField"
+            }
+          },
+          "detectPattern": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "fields"
+        ],
+        "additionalProperties": false
+      },
+      "BuildSourceEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "type": "string"
+          },
+          "requiresConfiguration": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "values"
+        ],
+        "additionalProperties": false
+      },
+      "BuildSourceGroup": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuildSourceEntry"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "sources"
+        ],
+        "additionalProperties": false
+      },
+      "BuildSourceCatalog": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "const": 1
+          },
+          "revision": {
+            "type": "string",
+            "description": "当前源列表SHA；保存时提供，防止覆盖并发修改"
+          },
+          "defaultGroup": {
+            "type": "string"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuildSourceGroup"
+            }
+          },
+          "types": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuildSourceType"
+            }
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "groups"
+        ],
+        "additionalProperties": false
+      },
+      "BuildSourceOptions": {
+        "type": "object",
+        "properties": {
+          "group": {
+            "type": "string"
+          },
+          "catalogRevision": {
+            "type": "string"
+          },
+          "selections": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "overrides": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": [
+          "group"
+        ],
+        "additionalProperties": false
+      },
+      "BuildSourceSnapshot": {
+        "type": "object",
+        "properties": {
+          "definitions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuildSourceType"
+            }
+          },
+          "group": {
+            "type": "string"
+          },
+          "catalogSHA": {
+            "type": "string"
+          },
+          "selections": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "arguments": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "unconfigured": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "group",
+          "catalogSHA",
+          "selections",
+          "values",
+          "arguments"
+        ],
+        "additionalProperties": false
+      },
+      "BuildSourceCapability": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "detected": {
+            "type": "boolean"
+          },
+          "supported": {
+            "type": "boolean"
+          },
+          "arguments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "detected",
+          "supported",
+          "arguments"
+        ],
+        "additionalProperties": false
+      },
+      "RuntimeImageIdentity": {
+        "type": "object",
+        "properties": {
+          "profileVersion": {
+            "type": "string"
+          },
+          "agentReach": {
+            "type": "boolean"
+          },
+          "upstream": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": true
+          },
+          "toolLabels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "profileVersion",
+          "agentReach"
         ],
         "additionalProperties": false
       },

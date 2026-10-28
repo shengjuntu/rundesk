@@ -42,11 +42,11 @@ An **instance** is the main object for daily work: choose a Codex or Kun instanc
 
 Version 0.54.0 removes the Kun forks, evaluation task sets, K4 Skill workbench, and offline experiment launchers from everyday navigation. Their APIs and stored data remain, as does inspection of existing fork previews. K4's parameterized tool flows are distinct from ordinary `SKILL.md` management.
 
-This release reorganizes the WebUI; it does **not** yet synchronize instance configuration across workspaces. Docker configuration still lives in separate instance/workspace environments. Automatic collection into a shared capability catalog and translation between Agent configuration formats are also pending. See [WebUI behavior and limits](docs/WEBUI.md).
+The instance-centered WebUI does **not** yet synchronize instance configuration across workspaces. Docker configuration still lives in separate instance/workspace environments. Automatic collection into a shared capability catalog and translation between Agent configuration formats are also pending. See [WebUI behavior and limits](docs/WEBUI.md).
 
 ## Current source version
 
-**RunDesk 0.54.1 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.55.0 source · external Kun 0.17.0 · worker protocol 16**
 
 This source includes runtime/resource contracts, a unified observation model, the conversation trace reader, the build center, and two API entry points over the same task core:
 
@@ -55,7 +55,9 @@ This source includes runtime/resource contracts, a unified observation model, th
 | **RDCA v1** — `/api/v1` | RunDesk's application and management API; machine-readable contract at `/api/v1/openapi.json` |
 | **UHP** — `/v1` | An additional service interface targeting protocol `2026-10-19`; implemented with [documented limits](docs/UHP.md), without a full conformance claim |
 
-Version 0.54.1 fixes the news2douyin and people-search 1.1.2 build recipes with reviewed local Agent-Reach source and its wheel packaging patch. Update/rebuild RunDesk to refresh embedded recipes, then start a new build from the recipe; rebuilding an old job preserves its old inputs. Codex remains an exact user-selected version. See [upgrade instructions](docs/UPGRADING.md).
+Version 0.55.0 loads build recipes from editable files in `recipes/<profile>/` instead of embedding their ZIPs in the executable. The build center previews Dockerfiles, exports complete contexts, and lets you select or edit download sources before a build. Source lists have international (primarily US/official) and China mirror groups covering pip, conda, npm, Docker, APT, YUM/DNF, Hugging Face, and GitHub; a recipe must declare the supported build arguments. Each build freezes its selected settings. See [build sources](docs/BUILD-SOURCES.md) and [upgrade instructions](docs/UPGRADING.md).
+
+The news2douyin and people-search 1.1.2 recipes retain the reviewed local Agent-Reach source and wheel packaging fix from 0.54.1. Codex remains an exact user-selected version; other dependencies still require their download channels.
 
 Version 0.54.0 focuses on instance navigation and configuration context without changing the storage or API schemas. It retains the persistent deadlines, progress and approval handoff, explicit capabilities, and [Python UHP client](examples/uhp_client.py) introduced in 0.53.0. Unsupported step/token budgets remain disclosed; applications can require supported capabilities before submission.
 
@@ -69,6 +71,8 @@ Use **Go 1.25.12** or a compatible newer toolchain. The WebUI is embedded; no fr
 make build
 ./bin/rundesk --data ./data
 ```
+
+When deploying the binary outside this source checkout, also deploy `recipes/` and `config/` beside it. Set `RUNDESK_RECIPES_DIR` for another recipe directory and `RUNDESK_BUILD_SOURCES` for a chosen source-list JSON file. The WebUI remains embedded; editable build assets are external. See [deployment](docs/SETUP.md).
 
 Open <http://127.0.0.1:3210> and configure Codex or Kun in the setup wizard. To explore the interface without real model calls:
 
@@ -93,7 +97,7 @@ Kun uses a tool-capable Chat Completions service; Codex uses its native provider
 | Agent deployment engineers | [Debugging](docs/DEBUG.md) · [Observation and capture](docs/UNIFIED_DEBUGGING.md) · [Read-only debug API/MCP](docs/DEBUG-SERVICE.md) |
 | Application developers | [Connect an application](docs/APPLICATION-CONNECT.md) · [API](docs/API-V1.md) · [Presets](docs/APPLICATION-RUNTIME-PRESETS.md) · [Python example](examples/application_quickstart.py) |
 | Harness developers and researchers | [Kun integration](docs/KUN.md) · [Harness controls](docs/KUN-HARNESS.md) · [Research APIs and historical workflows](docs/README.md#3-harness-开发与研究--harness-research) |
-| Maintainers and operators | [Architecture](docs/ARCHITECTURE.md) · [Build center](docs/BUILD-CENTER.md) · [Upgrading](docs/UPGRADING.md) · [Security](SECURITY.md) |
+| Maintainers and operators | [Architecture](docs/ARCHITECTURE.md) · [Build center](docs/BUILD-CENTER.md) · [Download sources](docs/BUILD-SOURCES.md) · [Upgrading](docs/UPGRADING.md) · [Security](SECURITY.md) |
 
 For local development, `make test` runs the host and SDK tests; `make check` adds race checks and `go vet`. Some integration checks require an independent Kun executable. Reproduction instructions and historical results are separated in [validation](docs/VALIDATION.md).
 

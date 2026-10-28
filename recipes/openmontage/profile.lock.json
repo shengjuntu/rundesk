@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "generatorVersion": "1.3.1",
+  "profile": {
+    "schemaVersion": 1,
+    "version": "1.0.0",
+    "runtime": "codex-docker",
+    "id": "openmontage",
+    "title": "OpenMontage（独立上游）",
+    "description": "保留 OpenMontage 原生 pipeline、导演 Skills、Remotion/HyperFrames 制作方式；TTS、图像和视频生成经 Video App MCP。独立于自研 video-build。",
+    "searchBackends": [
+      "none"
+    ],
+    "defaultSearchBackend": "none",
+    "aptPackages": [
+      "ffmpeg",
+      "fonts-noto-cjk",
+      "fontconfig",
+      "chromium"
+    ],
+    "pythonPackages": [],
+    "skill": "use-openmontage",
+    "tools": [
+      "Python 3.11+",
+      "OpenMontage native pipelines",
+      "OpenMontage provider registry",
+      "Remotion",
+      "HyperFrames 0.8.87",
+      "GSAP 3.15.0",
+      "FFmpeg",
+      "Chromium",
+      "Video App media MCP bridge"
+    ],
+    "outputs": [
+      "openmontage-project",
+      "final.mp4",
+      "native-stage-artifacts"
+    ],
+    "resources": {
+      "cpus": 4,
+      "memoryMB": 6144,
+      "network": "bridge"
+    },
+    "optionalComponents": [],
+    "skillFiles": [
+      "SKILL.md",
+      "agents/openai.yaml",
+      "references/video-app-providers.md"
+    ],
+    "upstream": "upstream.json"
+  },
+  "selection": {
+    "searchBackend": "none",
+    "agentReach": false,
+    "videoUse": false,
+    "nativeUpstream": "openmontage"
+  },
+  "codexVersion": "0.0.0",
+  "baseImage": "node:22-bookworm-slim",
+  "upstream": {
+    "schemaVersion": 1,
+    "repository": "https://github.com/calesthio/OpenMontage",
+    "commit": "c8066452325cb57c8fc1ba8c2a71b6e8842e6b65",
+    "sourceURL": "https://codeload.github.com/calesthio/OpenMontage/tar.gz/c8066452325cb57c8fc1ba8c2a71b6e8842e6b65",
+    "sourceSHA256": "dff7cd1cdf2cb0522398e00b3f0b75f32336b695a8be34ac8e6b6913055aab25",
+    "license": "AGPL-3.0",
+    "installScript": "install.sh",
+    "buildFiles": [
+      "install.sh",
+      "doctor.py",
+      "openmontage-python",
+      "hyperframes",
+      "npm/package.json",
+      "npm/package-lock.json",
+      "LICENSE-AGPL-3.0.txt",
+      "overlays/rundesk_video_app.py",
+      "overlays/video_app_tts.py",
+      "overlays/video_app_image.py",
+      "overlays/video_app_video.py",
+      "launch.py",
+      "patch_runtime.py"
+    ],
+    "skillDirectories": [],
+    "requiredFiles": [
+      "LICENSE",
+      "AGENTS.md",
+      "AGENT_GUIDE.md",
+      "tools/base_tool.py",
+      "tools/tool_registry.py",
+      "tools/audio/tts_selector.py",
+      "tools/graphics/image_selector.py",
+      "tools/video/video_selector.py",
+      "remotion-composer/package-lock.json",
+      "pipeline_defs/animated-explainer.yaml"
+    ]
+  },
+  "validation": {
+    "imageBuilt": false,
+    "modelTested": false,
+    "networkTested": false
+  }
+}

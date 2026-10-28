@@ -1,0 +1,369 @@
+{
+  "schemaVersion": 1,
+  "defaultGroup": "international",
+  "types": [
+    {
+      "id": "docker",
+      "name": "Docker 基础镜像",
+      "detectPattern": "(?im)^\\s*FROM\\s",
+      "fields": [
+        {
+          "id": "baseImage",
+          "label": "完整基础镜像（空值沿用配方）",
+          "argument": "RD_BASE_IMAGE",
+          "kind": "image"
+        }
+      ]
+    },
+    {
+      "id": "apt",
+      "name": "APT",
+      "detectPattern": "(?i)\\bapt(?:-get)?\\s",
+      "fields": [
+        {
+          "id": "mirror",
+          "label": "主仓库",
+          "argument": "RD_APT_MIRROR",
+          "kind": "url"
+        },
+        {
+          "id": "securityMirror",
+          "label": "安全更新仓库",
+          "argument": "RD_APT_SECURITY_MIRROR",
+          "kind": "url"
+        }
+      ]
+    },
+    {
+      "id": "npm",
+      "name": "npm / pnpm / Yarn",
+      "detectPattern": "(?i)\\b(?:npm|pnpm|yarn)\\s",
+      "fields": [
+        {
+          "id": "registry",
+          "label": "Registry",
+          "argument": "RD_NPM_REGISTRY",
+          "kind": "url"
+        }
+      ]
+    },
+    {
+      "id": "pip",
+      "name": "pip / PyPI",
+      "detectPattern": "(?i)\\bpip3?\\s",
+      "fields": [
+        {
+          "id": "indexUrl",
+          "label": "主索引",
+          "argument": "RD_PIP_INDEX_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    {
+      "id": "conda",
+      "name": "Conda / Mamba",
+      "detectPattern": "(?i)\\b(?:conda|mamba|micromamba)\\s",
+      "fields": [
+        {
+          "id": "channels",
+          "label": "Channels（空格分隔）",
+          "argument": "RD_CONDA_CHANNELS",
+          "kind": "urls"
+        }
+      ]
+    },
+    {
+      "id": "yum",
+      "name": "YUM / DNF",
+      "detectPattern": "(?i)\\b(?:yum|dnf)\\s",
+      "fields": [
+        {
+          "id": "baseUrl",
+          "label": "完整单一仓库 baseurl",
+          "argument": "RD_YUM_BASEURL",
+          "kind": "url"
+        }
+      ]
+    },
+    {
+      "id": "huggingface",
+      "name": "Hugging Face",
+      "detectPattern": "(?i)huggingface|\\bhf\\s+download",
+      "fields": [
+        {
+          "id": "endpoint",
+          "label": "Hub endpoint",
+          "argument": "RD_HF_ENDPOINT",
+          "kind": "url"
+        }
+      ]
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "detectPattern": "(?i)github\\.com|githubusercontent\\.com|\\bgit\\s+clone",
+      "fields": [
+        {
+          "id": "archiveBase",
+          "label": "源码归档",
+          "argument": "RD_GITHUB_ARCHIVE_BASE",
+          "kind": "url"
+        },
+        {
+          "id": "rawBase",
+          "label": "Raw 文件",
+          "argument": "RD_GITHUB_RAW_BASE",
+          "kind": "url"
+        },
+        {
+          "id": "releaseBase",
+          "label": "Release 附件",
+          "argument": "RD_GITHUB_RELEASE_BASE",
+          "kind": "url"
+        },
+        {
+          "id": "gitBase",
+          "label": "Git 仓库",
+          "argument": "RD_GITHUB_GIT_BASE",
+          "kind": "url"
+        },
+        {
+          "id": "apiBase",
+          "label": "GitHub API",
+          "argument": "RD_GITHUB_API_BASE",
+          "kind": "url"
+        }
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "id": "international",
+      "name": "国际源（美国/官方为主）",
+      "sources": [
+        {
+          "id": "official-docker",
+          "name": "沿用配方镜像",
+          "type": "docker",
+          "values": {
+            "baseImage": ""
+          },
+          "description": "镜像由当前 Docker Engine/Builder 拉取；可填写企业仓库中的完整镜像引用。"
+        },
+        {
+          "id": "official-debian",
+          "name": "Debian 官方（HTTP初始安装，保留签名校验）",
+          "type": "apt",
+          "values": {
+            "mirror": "http://deb.debian.org/debian",
+            "securityMirror": "http://security.debian.org/debian-security"
+          },
+          "description": "HTTP用于首次安装CA；保留APT签名验证，不关闭证书/签名校验。仅用于Debian；安全更新保持官方。"
+        },
+        {
+          "id": "official-debian-https",
+          "name": "Debian 官方（HTTPS，底图需含CA）",
+          "type": "apt",
+          "values": {
+            "mirror": "https://deb.debian.org/debian",
+            "securityMirror": "https://security.debian.org/debian-security"
+          },
+          "description": "适用于 Debian。发行版与签名保持由配方管理；HTTPS要求底图已有CA。 HTTPS镜像适用于已具备ca-certificates的基础镜像；缺少CA时先修复基础镜像。"
+        },
+        {
+          "id": "official-npm",
+          "name": "npm 官方",
+          "type": "npm",
+          "values": {
+            "registry": "https://registry.npmjs.org/"
+          }
+        },
+        {
+          "id": "official-pypi",
+          "name": "PyPI 官方",
+          "type": "pip",
+          "values": {
+            "indexUrl": "https://pypi.org/simple/"
+          }
+        },
+        {
+          "id": "official-conda-forge",
+          "name": "conda-forge 社区",
+          "type": "conda",
+          "values": {
+            "channels": "https://conda.anaconda.org/conda-forge"
+          },
+          "description": "社区channel；不隐式加入Anaconda defaults。"
+        },
+        {
+          "id": "international-yum-original",
+          "name": "保留配方/系统原仓库",
+          "type": "yum",
+          "values": {
+            "baseUrl": ""
+          },
+          "description": "空值沿用配方已有仓库；需要更换具体仓库时选择自定义条目。"
+        },
+        {
+          "id": "official-yum-custom",
+          "name": "YUM/DNF 指定仓库",
+          "type": "yum",
+          "values": {
+            "baseUrl": ""
+          },
+          "description": "请填写具体仓库URL，明确发行版、BaseOS/AppStream和架构；不要将同一URL覆盖所有repo。Rocky官方根：https://dl.rockylinux.org/pub/rocky/",
+          "requiresConfiguration": true
+        },
+        {
+          "id": "official-huggingface",
+          "name": "Hugging Face 官方",
+          "type": "huggingface",
+          "values": {
+            "endpoint": "https://huggingface.co"
+          },
+          "description": "Endpoint仅作用于配方声明的工具，数据集脚本可能仍访问其他站点。"
+        },
+        {
+          "id": "official-github",
+          "name": "GitHub 官方",
+          "type": "github",
+          "values": {
+            "archiveBase": "https://codeload.github.com",
+            "rawBase": "https://raw.githubusercontent.com",
+            "releaseBase": "https://github.com",
+            "gitBase": "https://github.com",
+            "apiBase": "https://api.github.com"
+          },
+          "description": "归档、Raw、Release和Git分别配置；只有配方使用相应参数时才生效。"
+        }
+      ]
+    },
+    {
+      "id": "china",
+      "name": "中国镜像",
+      "sources": [
+        {
+          "id": "china-docker-original",
+          "name": "沿用配方镜像（未配置中国镜像）",
+          "type": "docker",
+          "values": {
+            "baseImage": ""
+          },
+          "description": "不预设不可靠公共Docker加速器；沿用当前Builder，或选择自定义企业仓库。"
+        },
+        {
+          "id": "china-docker-custom",
+          "name": "企业镜像仓库（自定义）",
+          "type": "docker",
+          "values": {
+            "baseImage": ""
+          },
+          "description": "填写完整基础镜像，例如企业Harbor中的Node镜像；不会修改宿主daemon.json。",
+          "requiresConfiguration": true
+        },
+        {
+          "id": "tuna-debian",
+          "name": "清华 TUNA Debian 镜像（HTTP初始安装，保留签名校验）",
+          "type": "apt",
+          "values": {
+            "mirror": "http://mirrors.tuna.tsinghua.edu.cn/debian",
+            "securityMirror": "http://security.debian.org/debian-security"
+          },
+          "description": "HTTP用于首次安装CA；保留APT签名验证，不关闭证书/签名校验。仅用于Debian；安全更新保持官方。"
+        },
+        {
+          "id": "tuna-debian-https",
+          "name": "清华 TUNA Debian 镜像（HTTPS，底图需含CA）",
+          "type": "apt",
+          "values": {
+            "mirror": "https://mirrors.tuna.tsinghua.edu.cn/debian",
+            "securityMirror": "https://security.debian.org/debian-security"
+          },
+          "description": "主仓镜像；安全更新默认保留Debian官方，可单独修改。仅适用于Debian。 HTTPS镜像适用于已具备ca-certificates的基础镜像；缺少CA时先修复基础镜像。"
+        },
+        {
+          "id": "npmmirror",
+          "name": "npmmirror",
+          "type": "npm",
+          "values": {
+            "registry": "https://registry.npmmirror.com/"
+          },
+          "description": "第三方npm镜像；锁文件中的自定义tarball/Git地址不保证随registry切换。"
+        },
+        {
+          "id": "tuna-pypi",
+          "name": "清华 TUNA PyPI 镜像",
+          "type": "pip",
+          "values": {
+            "indexUrl": "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple/"
+          }
+        },
+        {
+          "id": "tuna-conda-forge",
+          "name": "清华 TUNA conda-forge 镜像",
+          "type": "conda",
+          "values": {
+            "channels": "https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge"
+          },
+          "description": "仅社区conda-forge；不隐式加入defaults。"
+        },
+        {
+          "id": "china-yum-original",
+          "name": "保留配方/系统原仓库",
+          "type": "yum",
+          "values": {
+            "baseUrl": ""
+          },
+          "description": "空值沿用配方已有仓库；需要更换具体仓库时选择自定义条目。"
+        },
+        {
+          "id": "china-yum-custom",
+          "name": "YUM/DNF 中国镜像（自定义）",
+          "type": "yum",
+          "values": {
+            "baseUrl": ""
+          },
+          "description": "填写具体单一仓库URL及发行版/架构；USTC Rocky帮助：https://mirrors.ustc.edu.cn/help/rocky.html。镜像根路径不能直接当作全部repo。",
+          "requiresConfiguration": true
+        },
+        {
+          "id": "hf-mirror",
+          "name": "HF-Mirror（第三方）",
+          "type": "huggingface",
+          "values": {
+            "endpoint": "https://hf-mirror.com"
+          },
+          "description": "第三方公益下载镜像；不保证覆盖全部Hub API、Xet/LFS或数据集脚本。此列表不接收访问令牌。"
+        },
+        {
+          "id": "china-github-original",
+          "name": "保留配方原 GitHub 来源",
+          "type": "github",
+          "values": {
+            "archiveBase": "",
+            "rawBase": "",
+            "releaseBase": "",
+            "gitBase": "",
+            "apiBase": ""
+          },
+          "description": "不改写配方中的GitHub来源；中国组的包管理器镜像仍可独立生效。没有预设公共代理。"
+        },
+        {
+          "id": "china-github-custom",
+          "name": "GitHub 企业镜像/代理（自定义）",
+          "type": "github",
+          "values": {
+            "archiveBase": "",
+            "rawBase": "",
+            "releaseBase": "",
+            "gitBase": "",
+            "apiBase": ""
+          },
+          "description": "未预设公共代理；空值沿用配方原值。如有企业镜像，按归档/Raw/Release/Git逐项填写并核对路径拼接。",
+          "requiresConfiguration": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # WebUI：以实例为中心 / Instance-centered WebUI
 
-本文描述 RunDesk 0.54.0（2026-10-26）的界面与当前后端边界。升级不改变存储布局，也不迁移或删除原有实例、工作区和历史数据。
+本文描述 RunDesk 0.55.0（2026-10-27）的界面与当前后端边界。升级不改变存储布局，也不迁移或删除原有实例、工作区和历史数据。
 
 RunDesk 的日常操作围绕实例展开：选择一个 Codex 或 Kun 实例，检查它的模型、Skills、MCP 和插件能力，选择工作区，再执行任务、查看制品与运行轨迹。应用接入和构建中心分别负责外部调用与运行环境准备，不要求用户先注册应用才能管理实例。
 
@@ -46,3 +46,5 @@ RunDesk 的日常操作围绕实例展开：选择一个 Codex 或 Kun 实例，
 The WebUI centers daily work on an Agent instance: inspect its capabilities, select a workspace, run tasks, and inspect artifacts and traces. Build presets produce images; images can support multiple independent instances. Application registration remains an integration concern.
 
 This navigation change does not yet synchronize configuration across workspaces. Docker environments still have separate persistent homes for each instance/workspace pair. The four Kun research launchers have been withdrawn from everyday navigation while their APIs, stored records, and historical branch inspection remain available.
+
+构建中心在 0.55.0 增加[外置配方与下载源](BUILD-SOURCES.md)：查看 Dockerfile、下载完整目录，按配方实际能力在国际/中国镜像之间选择和修改地址；源列表与默认分组可在页面维护。

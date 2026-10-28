@@ -1,10 +1,12 @@
 # 当前能力与后续工作
 
-**RunDesk 0.54.1 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。这里区分源码已实现、后端能力边界和目标环境验收；三个使命的产品定位见[中文 README](../README.zh-CN.md)。
+**RunDesk 0.55.0 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。这里区分源码已实现、后端能力边界和目标环境验收；三个使命的产品定位见[中文 README](../README.zh-CN.md)。
 
 0.54.0 将日常 WebUI 围绕实例组织，集中配置入口并保留工作区上下文；构建中心和应用接入分别管理运行基础与外部调用。Kun 分叉、评测任务集、K4 Skill 工作台和离线实验的常驻/创建入口撤下，研究 API、数据与已有分支查看保留。详见 [WebUI](WEBUI.md)。
 
 0.54.1 修复两套研究预置的 Agent-Reach 源码下载与 wheel 打包问题；内置配方及 CLI 同步至 1.1.2。构建不再下载该上游源码，其他依赖仍需网络。更新方式见[升级说明](UPGRADING.md)，本轮检查见[验证说明](VALIDATION.md)。
+
+0.55.0 将构建配方改为可编辑的外置目录，并在构建前提供国际/中国镜像源选择及逐项修改。源列表覆盖八类下载入口，实际应用取决于配方声明的参数；六套默认配方支持基础镜像、Debian APT、npm、pip。原配置重建沿用冻结上下文和源参数。详见[构建源配置](BUILD-SOURCES.md)。
 
 ## 围绕三个使命的能力
 
@@ -19,7 +21,7 @@
 - **实例与配置**：WebUI 以实例为配置入口；Docker 后端仍按“实例 × 工作区”保存独立配置与运行状态。跨工作区配置版本应用、自动收集统一能力库、跨 Agent 格式适配尚未实现，不能将页面集中理解为配置已全局同步。
 - **后端**：Codex 与 Kun 由独立运行模块及显式宿主服务接入，共享任务准入、取消和资源契约。新增后端仍需代码适配与契约测试，不是登记一个名称即可使用。见[后端能力](BACKENDS.md)与[资源契约](RESOURCE-CONTRACTS.md)。
 - **API**：RDCA v1 使用 `/api/v1`；UHP `/v1` 的协议仍为 `2026-10-19`。UHP 通过 `metadata.rundesk_require` 在任务和附件物化前拒绝所需但不支持的能力；默认任务时限 3600 秒，包含排队时间；APP 可轮询进度并将待审批用户引向工作台。标准 SSE 不新增私有进度事件。两入口共用任务核心，不依赖 HarnessRouter 服务，不声明完整 UHP conformant。见 [UHP 范围](UHP.md)。
-- **预设与构建**：一个应用可登记多个管理员批准的命名预设，分别固定 Codex Docker 实例与工作区，凭据精确授权。构建配方、镜像、运行预设、Skills、MCP 和插件是可组合资源；登记预设不代表资源已安装或账号已认证。见[运行预设](APPLICATION-RUNTIME-PRESETS.md)与[构建中心](BUILD-CENTER.md)。
+- **预设与构建**：一个应用可登记多个管理员批准的命名预设，分别固定 Codex Docker 实例与工作区，凭据精确授权。构建配方、镜像、运行预设、Skills、MCP 和插件是可组合资源；登记预设不代表资源已安装或账号已认证。构建目录和源列表可独立修改，镜像仍需显式构建与选择。见[运行预设](APPLICATION-RUNTIME-PRESETS.md)、[构建中心](BUILD-CENTER.md)与[下载源](BUILD-SOURCES.md)。
 - **插件**：提供 Codex build-tools 插件包、构建 Skill 与限于任务的 MCP；支持原生包只读检查和已观察到的组件来源。稳定原生安装/卸载接口未接入，Kun 不加载 Codex 插件。见[插件能力](NATIVE-PLUGINS.md)。
 - **启动与执行环境**：支持依赖检测、Kun 独立初始化、可选固定版本 Codex 安装和 Docker 应用准备。Kun 容器托管仍待实现，Bash 为显式授权的宿主执行。见[部署](SETUP.md)。
 - **文件与任务资源**：新产物默认保留原件引用，需要冻结时显式保存快照；旧托管副本仍可读取。任务资源目录是可重建视图，不是另一份任务状态源。见[个人文件](PERSONAL-FILES.md)与[任务资源](TASK-RESOURCES.md)。
@@ -40,3 +42,5 @@
 6. 完成 UHP 真实 APP–Codex/Kun 闭环验收；仅在后端提供可靠契约后实现硬工具轮次、输出 token 预算和原生指令语义。harness 写入等 Full 管理能力按应用需求扩展，不把平台配置与调试职责全部搬入 UHP。
 
 0.54.1 预置修复检查见 [profile-build-0541.json](validation/current/profile-build-0541.json)；0.54.0 的实际检查以 [webui-054.json](validation/current/webui-054.json) 为准，不从旧报告继承通过数。0.53.0 的 [UHP 加固](validation/current/uhp-hardening.json)、0.52.0 的[轨迹阅读器验证](validation/current/trace-reader.json)及文档整理记录保留为历史证据，不计作本轮重跑结果。真实 Kun、Docker、供应商模型与业务制品仍待目标环境验收；[验证说明](VALIDATION.md)区分各轮范围。
+
+0.55.0 的本轮检查见 [build-sources-055.json](validation/current/build-sources-055.json)：外置文件、源配置、HTTP、WebUI 与编译测试；没有 Docker 实构建或源测速验收。

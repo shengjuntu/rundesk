@@ -1,5 +1,6 @@
 """Compiler for independent upstream video environments; no network at prepare time."""
 import hashlib
+import dockerfile_files
 import json
 from pathlib import Path, PurePosixPath
 import re
@@ -184,6 +185,7 @@ def render(root, profile, selection, codex_version, base_image, destination, wri
             shutil.copyfile(path, target)
             target.chmod(0o755 if path.stat().st_mode & 0o111 else 0o644)
     write(destination / "upstream/upstream.json", json.dumps(upstream, ensure_ascii=False, indent=2) + "\n")
+    write(destination / "tools/configure-apt.sh", (root / "_shared/configure-apt.sh").read_text(), executable=True)
     write(destination / "tools/profile_doctor.py", (root / "_shared/upstream_profile_doctor.py").read_text(), executable=True)
     write(destination / "tools/video_app_media.py", (root / "_shared/video_app_media.py").read_text(), executable=True)
     seed = ('cli_auth_credentials_store = "file"\ncheck_for_update_on_startup = false\n\n'
@@ -203,36 +205,10 @@ def render(root, profile, selection, codex_version, base_image, destination, wri
               "io.rundesk.upstream.commit": upstream["commit"], "io.rundesk.upstream.source.sha256": upstream["sourceSHA256"],
               "io.rundesk.video-app-media.contract": "1", "io.rundesk.capabilities.skills": ", ".join([skill] + [row["name"] for row in upstream["skillDirectories"]]),
               "io.rundesk.capabilities.tools": ", ".join(profile["tools"]), "io.rundesk.capabilities.mcp": "video_app_media"}
-    lines = ["# Generated independent upstream environment; inspect upstream.json and install.sh before building.",
-             "FROM " + base_image,
-             "RUN apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=60 update && apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=60 install -y --no-install-recommends " + " ".join(pkgs) + " && rm -rf /var/lib/apt/lists/*",
-             "ENV npm_config_fetch_retries=3 npm_config_fetch_timeout=120000 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1",
-             "RUN python3 -m venv /opt/rundesk-python", 'ENV PATH="/opt/rundesk-python/bin:${PATH}"',
-             "COPY upstream/ /opt/rundesk-upstream/"]
-    lines += ["ENV " + key + "=" + json.dumps(value) for key, value in upstream.get("environment", {}).items()]
-    archive = "/opt/rundesk-upstream/source.tar.gz"
     if "sourceArchive" in upstream:
         (destination / "vendor").mkdir()
         shutil.copyfile(base / upstream["sourceArchive"], destination / "vendor/source.tar.gz")
-        lines.append("COPY vendor/source.tar.gz " + archive)
-    else:
-        lines.append("RUN curl --fail --location --retry 3 --connect-timeout 30 --max-time 900 --output " + archive + " " + upstream["sourceURL"])
-    lines += ["RUN echo '" + upstream["sourceSHA256"] + "  " + archive + "' | sha256sum -c - && mkdir -p " + source + " && tar -xzf " + archive + " --strip-components=1 -C " + source,
-              "RUN sh /opt/rundesk-upstream/" + upstream["installScript"]]
-    for rel in upstream["requiredFiles"]:
-        lines.append("RUN test -f " + source + "/" + rel)
-    lines += ["COPY skills/ /etc/codex/skills/", "COPY tools/ /opt/rundesk-profile/tools/"]
-    for row in upstream["skillDirectories"]:
-        src = source if row["source"] == "." else source + "/" + row["source"]
-        lines.append("RUN test -f " + src + "/SKILL.md && test ! -e /etc/codex/skills/" + row["name"] + " && ln -s " + src + " /etc/codex/skills/" + row["name"])
-    lines += ["ARG CODEX_VERSION=" + codex_version,
-              'RUN npm install --global "@openai/codex@${CODEX_VERSION}" && npm cache clean --force && codex --version && codex app-server --help >/dev/null',
-              *["LABEL " + key + "=" + json.dumps(value, ensure_ascii=False) for key, value in labels.items()],
-              "COPY seed/ /opt/rundesk-seed/", "COPY profile.lock.json /opt/rundesk-profile/profile.lock.json",
-              "COPY THIRD_PARTY.md /opt/rundesk-profile/THIRD_PARTY.md",
-              "RUN mkdir -p /opt/rundesk/bin && chmod -R a+rX /opt/upstreams /opt/rundesk-upstream /opt/rundesk-profile /etc/codex/skills /opt/rundesk-seed",
-              "USER node", "WORKDIR /home/node", 'CMD ["codex", "app-server"]', ""]
-    write(destination / "Dockerfile", "\n".join(lines))
+    dockerfile_files.render(root, profile, selection, codex_version, base_image, destination, write, labels)
     write(destination / ".dockerignore", "**\n!Dockerfile\n!profile.lock.json\n!THIRD_PARTY.md\n!seed/\n!seed/**\n!skills/\n!skills/**\n!tools/\n!tools/**\n!upstream/\n!upstream/**\n!vendor/\n!vendor/**\n")
     scope = upstream.get("sourceScope", "complete-repository")
     description = ("The pinned native skills and repository metadata (not the complete monorepo) remain in "

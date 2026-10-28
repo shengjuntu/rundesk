@@ -1,0 +1,12 @@
+#!/bin/sh
+# Run the locked upstream CLI; do not contact npx or refresh upstream skills.
+set -eu
+export HYPERFRAMES_BROWSER_PATH="${HYPERFRAMES_BROWSER_PATH:-/usr/bin/chromium}"
+export HYPERFRAMES_NO_TELEMETRY=1
+export HYPERFRAMES_NO_UPDATE_CHECK=1
+export HYPERFRAMES_SKIP_SKILLS=1
+export HYPERFRAMES_SKILL_PKG_VERSION=0.8.87
+export HYPERFRAMES_SKILL_NODE_MODULES=/opt/hyperframes/node_modules
+export DO_NOT_TRACK=1
+python3 /opt/rundesk-upstream/generation_guard.py "$@"
+exec node /opt/hyperframes/node_modules/hyperframes/bin/hyperframes.mjs "$@"

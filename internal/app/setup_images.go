@@ -10,11 +10,12 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/shengjuntu/rundesk/examples/profiletemplates"
@@ -29,8 +30,8 @@ type RuntimeImageInput struct {
 
 var profileRelease = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$`)
 
-// Expand the exact same contexts as examples/profiles.py without requiring
-// Python/npm on the RunDesk host. Only a validated Codex version is substituted.
+// Read a fresh external recipe snapshot without requiring Python/npm on the
+// RunDesk host. A submitted build freezes the returned context, not this folder.
 func runtimeImageContext(profile, version string) ([]byte, error) {
 	if !profileRelease.MatchString(version) || len(version) > 64 || version == "0.0.0" {
 		return nil, failure(400, "invalid_version", "请填写已选定的 Codex 精确版本 X.Y.Z")
@@ -43,6 +44,15 @@ func runtimeImageContext(profile, version string) ([]byte, error) {
 	data, err := profiletemplates.Files.ReadFile(profile + ".zip")
 	if err != nil {
 		return nil, err
+	}
+	return expandRuntimeImageContext(data, version)
+}
+
+// Expand a single already-read snapshot. Callers that inspect recipe metadata
+// first can use these exact same bytes and avoid a second read of editable files.
+func expandRuntimeImageContext(data []byte, version string) ([]byte, error) {
+	if !profileRelease.MatchString(version) || len(version) > 64 || version == "0.0.0" {
+		return nil, failure(400, "invalid_version", "请填写已选定的 Codex 精确版本 X.Y.Z")
 	}
 	z, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
@@ -64,7 +74,16 @@ func runtimeImageContext(profile, version string) ([]byte, error) {
 			return nil, err
 		}
 		if f.Name == "Dockerfile" {
-			b = []byte(strings.ReplaceAll(string(b), "0.0.0", version))
+			// The editable Dockerfile remains ordinary Docker syntax. Bind the
+			// selected version even if its on-disk default was edited previously.
+			dockerfile := string(b)
+			argument := regexp.MustCompile(`(?m)^ARG CODEX_VERSION=[^\r\n]*$`)
+			label := regexp.MustCompile(`(?m)^LABEL io\.rundesk\.codex\.version=[^\r\n]*$`)
+			if !argument.MatchString(dockerfile) || !label.MatchString(dockerfile) {
+				return nil, failure(400, "invalid_recipe_codex", "内置配方须保留 CODEX_VERSION 参数和 Codex 版本标签；任意 Dockerfile 请导入为自定义配方")
+			}
+			dockerfile = argument.ReplaceAllString(dockerfile, "ARG CODEX_VERSION="+version)
+			b = []byte(label.ReplaceAllString(dockerfile, "LABEL io.rundesk.codex.version="+strconv.Quote(version)))
 		}
 		if f.Name == "profile.lock.json" {
 			var lock map[string]any
@@ -159,6 +178,9 @@ func (m *Manager) runtimeDockerCommand(ctx context.Context, out io.Writer, args 
 const runtimeHyperframesLockSHA256 = "b3f48e9687cd27dea097203e928e6e7fd84344b88122ab2bb546d38b48705de1"
 
 func runtimeImageMatches(v ImageBuild, image imageInspection) bool {
+	if v.RuntimeIdentity != nil {
+		return frozenRuntimeImageMatches(v, image)
+	}
 	labels := image.Config.Labels
 	reach := "true"
 	if v.ProfileID == "video-build" || independentVideoProfile(v.ProfileID) {
@@ -192,66 +214,50 @@ type independentImageIdentity struct {
 	Repository   string `json:"repository"`
 	Commit       string `json:"commit"`
 	SourceSHA256 string `json:"sourceSHA256"`
-	Version      string
+	Version      string `json:"version"`
 }
 
-var independentRuntimeIdentities struct {
-	sync.Once
-	values map[string]independentImageIdentity
-}
-
-// Image identity comes from the same embedded source pin as the build recipe.
+// Image identity comes from the same external source pin as the build recipe.
 // A correctly named image from another upstream revision is not interchangeable.
 func independentRuntimeIdentity(profile string) (independentImageIdentity, bool) {
-	independentRuntimeIdentities.Do(func() {
-		independentRuntimeIdentities.values = map[string]independentImageIdentity{}
-		for _, id := range []string{"hyperframes", "video-use", "openmontage"} {
-			data, err := profiletemplates.Files.ReadFile(id + ".zip")
-			if err != nil {
-				continue
-			}
-			archive, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
-			if err != nil {
-				continue
-			}
-			for _, file := range archive.File {
-				if file.Name != "profile.lock.json" {
-					continue
-				}
-				reader, err := file.Open()
-				if err != nil {
-					break
-				}
-				var lock struct {
-					Profile struct {
-						ID      string `json:"id"`
-						Version string `json:"version"`
-					} `json:"profile"`
-					Upstream independentImageIdentity `json:"upstream"`
-				}
-				err = json.NewDecoder(io.LimitReader(reader, 128<<10)).Decode(&lock)
-				reader.Close()
-				if err == nil && lock.Profile.ID == id && lock.Profile.Version == "1.0.0" && len(lock.Upstream.Commit) == 40 && len(lock.Upstream.SourceSHA256) == 64 {
-					lock.Upstream.Version = lock.Profile.Version
-					independentRuntimeIdentities.values[id] = lock.Upstream
-				}
-				break
-			}
-		}
-	})
-	identity, ok := independentRuntimeIdentities.values[profile]
-	return identity, ok
+	var lock struct {
+		Profile struct {
+			ID      string `json:"id"`
+			Version string `json:"version"`
+		} `json:"profile"`
+		Upstream independentImageIdentity `json:"upstream"`
+	}
+	err := readRuntimeProfileLock(profile, &lock)
+	if err != nil || lock.Profile.ID != profile || !profileRelease.MatchString(lock.Profile.Version) || len(lock.Upstream.Commit) != 40 || len(lock.Upstream.SourceSHA256) != 64 {
+		return independentImageIdentity{}, false
+	}
+	lock.Upstream.Version = lock.Profile.Version
+	return lock.Upstream, true
+}
+
+func readRuntimeProfileLock(profile string, value any) error {
+	directory, err := profiletemplates.ProfileDirectory(profile)
+	if err != nil {
+		return err
+	}
+	file, err := os.Open(filepath.Join(directory, "profile.lock.json"))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	return json.NewDecoder(io.LimitReader(file, 256<<10)).Decode(value)
 }
 
 func runtimeProfileVersion(profile string) string {
-	if independentVideoProfile(profile) {
-		identity, _ := independentRuntimeIdentity(profile)
-		return identity.Version
+	var lock struct {
+		Profile struct {
+			Version string `json:"version"`
+		} `json:"profile"`
 	}
-	if profile == "video-build" {
-		return "1.4.0"
+	if readRuntimeProfileLock(profile, &lock) != nil {
+		return ""
 	}
-	return "1.1.2"
+	return lock.Profile.Version
 }
 
 func (m *Manager) cachedRuntimeImage(v ImageBuild) string {

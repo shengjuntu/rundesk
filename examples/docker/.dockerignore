@@ -2,6 +2,8 @@
 !Dockerfile
 !seed/
 !seed/**
+!tools/
+!tools/**
 **/auth.json
 **/.env
 **/.env.*

@@ -1,0 +1,10 @@
+cli_auth_credentials_store = "file"
+check_for_update_on_startup = false
+
+[mcp_servers.video_app_media]
+command = "python3"
+args = ["/opt/rundesk-profile/tools/video_app_media.py", "serve-mcp"]
+env_vars = ["VIDEO_APP_MCP_URL", "VIDEO_APP_TOKEN", "VIDEO_APP_PROJECT_ID"]
+enabled = true
+startup_timeout_sec = 30
+tool_timeout_sec = 1800

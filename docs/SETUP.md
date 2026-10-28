@@ -1,6 +1,6 @@
 # 启动与部署
 
-当前组合：RunDesk 0.54.1、独立 Kun 0.17.0、worker 协议 16。两者分别构建与发布，接口和旧版本兼容规则见 [Kun 拆分](KUN-SEPARATION.md)。
+当前组合：RunDesk 0.55.0、独立 Kun 0.17.0、worker 协议 16。两者分别构建与发布，接口和旧版本兼容规则见 [Kun 拆分](KUN-SEPARATION.md)。
 
 ## 构建
 
@@ -24,6 +24,20 @@ Linux/macOS：
 ```
 
 默认 http://127.0.0.1:3210。`--kun /absolute/path/to/kun` 指定 worker；否则在 RunDesk 可执行文件旁查找。路径属于服务器。缺少或协议不兼容时明确报错，不改用 Codex。`--data` 在启动时确定，向导不迁移数据。已有 Kun 执行目录不需要搬迁；替换二进制前先停止相关执行，保持原数据目录。
+
+## 外置构建文件
+
+WebUI 仍嵌入程序；Docker 构建配方从磁盘读取。若只在源码根目录启动，上级目录查找可以定位本仓库的 `recipes/` 和默认源配置；发布到其他目录时，把 `recipes/`、`config/` 与 RunDesk 程序一起部署。
+
+```bash
+export RUNDESK_RECIPES_DIR=/srv/rundesk/recipes
+export RUNDESK_BUILD_SOURCES=/srv/rundesk/build-sources.json
+./bin/rundesk --data ./data
+```
+
+`RUNDESK_BUILD_SOURCES` 指向要使用的完整源列表文件；可先复制发行包中的 `config/build-sources.json`。不设置该变量时，默认源列表首次复制到 `<data>/config/build-sources.json`。Windows 可用 PowerShell 的 `$env:RUNDESK_RECIPES_DIR`、`$env:RUNDESK_BUILD_SOURCES` 设置绝对路径。
+
+显式配方目录有误会报错，不会悄悄使用另一份默认配方。目录内完整上下文可直接修改，新构建会读取并冻结当前内容；历史重建继续使用原快照。源列表、构建前选择、Dockerfile 参数与镜像拉取边界见[下载源配置](BUILD-SOURCES.md)。宿主运行构建仍不要求 Python/npm；Docker 镜像中安装工具需要相应软件源。
 
 ## 环境向导
 
@@ -75,7 +89,7 @@ export RUNDESK_TOKEN='替换为足够长的随机密钥'
 
 运行后端可选“仅使用 Docker 应用”，完成设置不再要求宿主机安装 Codex；通用助手的后端设置保留，后续若要使用本机助手再配置。
 
-展开“应用 Docker 环境”，选择 news2douyin、people-search、video-build、hyperframes、video-use 或 openmontage，输入 Codex 精确版本和镜像地址。支持后台构建、从真实仓库拉取、检查本地镜像。主机只需要 Linux 本机 Docker Engine，内置配方不依赖主机 Python/npm。首次安装 Docker 仍由部署者完成。
+展开“应用 Docker 环境”，选择 news2douyin、people-search、video-build、hyperframes、video-use 或 openmontage，输入 Codex 精确版本和镜像地址。支持后台构建、从真实仓库拉取、检查本地镜像。主机只需要 Linux 本机 Docker Engine，随包外置配方不依赖主机 Python/npm。首次安装 Docker 仍由部署者完成。
 
 任务提交后立即返回，关闭向导不停止；再次打开可以继续查看进度和日志。相同在途配置不会重复入队，冲突的同名镜像准备会拒绝。构建按依赖层缓存；相同配方和相同已验收 image ID 会跳过构建，重新做离线工具检查。成功只意味着工具环境检查通过，仍需应用级模型认证、MCP 连通性和真实研究验收。
 

@@ -1,0 +1,55 @@
+{
+  "passed": true,
+  "scope": "Real Chromium renders shipped HTML/CSS/JS with HTTP/agent fixtures and QA-only Noto CJK font; no live Docker or model",
+  "checks": [
+    {
+      "dialog": "build",
+      "viewport": 1440,
+      "left": 430,
+      "right": 1010,
+      "width": 580,
+      "clientWidth": 578,
+      "scrollWidth": 578,
+      "height": 880,
+      "clientHeight": 878,
+      "scrollHeight": 1482,
+      "fields": 5
+    },
+    {
+      "dialog": "catalog",
+      "viewport": 1440,
+      "left": 430,
+      "right": 1010,
+      "clientWidth": 578,
+      "scrollWidth": 578,
+      "editorClientWidth": 526,
+      "editorScrollWidth": 2998,
+      "editorOverflow": "auto"
+    },
+    {
+      "dialog": "build",
+      "viewport": 390,
+      "left": 12,
+      "right": 378,
+      "width": 366,
+      "clientWidth": 364,
+      "scrollWidth": 364,
+      "height": 742.71875,
+      "clientHeight": 741,
+      "scrollHeight": 1999,
+      "fields": 5
+    },
+    {
+      "dialog": "catalog",
+      "viewport": 390,
+      "left": 12,
+      "right": 378,
+      "clientWidth": 364,
+      "scrollWidth": 364,
+      "editorClientWidth": 312,
+      "editorScrollWidth": 2998,
+      "editorOverflow": "auto"
+    }
+  ],
+  "errors": []
+}

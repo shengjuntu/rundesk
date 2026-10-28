@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "generatorVersion": "1.3.1",
+  "profile": {
+    "schemaVersion": 1,
+    "version": "1.0.0",
+    "runtime": "codex-docker",
+    "id": "hyperframes",
+    "title": "HyperFrames 上游制作环境",
+    "description": "原版 HyperFrames 0.8.87 CLI 与21个上游Skills；保留HTML动画、预览、检查、渲染流程，TTS和图像/视频生成统一调用Video App MCP。独立于自研video-build。",
+    "searchBackends": [
+      "none"
+    ],
+    "defaultSearchBackend": "none",
+    "aptPackages": [
+      "ffmpeg",
+      "fonts-noto-cjk",
+      "fontconfig",
+      "chromium"
+    ],
+    "pythonPackages": [],
+    "skill": "rundesk-hyperframes",
+    "tools": [
+      "Node.js 22+",
+      "HyperFrames 0.8.87",
+      "GSAP 3.15.0",
+      "Chromium",
+      "FFmpeg",
+      "ffprobe",
+      "Noto CJK"
+    ],
+    "outputs": [
+      "hyperframes-project",
+      "final.mp4",
+      "validation.json"
+    ],
+    "resources": {
+      "cpus": 4,
+      "memoryMB": 4096,
+      "network": "bridge"
+    },
+    "optionalComponents": [],
+    "skillFiles": [
+      "SKILL.md",
+      "agents/openai.yaml"
+    ],
+    "upstream": "upstream.json"
+  },
+  "selection": {
+    "searchBackend": "none",
+    "agentReach": false,
+    "videoUse": false,
+    "nativeUpstream": "hyperframes"
+  },
+  "codexVersion": "0.0.0",
+  "baseImage": "node:22-bookworm-slim",
+  "upstream": {
+    "schemaVersion": 1,
+    "repository": "https://github.com/heygen-com/hyperframes",
+    "commit": "82ae73a03156f782e48d631907db08232aeed817",
+    "sourceArchive": "vendor/hyperframes-skills-82ae73a03156f782e48d631907db08232aeed817.tar.gz",
+    "sourceSHA256": "492a80be9507b50abae44b6f10df4f5107feeab71d1dccfacd81c7f371c87fc2",
+    "license": "Apache-2.0",
+    "installScript": "install.sh",
+    "buildFiles": [
+      "install.sh",
+      "hyperframes",
+      "doctor.py",
+      "npm/package.json",
+      "npm/package-lock.json",
+      "generation_guard.py"
+    ],
+    "skillDirectories": [
+      {
+        "source": "skills/embedded-captions",
+        "name": "embedded-captions"
+      },
+      {
+        "source": "skills/faceless-explainer",
+        "name": "faceless-explainer"
+      },
+      {
+        "source": "skills/figma",
+        "name": "figma"
+      },
+      {
+        "source": "skills/general-video",
+        "name": "general-video"
+      },
+      {
+        "source": "skills/hyperframes",
+        "name": "hyperframes"
+      },
+      {
+        "source": "skills/hyperframes-animation",
+        "name": "hyperframes-animation"
+      },
+      {
+        "source": "skills/hyperframes-audio",
+        "name": "hyperframes-audio"
+      },
+      {
+        "source": "skills/hyperframes-cli",
+        "name": "hyperframes-cli"
+      },
+      {
+        "source": "skills/hyperframes-core",
+        "name": "hyperframes-core"
+      },
+      {
+        "source": "skills/hyperframes-creative",
+        "name": "hyperframes-creative"
+      },
+      {
+        "source": "skills/hyperframes-keyframes",
+        "name": "hyperframes-keyframes"
+      },
+      {
+        "source": "skills/hyperframes-registry",
+        "name": "hyperframes-registry"
+      },
+      {
+        "source": "skills/hyperframes-studio",
+        "name": "hyperframes-studio"
+      },
+      {
+        "source": "skills/media-use",
+        "name": "media-use"
+      },
+      {
+        "source": "skills/motion-graphics",
+        "name": "motion-graphics"
+      },
+      {
+        "source": "skills/music-to-video",
+        "name": "music-to-video"
+      },
+      {
+        "source": "skills/pr-to-video",
+        "name": "pr-to-video"
+      },
+      {
+        "source": "skills/product-launch-video",
+        "name": "product-launch-video"
+      },
+      {
+        "source": "skills/remotion-to-hyperframes",
+        "name": "remotion-to-hyperframes"
+      },
+      {
+        "source": "skills/slideshow",
+        "name": "slideshow"
+      },
+      {
+        "source": "skills/talking-head-recut",
+        "name": "talking-head-recut"
+      }
+    ],
+    "requiredFiles": [
+      "LICENSE",
+      "README.md",
+      "package.json",
+      "skills/hyperframes/SKILL.md",
+      "skills/hyperframes-core/SKILL.md",
+      "skills/media-use/SKILL.md"
+    ],
+    "environment": {
+      "HYPERFRAMES_BROWSER_PATH": "/usr/bin/chromium",
+      "HYPERFRAMES_NO_TELEMETRY": "1",
+      "HYPERFRAMES_NO_UPDATE_CHECK": "1",
+      "HYPERFRAMES_SKIP_SKILLS": "1",
+      "HYPERFRAMES_SKILL_PKG_VERSION": "0.8.87",
+      "HYPERFRAMES_SKILL_NODE_MODULES": "/opt/hyperframes/node_modules",
+      "DO_NOT_TRACK": "1"
+    },
+    "sourceScope": "native-skills-and-metadata"
+  },
+  "validation": {
+    "imageBuilt": false,
+    "modelTested": false,
+    "networkTested": false
+  }
+}

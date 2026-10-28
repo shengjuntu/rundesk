@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/calesthio/OpenMontage",
+  "commit": "c8066452325cb57c8fc1ba8c2a71b6e8842e6b65",
+  "sourceURL": "https://codeload.github.com/calesthio/OpenMontage/tar.gz/c8066452325cb57c8fc1ba8c2a71b6e8842e6b65",
+  "sourceSHA256": "dff7cd1cdf2cb0522398e00b3f0b75f32336b695a8be34ac8e6b6913055aab25",
+  "license": "AGPL-3.0",
+  "installScript": "install.sh",
+  "buildFiles": [
+    "install.sh",
+    "doctor.py",
+    "openmontage-python",
+    "hyperframes",
+    "npm/package.json",
+    "npm/package-lock.json",
+    "LICENSE-AGPL-3.0.txt",
+    "overlays/rundesk_video_app.py",
+    "overlays/video_app_tts.py",
+    "overlays/video_app_image.py",
+    "overlays/video_app_video.py",
+    "launch.py",
+    "patch_runtime.py"
+  ],
+  "skillDirectories": [],
+  "requiredFiles": [
+    "LICENSE",
+    "AGENTS.md",
+    "AGENT_GUIDE.md",
+    "tools/base_tool.py",
+    "tools/tool_registry.py",
+    "tools/audio/tts_selector.py",
+    "tools/graphics/image_selector.py",
+    "tools/video/video_selector.py",
+    "remotion-composer/package-lock.json",
+    "pipeline_defs/animated-explainer.yaml"
+  ]
+}

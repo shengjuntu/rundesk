@@ -918,6 +918,22 @@ schemas['NativePluginWarning']=obj({'code':st(),'message':st()},['code','message
 schemas['NativePluginOverview']=obj({'instanceId':st(),'workspaceId':st(),'backend':st(),'runtime':st(),'readOnly':{'const':True},'support':ref('NativePluginSupport'),'plugins':arr(ref('NativePluginStatus')),'warnings':arr(ref('NativePluginWarning'))},['instanceId','backend','runtime','readOnly','support','plugins','warnings'])
 schemas['PluginPackageInspection']=obj({'readOnly':{'const':True},'installSupported':{'const':False},'format':st(),'manifestPath':st(),'manifest':obj({'name':st(),'version':st(),'description':st()},['name']),'components':arr(obj({'kind':st(),'name':st(),'path':st(),'declared':bool_},['kind','name','declared'])),'dependencies':arr(obj({'name':st(),'requirement':st()},['name'])),'compatibility':obj({'codex':st(),'kun':{'const':'unsupported'},'stableNativeInstall':{'const':False},'openaiExtensionSource':st()},['codex','kun','stableNativeInstall','openaiExtensionSource']),'unknownFields':arr(st()),'warnings':arr(ref('NativePluginWarning'))},['readOnly','installSupported','format','manifestPath','manifest','components','dependencies','compatibility','unknownFields','warnings'])
 
+
+# Build-time source catalogs and frozen public parameters. Addresses are not credentials.
+string_map={'type':'object','additionalProperties':st()}
+source_values={'type':'object','additionalProperties':string_map}
+schemas['BuildSourceField']=obj({'id':st(),'label':st(),'argument':st(pattern='^RD_[A-Z0-9_]+$'),'kind':st(enum=['url','urls','image'])},['id','label','argument'])
+schemas['BuildSourceType']=obj({'id':st(),'name':st(),'fields':arr(ref('BuildSourceField')),'detectPattern':st()},['id','name','fields'])
+schemas['BuildSourceEntry']=obj({'id':st(),'name':st(),'type':st(),'values':string_map,'description':st(),'requiresConfiguration':bool_},['id','name','type','values'])
+schemas['BuildSourceGroup']=obj({'id':st(),'name':st(),'sources':arr(ref('BuildSourceEntry'))},['id','name','sources'])
+schemas['BuildSourceCatalog']=obj({'schemaVersion':{'const':1},'revision':st(description='当前源列表SHA；保存时提供，防止覆盖并发修改'),'defaultGroup':st(),'groups':arr(ref('BuildSourceGroup')),'types':arr(ref('BuildSourceType'))},['schemaVersion','groups'])
+schemas['BuildSourceOptions']=obj({'group':st(),'catalogRevision':st(),'selections':string_map,'overrides':source_values},['group'])
+schemas['BuildSourceSnapshot']=obj({'definitions':arr(ref('BuildSourceType')),'group':st(),'catalogSHA':st(),'selections':string_map,'values':source_values,'arguments':string_map,'unconfigured':arr(st())},['group','catalogSHA','selections','values','arguments'])
+schemas['BuildSourceCapability']=obj({'type':st(),'detected':bool_,'supported':bool_,'arguments':arr(st())},['type','detected','supported','arguments'])
+schemas['ImageBuild']['properties']['buildSources']=ref('BuildSourceSnapshot')
+schemas['RuntimeImageIdentity']=obj({'profileVersion':st(),'agentReach':bool_,'upstream':obj(extra=True),'toolLabels':string_map},['profileVersion','agentReach'])
+schemas['ImageBuild']['properties']['runtimeIdentity']=ref('RuntimeImageIdentity')
+
 def build_op(path,method,response,body=None,status='200',description=''):
  op=paths.setdefault(path,{}).setdefault(method,{'operationId':method+'_'+re.sub(r'[^A-Za-z0-9]+','_',path).strip('_'),'parameters':[{'name':name,'in':'path','required':True,'schema':st()} for name in re.findall(r'\{([^}]+)\}',path)]})
  op['x-administrator-only']=True
@@ -928,13 +944,23 @@ def build_op(path,method,response,body=None,status='200',description=''):
  if body is not None:op['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
  return op
 
+op=build_op('/build-center/sources','get',ref('BuildSourceCatalog'),description='读取外置下载源列表与可扩展参数类型')
+op['description']='仅管理员。按构建节点读取运行列表；首次从发行文件复制到数据目录，之后修改无需重启。不承诺源的地域、速度或实际可达性。'
+op=build_op('/build-center/sources','put',ref('BuildSourceCatalog'),ref('BuildSourceCatalog'),description='按revision更新外置源列表')
+op['description']='仅管理员。须提交读取时的revision；不一致返回409并保留原列表。只接受公开地址，不接受URL凭据或查询参数；不改写既有构建快照。'
+build_op('/build-center/recipes/{rid}/sources','get',obj({'types':arr(ref('BuildSourceCapability'))},['types']),description='识别配方实际来源类型及已声明并使用的源参数')
+op=build_op('/build-center/recipes/{rid}/dockerfile','get',obj({'dockerfile':st(),'path':st(),'template':bool_},['dockerfile','path','template']),description='预览外置或冻结配方的Dockerfile')
+op['parameters'].append({'name':'codexVersion','in':'query','schema':st(),'description':'内置配方可选精确Codex版本；省略时预览模板。自定义配方不可覆盖。'})
+op=build_op('/build-center/recipes/{rid}/context.zip','get',st(format='binary'),description='下载完整构建上下文ZIP')
+op['parameters'].append({'name':'codexVersion','in':'query','schema':st(),'description':'内置配方必须提供精确Codex版本；自定义配方按原快照导出。'})
+op['responses']['200']['content']={'application/zip':{'schema':st(format='binary')}}
 build_op('/build-center/recipes','get',obj({'items':arr(ref('BuildRecipe'))},['items']),description='读取内置与自定义配方')
 op=build_op('/build-center/recipes','post',ref('BuildRecipe'),description='导入并冻结自定义配方，拒绝危险路径和凭据文件')
 op['requestBody']={'required':True,'content':{'multipart/form-data':{'schema':obj({'manifest':st(description='BuildRecipeManifest的JSON字符串'),'context':st(format='binary',description='Docker context ZIP，最多32MiB'),'requestId':request24},['manifest','context','requestId'])}}}
 build_op('/build-center/recipes/{rid}','get',ref('BuildRecipe'),description='读取配方冻结元数据')
 op=build_op('/build-center/recipes/{rid}','delete',ref('BuildRecipe'),description='归档自定义配方，保留历史和输入，内置项不可更改')
 op['parameters'].append({'name':'revision','in':'query','required':True,'schema':integer})
-build_op('/build-center/recipes/{rid}/build','post',ref('ImageBuild'),obj({'recipeRevision':integer,'codexVersion':st(),'reference':st(),'noCache':bool_,'requestId':request24},['recipeRevision','requestId']),description='在现有队列构建已冻结配方，不修改默认助手')
+build_op('/build-center/recipes/{rid}/build','post',ref('ImageBuild'),obj({'recipeRevision':integer,'codexVersion':st(),'reference':st(),'noCache':bool_,'requestId':request24,'recipeSha':st(),'buildSources':ref('BuildSourceOptions')},['recipeRevision','requestId']),description='在现有队列构建已冻结配方，不修改默认助手')
 build_op('/build-center/builds','get',obj({'items':arr(ref('ImageBuild'))},['items']),description='读取setup、应用和平台全局构建')
 build_op('/build-center/builds/{bid}','get',ref('ImageBuild'),description='读取全局构建状态')
 build_op('/build-center/builds/{bid}/rebuild','post',ref('ImageBuild'),obj({'requestId':request24,'noCache':bool_},['requestId']),description='复制经过摘要校验的历史冻结输入，创建新构建')

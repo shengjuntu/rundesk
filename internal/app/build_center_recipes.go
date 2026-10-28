@@ -64,12 +64,14 @@ type BuildRecipe struct {
 }
 
 type RecipeBuildInput struct {
-	RecipeRevision int    `json:"recipeRevision"`
-	CodexVersion   string `json:"codexVersion,omitempty"`
-	Reference      string `json:"reference,omitempty"`
-	RequestID      string `json:"requestId"`
-	NoCache        bool   `json:"noCache,omitempty"`
-	OwnerRunID     string `json:"-"`
+	RecipeSHA      string              `json:"recipeSha,omitempty"`
+	BuildSources   *BuildSourceOptions `json:"buildSources,omitempty"`
+	RecipeRevision int                 `json:"recipeRevision"`
+	CodexVersion   string              `json:"codexVersion,omitempty"`
+	Reference      string              `json:"reference,omitempty"`
+	RequestID      string              `json:"requestId"`
+	NoCache        bool                `json:"noCache,omitempty"`
+	OwnerRunID     string              `json:"-"`
 }
 
 type RebuildCenterBuildInput struct {
@@ -513,7 +515,18 @@ func (m *Manager) StartRecipeBuild(id string, in RecipeBuildInput) (ImageBuild, 
 	}
 	buildRecipeMu.Lock()
 	defer buildRecipeMu.Unlock()
-	r, err := m.BuildCenterRecipe(id)
+	var rawBuiltin []byte
+	var r BuildRecipe
+	var err error
+	if strings.HasPrefix(id, "builtin-") {
+		profile := strings.TrimPrefix(id, "builtin-")
+		rawBuiltin, err = builtinRecipeSourceContext(profile)
+		if err == nil {
+			r, err = builtinRecipeFromSource(profile, rawBuiltin)
+		}
+	} else {
+		r, err = m.BuildCenterRecipe(id)
+	}
 	if err != nil {
 		return v, err
 	}
@@ -535,6 +548,9 @@ func (m *Manager) StartRecipeBuild(id string, in RecipeBuildInput) (ImageBuild, 
 	} else if bid != "" {
 		return m.BuildCenterBuild(bid)
 	}
+	if in.RecipeSHA != "" && in.RecipeSHA != r.RecipeSHA {
+		return v, failure(409, "recipe_snapshot_changed", "配方文件已变化，请刷新后重新提交")
+	}
 	if r.Archived {
 		return v, failure(409, "recipe_archived", "配方已归档，不能发起新构建；历史记录仍可查看和重建")
 	}
@@ -544,7 +560,7 @@ func (m *Manager) StartRecipeBuild(id string, in RecipeBuildInput) (ImageBuild, 
 	var data []byte
 	var setup *RuntimeImageInput
 	if r.Kind == "builtin" {
-		data, err = runtimeImageContext(r.ProfileID, in.CodexVersion)
+		data, err = expandRuntimeImageContext(rawBuiltin, in.CodexVersion)
 		if err != nil {
 			return v, err
 		}
@@ -564,7 +580,15 @@ func (m *Manager) StartRecipeBuild(id string, in RecipeBuildInput) (ImageBuild, 
 	if recipeDigest(r.BuildRecipeManifest, r.ContextSHA256) != r.RecipeSHA {
 		return v, failure(409, "recipe_snapshot_changed", "配方快照校验失败，请重新导入")
 	}
-	snapshot := &ImageBuild{RecipeID: r.ID, RecipeRevision: r.Revision, RecipeSHA: r.RecipeSHA, RecipeSmoke: &r.Smoke, OwnerRunID: in.OwnerRunID, RequestID: in.RequestID, RequestSHA: digest, Reference: in.Reference}
+	sources, err := m.resolveBuildSources(in.BuildSources, data, r.Dockerfile)
+	if err != nil {
+		return v, err
+	}
+	data, err = freezeBuildSources(data, sources)
+	if err != nil {
+		return v, err
+	}
+	snapshot := &ImageBuild{RecipeID: r.ID, RecipeRevision: r.Revision, RecipeSHA: r.RecipeSHA, RecipeSmoke: &r.Smoke, OwnerRunID: in.OwnerRunID, RequestID: in.RequestID, RequestSHA: digest, Reference: in.Reference, BuildSources: sources}
 	name := r.Name
 	if suffix := " · " + r.Version; len(name)+len(suffix) <= 120 {
 		name += suffix
@@ -649,6 +673,8 @@ func (m *Manager) RebuildCenterBuild(id string, in RebuildCenterBuildInput) (Ima
 }
 
 func (s *Server) buildCenterRecipeRoutes(mux *http.ServeMux) {
+	s.buildSourceRoutes(mux)
+	s.buildRecipeFileRoutes(mux)
 	m := s.Manager
 	mux.HandleFunc("GET /api/build-center/recipes", func(w http.ResponseWriter, r *http.Request) {
 		items, err := m.BuildCenterRecipes()

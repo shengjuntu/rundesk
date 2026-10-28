@@ -1,0 +1,4 @@
+feedparser==6.0.14
+yt-dlp==2026.8.19
+Pillow==12.3.0
+/opt/rundesk-profile/vendor/agent-reach

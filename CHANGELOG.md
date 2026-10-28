@@ -2,6 +2,14 @@
 
 版本段描述当时的发布行为与验证范围，不替代[当前状态](docs/STATUS.md)。
 
+## 0.55.0（2026-10-27）
+
+- 将六套构建配方及通用 Docker 下载模板改为 `recipes/<profile>/` 的外置文件；Go 不再嵌入配方 ZIP。Dockerfile 在 examples 中直接维护，CLI 从磁盘模板生成上下文；指定目录缺失时明确报错，编辑文件后的新构建不需重编译或重启。
+- 增加可编辑的下载源列表，分为 international 与 china，覆盖 pip、conda、npm、Docker、APT、YUM/DNF、Hugging Face 和 GitHub。构建前按配方检测与参数声明展示相关类型，可跨组选择、逐项覆盖；没有对应参数的配方不会被自动改写。
+- 增加 Dockerfile 内容预览和完整构建目录导出。每次构建保存源列表摘要、所选条目与有效参数；按原配置重建保留原快照，不吸收后来修改的文件或源配置。
+- 保留 news2douyin、people-search 1.1.2 的 Agent-Reach vendored 源码、许可证、打包补丁及资源检查；默认配方支持基础镜像、Debian APT、npm、pip 参数，OpenMontage 同时使用 GitHub 归档源参数并保留 commit/SHA 校验；其他类型由适用的配方声明使用。
+- 原应用、实例、工作区、HOME、认证、镜像与历史记录不自动替换或迁移。真实 Docker 构建、镜像站连通性、速度与业务任务仍需在部署环境验收；本轮实际检查以[验证说明](docs/VALIDATION.md)为准。
+
 ## 0.54.1（2026-10-26）
 
 - 将用户实测修复同步到 news2douyin、people-search 1.1.2：从固定 Agent-Reach 提交内置本地源码，移除重复 wheel `force-include`，保留上游 LICENSE、指南及 Skill；记录来源、原始 archive SHA-256、补丁与逐文件摘要。

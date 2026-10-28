@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "generatorVersion": "1.3.1",
+  "profile": {
+    "schemaVersion": 1,
+    "version": "1.1.2",
+    "runtime": "codex-docker",
+    "id": "people-search",
+    "title": "公开职业资料研究",
+    "description": "检索人物公开职业资料、核对同名身份、整理带来源的履历和作品；不收集私人联系方式或自动联系他人。",
+    "searchBackends": [
+      "exa"
+    ],
+    "defaultSearchBackend": "exa",
+    "aptPackages": [],
+    "pythonPackages": [
+      "feedparser"
+    ],
+    "skill": "research-public-people",
+    "tools": [
+      "Python 3",
+      "Node.js",
+      "Git",
+      "curl",
+      "ripgrep",
+      "feedparser"
+    ],
+    "outputs": [
+      "sources.json",
+      "people.json",
+      "report.md"
+    ],
+    "resources": {
+      "cpus": 2,
+      "memoryMB": 2048,
+      "network": "bridge"
+    },
+    "optionalComponents": [
+      "agent-reach"
+    ]
+  },
+  "selection": {
+    "searchBackend": "exa",
+    "agentReach": true,
+    "videoUse": false
+  },
+  "codexVersion": "0.0.0",
+  "baseImage": "node:22-bookworm-slim",
+  "dependencies": {
+    "schemaVersion": 1,
+    "checkedAt": "2026-10-18",
+    "python": {
+      "feedparser": "6.0.14",
+      "yt-dlp": "2026.8.19",
+      "Pillow": "12.3.0"
+    },
+    "agentReach": {
+      "repository": "https://github.com/silently0801/agent-reach",
+      "commit": "cf70302e928155703829439115a18132928f8913",
+      "version": "1.1.0",
+      "license": "MIT",
+      "sourceDirectory": "vendor/agent-reach",
+      "filesManifest": "vendor/agent-reach.sha256",
+      "filesManifestSHA256": "de0c2e9d75e61ad37967440975131414e91c8e36dcdff4ec652818da6e21d17b",
+      "patchFile": "vendor/agent-reach-wheel.patch",
+      "patchSHA256": "239d42674b9d0aec1f2d629a97d9751d8da78eebd1ef52d43619a2b3b58c3122",
+      "upstreamArchiveURL": "https://codeload.github.com/silently0801/agent-reach/tar.gz/cf70302e928155703829439115a18132928f8913",
+      "upstreamArchiveSHA256": "78ce1f9136add396ea1e1f828bcc9eac788d895854771e6e84784796a1ef6d79"
+    },
+    "note": "HyperFrames/GSAP and optional agent tools use exact direct versions and transitive npm locks. Optional video-use keeps its exact source archive and Python lock. Base image, Debian apt packages and Chromium are not fully pinned.",
+    "npm": {
+      "mcporter": "0.7.3",
+      "@steipete/bird": "0.8.0",
+      "undici": "7.16.0"
+    },
+    "videoUse": {
+      "repository": "https://github.com/browser-use/video-use",
+      "commit": "43cfc566833548093455c9d4a46bd69913b7e552",
+      "version": "0.1.0",
+      "license": "MIT",
+      "sourceArchive": "vendor/video-use-43cfc566833548093455c9d4a46bd69913b7e552.tar.gz",
+      "sourceSHA256": "b7c181c855265f5e88a2bacde46959b3a07034ee7dce00aed1f4b00bce6a3367",
+      "pythonLockFile": "video-use-requirements.txt",
+      "pythonLockSHA256": "7523bd37ce256469fa2d52fff4687e591528c463f15dc462acc19bffcd1b8ae6",
+      "python": {
+        "requests": "2.32.5",
+        "librosa": "0.11.0",
+        "matplotlib": "3.10.8",
+        "numpy": "2.2.6",
+        "pillow": "12.3.0",
+        "charset-normalizer": "3.5.2",
+        "idna": "3.20",
+        "urllib3": "2.8.0",
+        "audioread": "3.1.0",
+        "certifi": "2026.7.22",
+        "contourpy": "1.3.3",
+        "cycler": "0.12.1",
+        "decorator": "5.3.1",
+        "fonttools": "4.67.0",
+        "joblib": "1.6.0",
+        "cloudpickle": "3.1.2",
+        "kiwisolver": "1.5.1",
+        "lazy-loader": "0.6",
+        "msgpack": "1.2.3",
+        "numba": "0.68.0",
+        "llvmlite": "0.50.0",
+        "packaging": "26.3",
+        "pooch": "1.9.0",
+        "platformdirs": "4.13.4",
+        "pyparsing": "3.3.3",
+        "python-dateutil": "2.9.0.post0",
+        "scikit-learn": "1.9.1",
+        "narwhals": "2.27.1",
+        "scipy": "1.17.1",
+        "six": "1.17.0",
+        "soundfile": "0.14.0",
+        "cffi": "2.1.1",
+        "soxr": "1.1.0",
+        "threadpoolctl": "3.7.0",
+        "typing_extensions": "4.16.0",
+        "pycparser": "3.11"
+      }
+    },
+    "hyperframes": {
+      "repository": "https://github.com/heygen-com/hyperframes",
+      "version": "0.8.87",
+      "license": "Apache-2.0",
+      "nodeMajorMinimum": 22,
+      "npm": {
+        "hyperframes": "0.8.87",
+        "gsap": "3.15.0"
+      },
+      "npmLockFile": "hyperframes/package-lock.json",
+      "npmLockSHA256": "b3f48e9687cd27dea097203e928e6e7fd84344b88122ab2bb546d38b48705de1",
+      "browser": {
+        "package": "chromium",
+        "executable": "/usr/bin/chromium",
+        "pinning": "Debian apt version resolved during image build; not an exact browser pin"
+      }
+    }
+  },
+  "validation": {
+    "imageBuilt": false,
+    "modelTested": false,
+    "networkTested": false
+  }
+}

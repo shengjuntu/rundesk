@@ -47,6 +47,12 @@ python3 examples/news2douyin/run.py pack --without-agent-reach --codex-version X
 
 news2douyin 和 people-search 默认包含 Agent-Reach；保留 `--with-agent-reach` 兼容旧命令。Wigolo 选项已移除。Windows 可用 Python 生成 ZIP，RunDesk 托管 Docker 仍要求 Linux 本机 Engine。CLI build 默认超时 1800 秒，可用 `--timeout` 调整；初始化任务上限 60 分钟。
 
+## 外置配方与下载源
+
+六套默认完整目录位于 `recipes/<profile>/`，Go 在构建请求时读取它们，不再嵌入配方 ZIP。直接编辑目录影响新建构建；历史构建的输入保持冻结。可用 `RUNDESK_RECIPES_DIR` 指定另一份目录。
+
+构建中心的“查看配方”可预览 Dockerfile、填写精确 Codex 版本后下载完整构建目录 ZIP；修改后可按自定义配方导入。只需换源时，构建前选择国际/中国镜像，再逐项覆盖，无须改 Dockerfile。源目录和参数约定见[下载源配置](../docs/BUILD-SOURCES.md)。
+
 ## 构建与配置
 
 - npm 工具使用固定版本及 `package-lock.json` / `npm ci`；Agent-Reach 固定源码提交并内置修复后的本地源码（news2douyin、people-search 1.1.2），删除重复 wheel force-include；来源、补丁及逐文件摘要记录在 `_shared/dependencies.json` 和 `_shared/vendor/`。apt、pip、npm 配置有限重试和下载超时。工具依赖层位于 Codex 层之前，升级 Codex 时复用缓存。
@@ -59,7 +65,7 @@ news2douyin 和 people-search 默认包含 Agent-Reach；保留 `--with-agent-re
 
 初始化的离线检查使用只读根目录、无网络、非特权 UID，检查 Codex、工具版本、Skill 路径和配置。`agent-reach doctor` 是运行时联网渠道检查，不等于模型调用、证据质量或业务 MCP 验收。真实部署仍需检查认证、Exa 工具列表、一次检索和原文引用。
 
-内置构建 ZIP 由同一 CLI 编译生成；Go 二进制直接嵌入，无需在用户主机运行 Python。修改配方后执行：
+Dockerfile 直接维护在各 examples 配方目录，完整发行目录由同一 CLI 生成到 `recipes/`。维护者修改 examples 输入后运行下列脚本同步和检查；历史脚本名保留为兼容入口，已不向 Go 嵌入 ZIP。部署用户直接编辑已选 `recipes/`，不需执行 Python 或重新编译：
 
 ```bash
 python3 scripts/embed-profiles.py

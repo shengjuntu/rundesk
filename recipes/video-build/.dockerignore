@@ -1,0 +1,17 @@
+**
+!Dockerfile
+!requirements.txt
+!profile.lock.json
+!THIRD_PARTY.md
+!seed/
+!seed/**
+!skills/
+!skills/**
+!tools/
+!tools/**
+!agent-tools/
+!agent-tools/**
+!vendor/
+!vendor/**
+!hyperframes/
+!hyperframes/**

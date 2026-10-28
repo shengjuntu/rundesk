@@ -31,39 +31,41 @@ const buildContextLimit = 128 << 20
 const buildLogLimit = 4 << 20
 
 type ImageBuild struct {
-	Scope          string           `json:"scope,omitempty"`
-	Source         string           `json:"source,omitempty"`
-	ProfileID      string           `json:"profileId,omitempty"`
-	CodexVersion   string           `json:"codexVersion,omitempty"`
-	OfflineReady   bool             `json:"offlineReady"`
-	ID             string           `json:"id"`
-	InstanceID     string           `json:"instanceId"`
-	Name           string           `json:"name"`
-	Dockerfile     string           `json:"dockerfile"`
-	Reference      string           `json:"reference"`
-	Status         string           `json:"status"`
-	Created        string           `json:"created"`
-	Updated        string           `json:"updated"`
-	Started        string           `json:"started,omitempty"`
-	Finished       string           `json:"finished,omitempty"`
-	ContextSHA256  string           `json:"contextSha256"`
-	ContextBytes   int64            `json:"contextBytes"`
-	Files          int              `json:"files"`
-	TimeoutMinutes int              `json:"timeoutMinutes"`
-	NoCache        bool             `json:"noCache"`
-	ImageID        string           `json:"imageId,omitempty"`
-	ImageVersionID string           `json:"imageVersionId,omitempty"`
-	Error          string           `json:"error,omitempty"`
-	LogTruncated   bool             `json:"logTruncated"`
-	RecipeID       string           `json:"recipeId,omitempty"`
-	RecipeRevision int              `json:"recipeRevision,omitempty"`
-	RecipeSHA      string           `json:"recipeSha,omitempty"`
-	RecipeSmoke    *RecipeSmokeSpec `json:"recipeSmoke,omitempty"`
-	OwnerRunID     string           `json:"ownerRunId,omitempty"`
-	RequestID      string           `json:"requestId,omitempty"`
-	RequestSHA     string           `json:"requestSha,omitempty"`
-	RebuildOf      string           `json:"rebuildOf,omitempty"`
-	TestKind       string           `json:"testKind,omitempty"`
+	BuildSources    *BuildSourceSnapshot  `json:"buildSources,omitempty"`
+	RuntimeIdentity *RuntimeImageIdentity `json:"runtimeIdentity,omitempty"`
+	Scope           string                `json:"scope,omitempty"`
+	Source          string                `json:"source,omitempty"`
+	ProfileID       string                `json:"profileId,omitempty"`
+	CodexVersion    string                `json:"codexVersion,omitempty"`
+	OfflineReady    bool                  `json:"offlineReady"`
+	ID              string                `json:"id"`
+	InstanceID      string                `json:"instanceId"`
+	Name            string                `json:"name"`
+	Dockerfile      string                `json:"dockerfile"`
+	Reference       string                `json:"reference"`
+	Status          string                `json:"status"`
+	Created         string                `json:"created"`
+	Updated         string                `json:"updated"`
+	Started         string                `json:"started,omitempty"`
+	Finished        string                `json:"finished,omitempty"`
+	ContextSHA256   string                `json:"contextSha256"`
+	ContextBytes    int64                 `json:"contextBytes"`
+	Files           int                   `json:"files"`
+	TimeoutMinutes  int                   `json:"timeoutMinutes"`
+	NoCache         bool                  `json:"noCache"`
+	ImageID         string                `json:"imageId,omitempty"`
+	ImageVersionID  string                `json:"imageVersionId,omitempty"`
+	Error           string                `json:"error,omitempty"`
+	LogTruncated    bool                  `json:"logTruncated"`
+	RecipeID        string                `json:"recipeId,omitempty"`
+	RecipeRevision  int                   `json:"recipeRevision,omitempty"`
+	RecipeSHA       string                `json:"recipeSha,omitempty"`
+	RecipeSmoke     *RecipeSmokeSpec      `json:"recipeSmoke,omitempty"`
+	OwnerRunID      string                `json:"ownerRunId,omitempty"`
+	RequestID       string                `json:"requestId,omitempty"`
+	RequestSHA      string                `json:"requestSha,omitempty"`
+	RebuildOf       string                `json:"rebuildOf,omitempty"`
+	TestKind        string                `json:"testKind,omitempty"`
 }
 
 func buildActive(s string) bool              { return s == "queued" || s == "running" || s == "canceling" }
@@ -312,6 +314,7 @@ func (m *Manager) createBuildWithRecipe(iid, name, dockerfile string, timeout in
 		}
 	}
 	if recipe != nil {
+		v.BuildSources = recipe.BuildSources
 		v.RecipeID, v.RecipeRevision, v.RecipeSHA = recipe.RecipeID, recipe.RecipeRevision, recipe.RecipeSHA
 		v.RecipeSmoke, v.OwnerRunID, v.RequestID, v.RequestSHA, v.RebuildOf = recipe.RecipeSmoke, recipe.OwnerRunID, recipe.RequestID, recipe.RequestSHA, recipe.RebuildOf
 		if setup == nil && (recipe.RecipeID != "" || recipe.Scope == "recipe") {
@@ -320,6 +323,9 @@ func (m *Manager) createBuildWithRecipe(iid, name, dockerfile string, timeout in
 		if recipe.Reference != "" {
 			v.Reference = recipe.Reference
 		}
+	}
+	if e = freezeRuntimeImageIdentity(&v, filepath.Join(tmp, "context")); e != nil {
+		return ImageBuild{}, e
 	}
 	if e = os.Rename(tmp, m.buildDir(id)); e != nil {
 		return v, e
@@ -578,6 +584,11 @@ func (m *Manager) executeBuild(ctx context.Context, v ImageBuild) (imageID strin
 	if v.NoCache {
 		args = append(args, "--no-cache")
 	}
+	sourceArgs, sourceErr := buildSourceArguments(v.BuildSources)
+	if sourceErr != nil {
+		return "", false, sourceErr
+	}
+	args = append(args, sourceArgs...)
 	args = append(args, filepath.Join(dir, "context"))
 	cmd := m.docker.Command(args...)
 	cmd.Env = append(cmd.Env, "DOCKER_BUILDKIT=1")

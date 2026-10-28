@@ -1,6 +1,11 @@
 # RunDesk base runtime. Build context: examples/docker (see README.md).
 ARG BASE_IMAGE=node:22-bookworm-slim
-FROM ${BASE_IMAGE}
+ARG RD_BASE_IMAGE=${BASE_IMAGE}
+FROM ${RD_BASE_IMAGE}
+ARG RD_APT_MIRROR=http://deb.debian.org/debian
+ARG RD_APT_SECURITY_MIRROR=http://deb.debian.org/debian-security
+ARG RD_NPM_REGISTRY=https://registry.npmjs.org
+COPY tools/configure-apt.sh /opt/rundesk-profile/tools/configure-apt.sh
 ARG CODEX_VERSION
 ARG IMAGE_VERSION
 ARG SOURCE_URL
@@ -19,10 +24,11 @@ LABEL org.opencontainers.image.version="${IMAGE_VERSION}" \
 
 # Require an explicit release instead of silently following latest.
 RUN node -e 'if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(process.argv[1] || "")) { console.error("Set CODEX_VERSION to an exact release (see README.md)"); process.exit(1); }' "${CODEX_VERSION}" \
+ && RD_APT_MIRROR="${RD_APT_MIRROR}" RD_APT_SECURITY_MIRROR="${RD_APT_SECURITY_MIRROR}" sh /opt/rundesk-profile/tools/configure-apt.sh \
  && apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates git curl ripgrep python3 python3-venv \
  && rm -rf /var/lib/apt/lists/* \
- && npm install --global "@openai/codex@${CODEX_VERSION}" \
+ && npm_config_registry="${RD_NPM_REGISTRY}" npm install --global "@openai/codex@${CODEX_VERSION}" \
  && npm cache clean --force \
  && codex --version \
  && codex app-server --help >/dev/null

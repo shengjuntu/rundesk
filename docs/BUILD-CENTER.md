@@ -1,6 +1,6 @@
 # 构建中心
 
-RunDesk 0.52.0 的“构建中心”是跨应用的常驻入口。新闻搜索、媒体搜索、深度研究和视频制作可以共用配方或镜像；应用、Skills、MCP、插件、实例和任务自由组合，不要求定义工作流或应用层级。
+“构建中心”是跨应用的常驻入口，0.55.0 增加外置配方与构建前下载源配置。新闻搜索、媒体搜索、深度研究和视频制作可以共用配方或镜像；应用、Skills、MCP、插件、实例和任务自由组合，不要求定义工作流或应用层级。
 
 | 资源 | 负责的内容 |
 | --- | --- |
@@ -12,7 +12,7 @@ RunDesk 0.52.0 的“构建中心”是跨应用的常驻入口。新闻搜索�
 
 ## 使用
 
-打开左侧“构建中心”，选择已有配方构建，或导入自己的 manifest 与 Docker context ZIP。内置六项为 news2douyin、people-search、video-build、HyperFrames、video-use、OpenMontage。构建在后台排队，可以查看日志、取消和重建。已有 setup/应用构建也在全局列表中显示；原有入口继续工作。
+打开左侧“构建中心”，选择已有配方构建，或导入自己的 manifest 与 Docker context ZIP。“查看配方”可预览 Dockerfile 并下载完整构建目录；“下载源设置”维护国际/中国镜像源列表，构建前按配方支持逐项选择或修改。内置六项为 news2douyin、people-search、video-build、HyperFrames、video-use、OpenMontage。构建在后台排队，可以查看日志、取消和重建。已有 setup/应用构建也在全局列表中显示；原有入口继续工作。
 
 构建成功后在镜像区检查固定身份、查看引用、执行离线检查或声明的 smoke，或者创建并启动专用 Codex Docker 实例。启动环境不发起模型任务。已有应用的镜像更新仍需在其原管理界面显式操作。
 
@@ -22,7 +22,7 @@ RunDesk 0.52.0 的“构建中心”是跨应用的常驻入口。新闻搜索�
 
 ## 动态配方
 
-自定义配方存于 `data/build-recipes/<id>/revisions/<revision>/`，包含冻结 manifest、原始 ZIP 和摘要；无需修改 examples 或重新编译宿主。每次导入产生独立配方版本，修改内容应导入新版本。归档不删除历史输入。内置配方只读，随 RunDesk 二进制发布更新；已冻结的历史 ZIP 不会自动改变。0.54.1 将 news2douyin、people-search 更新至 1.1.2；使用新版配方须从配方新建构建任务，历史任务的“重建”仍使用原输入。
+自定义配方存于 `data/build-recipes/<id>/revisions/<revision>/`，包含冻结 manifest、原始 ZIP 和摘要；无需修改 examples 或重新编译宿主。每次导入产生独立配方版本，修改内容应导入新版本。归档不删除历史输入。默认配方的完整文件在 `recipes/<profile>/`，可直接编辑；Go 不再嵌入 ZIP。修改影响新建构建，无需重编译或重启；已冻结的历史 ZIP 不改变。news2douyin、people-search 保留 1.1.2 的 Agent-Reach 本地源码修复。外置目录、源字段及边界见[下载源配置](BUILD-SOURCES.md)。
 
 manifest 示例：
 
@@ -44,7 +44,7 @@ manifest 示例：
 
 镜像须提供 Codex CLI、Python 3 及所声明命令，适配现有 Codex Docker 环境。插件引用只记录原生 ID、可选来源和版本，不是 RunDesk 自定义插件包，也不自动安装插件。ZIP 上限 32 MiB，解压后 128 MiB、4000 项；拒绝越界路径、链接、特殊文件、重复路径和常见凭据文件。不要把真实服务密钥、Codex HOME、宿主 socket 或业务数据放入镜像。
 
-重建建立新任务，复制原始冻结上下文及其摘要，不读取已被修改的工作目录。未保留原始输入的旧历史会明确拒绝重建。输入相同可复用 Docker 层缓存；`noCache` 仅在确有需要时指定。
+重建建立新任务，复制原始冻结上下文、源参数及其摘要，不读取已被修改的工作目录或源列表。未保留原始输入的旧历史会明确拒绝重建。输入相同可复用 Docker 层缓存；`noCache` 仅在确有需要时指定。
 
 ## 检查、启动和删除
 
@@ -66,7 +66,11 @@ manifest 示例：
 | --- | --- |
 | `/build-center/recipes` | GET 列表；POST multipart `manifest`、`context`、`requestId` 导入 |
 | `/build-center/recipes/{rid}` | GET 明细；DELETE `?revision=N` 归档自定义项 |
-| `/build-center/recipes/{rid}/build` | POST `recipeRevision`、`requestId`，可选 reference、codexVersion、noCache |
+| `/build-center/recipes/{rid}/build` | POST `recipeRevision`、`requestId`，可选 reference、codexVersion、noCache、buildSources |
+| `/build-center/sources` | GET 源列表；PUT 携带 revision 保存，文件即时生效 |
+| `/build-center/recipes/{rid}/sources` | GET 配方涉及的下载类型及参数支持 |
+| `/build-center/recipes/{rid}/dockerfile` | GET Dockerfile 内容，可选 codexVersion |
+| `/build-center/recipes/{rid}/context.zip` | GET 完整上下文；内置配方须提供精确 codexVersion |
 | `/build-center/builds` | GET 全局列表 |
 | `/build-center/builds/{bid}` | GET 状态；平台成功记录保留为镜像来源 |
 | `/build-center/builds/{bid}/log` | GET `?after=N` 增量脱敏日志 |

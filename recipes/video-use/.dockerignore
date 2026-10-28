@@ -1,0 +1,14 @@
+**
+!Dockerfile
+!profile.lock.json
+!THIRD_PARTY.md
+!seed/
+!seed/**
+!skills/
+!skills/**
+!tools/
+!tools/**
+!upstream/
+!upstream/**
+!vendor/
+!vendor/**

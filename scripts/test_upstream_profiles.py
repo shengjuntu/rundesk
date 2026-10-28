@@ -127,6 +127,9 @@ class ActualRecipeTest(unittest.TestCase):
                 self.assertEqual(mcp["args"][-1], "serve-mcp")
                 if name == "openmontage":
                     self.assertIn(lock["upstream"]["sourceURL"], docker)
+                    self.assertIn("ARG RD_GITHUB_ARCHIVE_BASE=https://codeload.github.com", docker)
+                    self.assertIn('"${RD_GITHUB_ARCHIVE_BASE}/calesthio/OpenMontage/tar.gz/' + lock["upstream"]["commit"] + '"', docker)
+                    self.assertIn(lock["upstream"]["sourceSHA256"] + "  /opt/rundesk-upstream/source.tar.gz", docker)
                     self.assertNotIn("sourceArchive", lock["upstream"])
                     self.assertFalse((destination / "vendor").exists())
                 else:

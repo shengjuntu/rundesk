@@ -1,6 +1,18 @@
 # 验证范围与复验
 
-本页区分 0.54.1 研究预置构建修复、0.54.0 WebUI、0.53.0 UHP 加固、此前 0.52.0 文档整理与功能验证，以及更早的发布记录。测试替身通过不等于真实模型、Docker 或业务制品已验收。
+本页区分 0.55.0 外置配方与构建源、0.54.1 研究预置构建修复、0.54.0 WebUI、0.53.0 UHP 加固、此前 0.52.0 文档整理与功能验证，以及更早的发布记录。测试替身通过不等于真实模型、Docker 或业务制品已验收。
+
+## 0.55.0 外置配方与构建源
+
+本轮实际检查见 [build-sources-055.json](validation/current/build-sources-055.json)。Go 全套 668 个通过事件（含子测试）、14 项外部 Kun 测试跳过；源专项 race 通过。覆盖外置文件实时读取、通用模板、源目录错误不回退、配方快照、Dockerfile/ZIP 导出、源类型扩展、源列表并发保存、凭据拒绝、参数实际传入 Docker 命令、冻结定义及原配置重建。外部文件和源列表编辑不会重新解释既有构建的身份。
+
+Python 配方测试 20 项、独立上游 7 项通过，六套配方和通用模板目录与生成器一致。Agent-Reach wheel 实际断开包索引构建/本地安装并逐字节核对 7 个指南/Skill 资源；使用 `--no-deps`，不代表运行依赖或整个容器可用。APT fixture 验证 deb822/传统格式、保留 Signed-By、默认 HTTP 和显式 HTTPS 缺 CA 提示。
+
+真实编译后的 Linux 程序以独立目录部署，完成[本地 HTTP 检查](validation/current/build-sources-live-055.json)：从程序旁读取资源、无重启编辑 Dockerfile、源默认组保存/409 冲突、实际 GitHub 参数识别及带修复 vendor 的完整目录导出。该检查没有 Docker 或模型。Windows amd64 仅交叉编译，未运行。
+
+实际 WebUI JavaScript 的 JSDOM 测试通过；[Chromium 布局](validation/current/build-sources-browser-055.json)使用 HTTP fixture，检查 1440px/390px 两个宽度的构建源表单和源列表编辑器，没有水平溢出或页面异常。QA 字体不作为产品依赖，也不随包保存浏览器截图。
+
+没有执行完整 Docker 构建、镜像站连通性/测速、联网模型或业务任务。国际/中国分组及地址核对不能推导为所有下载均已切换；任意脚本需要声明并使用相应参数。旧版本报告继续保留原范围。
 
 ## 0.54.1 研究预置构建修复
 

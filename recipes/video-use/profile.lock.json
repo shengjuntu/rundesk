@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "generatorVersion": "1.3.1",
+  "profile": {
+    "schemaVersion": 1,
+    "version": "1.0.0",
+    "runtime": "codex-docker",
+    "id": "video-use",
+    "title": "Video Use · 上游原生剪辑",
+    "description": "独立 browser-use/video-use 上游 Skill 与原生 EDL/FFmpeg 剪辑环境；TTS、图片与视频生成走 Video App MCP，不改变我们自己的 video-build。",
+    "searchBackends": [
+      "none"
+    ],
+    "defaultSearchBackend": "none",
+    "aptPackages": [
+      "ffmpeg",
+      "fontconfig",
+      "fonts-noto-cjk"
+    ],
+    "pythonPackages": [],
+    "skill": "edit-with-video-use",
+    "tools": [
+      "Python 3.11",
+      "FFmpeg",
+      "ffprobe",
+      "video-use native helpers",
+      "NumPy",
+      "librosa",
+      "matplotlib",
+      "Pillow",
+      "Video App generation MCP"
+    ],
+    "outputs": [
+      "edit/project.md",
+      "edit/edl.json",
+      "edit/final.mp4"
+    ],
+    "resources": {
+      "cpus": 4,
+      "memoryMB": 4096,
+      "network": "bridge"
+    },
+    "optionalComponents": [],
+    "skillFiles": [
+      "SKILL.md",
+      "agents/openai.yaml",
+      "references/generation-services.md"
+    ],
+    "upstream": "upstream.json"
+  },
+  "selection": {
+    "searchBackend": "none",
+    "agentReach": false,
+    "videoUse": false,
+    "nativeUpstream": "video-use"
+  },
+  "codexVersion": "0.0.0",
+  "baseImage": "node:22-bookworm-slim",
+  "upstream": {
+    "schemaVersion": 1,
+    "repository": "https://github.com/browser-use/video-use",
+    "commit": "43cfc566833548093455c9d4a46bd69913b7e552",
+    "sourceArchive": "vendor/video-use-43cfc566833548093455c9d4a46bd69913b7e552.tar.gz",
+    "sourceSHA256": "b7c181c855265f5e88a2bacde46959b3a07034ee7dce00aed1f4b00bce6a3367",
+    "license": "MIT",
+    "installScript": "install.sh",
+    "buildFiles": [
+      "install.sh",
+      "requirements.lock",
+      "doctor.py"
+    ],
+    "skillDirectories": [
+      {
+        "source": ".",
+        "name": "video-use"
+      }
+    ],
+    "requiredFiles": [
+      "LICENSE",
+      "SKILL.md",
+      "install.md",
+      "pyproject.toml",
+      "helpers/render.py",
+      "helpers/transcribe.py",
+      "helpers/pack_transcripts.py",
+      "helpers/timeline_view.py",
+      "tests/test_render_fps.py"
+    ]
+  },
+  "validation": {
+    "imageBuilt": false,
+    "modelTested": false,
+    "networkTested": false
+  }
+}

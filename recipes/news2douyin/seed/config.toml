@@ -1,0 +1,9 @@
+cli_auth_credentials_store = "file"
+check_for_update_on_startup = false
+
+[mcp_servers.exa]
+url = "https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa,web_search_advanced_exa"
+enabled = true
+startup_timeout_sec = 30
+tool_timeout_sec = 90
+enabled_tools = ["web_search_exa", "web_fetch_exa", "web_search_advanced_exa"]

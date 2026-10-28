@@ -1,6 +1,6 @@
 # RunDesk Control API（RDCA）v1
 
-RunDesk 自身 API 的名称为 **RunDesk Control API（RDCA）**。当前契约随 RunDesk 0.54.1 发布。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
+RunDesk 自身 API 的名称为 **RunDesk Control API（RDCA）**。当前契约随 RunDesk 0.55.0 发布。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
 
 RunDesk 不依赖 HarnessRouter。附加 UHP 服务已在 `/v1` 提供入口，与 RDCA 共用任务核心和资源服务；各协议的授权与幂等细节分别定义。本版目标协议为 `2026-10-19`，不声明完整规范兼容，详见 [API 定位](API-STRATEGY.md) 和 [UHP 服务与限制](UHP.md)。
 
@@ -34,6 +34,20 @@ Content-Type: application/json
 应用请求可省略 instanceId/source，由凭据绑定。显式提交其他归属会拒绝；`source.taskId` 仅为业务标签，不负责去重。模型、Skills、MCP、安装、全局并发及凭据管理属于管理员。
 
 [注册与集中配置](APPLICATION-CONNECT.md) · [凭据生命周期和范围](APPLICATION-CREDENTIALS.md)
+
+## 构建配方与下载源（管理员）
+
+0.55.0 的配方为外置 `recipes/<profile>/` 文件，源列表为可编辑的 JSON；完整操作见[构建源配置](BUILD-SOURCES.md)。新增管理接口仍拒绝普通应用凭据与成员访问。
+
+| 路径 | 操作 |
+| --- | --- |
+| `GET /build-center/sources` | 读取源分组、条目、类型定义和当前 revision |
+| `PUT /build-center/sources` | 携带原 revision 保存；并发修改返回 409 |
+| `GET /build-center/recipes/{rid}/sources` | 识别源类型及配方是否声明并使用相应参数 |
+| `GET /build-center/recipes/{rid}/dockerfile` | 预览 Dockerfile；内置配方可选 `codexVersion` |
+| `GET /build-center/recipes/{rid}/context.zip` | 下载完整 ZIP；内置配方须给精确 `codexVersion` |
+
+已有 `POST /build-center/recipes/{rid}/build` 增加可选 `buildSources`：`group` 选择分组，`catalogRevision` 固定当前列表，`selections` 按类型选择条目，`overrides` 按类型/字段覆盖公开地址。实际解析值、参数定义与列表摘要保存在 `ImageBuild.buildSources` 和冻结上下文中。省略此字段保持旧配方行为；历史重建使用原参数，不读取新默认源。自定义 Dockerfile 未声明支持的设置不会被静默替换。
 
 ## 应用 Docker 环境
 

@@ -22,6 +22,36 @@ const profiles = ['news2douyin','people-search','video-build','hyperframes','vid
 const db = {recipes:profiles.map(id => ({schemaVersion:1,id:'builtin-'+id,profileId:id,kind:'builtin',name:id,version:'1.0.0',revision:1,description:'工具配方',dockerfile:'Dockerfile',contextSha256:'context-'+id,recipeSha:'recipe-'+id,plugins:[],smoke:{command:[],timeoutSeconds:60,expectedFiles:[]},archived:false})),builds:[],images:[],instances:[{id:'default',name:'Codex',codexHome:'/home/codex',agentRuntime:{kind:'codex'},execution:{mode:'local'}},{id:'kun',name:'Kun',agentRuntime:{kind:'kun'},execution:{mode:'local'}}],workspaces:[{id:'workspace',name:'项目',path:'/work/project'}],sessions:[]};
 const image = (key, name) => ({key,imageId:'sha256:'+key.repeat(3),references:[name],sources:[{kind:'build',id:'build-1',name:'工具镜像',recipeId:'builtin-video-build'}],registrations:[],selectedBy:[],environments:[],availability:'available'});
 db.images = [image('a'.repeat(24),'video:1'), image('b'.repeat(24),'video:2')];
+const sourceTypes = [
+  {id:'docker',name:'Docker',fields:[{id:'baseImage',label:'基础镜像',argument:'RD_BASE_IMAGE'}]},
+  {id:'apt',name:'APT',fields:[{id:'mirror',label:'APT 主仓',argument:'RD_APT_MIRROR'},{id:'securityMirror',label:'APT 安全仓',argument:'RD_APT_SECURITY_MIRROR'}]},
+  {id:'npm',name:'npm',fields:[{id:'registry',label:'npm registry',argument:'RD_NPM_REGISTRY'}]},
+  {id:'pip',name:'pip',fields:[{id:'indexUrl',label:'pip index',argument:'RD_PIP_INDEX_URL'}]},
+  {id:'conda',name:'Conda',fields:[{id:'channels',label:'频道',argument:'RD_CONDA_CHANNELS'}]},
+  {id:'github',name:'GitHub',fields:[{id:'archiveBase',label:'源码归档地址',argument:'RD_GITHUB_ARCHIVE_BASE'}]}
+];
+db.catalog={schemaVersion:1,defaultGroup:'international',revision:'catalog-1',types:sourceTypes,groups:[
+  {id:'international',name:'国际（美国为主）',sources:[
+    {id:'docker-original',name:'原始基础镜像',type:'docker',values:{baseImage:''}},
+    {id:'debian',name:'Debian 官方',type:'apt',values:{mirror:'https://deb.debian.org/debian',securityMirror:'https://security.debian.org/debian-security'}},
+    {id:'npm-official',name:'npm 官方',type:'npm',values:{registry:'https://registry.npmjs.org/'}},
+    {id:'pypi',name:'PyPI',type:'pip',values:{indexUrl:'https://pypi.org/simple/'}}
+  ]},
+  {id:'china',name:'中国镜像',sources:[
+    {id:'docker-keep',name:'保留原镜像',type:'docker',values:{baseImage:''}},
+    {id:'debian-cn',name:'Debian 镜像',type:'apt',values:{mirror:'https://mirror.example/debian',securityMirror:'https://security.debian.org/debian-security'}},
+    {id:'npm-cn',name:'npm 镜像',type:'npm',values:{registry:'https://registry.npmmirror.com/'}},
+    {id:'pypi-cn',name:'PyPI 镜像',type:'pip',values:{indexUrl:'https://pypi.tuna.tsinghua.edu.cn/simple/'}}
+  ]}
+]};
+const sourceCapability={types:[
+ {type:'docker',detected:true,supported:true,arguments:['RD_BASE_IMAGE']},
+ {type:'apt',detected:true,supported:true,arguments:['RD_APT_MIRROR','RD_APT_SECURITY_MIRROR']},
+ {type:'npm',detected:true,supported:true,arguments:['RD_NPM_REGISTRY']},
+ {type:'pip',detected:true,supported:true,arguments:['RD_PIP_INDEX_URL']},
+ {type:'github',detected:true,supported:false,arguments:[]}
+]};
+let catalogConflict=false, sourceReadError=false;
 const requests = [], receipts = new Map(); let uploadLost = true, launchCount = 0, launchError = false, checkCount = 0, deleted = false, imageGate, recipeGate, pluginGate;
 const fail = (text, status, code) => Object.assign(new Error(text), {status,code});
 function build(id, extra = {}) { return {id,name:'构建 '+id,status:'succeeded',scope:'recipe',recipeId:'builtin-video-build',recipeRevision:1,reference:'video:1',imageId:db.images[0]?.imageId || 'sha256:fixed',contextSha256:'frozen-context',created:'2026-10-20T10:00:00Z',...extra}; }
@@ -29,6 +59,9 @@ w.RunDeskDiagnostics = {recent:() => null,request:async (url, options = {}) => {
   const route = url.replace('/api/v1',''), method = options.method || 'GET', body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
   requests.push({route,method,body,headers:options.headers});
   if (method === 'GET') {
+    if (route === '/build-center/sources') { if(sourceReadError) throw fail('source catalog unreadable',500,'build_sources_invalid'); return copy(db.catalog); }
+    if (/^\/build-center\/recipes\/[^/]+\/sources$/.test(route)) return copy(sourceCapability);
+    if (/^\/build-center\/recipes\/[^/]+\/dockerfile/.test(route)) return {path:'Dockerfile',template:!route.includes('codexVersion='),dockerfile:'FROM node:22-bookworm-slim\nARG CODEX_VERSION='+(route.includes('codexVersion=')?'0.157.1':'0.0.0')};
     if (route === '/instances') return copy(db.instances);
     if (route === '/workspaces') return copy(db.workspaces);
     if (route === '/sessions' || route === '/applications') return [];
@@ -43,13 +76,17 @@ w.RunDeskDiagnostics = {recent:() => null,request:async (url, options = {}) => {
     if (route === '/workspaces/workspace/skills?instanceId=default') return {data:[{skills:[{name:'cut',path:'/home/codex/skills/cut/SKILL.md',pluginId:'editor@example',enabled:true},{name:'local',path:'/home/codex/skills/local/SKILL.md',enabled:true}]}]};
     throw Error('Unexpected GET '+route);
   }
+  if (method === 'PUT' && route === '/build-center/sources') {
+    if(catalogConflict || body.revision!==db.catalog.revision) throw fail('catalog changed',409,'build_sources_changed');
+    assert.equal(body.schemaVersion,1); assert(['international','china'].includes(body.defaultGroup)); assert(Array.isArray(body.types)); db.catalog={...copy(body),revision:'catalog-'+(Number(db.catalog.revision.split('-')[1])+1),types:copy(body.types)}; return copy(db.catalog);
+  }
   if (method === 'POST' && route === '/build-center/recipes') {
     assert(body instanceof w.FormData); const manifest = JSON.parse(body.get('manifest')), id = body.get('requestId'); assert.match(id,/^[0-9a-f]{24}$/); assert(body.get('context'));
     let value = receipts.get(id); if (!value) { value = {...manifest,id:'custom-'+id,revision:1,kind:'custom',archived:false,contextSha256:'custom-context',recipeSha:'custom-recipe'}; db.recipes.push(value); receipts.set(id,copy(value)); }
     if (uploadLost) { uploadLost = false; throw fail('response lost'); } return copy(value);
   }
   if (method === 'POST' && /^\/build-center\/recipes\/[^/]+\/build$/.test(route)) {
-    assert.match(body.requestId,/^[0-9a-f]{24}$/); assert.equal(body.recipeRevision,1); assert.equal(body.codexVersion,'0.163.0'); const value = build('build-'+(db.builds.length+1)); db.builds.unshift(value); return copy(value);
+    assert.match(body.requestId,/^[0-9a-f]{24}$/); assert.equal(body.recipeRevision,1); assert.equal(body.recipeSha,'recipe-video-build'); assert.equal(body.codexVersion,'0.163.0'); const value = build('build-'+(db.builds.length+1),{buildSources:{group:body.buildSources.group,catalogSHA:db.catalog.revision,selections:copy(body.buildSources.selections),values:copy(body.buildSources.overrides)}}); db.builds.unshift(value); return copy(value);
   }
   if (method === 'POST' && /\/build-center\/builds\/[^/]+\/rebuild$/.test(route)) {
     assert.match(body.requestId,/^[0-9a-f]{24}$/); const value = build('rebuild-'+(db.builds.length+1)); db.builds.unshift(value); return copy(value);
@@ -76,12 +113,49 @@ function deferred() { let resolve; const promise=new Promise(done=>{resolve=done
 (async()=>{
   assert($('#nav-build-center'),'permanent navigation is missing');
   await w.RunDeskBuildCenter.open(); assert.equal($$('[data-recipe-id]').length,6); assert.equal(state.applications.length,0); assert($('#nav-build-center').classList.contains('selected')); assert(!$('#nav-assistant').classList.contains('selected'));
+  // The catalog is editable without losing a draft on an optimistic-concurrency conflict.
+  $('[data-center-action="sources"]').click(); await until(()=>!!$('#center-sources-json')&&!$('.build-center-dialog button[type=submit]').disabled);
+  const editor=$('#center-sources-json'), catalogForm=editor.closest('form');
+  const draft=JSON.parse(editor.value);draft.types.push({id:'gomod',name:'Go Modules',fields:[{id:'proxy',label:'GOPROXY',argument:'RD_GOPROXY',kind:'url'}]});draft.groups[1].sources.find(s=>s.id==='npm-cn').values.registry='https://mirror.company.example/npm/';editor.value=JSON.stringify(draft);
+  const draftText=editor.value;catalogConflict=true;await submit(editor);assert.equal(editor.value,draftText);assert(catalogForm.querySelector('.error').textContent.includes('你的编辑仍保留'));
+  catalogConflict=false;await submit(editor);assert(catalogForm.querySelector('[role=status]').textContent.includes('已保存'));assert.equal(db.catalog.groups[1].sources.find(s=>s.id==='npm-cn').values.registry,'https://mirror.company.example/npm/');assert(db.catalog.types.some(t=>t.id==='gomod'));$('.build-center-dialog').close();
+  // A user can view the actual Dockerfile and export a version-resolved context.
+  findButton($('[data-recipe-id="builtin-news2douyin"]'),'查看配方').click();await until(()=>$('#center-recipe-dockerfile-content')?.textContent.includes('FROM node'));
+  const download=$('#center-recipe-context-download'), blocked=new w.MouseEvent('click',{bubbles:true,cancelable:true});download.dispatchEvent(blocked);assert(blocked.defaultPrevented);assert($('.build-center-dialog .error').textContent.includes('精确版本'));
+  $('#center-export-codex-version').value='0.157.1';$('#center-export-codex-version').dispatchEvent(new w.Event('input'));assert(download.href.endsWith('/context.zip?codexVersion=0.157.1'));findButton($('.build-center-dialog'),'预览 Dockerfile').click();await until(()=>$('#center-recipe-dockerfile-content').textContent.includes('0.157.1'));$('.build-center-dialog').close();
+  // A catalog error disables submission instead of silently building with different sources.
+  sourceReadError=true;$('[data-recipe-build="builtin-video-build"]').click();await until(()=>!!findButton($('.build-center-dialog'),'重试读取下载源'));assert($('.build-center-dialog button[type=submit]').disabled);$('.build-center-dialog').close();sourceReadError=false;
   $('[data-center-action="upload"]').click(); await until(()=>!!$('#center-recipe-name')); $('#center-recipe-name').value='Media'; setFile('#center-recipe-zip'); $('#center-recipe-smoke').value='["python","--version"]';
   await submit($('#center-recipe-name')); assert($('.build-center-dialog .error').textContent.includes('response lost')); await submit($('#center-recipe-name')); await until(()=>$$('[data-recipe-id]').length===7);
   const uploads=requests.filter(row=>row.route==='/build-center/recipes'&&row.method==='POST'); assert.equal(uploads.length,2); assert.equal(uploads[0].body.get('requestId'),uploads[1].body.get('requestId'),'uncertain upload duplicated receipt'); assert.equal(db.recipes.length,7);
   Object.defineProperty(w,'crypto',{value:{getRandomValues:array=>webcrypto.getRandomValues(array)},configurable:true}); $('[data-center-action="upload"]').click(); await until(()=>!!$('#center-recipe-name')); $('#center-recipe-name').value='Plain HTTP tools'; setFile('#center-recipe-zip'); await submit($('#center-recipe-name')); await until(()=>$$('[data-recipe-id]').length===8); Object.defineProperty(w,'crypto',{value:webcrypto,configurable:true});
-  $('[data-recipe-build="builtin-video-build"]').click(); await until(()=>!!$('#center-codex-version')); $('#center-codex-version').value='0.163.0'; const form=$('#center-codex-version').closest('form'); await Promise.all([form.onsubmit({preventDefault(){}}),form.onsubmit({preventDefault(){}})]); await until(()=>!!$('#center-build-log')); assert.equal(requests.filter(row=>row.route.endsWith('/build')&&row.method==='POST').length,1); assert($('#center-build-log').textContent.includes('real frozen build log'));
+  $('[data-recipe-build="builtin-video-build"]').click(); await until(()=>!!$('#center-source-group')&&!$('.build-center-dialog button[type=submit]').disabled); $('#center-codex-version').value='0.163.0';
+  assert.equal($('#center-source-npm-registry').value,'https://registry.npmjs.org/');assert(!$('[data-source-type="conda"]'),'unused source type leaked into build form');assert($('[data-source-type="github"]').textContent.includes('未声明可配置'));assert(!$('#center-source-github-archiveBase'));
+  $('#center-source-group').value='china';$('#center-source-group').dispatchEvent(new w.Event('change'));assert.equal($('#center-source-npm-registry').value,'https://mirror.company.example/npm/');
+  // Per-type choices can mix the groups, and a manually edited address is sent as an override.
+  $('#center-source-pip').value='pypi';$('#center-source-pip').dispatchEvent(new w.Event('change'));assert.equal($('#center-source-pip-indexUrl').value,'https://pypi.org/simple/');
+  $('#center-source-npm-registry').value='https://build.company.example/npm/';$('#center-source-npm-registry').dispatchEvent(new w.Event('input'));
+  const form=$('#center-codex-version').closest('form');await Promise.all([form.onsubmit({preventDefault(){}}),form.onsubmit({preventDefault(){}})]);await until(()=>!!$('#center-build-log'));assert.equal(requests.filter(row=>row.route.endsWith('/build')&&row.method==='POST').length,1);assert($('#center-build-log').textContent.includes('real frozen build log'));
+  const submitted=requests.find(row=>row.route.endsWith('/build')&&row.method==='POST').body.buildSources;assert.equal(submitted.group,'china');assert.equal(submitted.selections.pip,'pypi');assert.equal(submitted.overrides.npm.registry,'https://build.company.example/npm/');assert(!submitted.overrides.github);assert(!submitted.overrides.conda);assert($('.build-frozen-sources').textContent.includes('https://build.company.example/npm/'));
+
+  await w.RunDeskBuildCenter.open('recipes');$('[data-center-action="sources"]').click();await until(()=>!!$('#center-sources-json')&&!$('.build-center-dialog button[type=submit]').disabled);
+  const defaults=JSON.parse($('#center-sources-json').value);defaults.defaultGroup='china';$('#center-sources-json').value=JSON.stringify(defaults);await submit($('#center-sources-json'));assert.equal(db.catalog.defaultGroup,'china');$('.build-center-dialog').close();
+  $('[data-recipe-build="builtin-video-build"]').click();await until(()=>!!$('#center-source-group')&&!$('.build-center-dialog button[type=submit]').disabled);assert.equal($('#center-source-group').value,'china');assert.equal($('#center-source-npm-registry').value,'https://mirror.company.example/npm/');$('.build-center-dialog').close();
+  await w.RunDeskBuildCenter.open('builds',db.builds[0].id);
   const original=db.builds[0].id; $('[data-center-action="rebuild"]').click(); await until(()=>db.builds[0].id!==original&&$('#center-build-log')); assert(requests.some(row=>row.route==='/build-center/builds/'+original+'/rebuild')); assert.notEqual(db.builds[0].id,original);
+  // Model, source-code and Conda downloads use the same declared-argument UI.
+  const oldCatalog=copy(db.catalog), oldCapabilities=copy(sourceCapability.types);
+  db.catalog.types.push({id:'huggingface',name:'Hugging Face',fields:[{id:'endpoint',label:'Hub endpoint',argument:'RD_HF_ENDPOINT',kind:'url'}]});
+  db.catalog.types.find(t=>t.id==='github').fields.push({id:'rawBase',label:'Raw files',argument:'RD_GITHUB_RAW_BASE',kind:'url'});
+  db.catalog.groups[0].sources.push({id:'conda-official',name:'conda-forge',type:'conda',values:{channels:'https://conda.anaconda.org/conda-forge'}},{id:'hf-official',name:'Hugging Face',type:'huggingface',values:{endpoint:'https://huggingface.co'}},{id:'github-official',name:'GitHub',type:'github',values:{archiveBase:'https://codeload.github.com',rawBase:'https://raw.githubusercontent.com'}});
+  db.catalog.groups[1].sources.push({id:'conda-cn',name:'Conda 镜像',type:'conda',values:{channels:'https://mirror.example/conda-forge'}},{id:'hf-cn',name:'HF 镜像',type:'huggingface',values:{endpoint:'https://hf-mirror.com'},description:'第三方模型下载镜像'},{id:'github-enterprise',name:'企业源码代理',type:'github',values:{archiveBase:''},requiresConfiguration:true});
+  sourceCapability.types=[{type:'conda',detected:true,supported:true,arguments:['RD_CONDA_CHANNELS']},{type:'huggingface',detected:true,supported:true,arguments:['RD_HF_ENDPOINT']},{type:'github',detected:true,supported:true,arguments:['RD_GITHUB_ARCHIVE_BASE']}];
+  await w.RunDeskBuildCenter.open('recipes');$('[data-recipe-build="builtin-video-build"]').click();await until(()=>!!$('#center-source-huggingface-endpoint')&&!$('.build-center-dialog button[type=submit]').disabled);$('#center-codex-version').value='0.163.0';
+  assert.equal($('#center-source-huggingface-endpoint').value,'https://hf-mirror.com');assert($('[data-source-type="huggingface"]').textContent.includes('第三方'));assert(!$('#center-source-github-rawBase'),'an undeclared GitHub argument must not be offered');
+  const beforeSourceBuilds=requests.filter(r=>r.route.endsWith('/build')&&r.method==='POST').length;await submit($('#center-codex-version'));assert.equal(requests.filter(r=>r.route.endsWith('/build')&&r.method==='POST').length,beforeSourceBuilds);assert($('.build-center-dialog .error').textContent.includes('填写下载地址'));
+  $('#center-source-github-archiveBase').value='https://git-download.company.example/archives';$('#center-source-huggingface-endpoint').value='https://models.company.example';await submit($('#center-codex-version'));await until(()=>!!$('#center-build-log'));
+  const sourceBuild=requests.filter(r=>r.route.endsWith('/build')&&r.method==='POST').at(-1).body.buildSources;assert.equal(sourceBuild.overrides.huggingface.endpoint,'https://models.company.example');assert(sourceBuild.overrides.conda.channels.includes('conda-forge'));assert(!('rawBase' in sourceBuild.overrides.github));
+  db.catalog=oldCatalog;sourceCapability.types=oldCapabilities;
   await w.RunDeskBuildCenter.open('images',db.images[0].key); const beforeCheck=findButton($('.image-detail'),'核对镜像'); beforeCheck.click(); await until(()=>checkCount===1&&!beforeCheck.isConnected&&!!$('[data-center-action="launch"]'));
   $('[data-center-action="launch"]').click(); await until(()=>!!$('#center-launch-name')); await submit($('#center-launch-name')); assert.equal(launchCount,1); assert($('.build-center-dialog').textContent.includes('dedicated-work')); assert($('.build-center-dialog').textContent.includes('exited')); assert($('.build-center-dialog').textContent.includes('container exited'),'actual failed/exited runtime must remain visible'); $('.build-center-dialog').close();
   launchError=true; $('[data-center-action="launch"]').click(); await until(()=>!!$('#center-launch-name')); $('#center-launch-name').value='Uncertain instance'; await submit($('#center-launch-name')); assert($('.build-center-dialog .error').textContent.includes('partial-instance')); $('.build-center-dialog').close(); $('[data-center-action="launch"]').click(); await until(()=>!!$('#center-launch-name')); assert.equal($('#center-launch-name').value,'Uncertain instance'); assert($('#center-launch-name').disabled); await submit($('#center-launch-name')); const uncertain=requests.filter(row=>row.route.endsWith('/launch')).slice(-2); assert.equal(uncertain[0].body.requestId,uncertain[1].body.requestId,'409 unconfirmed launch lost its receipt'); findButton($('.build-center-dialog'),'开始另一实例请求').click(); await until(()=>!$('#center-launch-name').disabled); $('.build-center-dialog').close(); launchError=false;

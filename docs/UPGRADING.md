@@ -1,5 +1,16 @@
 # 升级到当前版本
 
+## 0.55.0：外置配方与构建源（2026-10-27）
+
+- 保留原数据目录，停止旧服务后更新 RunDesk 程序。构建资源现在是外置文件：部署时同时放置本版 `recipes/` 和 `config/`，不再只复制单个二进制。可将 `RUNDESK_RECIPES_DIR` 指向自己的配方目录。
+- 配方目录查找优先级为显式 `RUNDESK_RECIPES_DIR`、可执行文件旁的 `recipes/`、从当前工作目录向上查找的 `recipes/`。显式指定的目录缺失或无效会直接报错，不回退到另一份配方。修改 `recipes/<profile>/` 中的 Dockerfile、依赖或 vendor 后，从配方新建构建任务即可读取，无需重编译或重启。
+- 随包 `config/build-sources.json` 提供默认源列表；首次使用复制到 `<data>/config/build-sources.json`，随后由“下载源设置”或直接编辑该文件维护。`RUNDESK_BUILD_SOURCES` 可指定独立文件。更新发行包不应覆盖你已维护的源列表或配方，合并新版默认条目时先保留自己的版本。
+- 构建前可选国际/中国镜像分组，再逐项修改地址。切换组只填入条目，不保证某地区或网络一定可达；Docker 镜像拉取和容器内包下载分属不同层。
+- 已有自定义配方和历史 `context.zip` 继续保留。按原配置重建使用已冻结输入与源参数；需要新版文件或新源时，从配方新建构建任务。旧记录没有源快照时保持原行为，不补填今天的默认值。
+- 新镜像构建并检查通过后，再显式更新所需实例/应用；原镜像、HOME、认证、Skills/MCP、工作区与任务记录不删除。独立 Kun 0.17.0、SDK、worker 协议 16、UHP 协议保持原配套。
+
+具体操作与边界见[构建源配置](BUILD-SOURCES.md)和[构建中心](BUILD-CENTER.md)。下方版本段保留当时的升级要求。
+
 ## 0.54.1：研究预置构建修复（2026-10-26）
 
 - 源码构建者需重新编译 RunDesk，再替换程序并重启服务；内置 ZIP 编译在二进制中，单独替换 examples 不会更新已运行程序。保留原数据目录。
@@ -47,10 +58,10 @@
 
 以下通用步骤适用于当前源码；后续版本专题保留各自配套应用与环境说明。
 
-当前版本 RunDesk 0.54.1，配套独立 Kun 0.17.0、worker 协议 16、fork schema 3；视频工具 profile 为 video-build 1.4.0。
+当前版本 RunDesk 0.55.0，配套独立 Kun 0.17.0、worker 协议 16、fork schema 3；视频工具 profile 为 video-build 1.4.0。
 
 1. 等待活动任务结束，停止原服务，备份数据目录、工作区、Codex HOME/配置、独立 Kun 执行日志及服务环境设置。
-2. 在 RunDesk 源码执行 `make build`，本包只构建宿主；Kun 在其独立源码目录执行 `go build -o bin/kun ./cmd/kun`。将 Kun 放在 RunDesk 可执行文件旁，或通过 `--kun /absolute/path/to/kun` 指定。RunDesk 使用轻量 SDK 快照构建，不再包含 `cmd/kun` 或引擎源码。
+2. 在 RunDesk 源码执行 `make build`，本包只构建宿主；部署到别处时一并复制 `recipes/`、`config/` 或设置外置路径。Kun 在其独立源码目录执行 `go build -o bin/kun ./cmd/kun`。将 Kun 放在 RunDesk 可执行文件旁，或通过 `--kun /absolute/path/to/kun` 指定。RunDesk 使用轻量 SDK 快照构建，不再包含 `cmd/kun` 或引擎源码。
 3. 保留原系统用户、`--data`、`--codex`、`--kun`、CODEX_HOME 与服务参数。启动后用 `rundesk --version` 和 `kun --version` 核对，再刷新浏览器；旧会话继续读取，缺少或不兼容 Kun 明确报错，不自动切到 Codex。
 4. 本版不会自动安装 Codex、切换后端、启用 Bash 或开启 HTTP 观测。更换引擎后新建会话，历史会话保持原归属。HTTP 观测保留已有会话开关和默认关闭语义。
 

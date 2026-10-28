@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "scope": "compiled Linux binary with standalone recipes/config deployment over real local HTTP, no Docker or model",
+  "checks": [
+    "standalone binary loads six recipe directories beside executable",
+    "real HTTP returns editable catalog and actual OpenMontage GitHub capability",
+    "real HTTP exports version-resolved complete context with repaired local Agent-Reach",
+    "generic Docker template also loads from deployment files",
+    "on-disk Dockerfile edit is visible immediately in same server PID and changes source SHA",
+    "real versioned API persists default group and rejects stale revision with HTTP409"
+  ],
+  "dockerTested": false,
+  "modelTested": false
+}

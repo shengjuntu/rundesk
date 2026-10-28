@@ -1,0 +1,4 @@
+interface:
+  display_name: "OpenMontage via Video App"
+  short_description: "Use upstream production pipelines with Video App generation"
+  default_prompt: "Use $use-openmontage to make a video with the upstream pipeline and Video App media tools."
