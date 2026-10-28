@@ -82,6 +82,53 @@ class ProfilesTest(unittest.TestCase):
         code, _, _ = self.cli("pack", "news2douyin", "--codex-version", "0.144.6", "--output", str(archives[0]))
         self.assertEqual(code, 2); self.assertEqual(archives[0].read_bytes(), original)
 
+    def test_research_profiles_install_reviewed_local_agent_reach(self):
+        for name in ("news2douyin", "people-search"):
+            with self.subTest(profile=name):
+                target = self.root / name; target.mkdir()
+                profile = profiles.load_profile(name)
+                profiles.render(profile, profiles.resolve(profile), "0.157.1", "node:22-bookworm-slim", target)
+                self.assertEqual(profile["version"], "1.1.2")
+                requirements = (target / "requirements.txt").read_text()
+                self.assertIn("/opt/rundesk-profile/vendor/agent-reach\n", requirements)
+                self.assertNotIn("https://", requirements)
+                docker = (target / "Dockerfile").read_text()
+                self.assertLess(docker.index("COPY vendor/"), docker.index("python3 -m pip install"))
+                self.assertIn("ARG CODEX_VERSION=0.157.1", docker)
+                self.assertIn('io.rundesk.codex.version="0.157.1"', docker)
+                self.assertEqual(json.loads((target / "profile.lock.json").read_text())["codexVersion"], "0.157.1")
+                vendor = target / "vendor/agent-reach"
+                self.assertNotIn("force-include", (vendor / "pyproject.toml").read_text())
+                for resource in ("LICENSE", "agent_reach/skill/SKILL.md", "agent_reach/guides/setup-exa.md"):
+                    self.assertTrue((vendor / resource).is_file(), resource)
+                for line in (target / "vendor/agent-reach.sha256").read_text().splitlines():
+                    digest, path = line.split("  ", 1)
+                    self.assertEqual(hashlib.sha256((vendor / path).read_bytes()).hexdigest(), digest)
+                lite = self.root / (name + "-lite"); lite.mkdir()
+                profiles.render(profile, profiles.resolve(profile, agent_reach=False), "0.157.1", "node:22-bookworm-slim", lite)
+                self.assertFalse((lite / "vendor").exists())
+                self.assertNotIn("COPY vendor/", (lite / "Dockerfile").read_text())
+
+    def test_agent_reach_rejects_modified_extra_or_linked_source(self):
+        copy = self.root / "examples"
+        shutil.copytree(ROOT / "examples", copy, ignore=shutil.ignore_patterns("__pycache__"))
+        source = copy / "_shared/vendor/agent-reach"
+        file = source / "pyproject.toml"
+        original = file.read_bytes()
+        with patch.object(profiles, "ROOT", copy):
+            file.write_bytes(original + b"\n")
+            with self.assertRaisesRegex(profiles.ProfileError, "source digest mismatch"):
+                profiles.load_profile("news2douyin")
+            file.write_bytes(original)
+            extra = source / "unexpected.txt"; extra.write_text("do not sweep unreviewed files")
+            with self.assertRaisesRegex(profiles.ProfileError, "file list mismatch"):
+                profiles.load_profile("people-search")
+            extra.unlink()
+            guide = source / "agent_reach/guides/setup-exa.md"
+            guide.unlink(); guide.symlink_to(file)
+            with self.assertRaisesRegex(profiles.ProfileError, "unsafe Agent-Reach source"):
+                profiles.load_profile("news2douyin")
+
     def test_video_build_defaults_to_pinned_hyperframes_without_video_use(self):
         profile = profiles.load_profile("video-build")
         self.assertEqual(profile["version"], "1.4.0")

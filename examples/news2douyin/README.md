@@ -1,5 +1,7 @@
 # news2douyin
 
+预置版本 **1.1.2** 内置固定提交、已修复重复 wheel 打包问题的 Agent-Reach 本地源码。此修复同时用于 CLI 与内嵌构建配方；其他 apt/pip/npm 依赖仍需网络。旧构建的“重建”保留旧输入，请从新版配方新建任务。
+
 新闻研究工具镜像默认使用 **Exa + Agent-Reach**。移除 Wigolo、浏览器下载与本地重排模型；不包含 news2douyin 应用本体、TTS、发布接口或业务数据。
 
 推荐先在 RunDesk 初始化向导准备镜像，再到 news2douyin `/research/settings` 填入 `rundesk-news2douyin:exa-agent-reach`（或自己的实际标签），点击“连接并配置环境”。完成此环境的模型认证后，即可启动研究。

@@ -46,7 +46,7 @@ This release reorganizes the WebUI; it does **not** yet synchronize instance con
 
 ## Current source version
 
-**RunDesk 0.54.0 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.54.1 source · external Kun 0.17.0 · worker protocol 16**
 
 This source includes runtime/resource contracts, a unified observation model, the conversation trace reader, the build center, and two API entry points over the same task core:
 
@@ -54,6 +54,8 @@ This source includes runtime/resource contracts, a unified observation model, th
 | --- | --- |
 | **RDCA v1** — `/api/v1` | RunDesk's application and management API; machine-readable contract at `/api/v1/openapi.json` |
 | **UHP** — `/v1` | An additional service interface targeting protocol `2026-10-19`; implemented with [documented limits](docs/UHP.md), without a full conformance claim |
+
+Version 0.54.1 fixes the news2douyin and people-search 1.1.2 build recipes with reviewed local Agent-Reach source and its wheel packaging patch. Update/rebuild RunDesk to refresh embedded recipes, then start a new build from the recipe; rebuilding an old job preserves its old inputs. Codex remains an exact user-selected version. See [upgrade instructions](docs/UPGRADING.md).
 
 Version 0.54.0 focuses on instance navigation and configuration context without changing the storage or API schemas. It retains the persistent deadlines, progress and approval handoff, explicit capabilities, and [Python UHP client](examples/uhp_client.py) introduced in 0.53.0. Unsupported step/token budgets remain disclosed; applications can require supported capabilities before submission.
 

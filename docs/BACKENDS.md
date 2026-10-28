@@ -1,6 +1,6 @@
 # 后端能力与扩展边界
 
-当前源码包为 RunDesk 0.54.0，后端为独立 Kun 0.17.0（worker 协议 16）与 Codex App Server。RDCA 任务接口保持 `/api/v1`，附加 UHP `/v1` 入口复用同一任务核心。内部准入、运行与停止通过后端注册表分派。
+当前源码包为 RunDesk 0.54.1，后端为独立 Kun 0.17.0（worker 协议 16）与 Codex App Server。RDCA 任务接口保持 `/api/v1`，附加 UHP `/v1` 入口复用同一任务核心。内部准入、运行与停止通过后端注册表分派。
 
 | 能力 | Kun | Codex |
 | --- | --- | --- |

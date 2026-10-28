@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "_shared"))
 import upstream_profiles
 
 ROOT = Path(__file__).resolve().parent
-VERSION = "1.3.0"
+VERSION = "1.3.1"
 PROFILE_IDS = tuple(sorted(p.parent.name for p in ROOT.glob("*/profile.json") if re.fullmatch(r"[a-z0-9-]+", p.parent.name)))
 EXACT = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?\Z")
 IMAGE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/:@-]{0,240}\Z")
@@ -33,6 +33,43 @@ def read_json(path):
 
 def dump(value):
     print(json.dumps(value, ensure_ascii=False, indent=2))
+
+
+def agent_reach_files(pin):
+    """Validate the reviewed local source; never download or sweep a worktree."""
+    shared = ROOT / "_shared"
+    source = shared / "vendor/agent-reach"
+    if pin.get("sourceDirectory") != "vendor/agent-reach":
+        raise ProfileError("Agent-Reach requires the reviewed vendored source directory")
+    for field, digest in (("filesManifest", "filesManifestSHA256"), ("patchFile", "patchSHA256")):
+        rel = Path(pin.get(field, ""))
+        file = shared / rel
+        if rel.is_absolute() or ".." in rel.parts or not file.is_file() or any(p.is_symlink() for p in (file, *file.parents)):
+            raise ProfileError("Missing or unsafe Agent-Reach source manifest/patch")
+        if hashlib.sha256(file.read_bytes()).hexdigest() != pin.get(digest):
+            raise ProfileError("Agent-Reach source manifest/patch digest mismatch")
+    expected = {}
+    for line in (shared / pin["filesManifest"]).read_text(encoding="utf-8").splitlines():
+        parts = line.split("  ", 1)
+        if len(parts) != 2 or not re.fullmatch(r"[0-9a-f]{64}", parts[0]):
+            raise ProfileError("Invalid Agent-Reach source manifest")
+        digest, name = parts
+        rel = Path(name)
+        if rel.is_absolute() or ".." in rel.parts or rel.as_posix() != name or name in expected:
+            raise ProfileError("Invalid Agent-Reach source manifest path")
+        expected[name] = digest
+    if not {"pyproject.toml", "LICENSE", "agent_reach/skill/SKILL.md", "agent_reach/guides/setup-exa.md"} <= expected.keys():
+        raise ProfileError("Agent-Reach source manifest is incomplete")
+    paths = list(source.rglob("*"))
+    if not source.is_dir() or any(p.is_symlink() for p in (source, *source.parents, *paths)):
+        raise ProfileError("Missing or unsafe Agent-Reach source")
+    actual = {p.relative_to(source).as_posix() for p in paths if p.is_file()}
+    if actual != expected.keys():
+        raise ProfileError("Agent-Reach source file list mismatch")
+    for name, digest in expected.items():
+        if hashlib.sha256((source / name).read_bytes()).hexdigest() != digest:
+            raise ProfileError("Agent-Reach source digest mismatch: " + name)
+    return source, sorted(expected)
 
 
 def load_profile(name):
@@ -83,6 +120,8 @@ def load_profile(name):
         raise ProfileError("Agent-Reach needs an exact commit")
     if pins["agentReach"]["repository"] != "https://github.com/silently0801/agent-reach":
         raise ProfileError("Review a new Agent-Reach source before changing repository")
+    if "agent-reach" in value["optionalComponents"]:
+        agent_reach_files(pins["agentReach"])
     if "video-use" in value["optionalComponents"] and name != "video-build":
         raise ProfileError("video-use compatibility is only offered by video-build")
     if name == "video-build":
@@ -189,7 +228,15 @@ def render(profile, selection, codex_version, base_image, destination):
         requirements = [p + "==" + v for p, v in sorted(video_use["python"].items(), key=lambda row: row[0].lower())]
     if selection["agentReach"]:
         a = pins["agentReach"]
-        requirements += ["agent-reach @ " + a["repository"] + "/archive/" + a["commit"] + ".zip"]
+        source, files = agent_reach_files(a)
+        for name in files:
+            target = destination / "vendor/agent-reach" / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source / name, target)
+            target.chmod(0o755 if (source / name).stat().st_mode & 0o111 else 0o644)
+        for field in ("filesManifest", "patchFile"):
+            shutil.copyfile(ROOT / "_shared" / a[field], destination / "vendor" / Path(a[field]).name)
+        requirements += ["/opt/rundesk-profile/vendor/agent-reach"]
     write(destination / "requirements.txt", "\n".join(requirements) + "\n")
     write(destination / "seed/config.toml", seed_config(selection))
     skill = profile["skill"]
@@ -233,6 +280,8 @@ def render(profile, selection, codex_version, base_image, destination):
               "RUN python3 -m venv /opt/rundesk-python",
               "ENV PATH=\"/opt/rundesk-python/bin:${PATH}\" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1",
               "COPY requirements.txt /opt/rundesk-profile/requirements.txt"]
+    if selection["agentReach"]:
+        lines += ["COPY vendor/ /opt/rundesk-profile/vendor/"]
     if requirements:
         lines += ["RUN python3 -m pip install --retries 3 --timeout 60 --no-cache-dir " + ("--no-deps " if video_use else "") + "-r /opt/rundesk-profile/requirements.txt && python3 -m pip check"]
     if video_use:
@@ -272,6 +321,8 @@ def render(profile, selection, codex_version, base_image, destination):
           "Skills live in /etc/codex/skills; seed/config.toml initializes missing config only. Existing config is not merged.\n"
           "Use a new environment or apply the selected MCP configuration explicitly. Configure Codex authentication at runtime.\n"
           "Run python3 /opt/rundesk-profile/tools/profile_doctor.py --json inside the deployed container.\n"
+          "Agent-Reach uses reviewed vendored source with the duplicate wheel force-include removed; no GitHub source download is needed during build.\n"
+          "Other Python/npm/apt dependencies still require their package registries; this is not a fully offline image build.\n"
           "Agent-Reach includes gh, mcporter, bird, undici and its Codex skill; mcporter seeds Exa into the runtime HOME on first use.\n"
           "Cookies, proxies and optional external platform MCP services are configured at runtime; no Docker socket is bundled. video-build includes system Chromium for local HyperFrames checks.\n"
           "Run agent-reach doctor after startup to check live channels; it is not a model or research acceptance test.\n")

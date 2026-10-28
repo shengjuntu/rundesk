@@ -1,5 +1,7 @@
 # people-search
 
+预置版本 **1.1.2** 内置固定提交、已修复重复 wheel 打包问题的 Agent-Reach 本地源码。此修复同时用于 CLI 与内嵌构建配方；其他 apt/pip/npm 依赖仍需网络。旧构建的“重建”保留旧输入，请从新版配方新建任务。
+
 面向演讲者、研究者、作者、创始人等人物的公开职业资料研究。提供同名消歧、职业/作品时间线、来源核对与证据报告；不包含私人账号访问、私人联系方式挖掘或自动联系。
 
 统一入口：`python3 examples/people-search/run.py <命令>`。例如 `inspect`、`validate`、`pack --codex-version X.Y.Z --output ./people.zip`。完整参数见 [配置目录说明](../README.md)。

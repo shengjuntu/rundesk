@@ -108,6 +108,12 @@ def main():
     except (OSError, KeyError) as e:
         checks.append({"name": "writable-home", "ok": False, "error": str(e)})
     if selection["agentReach"]:
+        for resource in ("agent_reach/guides/setup-exa.md", "agent_reach/skill/SKILL.md"):
+            try:
+                installed = Path(importlib.metadata.distribution("agent-reach").locate_file(resource))
+                checks.append({"name": "agent-reach-resource " + resource, "ok": installed.is_file() and bool(installed.read_bytes())})
+            except (OSError, importlib.metadata.PackageNotFoundError) as exc:
+                checks.append({"name": "agent-reach-resource " + resource, "ok": False, "error": str(exc)})
         for argv in (["agent-reach", "--version"], ["gh", "--version"], ["bird", "--version"], ["mcporter", "--version"]):
             checks.append({"name": " ".join(argv), **run(argv)})
         for package, expected in config["dependencies"]["npm"].items():

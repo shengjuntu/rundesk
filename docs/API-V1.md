@@ -1,6 +1,6 @@
 # RunDesk Control API（RDCA）v1
 
-RunDesk 自身 API 的名称为 **RunDesk Control API（RDCA）**。当前契约随 RunDesk 0.54.0 发布。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
+RunDesk 自身 API 的名称为 **RunDesk Control API（RDCA）**。当前契约随 RunDesk 0.54.1 发布。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
 
 RunDesk 不依赖 HarnessRouter。附加 UHP 服务已在 `/v1` 提供入口，与 RDCA 共用任务核心和资源服务；各协议的授权与幂等细节分别定义。本版目标协议为 `2026-10-19`，不声明完整规范兼容，详见 [API 定位](API-STRATEGY.md) 和 [UHP 服务与限制](UHP.md)。
 
@@ -179,7 +179,7 @@ TaskSpec.input 的稳定入口是 `{text,files?,skills?}`；files 使用服务�
 - `POST /setup/runtime-images`：要求 `Idempotency-Key`；请求 `{profileId, codexVersion, source, reference}`。source 为 build/pull/local；Codex 为精确版本。立即返回 queued 的 ImageBuild，不等待构建/拉取。
 - 使用 `/instances/default/builds` 及 `/{bid}/log`、`/{bid}/cancel`、删除接口管理 `scope=setup` 的任务。相同镜像、来源和配方的在途请求复用任务；不同在途配方占用同一标签返回 409。
 
-`succeeded` 且 `offlineReady=true` 表示离线工具检查完成，不表示模型、账号、公网搜索或业务研究通过。平台/配方/Codex 版本不匹配会失败；已有应用不自动绑定或更新。当前模板版本为 1.1.0。
+`succeeded` 且 `offlineReady=true` 表示离线工具检查完成，不表示模型、账号、公网搜索或业务研究通过。平台/配方/Codex 版本不匹配会失败；已有应用不自动绑定或更新。news2douyin、people-search 当前模板版本为 1.1.2；video-build 为 1.4.0，三个独立上游视频配置为 1.0.0。
 
 `PUT /setup` 新增 `applicationsOnly`，允许仅使用 Docker 应用时完成初始化，而不要求本机 Codex/Kun 可执行程序。它不改变通用助手运行后端。内置模板随二进制发布，管理员主机无需 Python/npm。
 

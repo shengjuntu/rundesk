@@ -55,7 +55,7 @@ func runtimeImageFixture(t *testing.T) (*Manager, *runtimeImageDocker) {
 	m := testManager(t)
 	fake := newFakeDocker()
 	fake.image = "sha256:" + strings.Repeat("a", 64)
-	fake.imageLabels = map[string]string{"io.rundesk.profile": "news2douyin", "io.rundesk.codex.version": "0.144.6", "org.opencontainers.image.version": "1.1.0", "io.rundesk.agent-reach": "true"}
+	fake.imageLabels = map[string]string{"io.rundesk.profile": "news2douyin", "io.rundesk.codex.version": "0.144.6", "org.opencontainers.image.version": "1.1.2", "io.rundesk.agent-reach": "true"}
 	d := &runtimeImageDocker{fakeDocker: fake}
 	m.docker = d
 	return m, d
@@ -194,11 +194,14 @@ func TestRuntimeImageQueueBeforeApplicationRegistration(t *testing.T) {
 }
 
 func TestRuntimeImageWrongProfileAndProbeFailure(t *testing.T) {
-	for _, kind := range []string{"profile", "probe", "missing"} {
+	for _, kind := range []string{"profile", "old-recipe", "probe", "missing"} {
 		t.Run(kind, func(t *testing.T) {
 			m, d := runtimeImageFixture(t)
 			if kind == "profile" {
 				d.imageLabels["io.rundesk.profile"] = "video-build"
+			}
+			if kind == "old-recipe" {
+				d.imageLabels["org.opencontainers.image.version"] = "1.1.0"
 			}
 			if kind == "probe" {
 				d.failProbe = true

@@ -2,6 +2,13 @@
 
 版本段描述当时的发布行为与验证范围，不替代[当前状态](docs/STATUS.md)。
 
+## 0.54.1（2026-10-26）
+
+- 将用户实测修复同步到 news2douyin、people-search 1.1.2：从固定 Agent-Reach 提交内置本地源码，移除重复 wheel `force-include`，保留上游 LICENSE、指南及 Skill；记录来源、原始 archive SHA-256、补丁与逐文件摘要。
+- CLI 与 Go 内嵌配方统一从 `/opt/rundesk-profile/vendor/agent-reach` 安装；Dockerfile 在 pip 前复制 vendor，不再通过 GitHub archive 下载该源码。其他 apt、pip、npm 依赖仍需下载，不声明完全离线构建。
+- 更新运行镜像的预置版本识别及离线资源检查，拒绝将旧 1.1.0 镜像视为新版预置。内置配方保留精确 Codex 版本选择；自定义配方仍按导入时固定的 Dockerfile、标签和 lock 构建，不改变冻结契约。
+- 重新生成六套内嵌上下文；增加两套研究配方的生成、资源、摘要、导入与旧镜像拒绝回归，并实际构建/安装修复后的 wheel 检查资源。范围见[验证说明](docs/VALIDATION.md)。本环境没有 Docker，不把用户报告的 news2douyin 构建成功算作本轮重跑，也不声称 people-search 已完成 Docker 验收。
+
 ## 0.54.0（2026-10-26）
 
 - WebUI 以实例为日常管理入口，集中模型、Skills、MCP、插件、工作区和任务记录；无需先将实例注册为应用。构建中心继续负责配方、镜像和实例准备，应用接入保留独立入口。

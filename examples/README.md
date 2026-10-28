@@ -49,7 +49,7 @@ news2douyin 和 people-search 默认包含 Agent-Reach；保留 `--with-agent-re
 
 ## 构建与配置
 
-- npm 工具使用固定版本及 `package-lock.json` / `npm ci`；Agent-Reach 固定源码提交。apt、pip、npm 配置有限重试和下载超时。工具依赖层位于 Codex 层之前，升级 Codex 时复用缓存。
+- npm 工具使用固定版本及 `package-lock.json` / `npm ci`；Agent-Reach 固定源码提交并内置修复后的本地源码（news2douyin、people-search 1.1.2），删除重复 wheel force-include；来源、补丁及逐文件摘要记录在 `_shared/dependencies.json` 和 `_shared/vendor/`。apt、pip、npm 配置有限重试和下载超时。工具依赖层位于 Codex 层之前，升级 Codex 时复用缓存。
 - `profile.lock.json` 记录组件选择，`SHA256SUMS` 记录上下文摘要。基础镜像、apt 与 Python 传递依赖未完全锁定，不宣称离线构建或位级可重现。
 - Skills 放在 `/etc/codex/skills`，不会被挂载 HOME 遮挡。Codex Exa 配置放在 `/opt/rundesk-seed/config.toml`，只初始化缺失配置。
 - mcporter 第一次调用时在当前运行用户的 `HOME/.mcporter` 建立 Exa 配置，保留已有 JSON/JSONC 配置。它与 Codex 原生 MCP 配置独立，修改认证地址时需分别设置。
@@ -65,6 +65,8 @@ news2douyin 和 people-search 默认包含 Agent-Reach；保留 `--with-agent-re
 python3 scripts/embed-profiles.py
 python3 scripts/embed-profiles.py --check
 python3 scripts/test_profiles.py
+# 在装有 hatchling 的隔离 Python 环境中，断开包索引构建/安装 wheel 并检查指南与 Skill
+python3 scripts/test_agent_reach_wheel.py
 ```
 
 [Agent-Reach 评估](news2douyin/AGENT-REACH.md) · [初始化说明](../docs/SETUP.md) · [镜像构建](../docs/BUILDS.md) · [应用 API](../docs/API-V1.md)

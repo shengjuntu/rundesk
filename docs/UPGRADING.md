@@ -1,5 +1,14 @@
 # 升级到当前版本
 
+## 0.54.1：研究预置构建修复（2026-10-26）
+
+- 源码构建者需重新编译 RunDesk，再替换程序并重启服务；内置 ZIP 编译在二进制中，单独替换 examples 不会更新已运行程序。保留原数据目录。
+- 在构建中心选择内置 news2douyin 或 people-search，确认配方为 **1.1.2**，填写精确 Codex 版本（例如本次用户已测试的 `0.157.1`），**从配方新建构建任务**。历史任务“重建”使用冻结的旧 ZIP，不能获得本次修复。
+- Agent-Reach 现为修复后的本地源码，构建不再下载其 GitHub archive；apt、Python/npm 依赖及构建后端仍需要相应下载通道。
+- 自定义配方继续固定导入时的 Codex 版本；用 `pack --codex-version 0.157.1` 生成的 Dockerfile 默认值、标签与 profile.lock.json 保持一致，不需传版本参数。修复已有自定义配方时，生成并导入新的 ZIP，旧快照不修改。
+- 构建并检查新镜像后，在对应实例/应用中显式选择它；不自动替换运行中的镜像，也不删除原镜像、HOME、认证、工作区或历史。
+- RunDesk 为 0.54.1；独立 Kun 0.17.0、SDK、worker 协议 16、UHP 协议和 RDCA schema 不变。实际验证边界见[验证说明](VALIDATION.md)。
+
 ## 0.54.0：实例中心 WebUI（2026-10-26）
 
 保留原数据目录替换 RunDesk 程序，并刷新浏览器。RunDesk 更新为 0.54.0；独立 Kun 0.17.0、轻量 SDK、worker 协议 16、UHP `2026-10-19` 与 RDCA schema 均不变。
@@ -38,7 +47,7 @@
 
 以下通用步骤适用于当前源码；后续版本专题保留各自配套应用与环境说明。
 
-当前版本 RunDesk 0.54.0，配套独立 Kun 0.17.0、worker 协议 16、fork schema 3；视频工具 profile 为 video-build 1.4.0。
+当前版本 RunDesk 0.54.1，配套独立 Kun 0.17.0、worker 协议 16、fork schema 3；视频工具 profile 为 video-build 1.4.0。
 
 1. 等待活动任务结束，停止原服务，备份数据目录、工作区、Codex HOME/配置、独立 Kun 执行日志及服务环境设置。
 2. 在 RunDesk 源码执行 `make build`，本包只构建宿主；Kun 在其独立源码目录执行 `go build -o bin/kun ./cmd/kun`。将 Kun 放在 RunDesk 可执行文件旁，或通过 `--kun /absolute/path/to/kun` 指定。RunDesk 使用轻量 SDK 快照构建，不再包含 `cmd/kun` 或引擎源码。

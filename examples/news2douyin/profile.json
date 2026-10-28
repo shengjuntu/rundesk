@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "1.1.0",
+  "version": "1.1.2",
   "runtime": "codex-docker",
   "id": "news2douyin",
   "title": "新闻采集与短视频准备",

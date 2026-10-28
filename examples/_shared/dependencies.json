@@ -10,7 +10,14 @@
     "repository": "https://github.com/silently0801/agent-reach",
     "commit": "cf70302e928155703829439115a18132928f8913",
     "version": "1.1.0",
-    "license": "MIT"
+    "license": "MIT",
+    "sourceDirectory": "vendor/agent-reach",
+    "filesManifest": "vendor/agent-reach.sha256",
+    "filesManifestSHA256": "de0c2e9d75e61ad37967440975131414e91c8e36dcdff4ec652818da6e21d17b",
+    "patchFile": "vendor/agent-reach-wheel.patch",
+    "patchSHA256": "239d42674b9d0aec1f2d629a97d9751d8da78eebd1ef52d43619a2b3b58c3122",
+    "upstreamArchiveURL": "https://codeload.github.com/silently0801/agent-reach/tar.gz/cf70302e928155703829439115a18132928f8913",
+    "upstreamArchiveSHA256": "78ce1f9136add396ea1e1f828bcc9eac788d895854771e6e84784796a1ef6d79"
   },
   "note": "HyperFrames/GSAP and optional agent tools use exact direct versions and transitive npm locks. Optional video-use keeps its exact source archive and Python lock. Base image, Debian apt packages and Chromium are not fully pinned.",
   "npm": {

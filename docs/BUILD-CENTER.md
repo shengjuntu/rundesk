@@ -22,7 +22,7 @@ RunDesk 0.52.0 的“构建中心”是跨应用的常驻入口。新闻搜索�
 
 ## 动态配方
 
-自定义配方存于 `data/build-recipes/<id>/revisions/<revision>/`，包含冻结 manifest、原始 ZIP 和摘要；无需修改 examples 或重新编译宿主。每次导入产生独立配方版本，修改内容应导入新版本。归档不删除历史输入。内置配方只读，原有 video-build 目录与旧内置 ZIP 不变。
+自定义配方存于 `data/build-recipes/<id>/revisions/<revision>/`，包含冻结 manifest、原始 ZIP 和摘要；无需修改 examples 或重新编译宿主。每次导入产生独立配方版本，修改内容应导入新版本。归档不删除历史输入。内置配方只读，随 RunDesk 二进制发布更新；已冻结的历史 ZIP 不会自动改变。0.54.1 将 news2douyin、people-search 更新至 1.1.2；使用新版配方须从配方新建构建任务，历史任务的“重建”仍使用原输入。
 
 manifest 示例：
 

@@ -1,0 +1,105 @@
+{
+  "checkedAt": "2026-10-26T14:21:11.294026+00:00",
+  "version": "0.54.1",
+  "profiles": {
+    "news2douyin": "1.1.2",
+    "people-search": "1.1.2"
+  },
+  "source": {
+    "repository": "https://github.com/silently0801/agent-reach",
+    "commit": "cf70302e928155703829439115a18132928f8913",
+    "version": "1.1.0",
+    "license": "MIT",
+    "sourceDirectory": "vendor/agent-reach",
+    "filesManifest": "vendor/agent-reach.sha256",
+    "filesManifestSHA256": "de0c2e9d75e61ad37967440975131414e91c8e36dcdff4ec652818da6e21d17b",
+    "patchFile": "vendor/agent-reach-wheel.patch",
+    "patchSHA256": "239d42674b9d0aec1f2d629a97d9751d8da78eebd1ef52d43619a2b3b58c3122",
+    "upstreamArchiveURL": "https://codeload.github.com/silently0801/agent-reach/tar.gz/cf70302e928155703829439115a18132928f8913",
+    "upstreamArchiveSHA256": "78ce1f9136add396ea1e1f828bcc9eac788d895854771e6e84784796a1ef6d79"
+  },
+  "originalPackagingFailure": {
+    "reproduced": true,
+    "exitCode": 1,
+    "error": "ValueError: A second file is being added to the wheel archive at the same path: agent_reach/guides/setup-exa.md",
+    "buildBackend": "hatchling 1.32.4"
+  },
+  "checks": [
+    {
+      "command": "python3 scripts/test_profiles.py",
+      "exitCode": 0,
+      "testsPassed": 17,
+      "scope": "all profile variants, vendored checksums, rejected tampering/extra files/symlinks, Codex 0.157.1 in Dockerfile/label/lock, lite profiles, reproducible ZIPs"
+    },
+    {
+      "command": "python3 scripts/test_upstream_profiles.py",
+      "exitCode": 0,
+      "testsPassed": 7
+    },
+    {
+      "command": "python3 scripts/embed-profiles.py --check",
+      "exitCode": 0,
+      "profiles": 6
+    },
+    {
+      "command": "python3 scripts/test_agent_reach_wheel.py",
+      "exitCode": 0,
+      "backend": "hatchling 1.32.4",
+      "resourceFilesVerified": 7,
+      "scope": "PIP_NO_INDEX=1, actual wheel build plus pip install --no-deps --no-index; compare all guide/skill bytes to reviewed source; runtime dependencies not installed"
+    },
+    {
+      "command": "go test -json ./...",
+      "exitCode": 0,
+      "testEvents": {
+        "pass": 656,
+        "skip": 14
+      },
+      "scope": "includes subtests; 14 tests require external Kun and were skipped"
+    },
+    {
+      "command": "go test ./internal/app -run 'TestResearchRecipeVendoredContext|TestRuntimeImageEmbeddedContext|TestRuntimeImageWrongProfileAndProbeFailure|TestBuildCenterRecipeImportsAndImmutableSnapshots' -count=1",
+      "exitCode": 0,
+      "scope": "final regenerated embedded contexts, custom import secret/path checks, identity and old-image rejection; Docker adapter fixtures"
+    },
+    {
+      "command": "python3 scripts/check-docs.py",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    }
+  ],
+  "builds": [
+    {
+      "platform": "linux/amd64",
+      "exitCode": 0,
+      "cgo": false,
+      "bytes": 36847148,
+      "sha256": "e828ef2abdc7b341e9fd487815b39c3d466e85123a78a97740f228b3ef4d86a5",
+      "runtimeTested": true
+    },
+    {
+      "platform": "windows/amd64",
+      "exitCode": 0,
+      "cgo": false,
+      "bytes": 37170176,
+      "sha256": "b20e6e2347757cb6ddfd6722c33b0a48d38975b617d12bc587a98d86ea3702dd",
+      "runtimeTested": false
+    }
+  ],
+  "limitations": {
+    "dockerAvailable": false,
+    "dockerBuildTested": false,
+    "windowsRuntimeTested": false,
+    "liveChannelsTested": false,
+    "modelTested": false,
+    "fullyOfflineImageBuild": false
+  },
+  "userReportedEvidence": {
+    "news2douyin": "User reports v1.1.2 Docker build and smoke passed with Codex 0.157.1; not rerun here",
+    "people-search": "User prepared the same repair; Docker build pending"
+  },
+  "upgrade": "Recompile/update RunDesk; create a NEW build from the updated built-in recipe. Rebuild of an old job intentionally uses its frozen old ZIP. Custom recipes retain their imported Codex version."
+}

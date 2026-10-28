@@ -251,7 +251,7 @@ func runtimeProfileVersion(profile string) string {
 	if profile == "video-build" {
 		return "1.4.0"
 	}
-	return "1.1.0"
+	return "1.1.2"
 }
 
 func (m *Manager) cachedRuntimeImage(v ImageBuild) string {
