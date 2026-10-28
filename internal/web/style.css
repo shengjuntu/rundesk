@@ -1190,6 +1190,7 @@ dialog::backdrop {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  width: min(980px, 96vw);
 }
 #settings .dialog-head,
 #settings .settings-tabs {

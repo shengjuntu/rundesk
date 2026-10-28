@@ -6,7 +6,7 @@ window.RunDeskOnboarding = (() => {
   const steps = [
     ["llm", "寻找和配置 LLM", "Find and configure LLM", "发现模型，启用 Kun", "Discover models and enable Kun"],
     ["codex", "配置和安装 Codex", "Configure and install Codex", "复用已有安装或下载安装", "Reuse or install Codex"],
-    ["docker", "准备 Docker 环境", "Prepare Docker environments", "下载镜像或本机构建", "Download images or build locally"]
+    ["docker", "准备 Docker 环境（可选）", "Prepare Docker environments (optional)", "下载镜像或本机构建，也可稍后再做", "Download, build locally, or do this later"]
   ];
   let current, preferredInstance = "";
   const statusLabels = () => ({ready:tr("已就绪","Ready"),listed:tr("发现模型，待测试","Models found; untested"),succeeded:tr("已完成","Completed"),failed:tr("需要处理","Needs attention"),running:tr("进行中","Running"),queued:tr("排队中","Queued"),interrupted:tr("已中断","Interrupted"),unavailable:tr("未发现","Not found"),error:tr("检测失败","Check failed"),candidate:tr("候选经验","Candidate"),verified:tr("已验证经验","Verified"),auth_required:tr("需要认证","Authentication required"),empty:tr("未返回模型","No models returned"),incompatible:tr("协议不匹配","Protocol mismatch"),unreachable:tr("未连接","Unreachable"),canceled:tr("已取消","Canceled"),canceling:tr("正在取消","Canceling"),completed:tr("已完成","Completed"),idle:tr("待配置","Not configured"),waiting:tr("等待处理","Waiting"),watching:tr("已开启失败自动修复","Automatic repair enabled"),revalidating:tr("正在复查模型能力","Rechecking model capabilities"),submitted:tr("已交给 Kun","Sent to Kun"),blocked:tr("自动交接需要处理","Handoff needs attention"),disabled:tr("已关闭自动修复","Automatic repair disabled"),inference_only:tr("推理通过，工具未通过","Inference passed; tools failed")});
@@ -35,7 +35,11 @@ window.RunDeskOnboarding = (() => {
     try { sessionStorage.setItem("rundesk-onboarding-draft", JSON.stringify({endpoint:c.endpoint,model:c.model,keyEnv:c.keyEnv,kunPath:c.kunPath,codexPath:c.codexPath,version:c.version,group:c.group,selected:[...c.selected],receipts:c.receipts,sourceDrafts:c.sourceDrafts,autoRepair:c.autoRepair,autoAuthorizations:c.autoAuthorizations,installAdoptRequestId:c.installAdoptRequestId,installAdopted:c.installAdopted,dockerMode:c.dockerMode,runtimeDrafts:c.runtimeDrafts,codexRuntime:c.codexRuntime})); } catch {}
   }
   function readyKun(c) { return !!c.kun?.ready; }
-  function setStep(c, index) { c.step = Math.max(0, Math.min(steps.length - 1, index)); render(c); c.page.scrollTop = 0; }
+  function setStep(c, index, fromHistory = false) {
+    c.step = Math.max(0, Math.min(steps.length - 1, index));
+    if (!fromHistory) history.pushState(null, "", "#setup/" + steps[c.step][0]);
+    render(c); c.page.scrollTop = 0;
+  }
   function updateSteps(c) {
     const ready = [readyKun(c),!!c.codexPath,c.builds.some(value => value.status === "succeeded")];
     for (const [index, node] of [...c.nav.children].entries()) {
@@ -54,7 +58,8 @@ window.RunDeskOnboarding = (() => {
     if (c.step === 2) { docker(c); finish(c); }
     c.main.append(c.error);
     const footer = el("footer", {class:"ob-footer"}, c.step > 0 ? action(c,tr("上一步","Back"),()=>setStep(c,c.step-1)) : el("span"), el("span", {class:"ob-footer-note"}, tr("配置保存在这台 RunDesk 服务器上。","Configuration is saved on this RunDesk server.")));
-    if (c.step < steps.length - 1) footer.append(action(c,tr("下一步","Next"),()=>setStep(c,c.step+1),"primary",{"data-ob-next":""}));
+    if (c.step === 1) footer.append(action(c,tr("完成基本设置，稍后准备 Docker","Finish setup; prepare Docker later"),()=>completeSetup(c),"quiet",{"data-ob-skip-docker":""}));
+    if (c.step < steps.length - 1) footer.append(action(c,c.step===1?tr("继续：准备 Docker（可选）","Continue: Docker (optional)"):tr("下一步","Next"),()=>setStep(c,c.step+1),"primary",{"data-ob-next":""}));
     else footer.append(c.completeButton);
     c.main.append(footer);
   }
@@ -573,13 +578,14 @@ window.RunDeskOnboarding = (() => {
     saveDraft(c);render(c);schedule(c);
     await Promise.allSettled([scan(c),loadDocker(c)]);
   }
-  function close(c,completed=false) {
+  function close(c,completed=false,restoreRoute=true) {
     if(c.closed)return;c.closed=true;clearTimeout(c.timer);c.page.remove();document.body.classList.remove("rd-onboarding","rd-starting");$("#startup-loading")?.remove();
+    if(restoreRoute && location.hash.startsWith("#setup/"))history.replaceState(null,"",c.returnHash||location.pathname+location.search);
     if(!completed)sessionStorage.setItem("rundesk-setup-dismissed","1");current=null;c.resolve?.(completed);
   }
   async function open(options={}) {
     if(current){current.page.focus();return current.promise;}
-    const saved=draft(),c={step:0,closed:false,initial:!!options.initial,setup:options.setup||await api("/setup"),discovery:null,scanning:false,kun:null,installJobs:[],builds:[],logs:{},repairs:[],experiences:[],recipes:[],capabilities:{},catalog:null,publicCatalog:null,publicCatalogError:"",runtimeProfiles:null,dockerMode:["pull","build","local"].includes(saved.dockerMode)?saved.dockerMode:"pull",runtimeDrafts:saved.runtimeDrafts||{},codexRuntime:saved.codexRuntime||{mode:"auto"},dockerCheck:null,receipts:saved.receipts||{},sourceDrafts:saved.sourceDrafts||{},autoRepair:saved.autoRepair!==false,autoAuthorizations:saved.autoAuthorizations||{},autoRows:[],installAdoptRequestId:saved.installAdoptRequestId||"",installAdopted:!!saved.installAdopted,selected:new Set(saved.selected||[]),endpoint:saved.endpoint||"",model:saved.model||"",keyEnv:saved.keyEnv||"",kunPath:saved.kunPath||"",codexPath:saved.codexPath||"",version:saved.version||"0.157.1",group:saved.group||""};
+    const saved=draft(),requestedStep=options.step||/^#setup\/(llm|codex|docker)$/.exec(location.hash)?.[1],c={step:Math.max(0,steps.findIndex(value=>value[0]===requestedStep)),returnHash:location.hash.startsWith("#setup/")?"#instances":location.hash,closed:false,initial:!!options.initial,setup:options.setup||await api("/setup"),discovery:null,scanning:false,kun:null,installJobs:[],builds:[],logs:{},repairs:[],experiences:[],recipes:[],capabilities:{},catalog:null,publicCatalog:null,publicCatalogError:"",runtimeProfiles:null,dockerMode:["pull","build","local"].includes(saved.dockerMode)?saved.dockerMode:"pull",runtimeDrafts:saved.runtimeDrafts||{},codexRuntime:saved.codexRuntime||{mode:"auto"},dockerCheck:null,receipts:saved.receipts||{},sourceDrafts:saved.sourceDrafts||{},autoRepair:saved.autoRepair!==false,autoAuthorizations:saved.autoAuthorizations||{},autoRows:[],installAdoptRequestId:saved.installAdoptRequestId||"",installAdopted:!!saved.installAdopted,selected:new Set(saved.selected||[]),endpoint:saved.endpoint||"",model:saved.model||"",keyEnv:saved.keyEnv||"",kunPath:saved.kunPath||"",codexPath:saved.codexPath||"",version:saved.version||"0.157.1",group:saved.group||""};
     c.workspaceId=c.setup.settings.workspaceId||ws()?.id||state.workspaces[0]?.id||"";
     if(!c.codexPath&&c.setup.settings.codex)c.codexPath=c.setup.settings.codex;
     c.promise=new Promise(resolve=>{c.resolve=resolve;});current=c;
@@ -590,9 +596,16 @@ window.RunDeskOnboarding = (() => {
     c.main=el("div",{class:"ob-main"});
     const language=action(c,document.documentElement.lang==="en"?"中文":"English",()=>{const next=document.documentElement.lang==="en"?"zh":"en";localStorage.setItem("rundesk-language",next);saveDraft(c);location.reload();},"ob-language");
     c.page.append(el("header",{class:"ob-header"},el("div",{class:"ob-brand"},el("span",{class:"brandmark"},"r."),"RunDesk",el("small",{},tr("初始化","SETUP"))),el("div",{class:"ob-head-actions"},language,action(c,c.initial?tr("稍后配置","Set up later"):tr("返回工作台","Back to RunDesk"),()=>close(c),"quiet",{id:"onboarding-dismiss"}))),el("div",{class:"ob-layout"},el("aside",{class:"ob-sidebar"},el("p",{},tr("准备你的工作环境","PREPARE YOUR WORKSPACE")),c.nav,el("p",{class:"ob-sidebar-note"},tr("三步完成准备。每一步都可以暂时跳过，之后回来继续。","Get ready in three steps. You can skip any step for now and return later."))),c.main));
-    document.body.classList.add("rd-onboarding");document.body.classList.remove("rd-starting");document.body.append(c.page);$("#startup-loading")?.remove();render(c);c.page.focus();
+    document.body.classList.add("rd-onboarding");document.body.classList.remove("rd-starting");document.body.append(c.page);$("#startup-loading")?.remove();history.pushState(null,"","#setup/"+steps[c.step][0]);render(c);c.page.focus();
     load(c).catch(error=>{if(!c.closed)c.error.textContent=error.message;});return c.promise;
   }
+  window.addEventListener("hashchange",()=>{
+    if(!current||current.closed)return;
+    const match=/^#setup\/(llm|codex|docker)$/.exec(location.hash);
+    if(!match){close(current,false,false);return;}
+    const index=steps.findIndex(step=>step[0]===match[1]);
+    if(index!==current.step)setStep(current,index,true);
+  });
   function bootFailed(error) {
     const node=$("#startup-loading");if(!node)return;
     if(error.status===401){node.classList.add("hidden");return;}

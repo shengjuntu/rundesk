@@ -46,7 +46,9 @@ The instance-centered WebUI does **not** yet synchronize instance configuration 
 
 ## Current source version
 
-**RunDesk 0.58.0 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.59.0 source · external Kun 0.17.0 · worker protocol 16**
+
+Version 0.59.0 makes setup a three-page guide. Docker is optional: finish basic setup after the Codex page and return to it from **Environment setup**. The Agent list separates image preparation from adding an Agent based on an existing image. The chat composer shows the selected Agent and workspace; Skills, MCP and native plugins stay inside one settings dialog. Docker configuration still belongs to each Agent/workspace environment. See [WebUI](docs/WEBUI.md).
 
 Version 0.57.0 starts new installations with a **three-step wizard**: **find and configure LLM → configure and install Codex → prepare Docker environments**. The first step discovers server hardware and model services, tests inference and function calling, and enables the dedicated Kun setup assistant on the same page. The third step defaults to downloading a prebuilt image, with local builds and existing local images available as alternatives; it also saves setup and opens the workbench. Installation and build failures can become traceable Kun repair tasks; verified repairs retain versioned evidence for later reuse. See [setup](docs/SETUP.md) for prerequisites and the limits of automatic discovery.
 

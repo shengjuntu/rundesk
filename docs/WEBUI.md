@@ -1,12 +1,12 @@
 # WebUI：以实例为中心 / Instance-centered WebUI
 
-本文描述 RunDesk 0.58.0（2026-10-28）的界面与当前后端边界。升级不改变存储布局，也不迁移或删除原有实例、工作区和历史数据。
+本文描述 RunDesk 0.59.0（2026-10-28）的界面与当前后端边界。升级不改变存储布局，也不迁移或删除原有实例、工作区和历史数据。界面将长期保存的“实例”称为 **Agent**；它不等同于 Docker 容器。
 
 RunDesk 的日常操作围绕实例展开：选择一个 Codex 或 Kun 实例，检查它的模型、Skills、MCP 和插件能力，选择工作区，再执行任务、查看制品与运行轨迹。应用接入和构建中心分别负责外部调用与运行环境准备，不要求用户先注册应用才能管理实例。
 
 ## 初始化首页
 
-首次非 Demo 安装先进入全屏初始化页，工作台在初始化结束或明确稍后配置之后显示。页面只有三步：**寻找和配置 LLM、配置和安装 Codex、准备 Docker 环境**。环境发现和 Kun 模型配置放在第一步，完成概览和进入工作台放在第三步。可以自由返回或切换步骤，不要求先完成所有可选软件才能查看资源。已完成安装从实例管理开始；左侧导航栏底部的齿轮“环境检查”可重新打开向导。
+首次非 Demo 安装先进入全屏初始化页，工作台在初始化结束或明确稍后配置之后显示。页面只有三步：**寻找和配置 LLM、配置和安装 Codex、准备 Docker 环境（可选）**。环境发现和 Kun 模型配置放在第一步；第二步可直接点击“完成基本设置，稍后准备 Docker”；第三步保留构建、镜像下载、经验与完整概览。可以自由返回或切换步骤，浏览器地址记录当前步骤。已完成安装从 Agent 列表开始；左侧“环境设置”可重新打开向导。
 
 环境扫描展示运行 RunDesk 的服务器信息及本机模型服务，不代表浏览器所在电脑。选择模型后主动测试推理和自动函数调用，再保存专用 Kun 初始化助手。Codex 安装和 Docker 构建按明确选择提交后台任务，刷新后可继续查看状态和日志。失败可以重试，或交给已就绪的 Kun 生成独立修复任务，轨迹使用既有任务/会话界面。
 
@@ -20,13 +20,13 @@ RunDesk 的日常操作围绕实例展开：选择一个 Codex 或 Kun 实例，
 | --- | --- |
 | 构建预设 | 指定 Agent、系统依赖、内置能力和初始配置 |
 | Docker 镜像 | 构建结果，可以用于创建多个实例 |
-| 实例 | 长期管理的 Agent 身份，关联运行方式、镜像和配置入口 |
+| Agent（存储标识 instance） | 长期管理的身份，关联运行方式、镜像和配置入口 |
 | 工作区 | 项目文件、项目规则及制品所在的目录 |
 | 运行环境 | 某个实例在某个工作区使用的容器及持久状态 |
 
 默认实例保留本机使用方式。通过构建中心创建的 Docker 实例可以直接进入实例页面管理；重建容器不等于重新创建实例。Kun 当前仍仅支持本机 worker，不能通过界面布局变化获得 Docker 托管能力。
 
-实例页面集中展示配置入口，并明确当前工作区。切换工作区后，应核对配置所属的运行环境；任务与轨迹保留原来的实例和工作区归属。应用及其命名运行预设继续作为接入绑定使用，详情见[运行预设](APPLICATION-RUNTIME-PRESETS.md)。
+Agent 页面集中展示配置入口，并明确当前工作区。列表的“准备 Docker 镜像”进入配方，“从镜像添加 Agent”进入已登记的镜像；构建预设先生成镜像，镜像再用于添加 Agent。新对话输入框上方也显示 Agent 和工作区，可以直接切换；Skills、MCP 和插件都在同一个设置对话框中。切换工作区后，应核对配置所属的运行环境；任务与轨迹保留原来的 Agent 和工作区归属。应用及其命名运行预设继续作为接入绑定使用，详情见[运行预设](APPLICATION-RUNTIME-PRESETS.md)。
 
 ## 当前配置边界
 
@@ -53,7 +53,7 @@ RunDesk 的日常操作围绕实例展开：选择一个 Codex 或 Kun 实例，
 
 ## English summary
 
-New installations begin with three steps: find and configure LLM, configure and install Codex, and prepare Docker environments. The last step defaults to a published prebuilt image and retains local build or existing-image options. The bundled public catalog stays empty until actual release references are provided. Optional components can be skipped; existing installations can reopen setup. Daily work centers on an Agent instance: inspect its capabilities, select a workspace, run tasks, and inspect artifacts and traces. Build presets produce images; images can support multiple independent instances. Application registration remains an integration concern.
+New installations begin with three full-screen pages: find and configure LLM, configure and install Codex, and optionally prepare Docker environments. Basic setup can finish after Codex; Environment setup reopens the guide later. The Docker page defaults to a published prebuilt image and retains local build or existing-image options. The bundled public catalog stays empty until actual release references are provided. Daily work centers on an Agent: select a workspace in the conversation composer, run tasks, and inspect artifacts and traces. Skills, MCP and plugins share a settings dialog. Build presets produce images; images can support multiple Agents. Application registration remains an integration concern.
 
 Local builds select network settings and Codex runtime sources independently. China and international settings use the same recipes. Matching managed Linux archives or compatible local bases can be reused, while exact-version npm installation remains available. Download-source updates are merged into an editable draft and saved explicitly; they do not overwrite an existing deployment during upgrade.
 

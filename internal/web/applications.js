@@ -4,31 +4,31 @@ function applicationForInstance(id){return state.applications.find(a=>applicatio
 function currentApplication(){return applicationForInstance(instance()?.id);}
 function currentApplicationBinding(){const a=currentApplication();return a?applicationBindings(a).find(b=>b.instanceId===instance()?.id&&(!b.presetId||b.workspaceId===ws()?.id)):null;}
 function applicationBindingRoute(a){return "#application/"+encodeURIComponent(a.appId)+(a.presetId?"/preset/"+encodeURIComponent(a.presetId):"");}
-function contextTitle(){return instance()?.name||rdText("实例");}
+function contextTitle(){return instance()?.name||rdText("Agent");}
 function sessionInContext(s){return s.instanceId===instance()?.id&&(s.instanceId!=="default"||(state.taskAppID?s.source?.appId===state.taskAppID:s.source?.kind!=="application"));}
 function draftKey(){return instance()?.id+":"+ws()?.id+":"+(state.session?.id||"new");}
 function stashProductDraft(){if(!state.draftContext||state.view!=="conversation")return;state.drafts.set(state.draftContext,{text:$("#prompt").value,uploads:[...state.uploads],skills:[...state.chosenSkills]});}
 function restoreProductDraft(){state.draftContext=draftKey();const d=state.drafts.get(state.draftContext);if(d){$("#prompt").value=d.text;state.uploads=[...d.uploads];state.chosenSkills=[...d.skills];renderAttachments();}}
 function updateProductNavigation(){
  const view=state.view,conversation=view==="conversation",apps=["applications","application","users"].includes(view);
- for(const [id,on] of [["nav-instances",["instances","instance","capability"].includes(view)],["nav-users",view==="users"],["nav-build-center",view==="build-center"],["nav-assistant",conversation],["nav-applications",["applications","application"].includes(view)],["nav-tasks",view==="tasks"]]){
+ for(const [id,on] of [["nav-instances",["instances","instance"].includes(view)],["nav-users",view==="users"],["nav-build-center",view==="build-center"],["nav-assistant",conversation],["nav-applications",["applications","application"].includes(view)],["nav-tasks",view==="tasks"]]){
   const node=$("#"+id);if(!node)continue;node.classList.toggle("selected",on);if(on)node.setAttribute("aria-current","page");else node.removeAttribute("aria-current");
  }
  $("#application-count").textContent=state.applications.length||"";
- $("#page-label").textContent=({instances:rdText("实例"),"build-center":rdText("构建中心"),users:rdText("用户与授权"),tasks:rdText("任务"),applications:rdText("应用接入")})[view]||contextTitle();
+ $("#page-label").textContent=({instances:rdText("Agents"),"build-center":rdText("构建中心"),users:rdText("用户与授权"),tasks:rdText("任务"),applications:rdText("应用接入")})[view]||contextTitle();
  $("#history-label").textContent=contextTitle();
- $("#settings-button").textContent=rdText("实例设置");$("#settings-button").classList.toggle("hidden",!["conversation","instance","capability","application"].includes(view)||!ws()||!!state.instanceResolving);
+ $("#settings-button").textContent=rdText("Agent 设置");$("#settings-button").classList.toggle("hidden",!["conversation","instance","application"].includes(view)||!ws()||!!state.instanceResolving);
  $("#new-session").classList.toggle("hidden",!conversation);
- $("#back-applications").classList.toggle("hidden",!["conversation","instance","capability","application"].includes(view));
- $("#back-applications").textContent=apps?rdText("应用 /"):rdText("实例 /");
- $("#back-applications").setAttribute("aria-label",apps?rdText("返回应用"):rdText("返回实例"));
+ $("#back-applications").classList.toggle("hidden",!["conversation","instance","application"].includes(view));
+ $("#back-applications").textContent=apps?rdText("应用 /"):rdText("Agents /");
+ $("#back-applications").setAttribute("aria-label",apps?rdText("返回应用"):rdText("返回 Agent"));
  const fixed=window.RunDeskInstances?.binding(instance()?.id)?.presetId;
  $("#workspace").disabled=!!fixed;$("#add-workspace").disabled=!!fixed;
  for(const q of ["#trace-button","#debug-button","#workspace-name",".breadcrumb-divider",".sidebar>.workspace",".instance-context",".session-filters","#session-list","#history-label","#sidebar-toggle","#mode"])$(q)?.classList.toggle("hidden",!conversation);
 }
 function setProductPage(view){
  state.view=view;document.body.dataset.view=view;if(!["instances","instance"].includes(view))state.instanceResolving=false;
- for(const [selector,shown] of [["#tasks-page",view==="tasks"],[".main-row",view==="conversation"],["#instances-page",["instances","instance"].includes(view)],["#applications-page",["applications","application","users"].includes(view)],["#capability-page",view==="capability"],["#build-center-page",view==="build-center"]])$(selector)?.classList.toggle("hidden",!shown);
+ for(const [selector,shown] of [["#tasks-page",view==="tasks"],[".main-row",view==="conversation"],["#instances-page",["instances","instance"].includes(view)],["#applications-page",["applications","application","users"].includes(view)],["#build-center-page",view==="build-center"]])$(selector)?.classList.toggle("hidden",!shown);
  updateProductNavigation();closeConversationSidebar();
 }
 async function refreshApplicationCatalog(){const selection=state.selection;const [a,i,s]=await Promise.all([api("/applications"),api("/instances"),api("/sessions")]);if(selection!==state.selection)return;const id=instance()?.id||"default";state.applications=a;state.instances=i;state.sessions=s;renderInstanceOptions(id);}
@@ -74,21 +74,16 @@ async function renderAssistantSettings(target){
 }
 function contextRoute(){
  if(state.session&&state.view==="conversation")return "#session/"+encodeURIComponent(state.session.id);
- if(["instances","instance","capability"].includes(state.view)||location.hash.startsWith("#instance/"))return location.hash||"#instances";
+ if(["instances","instance"].includes(state.view)||location.hash.startsWith("#instance/"))return location.hash||"#instances";
  if(state.view==="applications")return "#applications";
  if(state.view==="application"&&currentApplicationBinding())return applicationBindingRoute(currentApplicationBinding());
  return window.RunDeskInstances?RunDeskInstances.route(instance()?.id||"default",ws()?.id):"#assistant";
 }
 async function showCapabilityPage(tab){
- if(state.view!=="capability"){stashProductDraft();state.capabilityReturn={view:state.view,route:contextRoute()};}
- if($("#settings").open)$("#settings").close();state.settingsTab=tab;setProductPage("capability");
- const applicationContext=state.capabilityReturn?.view==="application"&&currentApplicationBinding();
- const owner=applicationContext?applicationBindingRoute(currentApplicationBinding()):"#instance/"+encodeURIComponent(instance().id);
- history.replaceState(null,"",owner+"/settings/"+tab+(!applicationContext?"?"+new URLSearchParams({workspace:ws().id}):""));
- const page=$("#capability-page");page.replaceChildren(el("div",{class:"page-intro capability-heading"},el("div",{},button(rdText("← 返回"),closeSettings,"quiet back-link"),el("p",{class:"eyebrow"},tab==="plugins"?"NATIVE PLUGINS":tab==="skills"?"SKILL LIBRARY":"CONNECTED TOOLS"),el("h1",{},tab==="plugins"?rdText("原生插件"):tab==="skills"?rdText("技能 Skills"):rdText("工具 MCP")),el("p",{class:"capability-owner"},rdFormat("配置对象：${0} · 当前项目：${1}",instance()?.id==="default"&&state.taskAppID?rdText("通用助手（历史任务共享；保存会影响通用助手）"):contextTitle(),ws()?.name||""))),el("nav",{class:"actions","aria-label":rdText("能力分类")},...[["plugins","插件"],["skills","Skills"],["mcp","MCP"]].map(([key,label])=>button(rdText(label),()=>showCapabilityPage(key),key===tab?"selected":"quiet")))),el("div",{id:"capability-content"}));await renderSettings();
+ return openSettings(tab);
 }
-function closeSettings(){if($("#settings").open)$("#settings").close();if(state.view==="capability"){const back=state.capabilityReturn||{view:currentApplication()?"application":"conversation",route:currentApplication()?applicationBindingRoute(currentApplicationBinding()):"#assistant"};setProductPage(back.view);history.replaceState(null,"",back.route);}}
-function skillCanBeSelected(){return state.view==="conversation"||state.view==="capability"&&state.capabilityReturn?.view==="conversation";}
+function closeSettings(){if($("#settings").open)$("#settings").close();}
+function skillCanBeSelected(){return state.view==="conversation";}
 function compactConfigurationForms(target,kind){for(const card of [...target.children]){const title=card.querySelector(":scope>h3")?.textContent;if(!title||!(kind==="skills"&&title.includes(rdText("编辑 SKILL.md"))||kind==="mcp"&&title===rdText("添加 / 编辑 MCP")))continue;const d=el("details",{class:"card configuration-editor"},el("summary",{},kind==="skills"?rdText("编辑 SKILL.md / 创建简单技能"):rdText("添加 / 编辑 MCP 服务")));card.before(d);card.classList.remove("card");card.querySelector(":scope>h3").remove();d.append(card);}}
 async function restoreProductRoute(){
  const [route,query=""]=location.hash.slice(1).split("?");const params=new URLSearchParams(query),parts=route.split("/");let id;try{id=decodeURIComponent(parts[1]||"");}catch{return false;}

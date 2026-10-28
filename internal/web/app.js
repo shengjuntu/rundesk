@@ -194,6 +194,12 @@ async function boot() {
 function updateWorkspaceLabel() {
   const w = ws();
   $("#workspace-name").textContent = w?.name || rdText("默认项目");
+  const context = $("#composer-workspace");
+  const currentInstance = instance();
+  $("#composer-agent").textContent = rdFormat("Agent：${0}",currentInstance?.name||"");
+  context.replaceChildren(...(currentInstance ? (window.RunDeskInstances?.workspacesFor(currentInstance)||state.workspaces) : []).map(row=>el("option",{value:row.id},row.name)));
+  context.value = w?.id || "";
+  context.disabled = !w || !!window.RunDeskInstances?.binding(currentInstance?.id)?.presetId;
   updateProductNavigation();
   localStorage.setItem("rundesk-instance", instance()?.id || "default");
   if (!state.session) $("#model").value = instance()?.agentRuntime?.kind==="kun"?instance().agentRuntime.model:(instance()?.defaultModel || "");
@@ -898,19 +904,16 @@ async function previewFile(file) {
 async function openSettings(tab = "overview") {
   window.RunDeskTraceUI?.close();
   state.settingsTab = tab;
-  if(["plugins","skills","mcp"].includes(tab))return showCapabilityPage(tab);
-  if(state.view==="capability")closeSettings();
   $("#settings").showModal();
   await renderSettings();
 }
 async function renderSettings() {
-  if(["plugins","skills","mcp"].includes(state.settingsTab)&&state.view!=="capability")return showCapabilityPage(state.settingsTab);
   const shared=instance()?.id==="default"&&!!state.taskAppID;
   $("#settings-title").textContent=(shared?rdText("通用助手（历史任务共享）"):contextTitle())+rdText(" · 设置");
   $("#settings-eyebrow").textContent="INSTANCE SETTINGS";
   $("#settings-context").textContent=shared?rdText("这条历史应用任务沿用通用助手配置；保存也影响通用助手。"):rdFormat("配置对象：${0} · 当前项目：${1}",contextTitle(),ws()?.name||"");
   const target = el("div");
-  $(state.view==="capability"?"#capability-content":"#settings-content").replaceChildren(target);
+  $("#settings-content").replaceChildren(target);
   $$("[data-settings-tab]").forEach((b) =>
     b.classList.toggle("selected", b.dataset.settingsTab === state.settingsTab),
   );
@@ -1011,6 +1014,9 @@ $("#workspace").onchange = () =>
   safe(async () => {
     await RunDeskInstances.conversation(instance().id,$("#workspace").value);
   });
+$("#composer-workspace").onchange = () => safe(async () => {
+  await RunDeskInstances.conversation(instance().id,$("#composer-workspace").value,true);
+});
 $("#add-workspace").onclick = () =>
   safe(async () => {
     const name = prompt(rdText("工作区名称"));

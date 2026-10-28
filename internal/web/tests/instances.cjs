@@ -74,6 +74,8 @@ function deferred() { let resolve; const promise = new Promise(done => {resolve=
   sync();
   await w.RunDeskInstances.open();
   assert.equal(state.view,'instances'); assert.equal(w.location.hash,'#instances');
+  button($('#instances-page'),'从镜像添加 Agent').click();assert.deepEqual(w.buildCenterOpen,['images']);
+  button($('#instances-page'),'准备 Docker 镜像').click();assert.deepEqual(w.buildCenterOpen,['recipes']);
   for (const id of ['default','video','other','kun']) assert($('#instances-page').textContent.includes(id),'missing instance '+id);
   assert.equal(requests.filter(row => row.method !== 'GET').length,0,'opening instances changed runtime');
   checks.push('all local, Docker and Kun identities appear without application registration or runtime writes');
@@ -85,7 +87,7 @@ function deferred() { let resolve; const promise = new Promise(done => {resolve=
   await w.RunDeskInstances.show('video','w-b'); assertTarget('video','w-b');
   await w.openSettings('skills');
   assert(requests.some(row => row.route === '/workspaces/w-b/skills?instanceId=video'),'Skills request lost the selected target');
-  assert.equal(state.view,'capability'); assert(w.location.hash.includes('workspace=w-b'));
+  assert.equal(state.view,'instance');assert($('#settings').open);assert(w.location.hash.includes('workspace=w-b'));
   await w.closeSettings(); assertTarget('video','w-b'); assert.equal(state.view,'instance');
   await w.openSettings('mcp');
   assert(requests.some(row => row.route === '/workspaces/w-b/mcp?instanceId=video'),'MCP request lost the selected target');
@@ -99,6 +101,10 @@ function deferred() { let resolve; const promise = new Promise(done => {resolve=
 
   await w.RunDeskInstances.conversation('video','w-b',true);
   assertTarget('video','w-b'); assert.equal(state.view,'conversation');
+  assert.equal($('#composer-workspace').value,'w-b');assert($('#composer-agent').textContent.includes('video'));
+  $('#composer-workspace').value='w-a';$('#composer-workspace').dispatchEvent(new w.Event('change'));
+  await until(() => $('#workspace').value==='w-a' && $('#composer-workspace').value==='w-a');
+  await w.RunDeskInstances.conversation('video','w-b',true);
   $('#new-session').click(); await until(() => state.view === 'conversation' && !state.session);
   assertTarget('video','w-b');
   $('#assistant-settings').click(); await until(() => $('#settings').open);
@@ -106,7 +112,7 @@ function deferred() { let resolve; const promise = new Promise(done => {resolve=
   await w.newSession();
   let created = requests.filter(row => row.method === 'POST' && row.route === '/sessions').at(-1);
   assert.equal(created.body.instanceId,'video'); assert.equal(created.body.workspaceId,'w-b');
-  checks.push('new chat, settings and actual session POST keep the chosen nondefault instance');
+  checks.push('composer workspace choice, new chat, settings and actual session POST keep the chosen Agent and workspace');
 
   await w.RunDeskInstances.conversation('preset','w-p',true);
   await w.newSession();
@@ -124,7 +130,7 @@ function deferred() { let resolve; const promise = new Promise(done => {resolve=
 
   w.history.replaceState(null,'','#instance/video/settings/mcp?workspace=w-b');
   assert.equal(await w.restoreProductRoute(),true);
-  assertTarget('video','w-b'); assert.equal(state.view,'capability');
+  assertTarget('video','w-b'); assert.equal(state.view,'instance');assert($('#settings').open);
   await w.closeSettings();
   w.history.replaceState(null,'','#instance/video/conversation?workspace=w-a');
   assert.equal(await w.restoreProductRoute(),true);

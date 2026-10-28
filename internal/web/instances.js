@@ -88,17 +88,17 @@ window.RunDeskInstances = (() => {
     const page = $("#instances-page"); setLoading(page);
     try {
       if (!await load(g, selection) || !current(g, selection, "instances")) return;
-      const query = el("input", {type:"search",id:"instance-search",placeholder:rdText("搜索实例、引擎或镜像…"),"aria-label":rdText("搜索实例")});
+      const query = el("input", {type:"search",id:"instance-search",placeholder:rdText("搜索 Agent、引擎或镜像…"),"aria-label":rdText("搜索 Agent")});
       const filter = el("select", {id:"instance-engine-filter","aria-label":rdText("实例引擎筛选")}, el("option", {value:""}, rdText("全部引擎")), el("option", {value:"codex"}, "Codex"), el("option", {value:"kun"}, "Kun"));
       const grid = el("div", {class:"instance-grid"});
       const paint = () => {
         const text = query.value.trim().toLowerCase();
         const rows = state.instances.filter(i => (!filter.value || (i.agentRuntime?.kind || "codex") === filter.value) && [i.name,i.description,engine(i),i.execution?.image].join(" ").toLowerCase().includes(text));
         grid.replaceChildren(...rows.map(card));
-        if (!rows.length) grid.append(el("div", {class:"instance-empty"}, el("h2", {}, rdText("没有匹配的实例")), el("p", {}, rdText("调整筛选条件，或从构建预设创建一个实例。"))));
+        if (!rows.length) grid.append(el("div", {class:"instance-empty"}, el("h2", {}, rdText("没有匹配的 Agent")), el("p", {}, rdText("调整筛选条件，或先准备 Docker 镜像。"))));
       };
       query.oninput = paint; filter.onchange = paint;
-      page.replaceChildren(heading(rdText("实例"), rdText("选择一个 Agent，配置它的能力，再进入工作区执行任务。"), el("div", {class:"actions"}, button(rdText("刷新"), open, "quiet"), button(rdText("从预设创建实例"), () => RunDeskBuildCenter.open("recipes"), "primary"))), el("div", {class:"instance-toolbar"}, query, filter, el("span", {class:"muted"}, rdFormat("${0} 个实例",state.instances.length))), grid);
+      page.replaceChildren(heading(rdText("Agents"), rdText("Agent 保存模型和运行配置；选定工作区后开始对话。Docker 容器按 Agent 与工作区组合创建。"), el("div", {class:"actions"}, button(rdText("刷新"), open, "quiet"), button(rdText("准备 Docker 镜像"), () => RunDeskBuildCenter.open("recipes"), "quiet"), button(rdText("从镜像添加 Agent"), () => RunDeskBuildCenter.open("images"), "primary"))), el("div", {class:"instance-toolbar"}, query, filter, el("span", {class:"muted"}, rdFormat("${0} 个 Agent",state.instances.length))), grid);
       paint(); updateProductNavigation();
     } catch (error) { if (current(g, selection, "instances")) failure(page,error,open); }
   }
@@ -106,10 +106,10 @@ window.RunDeskInstances = (() => {
     const sessions = state.sessions.filter(s => s.instanceId === i.id), count = sessions.filter(s => active(s.status)).length;
     const workCount = new Set([...(state.environments || []).filter(e => e.instanceId === i.id).map(e => e.workspaceId), ...sessions.map(s => s.workspaceId)]).size;
     const b = binding(i.id);
-    const tags = el("div", {class:"instance-tags"}, el("span", {class:"badge"}, engine(i)), el("span", {class:"badge"}, mode(i)), i.id === "default" ? el("span", {class:"badge"}, rdText("默认实例")) : null);
+    const tags = el("div", {class:"instance-tags"}, el("span", {class:"badge"}, engine(i)), el("span", {class:"badge"}, mode(i)), i.id === "default" ? el("span", {class:"badge"}, rdText("默认 Agent")) : null);
     const chat = button(rdText("开始对话"), () => conversation(i.id,undefined,true), "quiet");
     chat.disabled = !!b?.presetId && !b.enabled;
-    return el("article", {class:"instance-card","data-instance-id":i.id}, el("div", {class:"instance-card-top"},mark(i), el("span", {class:"instance-status"+(count?" busy":"")}, count ? rdFormat("${0} 个任务进行中",count) : rdText("暂无进行中的任务"))), el("h2", {}, i.name), tags, el("p", {class:"instance-description"},i.description || (i.id === "default" ? rdText("本机默认 Agent，可直接开始对话。") : rdText("独立管理模型、Skills、MCP 和运行环境。"))), el("div", {class:"instance-card-metadata"}, el("span", {}, rdFormat("${0} 个工作区",workCount)), el("span", {}, rdFormat("${0} 条会话",sessions.length))), el("div", {class:"instance-card-actions"}, button(rdText("管理实例"), () => show(i.id), "primary"), chat), b?.presetId && !b.enabled ? el("p", {class:"help"},rdText("关联的应用预设已停用，历史仍可查看。")) : null);
+    return el("article", {class:"instance-card","data-instance-id":i.id}, el("div", {class:"instance-card-top"},mark(i), el("span", {class:"instance-status"+(count?" busy":"")}, count ? rdFormat("${0} 个任务进行中",count) : rdText("暂无进行中的任务"))), el("h2", {}, i.name), tags, el("p", {class:"instance-description"},i.description || (i.id === "default" ? rdText("本机默认 Agent，可直接开始对话。") : rdText("独立管理模型、Skills、MCP 和运行环境。"))), el("div", {class:"instance-card-metadata"}, el("span", {}, rdFormat("${0} 个工作区",workCount)), el("span", {}, rdFormat("${0} 条会话",sessions.length))), el("div", {class:"instance-card-actions"}, button(rdText("配置 Agent"), () => show(i.id), "primary"), chat), b?.presetId && !b.enabled ? el("p", {class:"help"},rdText("关联的应用预设已停用，历史仍可查看。")) : null);
   }
 
   async function show(iid, wid) {
@@ -149,7 +149,7 @@ window.RunDeskInstances = (() => {
     const sessions = state.sessions.filter(s => s.instanceId === i.id && (!w || s.workspaceId === w.id));
     const tasks = el("div", {class:"application-tasks instance-sessions"}, ...(sessions.length ? sessions.slice(0,30).map(taskRow) : [el("div", {class:"instance-empty compact"}, el("h3", {},rdText("这个工作区还没有会话")),el("p", {},rdText("开始对话后，可在这里查看任务、轨迹和制品。")))]));
     const association = b ? el("div", {class:"instance-association"},el("span", {},rdText("连接的应用：") + b.name + (b.presetId ? " · " + b.presetName : "")), button(rdText("查看应用接入"),() => showApplication(b.appId,b.presetId||""),"quiet")) : null;
-    page.replaceChildren(el("div", {class:"instance-back"},button(rdText("← 所有实例"),open,"quiet back-link")), heading(i.name,i.description||rdText("在当前实例中配置能力、选择工作区并查看运行记录。"),el("div", {class:"actions"},button(rdText("刷新"),() => show(i.id,w?.id),"quiet"),chat)),
+    page.replaceChildren(el("div", {class:"instance-back"},button(rdText("← 所有 Agent"),open,"quiet back-link")), heading(i.name,i.description||rdText("配置 Agent、选择工作区并查看运行记录。"),el("div", {class:"actions"},button(rdText("刷新"),() => show(i.id,w?.id),"quiet"),chat)),
       el("div", {class:"instance-detail-grid"},el("section", {class:"instance-overview"},el("div", {class:"instance-section-title"},mark(i),el("h2", {},rdText("实例概况"))),facts,i.execution?.image ? el("p", {class:"instance-image",title:i.execution.image},rdText("镜像：")+i.execution.image) : null,maintenance),
       el("section", {class:"instance-workspace"},el("h2", {},rdText("当前工作区")),workspaceActions,w ? el("p", {class:"instance-workspace-path"},w.path||w.name) : el("p", {class:"help"},rdText("还没有可用工作区，请创建一个工作区后配置能力。")),el("p", {class:"help"},preset ? rdText("此实例关联应用预设，使用固定工作区。") : rdText("工作区保存项目文件和制品；切换工作区不会切换实例。")),preset && !b.enabled ? el("p", {class:"error"},rdText("关联的应用预设已停用，历史仍可查看。")) : null)),
       el("section", {class:"instance-capability-section"},el("div", {class:"instance-section-title"},el("h2", {},rdText("实例能力")),el("span", {class:"muted"},w?.name||rdText("尚未选择工作区"))),capabilities,el("p", {class:"instance-scope-note"},i.execution?.mode === "docker" ? rdText("当前版本中，Docker 的 Skills、MCP 和认证仍按工作区环境保存；这里修改的是上方选中的工作区，尚未跨工作区同步。") : rdText("实例级能力由这个 Agent 使用；工作区还可以提供自己的项目技能。"))),...(association?[association]:[]),
