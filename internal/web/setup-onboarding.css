@@ -24,7 +24,7 @@ body.rd-onboarding #shell { visibility:hidden; }
 .onboarding .ob-step[aria-current="step"] .ob-step-number { background:#5268df;border-color:#5268df;color:white; }
 .onboarding .ob-step[data-state="ready"] .ob-step-number { background:#e5f3ed;color:#268565;border-color:#cfe8dc; }
 .onboarding .ob-step span:last-child { display:grid;gap:4px; }
-.onboarding .ob-step strong { font-weight:600;font-size:13px; }
+.onboarding .ob-step strong { font-weight:600;font-size:13px;line-height:1.6; }
 .onboarding .ob-step small { font-size:11px;color:#8b94a7; }
 .onboarding .ob-sidebar-note { font-size:12px;line-height:1.8;color:#8a93a6;margin:30px 12px; }
 .onboarding .ob-main { min-width:0; }
@@ -80,6 +80,8 @@ body.rd-onboarding #shell { visibility:hidden; }
 .onboarding .ob-recipes { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
 .onboarding details { margin:12px 0;min-width:0; }
 .onboarding summary { font-size:12px;color:#68768d;cursor:pointer;line-height:1.7; }
+.onboarding .ob-inventory,.onboarding .ob-setup-summary { background:#fff;border:1px solid #e5e8f0;border-radius:12px;padding:16px 20px;margin:0 0 16px; }
+.onboarding .ob-inventory[open]>summary,.onboarding .ob-setup-summary[open]>summary { margin-bottom:12px; }
 .onboarding pre { max-height:250px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:9px;padding:15px;background:#f6f8fc;border:1px solid #edf0f5;font-size:11px;line-height:1.7;margin:12px 0 0; }
 .onboarding .ob-job { padding:16px 0;border-top:1px solid #edf0f5; }
 .onboarding .ob-job:first-child { border-top:0; }

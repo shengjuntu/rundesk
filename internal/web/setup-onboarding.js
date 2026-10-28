@@ -4,11 +4,9 @@ window.RunDeskOnboarding = (() => {
   const enc = encodeURIComponent, activeJob = value => ["queued", "running", "canceling", "starting", "waiting"].includes(value);
   const names = {kun:"Kun",codex:"Codex",docker:"Docker",node:"Node.js",npm:"npm",vllm:"vLLM","llama-server":"llama.cpp"};
   const steps = [
-    ["environment", "本机环境", "Environment", "扫描设备与模型服务", "Find hardware and services"],
-    ["kun", "启用 Kun", "Enable Kun", "连接模型，验证工具调用", "Connect a tool-capable model"],
-    ["codex", "准备 Codex", "Prepare Codex", "复用已有安装或下载安装", "Reuse or install Codex"],
-    ["docker", "Docker 预设", "Docker presets", "选择需要的工具环境", "Choose your environments"],
-    ["finish", "开始使用", "Get started", "查看结果，进入工作台", "Review and enter RunDesk"]
+    ["llm", "寻找和配置 LLM", "Find and configure LLM", "发现模型，启用 Kun", "Discover models and enable Kun"],
+    ["codex", "配置和安装 Codex", "Configure and install Codex", "复用已有安装或下载安装", "Reuse or install Codex"],
+    ["docker", "构建 Docker", "Build Docker", "选择预设，完成初始化", "Choose presets and finish setup"]
   ];
   let current, preferredInstance = "";
   const statusLabels = () => ({ready:tr("已就绪","Ready"),listed:tr("发现模型，待测试","Models found; untested"),succeeded:tr("已完成","Completed"),failed:tr("需要处理","Needs attention"),running:tr("进行中","Running"),queued:tr("排队中","Queued"),interrupted:tr("已中断","Interrupted"),unavailable:tr("未发现","Not found"),error:tr("检测失败","Check failed"),candidate:tr("候选经验","Candidate"),verified:tr("已验证经验","Verified"),auth_required:tr("需要认证","Authentication required"),empty:tr("未返回模型","No models returned"),incompatible:tr("协议不匹配","Protocol mismatch"),unreachable:tr("未连接","Unreachable"),canceled:tr("已取消","Canceled"),canceling:tr("正在取消","Canceling"),completed:tr("已完成","Completed"),idle:tr("待配置","Not configured"),waiting:tr("等待处理","Waiting"),watching:tr("已开启失败自动修复","Automatic repair enabled"),revalidating:tr("正在复查模型能力","Rechecking model capabilities"),submitted:tr("已交给 Kun","Sent to Kun"),blocked:tr("自动交接需要处理","Handoff needs attention"),disabled:tr("已关闭自动修复","Automatic repair disabled"),inference_only:tr("推理通过，工具未通过","Inference passed; tools failed")});
@@ -39,7 +37,7 @@ window.RunDeskOnboarding = (() => {
   function readyKun(c) { return !!c.kun?.ready; }
   function setStep(c, index) { c.step = Math.max(0, Math.min(steps.length - 1, index)); render(c); c.page.scrollTop = 0; }
   function updateSteps(c) {
-    const ready = [!!c.discovery,readyKun(c),!!c.codexPath,c.builds.some(value => value.status === "succeeded"),false];
+    const ready = [readyKun(c),!!c.codexPath,c.builds.some(value => value.status === "succeeded")];
     for (const [index, node] of [...c.nav.children].entries()) {
       node.setAttribute("aria-current", index === c.step ? "step" : "false");
       node.dataset.state = ready[index] ? "ready" : "idle";
@@ -51,18 +49,17 @@ window.RunDeskOnboarding = (() => {
   }
   function render(c) {
     if (c.closed) return; updateSteps(c); c.error.textContent = "";
-    if (c.step === 0) environment(c);
-    if (c.step === 1) kun(c);
-    if (c.step === 2) codex(c);
-    if (c.step === 3) docker(c);
-    if (c.step === 4) finish(c);
+    if (c.step === 0) { environment(c); kun(c); }
+    if (c.step === 1) codex(c);
+    if (c.step === 2) { docker(c); finish(c); }
     c.main.append(c.error);
     const footer = el("footer", {class:"ob-footer"}, c.step > 0 ? action(c,tr("上一步","Back"),()=>setStep(c,c.step-1)) : el("span"), el("span", {class:"ob-footer-note"}, tr("配置保存在这台 RunDesk 服务器上。","Configuration is saved on this RunDesk server.")));
-    if (c.step < 4) footer.append(action(c,c.step === 0 ? tr("配置 Kun","Configure Kun") : tr("下一步","Next"),()=>setStep(c,c.step+1),"primary",{"data-ob-next":""}));
+    if (c.step < steps.length - 1) footer.append(action(c,tr("下一步","Next"),()=>setStep(c,c.step+1),"primary",{"data-ob-next":""}));
+    else footer.append(c.completeButton);
     c.main.append(footer);
   }
   function environment(c) {
-    header(c,"先认识这台机器","Let's prepare this machine","自动发现服务器上的设备、工具和本机模型服务。扫描不会安装软件，也不会调用模型。","Discover hardware, tools and local model services on the server. Scanning does not install software or run model inference.");
+    header(c,"寻找和配置 LLM","Find and configure LLM","自动发现 GPU、vLLM、llama.cpp 和本机模型服务，也可以连接已有的远程服务。验证模型后，Kun 就能协助后续安装和构建。","Discover GPUs, vLLM, llama.cpp and local model services, or connect an existing remote service. Once the model is tested, Kun can help with installation and builds.");
     const data = c.discovery;
     if (!data) {
       c.main.append(card(tr("正在扫描本机环境","Scanning the local environment"), el("p", {role:"status",class:"ob-help"}, c.scanning ? tr("正在检查 GPU、可执行文件和本机监听的模型服务…","Checking GPUs, executables and local model services…") : tr("扫描尚未完成，可以重新检查。","The scan has not completed. You can retry.")), action(c,tr("重新扫描","Scan again"),()=>scan(c)))); return;
@@ -73,17 +70,18 @@ window.RunDeskOnboarding = (() => {
       el("div", {class:"ob-metric"},el("span",{},tr("内存","Memory")),el("strong",{},p.memoryBytes?(p.memoryBytes/1073741824).toFixed(1)+" GB":"—"),el("small",{},tr("服务器可见物理内存","Memory visible to the server"))),
       el("div", {class:"ob-metric"},el("span",{},"GPU"),el("strong",{},gpuNames.length?gpuNames.length+tr(" 张"," detected"):tr("未发现","Not detected")),el("small",{},gpuNames[0]||tr("远程模型服务仍可使用","Remote model services can still be used")))));
     const tools=el("div",{class:"ob-list"},...(data.tools||[]).map(value=>el("div",{class:"ob-tool","data-tool":value.id},el("strong",{},names[value.id]||value.id),badge(value.status,value.status==="ready"?tr("已发现","Detected"):undefined),el("code",{},value.version||value.path||value.error||"—"))));
-    const toolCard=card(tr("运行环境","Runtime environment"),tools);
-    toolCard.querySelector(".ob-card-head").append(action(c,tr("重新扫描","Scan again"),()=>scan(c),"quiet",{id:"onboarding-rescan"}));
-    c.main.append(toolCard,serviceList(c));
-    if(data.gpus?.length)c.main.append(el("details",{},el("summary",{},tr("GPU 详情","GPU details")),el("pre",{},data.gpus.map((value,index)=>["GPU "+index,value.name,value.memoryMiB?Math.round(value.memoryMiB/1024)+" GiB":"",value.driver?"driver "+value.driver:""].filter(Boolean).join(" · ")).join("\n"))));
-    if (data.warnings?.length) c.main.append(el("details",{},el("summary",{},tr("扫描说明","Scan notes")),el("pre",{},data.warnings.join("\n"))));
-    c.main.append(note("检测的是运行 RunDesk 的服务器。模型服务未运行、需要认证或位于另一台机器时，可在下一步手工填写地址。","This checks the server running RunDesk. If a model service is stopped, requires authentication or runs on another machine, enter its address in the next step."));
+    const inventory=el("details",{class:"ob-inventory"},el("summary",{},tr("查看设备与运行环境","View hardware and runtime environment")),tools);
+    if(data.gpus?.length)inventory.append(el("h3",{style:"margin-top:16px"},tr("GPU 详情","GPU details")),el("pre",{},data.gpus.map((value,index)=>["GPU "+index,value.name,value.memoryMiB?Math.round(value.memoryMiB/1024)+" GiB":"",value.driver?"driver "+value.driver:""].filter(Boolean).join(" · ")).join("\n")));
+    if(data.warnings?.length)inventory.append(el("h3",{style:"margin-top:16px"},tr("扫描说明","Scan notes")),el("pre",{},data.warnings.join("\n")));
+    c.main.append(inventory);
+    const services=serviceList(c);
+    services.querySelector(".ob-card-head").append(action(c,c.scanning?tr("扫描中…","Scanning…"):tr("重新扫描","Scan again"),()=>scan(c),"quiet",{id:"onboarding-rescan"}));
+    c.main.append(services);
   }
   function serviceList(c) {
     const services=(c.discovery?.services||[]).filter(value=>!["unreachable","incompatible"].includes(value.status));
     const list=el("div",{},...services.map(value=>{
-      const node=action(c,"",()=>{chooseService(c,value);setStep(c,1);},"ob-service",{"data-service-endpoint":value.endpoint});
+      const node=action(c,"",()=>{chooseService(c,value);render(c);const input=c.page.querySelector("#onboarding-endpoint");input?.focus();input?.scrollIntoView?.({block:"nearest"});},"ob-service"+(c.endpoint===value.endpoint?" selected":""),{"data-service-endpoint":value.endpoint,"aria-pressed":String(c.endpoint===value.endpoint)});
       node.append(el("span",{class:"ob-service-icon","aria-hidden":"true"},"◇"),el("span",{class:"ob-service-info"},el("strong",{},value.endpoint),el("small",{},(value.models||[]).map(model=>model.id).join(" · ")||value.error||tr("打开后配置认证与模型","Configure authentication and model"))),badge(value.authRequired?"auth_required":value.status));return node;
     }));
     if(!services.length)list.append(el("div",{class:"ob-muted-card"},tr("还没有发现可列出模型的服务。可以启动 vLLM、llama.cpp，或填写已有服务地址。","No service with a model list was found. Start vLLM or llama.cpp, or enter an existing service address.")));
@@ -103,12 +101,13 @@ window.RunDeskOnboarding = (() => {
         if(!c.codexPath&&installed)c.codexPath=installed.path;
         const worker=(c.discovery.tools||[]).find(value=>value.id==="kun"&&value.status==="ready");
         if(!c.kunPath&&worker)c.kunPath=worker.path;
-        updateSteps(c);if(c.step===0||c.step===1)render(c);
+        updateSteps(c);
+        const path=c.page.querySelector("#onboarding-codex-path");if(path&&!path.value)path.value=c.codexPath;
+        const status=c.page.querySelector("#onboarding-codex-status");if(status&&installed){status.dataset.state="ready";status.textContent=installed.version||tr("检测到可用安装","Installation found");}
       }
-    } finally {c.scanning=false;if(!c.closed&&c.step===0&&!c.discovery)render(c);}
+    } finally {c.scanning=false;if(!c.closed&&c.step===0)render(c);}
   }
   function kun(c) {
-    header(c,"让 Kun 帮你完成准备","Give Kun the tools to help","连接一个支持工具调用的模型。启用后，安装和构建遇到问题时，可以交给 Kun 分析、调整并验证。","Connect a model that supports tool calls. Kun can then investigate installation and build failures, adjust the configuration and verify the result.");
     if(c.kun?.ready)c.main.append(el("div",{class:"ob-notice",role:"status"},tr("Kun 已通过 worker 协议、模型推理与工具调用检查，可以执行修复任务。","Kun passed the worker protocol, inference and tool-call checks and can run repair tasks.")));
     const endpoint=el("input",{id:"onboarding-endpoint",value:c.endpoint,placeholder:"http://127.0.0.1:8000/v1",autocomplete:"url"});
     const model=el("input",{id:"onboarding-model",value:c.model,placeholder:tr("服务返回的模型 ID","Model ID returned by the service"),list:"onboarding-models"});
@@ -128,8 +127,6 @@ window.RunDeskOnboarding = (() => {
     if(c.kun?.error)stateCard.append(el("p",{class:"ob-error"},c.kun.error));
     if(c.kun?.worker)stateCard.append(note("已连接 worker：","Connected worker: "),el("code",{},[c.kun.worker.engineVersion,"protocol "+c.kun.worker.protocolVersion].filter(Boolean).join(" · ")));
     c.main.append(config,stateCard);
-    const services=(c.discovery?.services||[]).filter(value=>value.status==="listed");
-    if(services.length)c.main.append(serviceList(c));
   }
   async function saveKun(c) {
     c.kun=await api("/setup/kun",{method:"POST",body:{endpoint:c.endpoint,model:c.model,apiKeyEnv:c.keyEnv,kunPath:c.kunPath,...(c.kun?.revision!=null?{expectedRevision:c.kun.revision}:{})}});
@@ -137,11 +134,12 @@ window.RunDeskOnboarding = (() => {
     if(c.kun.ready){preferredInstance=c.kun.instanceId;localStorage.setItem("rundesk-instance",preferredInstance);}
   }
   function codex(c) {
-    header(c,"准备 Codex，已有的直接用","Prepare Codex","自动发现已有安装；需要安装时，下载指定版本到 RunDesk 自己的目录。原生安装不要求预先安装 Node.js 或 npm。","Reuse a discovered installation, or download an exact release into RunDesk's own directory. Native installation does not require Node.js or npm.");
+    header(c,"配置和安装 Codex","Configure and install Codex","自动发现已有安装；需要安装时，下载指定版本到 RunDesk 自己的目录。原生安装不要求预先安装 Node.js 或 npm。","Reuse a discovered installation, or download an exact release into RunDesk's own directory. Native installation does not require Node.js or npm.");
     const installed=(c.discovery?.tools||[]).find(value=>value.id==="codex"&&value.status==="ready");
     const path=el("input",{id:"onboarding-codex-path",value:c.codexPath,placeholder:tr("Codex 可执行文件的绝对路径","Absolute path to the Codex executable")});
     path.oninput=()=>{c.codexPath=path.value.trim();saveDraft(c);};
-    c.main.append(card(tr("已有 Codex","Existing Codex"),el("div",{class:"ob-inline"},badge(installed?"ready":"unavailable",installed?(installed.version||tr("检测到可用安装","Installation found")):tr("尚未发现可用安装","No working installation found"))),el("label",{style:"margin-top:16px"},tr("使用的可执行文件","Executable to use"),path),note("安装完成后会填入路径，完成初始化时保存。Codex 的模型认证仍需要在实例中配置。","A successful installation fills in this path, which is saved when setup finishes. Codex model authentication is configured separately in the instance.")));
+    const installedStatus=badge(installed?"ready":"unavailable",installed?(installed.version||tr("检测到可用安装","Installation found")):tr("尚未发现可用安装","No working installation found"));installedStatus.id="onboarding-codex-status";
+    c.main.append(card(tr("已有 Codex","Existing Codex"),el("div",{class:"ob-inline"},installedStatus),el("label",{style:"margin-top:16px"},tr("使用的可执行文件","Executable to use"),path),note("安装完成后会填入路径，完成初始化时保存。Codex 的模型认证仍需要在实例中配置。","A successful installation fills in this path, which is saved when setup finishes. Codex model authentication is configured separately in the instance.")));
     const version=el("input",{id:"onboarding-codex-version",value:c.version,placeholder:"0.157.1"});version.oninput=()=>{c.version=version.value.trim();saveDraft(c);};
     const method=el("select",{id:"onboarding-install-method"},el("option",{value:"auto"},tr("自动（优先原生下载）","Automatic (prefer native download)")),el("option",{value:"native"},tr("原生下载，无需 Node.js","Native download; no Node.js required")),el("option",{value:"npm"},tr("使用本机 npm","Use the local npm installation")));
     const group=sourceGroup(c,"onboarding-install-group");
@@ -247,7 +245,7 @@ window.RunDeskOnboarding = (() => {
       saveDraft(c);
     }finally{c.registering=false;}
   }
-  async function loadCatalog(c) { c.catalog=await api("/build-center/sources");if(!c.group)c.group=c.catalog.defaultGroup||"international";saveDraft(c);if(!c.closed&&(c.step===2||c.step===3))render(c); }
+  async function loadCatalog(c) { c.catalog=await api("/build-center/sources");if(!c.group)c.group=c.catalog.defaultGroup||"international";saveDraft(c);if(!c.closed&&(c.step===1||c.step===2))render(c); }
   function adoptInstall(c) {
     if(!c.installAdoptRequestId||c.installAdopted)return;
     const source=c.installJobs.find(value=>value.input?.requestId===c.installAdoptRequestId);if(!source)return;
@@ -269,7 +267,7 @@ window.RunDeskOnboarding = (() => {
           c.repairs=[v,...c.repairs.filter(row=>row.id!==v.id)];renderRepairs(c);schedule(c);
         },"quiet",{"data-install-repair":value.id});repair.disabled=!readyKun(c)||pendingAuto(c,"codex-install",value.id);container.append(el("div",{class:"ob-actions"},repair));
         if(sourceAuto(c,"codex-install",value.id))container.append(note("已开启后台自动交接，请在 Kun 修复任务中查看状态。","Background handoff is enabled. See Kun repair tasks for its status."));
-        if(!readyKun(c))container.append(note("先在“启用 Kun”中完成模型与工具测试，即可委托修复。","Complete the model and tool tests under Enable Kun to delegate a repair."));
+        if(!readyKun(c))container.append(note("先在第一步“寻找和配置 LLM”中启用 Kun，即可委托修复。","Enable Kun in step 1, Find and configure LLM, to delegate a repair."));
       }
       if(result.log||activeJob(value.status))container.append(el("details",{open:opened.has(value.id)||activeJob(value.status),"data-job":value.id},el("summary",{},tr("安装日志","Installation log")),el("pre",{},result.log||tr("任务在后台执行，正在等待日志。","The task is running in the background; waiting for logs."))));
       return container;
@@ -294,7 +292,7 @@ window.RunDeskOnboarding = (() => {
     if(!c.repairs.length&&!c.autoRows.length)target.append(note("失败时可以委托 Kun。修复过程保留任务、修改和验证记录。","Delegate to Kun when a step fails. The task, changes and validation results remain available."));
   }
   function docker(c) {
-    header(c,"选择你需要的 Docker 预设","Choose your Docker presets","预设准备好依赖、工具和 Skills。只构建你选中的环境；模型认证和应用连接可以随后完成。","Presets prepare dependencies, tools and Skills. Build only the environments you select; configure model authentication and app connections afterward.");
+    header(c,"构建 Docker","Build Docker","预设准备好依赖、工具和 Skills。只构建你选中的环境；模型认证和应用连接可以随后完成。","Presets prepare dependencies, tools and Skills. Build only the environments you select; configure model authentication and app connections afterward.");
     const dockerState=c.dockerCheck;
     const status=card(tr("Docker Engine","Docker Engine"),el("div",{class:"ob-inline"},badge(dockerState?.ok?"ready":dockerState?"unavailable":"idle",dockerState?.ok?tr("Docker 检查通过","Docker check passed"):dockerState?tr("Docker 尚不可用","Docker is unavailable"):tr("尚未检查","Not checked")),action(c,tr("检查 Docker","Check Docker"),async()=>{c.dockerCheck=await api("/setup/check",{method:"POST",body:{kind:"docker"}});render(c);},"quiet",{id:"onboarding-check-docker"})),note("Docker 不可用时可以跳过此步，稍后从构建中心继续。","If Docker is unavailable, skip this step and continue later from the build center."));
     if(dockerState&&!dockerState.ok)status.append(el("p",{class:"ob-error"},dockerState.error||""));c.main.append(status);
@@ -354,7 +352,7 @@ window.RunDeskOnboarding = (() => {
     if(check.status==="fulfilled")c.dockerCheck=check.value;
     const capabilities=await Promise.allSettled(c.recipes.map(async value=>[value.id,await api("/build-center/recipes/"+enc(value.id)+"/sources")]));
     for(const result of capabilities)if(result.status==="fulfilled")c.capabilities[result.value[0]]=result.value[1];
-    if(!c.closed){if(c.step===3)render(c);schedule(c);}
+    if(!c.closed){if(c.step===2)render(c);schedule(c);}
   }
   function renderBuilds(c) {
     const target=c.page.querySelector("#onboarding-build-history");if(!target)return;
@@ -384,23 +382,22 @@ window.RunDeskOnboarding = (() => {
     c.logs[id]={next:value.next,text:text.length>131072?tr("[显示日志末尾]\n","[Showing the end of the log]\n")+text.slice(-131072):text};
   }
   function finish(c) {
-    header(c,"准备到这里，接着就能用","Ready for your next step","已完成的配置会保留，后台任务会继续运行。可选组件随时可以从环境检查或构建中心补上。","Your saved configuration is retained and background jobs keep running. Add optional components later from environment setup or the build center.");
     const succeeded=c.builds.filter(value=>value.status==="succeeded").length,running=c.builds.filter(value=>activeJob(value.status)).length;
-    const summary=card(null,el("div",{class:"ob-success-mark","aria-hidden":"true"},"✓"),el("h2",{},tr("初始化结果","Setup results")),
+    const summary=el("details",{class:"ob-setup-summary"},el("summary",{},tr("查看三步初始化结果","Review the three setup steps")),
       summaryRow(tr("本机环境","Environment"),c.discovery?tr("已扫描","Scanned"):tr("尚未扫描","Not scanned")),
       summaryRow("Kun",readyKun(c)?badge("ready",tr("可执行修复任务","Ready for repair tasks")):badge("idle",tr("尚未就绪，可稍后配置","Not ready; configure later"))),
       summaryRow("Codex",c.codexPath?c.codexPath:tr("已跳过","Skipped")),
       summaryRow(tr("Docker 镜像","Docker images"),succeeded+tr(" 个构建成功"," successful")+(running?" · "+running+tr(" 个进行中"," running"):"")));
     c.main.append(summary);
     const work=el("select",{id:"onboarding-workspace"},...state.workspaces.map(value=>el("option",{value:value.id},value.name)));work.value=c.workspaceId||state.workspaces[0]?.id||"";work.onchange=()=>{c.workspaceId=work.value;};
-    const complete=action(c,tr("保存并进入 RunDesk","Save and enter RunDesk"),async()=>{
+    c.completeButton=action(c,tr("完成并进入 RunDesk","Finish and enter RunDesk"),async()=>{
       const saved=await api("/setup/complete",{method:"POST",body:{workspaceId:work.value,revision:c.setup.settings.revision,...(c.codexPath?{codex:c.codexPath}:{}),completed:true}});
       c.setup.settings=saved.settings||saved;sessionStorage.removeItem("rundesk-setup-dismissed");
       if(Object.values(c.autoAuthorizations).every(value=>value.state==="registered"))sessionStorage.removeItem("rundesk-onboarding-draft");else saveDraft(c);
       if(readyKun(c)){preferredInstance=c.kun.instanceId;localStorage.setItem("rundesk-instance",preferredInstance);}
       localStorage.setItem("rundesk-assistant-workspace",work.value);if($("#workspace"))$("#workspace").value=work.value;close(c,true);
     },"primary",{id:"onboarding-complete"});
-    c.main.append(card(tr("开始工作","Start working"),el("label",{},tr("默认工作区","Default workspace"),work),note("Kun、Codex 和 Docker 可以独立使用。未配置模型时，仍可进入工作台管理配方与资源。","Kun, Codex and Docker can be used independently. You can manage recipes and resources before configuring a model."),el("div",{class:"ob-actions"},complete)));
+    c.main.append(card(tr("完成初始化","Finish setup"),el("label",{},tr("默认工作区","Default workspace"),work),note("点击下方“完成并进入 RunDesk”保存配置。Docker 可以稍后构建；已经提交的安装、构建和修复任务会继续在后台运行。","Finish and enter RunDesk below to save your configuration. Docker builds are optional; submitted installation, build and repair tasks continue in the background.")));
     const examples=card(tr("积累的修复经验","Repair experience"),el("div",{id:"onboarding-experiences"}));c.main.append(examples);renderExperiences(c);
   }
   function summaryRow(key,value) { return el("div",{class:"ob-summary-row"},el("span",{},key),el("span",{},value)); }
@@ -495,7 +492,7 @@ window.RunDeskOnboarding = (() => {
     [...c.nav.children].forEach((node,index)=>{node.dataset.setupStep=steps[index][0];node.append(el("span",{class:"ob-step-number"},index+1),el("span",{},el("strong",{},tr(steps[index][1],steps[index][2])),el("small",{},tr(steps[index][3],steps[index][4]))));});
     c.main=el("div",{class:"ob-main"});
     const language=action(c,document.documentElement.lang==="en"?"中文":"English",()=>{const next=document.documentElement.lang==="en"?"zh":"en";localStorage.setItem("rundesk-language",next);saveDraft(c);location.reload();},"ob-language");
-    c.page.append(el("header",{class:"ob-header"},el("div",{class:"ob-brand"},el("span",{class:"brandmark"},"r."),"RunDesk",el("small",{},tr("初始化","SETUP"))),el("div",{class:"ob-head-actions"},language,action(c,c.initial?tr("稍后配置","Set up later"):tr("返回工作台","Back to RunDesk"),()=>close(c),"quiet",{id:"onboarding-dismiss"}))),el("div",{class:"ob-layout"},el("aside",{class:"ob-sidebar"},el("p",{},tr("准备你的工作环境","PREPARE YOUR WORKSPACE")),c.nav,el("p",{class:"ob-sidebar-note"},tr("从发现环境开始。按需要准备能力，每一步都可以回来继续。","Start with discovery. Prepare the capabilities you need and return to any step later."))),c.main));
+    c.page.append(el("header",{class:"ob-header"},el("div",{class:"ob-brand"},el("span",{class:"brandmark"},"r."),"RunDesk",el("small",{},tr("初始化","SETUP"))),el("div",{class:"ob-head-actions"},language,action(c,c.initial?tr("稍后配置","Set up later"):tr("返回工作台","Back to RunDesk"),()=>close(c),"quiet",{id:"onboarding-dismiss"}))),el("div",{class:"ob-layout"},el("aside",{class:"ob-sidebar"},el("p",{},tr("准备你的工作环境","PREPARE YOUR WORKSPACE")),c.nav,el("p",{class:"ob-sidebar-note"},tr("三步完成准备。每一步都可以暂时跳过，之后回来继续。","Get ready in three steps. You can skip any step for now and return later."))),c.main));
     document.body.classList.add("rd-onboarding");document.body.classList.remove("rd-starting");document.body.append(c.page);$("#startup-loading")?.remove();render(c);c.page.focus();
     load(c).catch(error=>{if(!c.closed)c.error.textContent=error.message;});return c.promise;
   }

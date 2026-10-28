@@ -46,9 +46,9 @@ The instance-centered WebUI does **not** yet synchronize instance configuration 
 
 ## Current source version
 
-**RunDesk 0.56.0 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.56.1 source · external Kun 0.17.0 · worker protocol 16**
 
-Version 0.56.0 starts new installations with an initialization page: discover the server's hardware, tools and local model services; test a model's inference and function calling; configure a dedicated Kun setup assistant; detect or install Codex; then select the Docker presets to prepare. Installation and build failures can become traceable repair tasks. Successful repairs retain versioned evidence for later reuse. See [setup](docs/SETUP.md) for prerequisites and the limits of automatic discovery.
+Version 0.56.1 starts new installations with a **three-step wizard**: **find and configure LLM → configure and install Codex → build Docker**. The first step discovers server hardware and model services, tests inference and function calling, and enables the dedicated Kun setup assistant on the same page. The third step also saves setup and opens the workbench. Installation and build failures can become traceable Kun repair tasks; verified repairs retain versioned evidence for later reuse. See [setup](docs/SETUP.md) for prerequisites and the limits of automatic discovery.
 
 This source includes runtime/resource contracts, a unified observation model, the conversation trace reader, the build center, and two API entry points over the same task core:
 
@@ -76,7 +76,7 @@ chmod +x ./start-rundesk.sh
 ./start-rundesk.sh
 ```
 
-On Windows, extract the package and double-click `start-rundesk.cmd`. Open <http://127.0.0.1:3210>; a new installation starts with initialization. Use an existing local model service or enter a remote endpoint. Docker Engine is optional and must be installed separately when you want to build containers.
+On Windows, extract the package and double-click `start-rundesk.cmd`. Open <http://127.0.0.1:3210>; a new installation starts with the three-step wizard. Reopen it later from the gear button labeled “Environment check” at the bottom of the navigation rail. Use an existing local model service or enter a remote endpoint. Docker Engine is optional and must be installed separately when you want to build containers.
 
 ### Build from source
 

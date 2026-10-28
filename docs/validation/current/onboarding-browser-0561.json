@@ -1,0 +1,107 @@
+{
+  "version": "0.56.1",
+  "passed": true,
+  "scope": "Real Chromium loads the full shipped HTML/CSS/JS with HTTP fixtures and a QA-only CJK font. No live package installation, Docker build or model inference.",
+  "checks": [
+    {
+      "entry": "full shipped app boot shows setup before loading workbench sessions/apps"
+    },
+    {
+      "navigation": "exactly three startup steps; discovery and LLM configuration share the first page"
+    },
+    {
+      "discovery": "selecting a discovered model fills configuration without adding or advancing a step"
+    },
+    {
+      "api": "full shipped api sends Idempotency-Key for real model-test and Kun configuration POSTs"
+    },
+    {
+      "step": "llm",
+      "viewport": 1440,
+      "width": 1440,
+      "clientWidth": 1440,
+      "scrollWidth": 1440,
+      "mainWidth": 792,
+      "scrollHeight": 1552,
+      "clientHeight": 1000
+    },
+    {
+      "step": "codex",
+      "viewport": 1440,
+      "width": 1440,
+      "clientWidth": 1440,
+      "scrollWidth": 1440,
+      "mainWidth": 792,
+      "scrollHeight": 1517,
+      "clientHeight": 1000
+    },
+    {
+      "step": "docker",
+      "viewport": 1440,
+      "width": 1440,
+      "clientWidth": 1440,
+      "scrollWidth": 1440,
+      "mainWidth": 792,
+      "scrollHeight": 3054,
+      "clientHeight": 1000
+    },
+    {
+      "step": "llm",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390,
+      "mainWidth": 354,
+      "scrollHeight": 1904,
+      "clientHeight": 844
+    },
+    {
+      "step": "codex",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390,
+      "mainWidth": 354,
+      "scrollHeight": 1867,
+      "clientHeight": 844
+    },
+    {
+      "step": "docker",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390,
+      "mainWidth": 354,
+      "scrollHeight": 4295,
+      "clientHeight": 844
+    },
+    {
+      "step": "llm",
+      "language": "en",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390
+    },
+    {
+      "step": "codex",
+      "language": "en",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390
+    },
+    {
+      "step": "docker",
+      "language": "en",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390
+    },
+    {
+      "authentication": "401 login is visible above startup mask and successful login enters initialization"
+    }
+  ],
+  "errors": []
+}

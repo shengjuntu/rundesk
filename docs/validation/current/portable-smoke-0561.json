@@ -1,0 +1,17 @@
+{
+  "version": "0.56.1",
+  "passed": true,
+  "platform": "linux/amd64",
+  "scope": "Freshly extracted portable ZIP, original standalone Kun binary, minimal PATH, real HTTP, no model or Docker build.",
+  "checks": [
+    "portable launcher starts from a directory with spaces and an unrelated working directory",
+    "fresh data shows first-run initialization",
+    "both new UI assets are present in the binary",
+    "adjacent Kun is discovered with Node, npm, Codex and Docker absent from PATH",
+    "six external recipes and eight source types load from the extracted bundle",
+    "the binary includes the final OpenAPI provenance fields",
+    "optional Codex and Docker can be skipped without preventing completion",
+    "the configured data directory survives a full service restart"
+  ],
+  "archiveSHA256": "eff4cc89621e1579b85ceaac4fd382d9c81318189b7114dfd069df9fd60fa957"
+}

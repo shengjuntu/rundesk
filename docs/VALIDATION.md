@@ -1,6 +1,12 @@
 # 验证范围与复验
 
-本页区分 0.56.0 初始化与修复、0.55.0 外置配方与构建源、0.54.1 研究预置构建修复、0.54.0 WebUI、0.53.0 UHP 加固、此前 0.52.0 文档整理与功能验证，以及更早的发布记录。测试替身通过不等于真实模型、Docker 或业务制品已验收。
+本页区分 0.56.1 三步向导、0.56.0 初始化与修复、0.55.0 外置配方与构建源、0.54.1 研究预置构建修复、0.54.0 WebUI、0.53.0 UHP 加固、此前 0.52.0 文档整理与功能验证，以及更早的发布记录。测试替身通过不等于真实模型、Docker 或业务制品已验收。
+
+## 0.56.1 三步启动向导
+
+本轮[验证报告](validation/current/onboarding-0561.json)记录三步界面的实际复验：[前端行为](validation/current/onboarding-js-0561.json) 30 项、[Chromium 界面](validation/current/onboarding-browser-0561.json) 14 项、[编译服务 HTTP 联调](validation/current/onboarding-live-http-0561.json) 13 项通过。覆盖首次启动、同页选择与配置 LLM、Codex 安装入口、Docker 页直接完成、可选跳过、手工重开，以及中英文桌面/手机布局。
+
+Go 首次启动、OpenAPI 与嵌入资源的 4 项针对性检查通过；Linux/Windows amd64 编译成功。独立 Kun 握手真实运行，模型响应使用脚本服务；本轮没有重复下载 Codex，也未执行真实 Docker 构建或 Windows 原生运行。[Linux 可运行包](validation/current/portable-smoke-0561.json)解压启动的 8 项检查通过，包含最小 PATH、旁置 Kun、外置配方、嵌入界面及重启保留状态。0.56.0 的全量测试保留为历史证据，不计为本轮重跑。
 
 ## 0.56.0 首次初始化与修复
 

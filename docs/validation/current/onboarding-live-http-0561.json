@@ -1,0 +1,75 @@
+{
+  "version": "0.56.1",
+  "passed": true,
+  "scope": "Compiled RunDesk HTTP service and actual standalone Kun worker, full unmodified browser UI, scripted local Chat Completions responses in place of model weights. No package download, Docker build, model training or global installation.",
+  "checks": [
+    "both embedded onboarding assets return HTTP 200 with the shipped implementation",
+    "unauthenticated first request shows visible login above startup mask",
+    "authenticated first view is initialization, before workbench sessions/apps load",
+    "the embedded first page has exactly three stages and includes the LLM form directly",
+    "real model-test HTTP exchange completes inference, auto tool call and tool-result round trip",
+    "real standalone Kun worker handshake and dedicated setup instance save report ready",
+    "Kun readiness enables bounded failure handoff option without requiring Codex",
+    "Docker recipes are opt in and can be skipped",
+    "real setup completion works with Codex and Docker skipped and selects Kun",
+    "fresh root navigation restores selected Kun without reopening initialization",
+    "reload preserves Kun selection and completed state",
+    "default Codex instance configuration remains separate",
+    "all new exercised POSTs use real idempotency headers and succeed; no page exceptions"
+  ],
+  "modelExchanges": [
+    {
+      "model": "setup-scripted-model",
+      "hasTools": false,
+      "roles": [
+        "user"
+      ]
+    },
+    {
+      "model": "setup-scripted-model",
+      "hasTools": true,
+      "toolChoice": "auto",
+      "roles": [
+        "user"
+      ]
+    },
+    {
+      "model": "setup-scripted-model",
+      "hasTools": false,
+      "roles": [
+        "user",
+        "assistant",
+        "tool",
+        "user"
+      ]
+    }
+  ],
+  "exercisedPosts": [
+    {
+      "path": "/api/v1/login",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/setup/check",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/setup/model-test",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/setup/kun",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/setup/complete",
+      "method": "POST",
+      "status": 200
+    }
+  ],
+  "pageErrors": []
+}

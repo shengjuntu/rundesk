@@ -1,0 +1,49 @@
+{
+  "version": "0.56.1",
+  "passed": true,
+  "date": "2026-10-27",
+  "scope": "Three-step startup wizard patch; backend behavior is unchanged from 0.56.0.",
+  "frontend": {
+    "js": {
+      "report": "onboarding-js-0561.json",
+      "checks": 30
+    },
+    "browser": {
+      "report": "onboarding-browser-0561.json",
+      "checks": 14
+    },
+    "live-http": {
+      "report": "onboarding-live-http-0561.json",
+      "checks": 13
+    }
+  },
+  "goTargeted": {
+    "passed": true,
+    "tests": [
+      "TestV1OpenAPIAndPayloadBounds",
+      "TestBuildCenterOpenAPIKeepsCapabilitySeparateFromAdministratorAPI",
+      "TestOnboardingFirstRunSurvivesEarlySessionAndCompletionPreservesBackend",
+      "TestHTMLScriptAndStyleAssetsAreEmbedded"
+    ]
+  },
+  "builds": [
+    "linux/amd64",
+    "windows/amd64"
+  ],
+  "notValidated": [
+    "Windows native execution",
+    "Real model diagnostic quality",
+    "Actual Docker image build"
+  ],
+  "baselineReport": "onboarding-056.json",
+  "portable": {
+    "passed": true,
+    "report": "portable-smoke-0561.json",
+    "checks": 8
+  },
+  "documentation": {
+    "passed": true,
+    "documents": 101,
+    "paths": 233
+  }
+}

@@ -1,5 +1,11 @@
 # 升级到当前版本
 
+## 0.56.1：三步启动向导（2026-10-27）
+
+- 停止旧服务，保留原数据目录，替换 RunDesk 程序并刷新浏览器；继续保留配套 `recipes/`、`config/` 和独立 Kun 0.17.0。
+- 向导合并为“寻找和配置 LLM → 配置和安装 Codex → 构建 Docker”三步。硬件和模型服务发现、Kun 配置同在第一步；完成设置和进入工作台放在第三步。安装与构建的自动修复、源配置和经验复用继续保留。
+- 已完成的初始化状态不会重置。需要查看新向导时，点击左侧导航栏底部的齿轮“环境检查”；无需清空数据或重新安装。后端、配置文件、worker 协议、安装任务及构建记录保持原契约。
+
 ## 0.56.0：首次初始化与 Kun 修复（2026-10-27）
 
 - 保留原数据目录替换 RunDesk，并继续部署 `recipes/`、`config/`。Kun 仍为独立 0.17.0 程序、worker 协议 16；源码只构建宿主。使用已有 `--kun` 路径，或将匹配的 Kun 放在 RunDesk 程序旁，向导也可保存其路径；显式 CLI 参数优先。
@@ -69,7 +75,7 @@
 
 以下通用步骤适用于当前源码；后续版本专题保留各自配套应用与环境说明。
 
-当前版本 RunDesk 0.56.0，配套独立 Kun 0.17.0、worker 协议 16、fork schema 3；视频工具 profile 为 video-build 1.4.0。
+当前版本 RunDesk 0.56.1，配套独立 Kun 0.17.0、worker 协议 16、fork schema 3；视频工具 profile 为 video-build 1.4.0。
 
 1. 等待活动任务结束，停止原服务，备份数据目录、工作区、Codex HOME/配置、独立 Kun 执行日志及服务环境设置。
 2. 在 RunDesk 源码执行 `make build`，本包只构建宿主；部署到别处时一并复制 `recipes/`、`config/` 或设置外置路径。Kun 在其独立源码目录执行 `go build -o bin/kun ./cmd/kun`。将 Kun 放在 RunDesk 可执行文件旁，或通过 `--kun /absolute/path/to/kun` 指定。RunDesk 使用轻量 SDK 快照构建，不再包含 `cmd/kun` 或引擎源码。

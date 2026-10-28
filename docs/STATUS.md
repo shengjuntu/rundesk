@@ -1,6 +1,6 @@
 # 当前能力与后续工作
 
-**RunDesk 0.56.0 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。这里区分源码已实现、后端能力边界和目标环境验收；三个使命的产品定位见[中文 README](../README.zh-CN.md)。
+**RunDesk 0.56.1 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。这里区分源码已实现、后端能力边界和目标环境验收；三个使命的产品定位见[中文 README](../README.zh-CN.md)。
 
 0.54.0 将日常 WebUI 围绕实例组织，集中配置入口并保留工作区上下文；构建中心和应用接入分别管理运行基础与外部调用。Kun 分叉、评测任务集、K4 Skill 工作台和离线实验的常驻/创建入口撤下，研究 API、数据与已有分支查看保留。详见 [WebUI](WEBUI.md)。
 
@@ -9,6 +9,8 @@
 0.55.0 将构建配方改为可编辑的外置目录，并在构建前提供国际/中国镜像源选择及逐项修改。源列表覆盖八类下载入口，实际应用取决于配方声明的参数；六套默认配方支持基础镜像、Debian APT、npm、pip。原配置重建沿用冻结上下文和源参数。详见[构建源配置](BUILD-SOURCES.md)。
 
 0.56.0 增加首次初始化首页、本机硬件与模型服务发现、主动推理/函数调用检查、专用 Kun 初始化助手、无需 Node/npm 的 Codex 后台受管安装，以及多选 Docker 预设。失败安装和构建可形成 Kun 修复任务；经实际记录验证的经验以版本保存并可检索复用，不自动改写公共 Skill 或默认源。运行前置条件见[部署](SETUP.md)。
+
+0.56.1 将启动向导收拢为三步：寻找和配置 LLM（含 Kun 启用）、配置和安装 Codex、构建 Docker。第三步直接完成设置并进入工作台，保留自动修复、构建源编辑和版本化经验。已完成初始化的安装可从左侧齿轮“环境检查”重开。
 
 ## 围绕三个使命的能力
 
@@ -46,5 +48,7 @@
 0.54.1 预置修复检查见 [profile-build-0541.json](validation/current/profile-build-0541.json)；0.54.0 的实际检查以 [webui-054.json](validation/current/webui-054.json) 为准，不从旧报告继承通过数。0.53.0 的 [UHP 加固](validation/current/uhp-hardening.json)、0.52.0 的[轨迹阅读器验证](validation/current/trace-reader.json)及文档整理记录保留为历史证据，不计作本轮重跑结果。真实 Kun、Docker、供应商模型与业务制品仍待目标环境验收；[验证说明](VALIDATION.md)区分各轮范围。
 
 0.55.0 的本轮检查见 [build-sources-055.json](validation/current/build-sources-055.json)：外置文件、源配置、HTTP、WebUI 与编译测试；没有 Docker 实构建或源测速验收。
+
+0.56.1 的[三步向导验证](validation/current/onboarding-0561.json)记录本轮界面、编译服务与针对性 Go 检查。
 
 0.56.0 的[初始化总验证](validation/current/onboarding-056.json)包含 Go 回归、专项 race、真实 Codex 原生下载、真实 Kun 配合脚本模型的修复闭环，以及产品 WebUI/HTTP 验证；具体范围见[验证说明](VALIDATION.md)，不推导为真实模型诊断能力或 Docker 部署验收。
