@@ -105,7 +105,10 @@ class ProfilesTest(unittest.TestCase):
                 docker = (target / "Dockerfile").read_text()
                 for arg in ("RD_BASE_IMAGE", "RD_APT_MIRROR", "RD_APT_SECURITY_MIRROR", "RD_NPM_REGISTRY", "RD_PIP_INDEX_URL"):
                     self.assertIn("ARG " + arg + "=", docker)
-                self.assertIn('npm_config_registry="${RD_NPM_REGISTRY}" npm install --global', docker)
+                self.assertIn('RD_CODEX_MODE="${RD_CODEX_MODE}" RD_NPM_REGISTRY="${RD_NPM_REGISTRY}" sh /opt/rundesk-profile/tools/install-codex.sh', docker)
+                self.assertTrue((target / "tools/install-codex.sh").is_file())
+                self.assertTrue((target / "runtime/.keep").is_file())
+                self.assertIn("COPY runtime/ /opt/rundesk-runtime/", docker)
                 self.assertFalse(any(line.startswith("ENV ") and ("RD_NPM_REGISTRY" in line or "RD_PIP_INDEX_URL" in line) for line in docker.splitlines()))
                 self.assertTrue((target / "tools/configure-apt.sh").is_file())
                 if name in ("news2douyin", "people-search", "video-build"):
@@ -134,6 +137,14 @@ class ProfilesTest(unittest.TestCase):
         self.assertIn("Suites: bookworm bookworm-updates", content)
         self.assertIn("Suites: bookworm-security", content)
         self.assertEqual(content.count("Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg"), 2)
+        self.assertIn("https://third-party.example.test/repo stable main", legacy.read_text())
+        # Idempotent on already configured images; a later network group may
+        # replace RunDesk's own previous origins without touching other repos.
+        subprocess.run(["sh", str(script), str(root)], env=env, check=True)
+        self.assertEqual(content, path.read_text())
+        env = dict(env, RD_APT_MIRROR="https://new.example.test/debian", RD_APT_SECURITY_MIRROR="https://new.example.test/debian-security")
+        subprocess.run(["sh", str(script), str(root)], env=env, check=True)
+        self.assertIn("URIs: https://new.example.test/debian\n", path.read_text())
         self.assertIn("https://third-party.example.test/repo stable main", legacy.read_text())
         certificates.unlink()
         result = subprocess.run(["sh", str(script), str(root)], env=env, capture_output=True, text=True)

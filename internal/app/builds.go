@@ -31,11 +31,13 @@ const buildContextLimit = 128 << 20
 const buildLogLimit = 4 << 20
 
 type ImageBuild struct {
+	CodexRuntime *BuildRuntimeSnapshot `json:"codexRuntime,omitempty"`
 	PlatformOS      string                `json:"platformOS,omitempty"`
 	PlatformArch    string                `json:"platformArch,omitempty"`
 	SourceBuildID   string                `json:"sourceBuildId,omitempty"`
 	BuildSources    *BuildSourceSnapshot  `json:"buildSources,omitempty"`
 	RuntimeIdentity *RuntimeImageIdentity `json:"runtimeIdentity,omitempty"`
+	PublicImage     *PublicImageSnapshot  `json:"publicImage,omitempty"`
 	Scope           string                `json:"scope,omitempty"`
 	Source          string                `json:"source,omitempty"`
 	ProfileID       string                `json:"profileId,omitempty"`
@@ -220,6 +222,11 @@ func (m *Manager) createBuildWithRecipe(iid, name, dockerfile string, timeout in
 	m.buildMu.Lock()
 	defer m.buildMu.Unlock()
 	var v ImageBuild
+	if setup != nil && setup.RequestID != "" {
+		if previous, found, err := m.replayRuntimeImageLocked(setup); err != nil || found {
+			return previous, err
+		}
+	}
 	if runtime.GOOS != "linux" {
 		return v, failure(400, "docker_platform_unsupported", "镜像构建仅支持 Linux 本机 Docker")
 	}
@@ -304,12 +311,20 @@ func (m *Manager) createBuildWithRecipe(iid, name, dockerfile string, timeout in
 	if setup != nil {
 		v.Scope, v.Source, v.ProfileID, v.CodexVersion = "setup", setup.Source, setup.ProfileID, setup.CodexVersion
 		v.Reference, v.Status = setup.Reference, "queued"
+		v.RequestID, v.RequestSHA, v.PublicImage = setup.RequestID, setup.requestSHA, setup.publicImage
+		v.CodexRuntime = setup.runtimeSnapshot
 		for _, old := range rows {
 			if recipe != nil {
 				break
 			}
 			if old.Scope == "setup" && buildActive(old.Status) && old.Reference == v.Reference {
-				if old.ContextSHA256 == v.ContextSHA256 && old.Source == v.Source {
+				publicMatch := old.PublicImage == nil && v.PublicImage == nil || old.PublicImage != nil && v.PublicImage != nil && *old.PublicImage == *v.PublicImage
+				if old.ContextSHA256 == v.ContextSHA256 && old.Source == v.Source && publicMatch {
+					if setup.RequestID != "" {
+						if err := m.Store.Put("runtime-image-request", runtimeImageRequestKey(setup.RequestID), runtimeImageRequest{InputSHA: setup.requestSHA, BuildID: old.ID}); err != nil {
+							return ImageBuild{}, err
+						}
+					}
 					return old, nil
 				}
 				return ImageBuild{}, failure(409, "runtime_image_busy", "此镜像已有准备任务，请先等待或取消")
@@ -318,6 +333,10 @@ func (m *Manager) createBuildWithRecipe(iid, name, dockerfile string, timeout in
 	}
 	if recipe != nil {
 		v.BuildSources = recipe.BuildSources
+		v.CodexRuntime = recipe.CodexRuntime
+		if setup != nil && (setup.Source == "pull" || setup.Source == "local") {
+			v.PublicImage = recipe.PublicImage
+		}
 		v.RecipeID, v.RecipeRevision, v.RecipeSHA = recipe.RecipeID, recipe.RecipeRevision, recipe.RecipeSHA
 		v.RecipeSmoke, v.OwnerRunID, v.RequestID, v.RequestSHA, v.RebuildOf = recipe.RecipeSmoke, recipe.OwnerRunID, recipe.RequestID, recipe.RequestSHA, recipe.RebuildOf
 		if setup == nil && (recipe.RecipeID != "" || recipe.Scope == "recipe") {
@@ -330,11 +349,16 @@ func (m *Manager) createBuildWithRecipe(iid, name, dockerfile string, timeout in
 	if e = freezeRuntimeImageIdentity(&v, filepath.Join(tmp, "context")); e != nil {
 		return ImageBuild{}, e
 	}
+	if v.PublicImage != nil && (v.RuntimeIdentity == nil || v.RuntimeIdentity.ProfileVersion != v.PublicImage.ProfileVersion) {
+		return ImageBuild{}, failure(409, "public_image_profile_mismatch", "所选公共镜像版本与当前预设配方不匹配，请选择兼容版本")
+	}
 	if e = os.Rename(tmp, m.buildDir(id)); e != nil {
 		return v, e
 	}
 	if e = m.Store.Put("image-build", id, v); e != nil {
 		_ = os.RemoveAll(m.buildDir(id))
+	} else if setup != nil && setup.RequestID != "" {
+		e = m.Store.Put("runtime-image-request", runtimeImageRequestKey(setup.RequestID), runtimeImageRequest{InputSHA: setup.requestSHA, BuildID: id})
 	}
 	return v, e
 }
@@ -590,6 +614,9 @@ func (m *Manager) executeBuild(ctx context.Context, v ImageBuild) (imageID strin
 		id, err := m.acquireRuntimeImage(ctx, v, out)
 		return id, bounded.truncated, err
 	}
+	runtimeArgs, runtimeErr := m.prepareBuildRuntime(ctx, v, filepath.Join(dir, "context"), out)
+	if runtimeErr != nil { return "", false, runtimeErr }
+	if err := m.prepareBuildDownloads(ctx, v, filepath.Join(dir, "context"), out); err != nil { return "", false, err }
 	iidfile := filepath.Join(dir, "image-id")
 	_ = os.Remove(iidfile)
 	args := []string{"build", "--builder", "default", "--load", "--progress=plain", "--platform", "linux/" + runtime.GOARCH, "--iidfile", iidfile, "--tag", v.Reference, "--file", filepath.Join(dir, "context", filepath.FromSlash(v.Dockerfile))}
@@ -601,6 +628,7 @@ func (m *Manager) executeBuild(ctx context.Context, v ImageBuild) (imageID strin
 		return "", false, sourceErr
 	}
 	args = append(args, sourceArgs...)
+	args = append(args, runtimeArgs...)
 	args = append(args, filepath.Join(dir, "context"))
 	cmd := m.docker.Command(args...)
 	cmd.Env = append(cmd.Env, "DOCKER_BUILDKIT=1")

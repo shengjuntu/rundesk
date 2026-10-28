@@ -1,0 +1,7 @@
+{
+  "version": "0.57.0",
+  "passed": true,
+  "testPassEvents": 3,
+  "change": "Test-only synchronization waits for the completed terminal event handler and released locks. Production busy guards remain unchanged.",
+  "scope": "Focused cancellation/environment lifecycle test repeated under the race detector."
+}

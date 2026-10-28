@@ -2,10 +2,14 @@
 ARG BASE_IMAGE=node:22-bookworm-slim
 ARG RD_BASE_IMAGE=${BASE_IMAGE}
 FROM ${RD_BASE_IMAGE}
+RUN node -e 'if (Number(process.versions.node.split(".")[0]) < 22) process.exit(1)' && npm --version >/dev/null && id node >/dev/null
 ARG RD_APT_MIRROR=http://deb.debian.org/debian
 ARG RD_APT_SECURITY_MIRROR=http://deb.debian.org/debian-security
 ARG RD_NPM_REGISTRY=https://registry.npmjs.org
 COPY tools/configure-apt.sh /opt/rundesk-profile/tools/configure-apt.sh
+COPY tools/install-codex.sh /opt/rundesk-profile/tools/install-codex.sh
+COPY runtime/ /opt/rundesk-runtime/
+ARG RD_CODEX_MODE=auto
 ARG CODEX_VERSION
 ARG IMAGE_VERSION
 ARG SOURCE_URL
@@ -28,10 +32,7 @@ RUN node -e 'if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(process.argv[1] || ""
  && apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates git curl ripgrep python3 python3-venv \
  && rm -rf /var/lib/apt/lists/* \
- && npm_config_registry="${RD_NPM_REGISTRY}" npm install --global "@openai/codex@${CODEX_VERSION}" \
- && npm cache clean --force \
- && codex --version \
- && codex app-server --help >/dev/null
+ && CODEX_VERSION="${CODEX_VERSION}" RD_CODEX_MODE="${RD_CODEX_MODE}" RD_NPM_REGISTRY="${RD_NPM_REGISTRY}" sh /opt/rundesk-profile/tools/install-codex.sh
 # Add approved tools / MCP executables here, with explicit versions.
 # Do not declare VOLUME or bake credentials into the image.
 RUN mkdir -p /opt/rundesk/bin /opt/rundesk-seed/skills

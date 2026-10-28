@@ -1,6 +1,6 @@
 # 当前能力与后续工作
 
-**RunDesk 0.56.1 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。这里区分源码已实现、后端能力边界和目标环境验收；三个使命的产品定位见[中文 README](../README.zh-CN.md)。
+**RunDesk 0.58.0 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。这里区分源码已实现、后端能力边界和目标环境验收；三个使命的产品定位见[中文 README](../README.zh-CN.md)。
 
 0.54.0 将日常 WebUI 围绕实例组织，集中配置入口并保留工作区上下文；构建中心和应用接入分别管理运行基础与外部调用。Kun 分叉、评测任务集、K4 Skill 工作台和离线实验的常驻/创建入口撤下，研究 API、数据与已有分支查看保留。详见 [WebUI](WEBUI.md)。
 
@@ -11,6 +11,10 @@
 0.56.0 增加首次初始化首页、本机硬件与模型服务发现、主动推理/函数调用检查、专用 Kun 初始化助手、无需 Node/npm 的 Codex 后台受管安装，以及多选 Docker 预设。失败安装和构建可形成 Kun 修复任务；经实际记录验证的经验以版本保存并可检索复用，不自动改写公共 Skill 或默认源。运行前置条件见[部署](SETUP.md)。
 
 0.56.1 将启动向导收拢为三步：寻找和配置 LLM（含 Kun 启用）、配置和安装 Codex、构建 Docker。第三步直接完成设置并进入工作台，保留自动修复、构建源编辑和版本化经验。已完成初始化的安装可从左侧齿轮“环境检查”重开。
+
+0.57.0 在第三步加入预构建镜像下载优先入口、固定 Digest 的外置公开目录，以及经同源 offline/smoke 检查后的后台镜像发布。随包目录为空；尚未配置实际发布账号和公共镜像地址，源码能力不等于镜像已经公开托管。详见[镜像分发](IMAGE-DISTRIBUTION.md)。
+
+0.58.0 在同一套配方上补充 Codex 运行时复用、完整归档下载地址与校验缓存，以及阿里云 Debian 源选项。网络选择与运行时来源独立；保留现有源配置，管理员可显式合并新增默认条目。受管原生包与基础镜像按精确版本和实际身份检查，不因采用镜像源而跳过 smoke。详见[运行时复用](BUILD-RUNTIME.md)与[构建源配置](BUILD-SOURCES.md)。
 
 ## 围绕三个使命的能力
 
@@ -25,9 +29,9 @@
 - **实例与配置**：WebUI 以实例为配置入口；Docker 后端仍按“实例 × 工作区”保存独立配置与运行状态。跨工作区配置版本应用、自动收集统一能力库、跨 Agent 格式适配尚未实现，不能将页面集中理解为配置已全局同步。
 - **后端**：Codex 与 Kun 由独立运行模块及显式宿主服务接入，共享任务准入、取消和资源契约。新增后端仍需代码适配与契约测试，不是登记一个名称即可使用。见[后端能力](BACKENDS.md)与[资源契约](RESOURCE-CONTRACTS.md)。
 - **API**：RDCA v1 使用 `/api/v1`；UHP `/v1` 的协议仍为 `2026-10-19`。UHP 通过 `metadata.rundesk_require` 在任务和附件物化前拒绝所需但不支持的能力；默认任务时限 3600 秒，包含排队时间；APP 可轮询进度并将待审批用户引向工作台。标准 SSE 不新增私有进度事件。两入口共用任务核心，不依赖 HarnessRouter 服务，不声明完整 UHP conformant。见 [UHP 范围](UHP.md)。
-- **预设与构建**：一个应用可登记多个管理员批准的命名预设，分别固定 Codex Docker 实例与工作区，凭据精确授权。构建配方、镜像、运行预设、Skills、MCP 和插件是可组合资源；登记预设不代表资源已安装或账号已认证。构建目录和源列表可独立修改，镜像仍需显式构建与选择。见[运行预设](APPLICATION-RUNTIME-PRESETS.md)、[构建中心](BUILD-CENTER.md)与[下载源](BUILD-SOURCES.md)。
+- **预设与构建**：一个应用可登记多个管理员批准的命名预设，分别固定 Codex Docker 实例与工作区，凭据精确授权。构建配方、镜像、运行预设、Skills、MCP 和插件是可组合资源；登记预设不代表资源已安装或账号已认证。构建目录和源列表可独立修改，镜像可显式拉取、复用或构建后选择；公开分发条目与来源镜像分别校验。见[运行预设](APPLICATION-RUNTIME-PRESETS.md)、[构建中心](BUILD-CENTER.md)与[下载源](BUILD-SOURCES.md)。
 - **插件**：提供 Codex build-tools 插件包、Codex/Kun 构建 Skill 与限于任务的 MCP；支持原生包只读检查和已观察到的组件来源。稳定原生安装/卸载接口未接入，Kun 不加载 Codex 插件。见[插件能力](NATIVE-PLUGINS.md)。
-- **启动与执行环境**：首次页面支持本机发现、Kun worker/模型验证、可选固定版本 Codex 原生受管安装和 Docker 预设多选；失败可交给受限 Kun 修复并记录经验。Kun 容器托管仍待实现，Bash 为显式授权的宿主执行。见[部署](SETUP.md)。
+- **启动与执行环境**：首次页面支持本机发现、Kun worker/模型验证、可选固定版本 Codex 原生受管安装和预构建镜像下载、本机构建或本地镜像检查；失败可交给受限 Kun 修复并记录经验。Kun 容器托管仍待实现，Bash 为显式授权的宿主执行。见[部署](SETUP.md)。
 - **文件与任务资源**：新产物默认保留原件引用，需要冻结时显式保存快照；旧托管副本仍可读取。任务资源目录是可重建视图，不是另一份任务状态源。见[个人文件](PERSONAL-FILES.md)与[任务资源](TASK-RESOURCES.md)。
 
 ## 示例应用
@@ -38,6 +42,8 @@
 
 ## 后续工作
 
+公开分发上线还需维护者提供实际仓库账号/目标地址，上传验证过的镜像、设置公开可见性，并在国内和国外目标网络验收匿名下载；本版不预填虚构的官方镜像。
+
 1. 完善实例配置的版本与作用范围，在保留工作区运行状态的基础上实现跨工作区应用；另行实现能力定义收集、复用及 Agent 格式适配。
 2. 在目标部署环境验收 Codex/Kun 真实模型、Docker 回调、模型认证、Windows 运行，以及代表性应用任务。
 3. 持续完善后端配置、审批、恢复和执行环境契约；补齐 Kun 托管容器及交互 Shell、Bash 流式输出等能力。
@@ -47,8 +53,12 @@
 
 0.54.1 预置修复检查见 [profile-build-0541.json](validation/current/profile-build-0541.json)；0.54.0 的实际检查以 [webui-054.json](validation/current/webui-054.json) 为准，不从旧报告继承通过数。0.53.0 的 [UHP 加固](validation/current/uhp-hardening.json)、0.52.0 的[轨迹阅读器验证](validation/current/trace-reader.json)及文档整理记录保留为历史证据，不计作本轮重跑结果。真实 Kun、Docker、供应商模型与业务制品仍待目标环境验收；[验证说明](VALIDATION.md)区分各轮范围。
 
-0.55.0 的本轮检查见 [build-sources-055.json](validation/current/build-sources-055.json)：外置文件、源配置、HTTP、WebUI 与编译测试；没有 Docker 实构建或源测速验收。
+0.55.0 的历史检查见 [build-sources-055.json](validation/current/build-sources-055.json)：外置文件、源配置、HTTP、WebUI 与编译测试；没有 Docker 实构建或源测速验收。
 
-0.56.1 的[三步向导验证](validation/current/onboarding-0561.json)记录本轮界面、编译服务与针对性 Go 检查。
+0.57.0 的[公开镜像分发验证](validation/current/public-images-057.json)记录该版公开目录、拉取、发布与匿名访问检查的验证范围。
+
+0.56.1 的[三步向导验证](validation/current/onboarding-0561.json)记录该版界面、编译服务与针对性 Go 检查。
 
 0.56.0 的[初始化总验证](validation/current/onboarding-056.json)包含 Go 回归、专项 race、真实 Codex 原生下载、真实 Kun 配合脚本模型的修复闭环，以及产品 WebUI/HTTP 验证；具体范围见[验证说明](VALIDATION.md)，不推导为真实模型诊断能力或 Docker 部署验收。
+
+用户在 2026-10-28 提供了六套修复配方的实际构建、smoke 与 available 记录，作为部署经验收录在[运行时说明](BUILD-RUNTIME.md#这次实机修复的来源)。这些记录不计入 0.58.0 源码回归通过数；本版实际执行范围以[验证说明](VALIDATION.md)为准。

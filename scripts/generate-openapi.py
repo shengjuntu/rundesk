@@ -998,6 +998,12 @@ schemas['BuildSourceCapability']=obj({'type':st(),'detected':bool_,'supported':b
 schemas['ImageBuild']['properties']['buildSources']=ref('BuildSourceSnapshot')
 schemas['RuntimeImageIdentity']=obj({'profileVersion':st(),'agentReach':bool_,'upstream':obj(extra=True),'toolLabels':string_map},['profileVersion','agentReach'])
 schemas['ImageBuild']['properties']['runtimeIdentity']=ref('RuntimeImageIdentity')
+schemas['BuildRuntimeOptions']=obj({'mode':st(enum=['auto','native','base','npm'],description='auto优先复用同版本受管Linux安装，无匹配安装则npm；native/base显式选择失败不静默回退'),'reference':st(description='base模式的完整本地镜像引用，需包含Node22+/npm/node用户及精确Codex')})
+schemas['BuildRuntimeSnapshot']=obj({k:st() for k in ['requestedMode','mode','version','platform','reference','imageId','installId','assetSha256','integrity','reason']}|{'assetBytes':integer},['requestedMode','mode','version','platform'])
+schemas['BuildRuntimeAvailability']=obj({'version':st(),'platform':st(),'nativeAvailable':bool_,'nativeInstallId':st(),'reason':st()},['version','platform','nativeAvailable'])
+schemas['ImageBuild']['properties']['codexRuntime']=ref('BuildRuntimeSnapshot')
+schemas['BuildExperienceEvidence']['properties']['codexRuntime']=ref('BuildRuntimeSnapshot')
+
 
 def build_op(path,method,response,body=None,status='200',description=''):
  op=paths.setdefault(path,{}).setdefault(method,{'operationId':method+'_'+re.sub(r'[^A-Za-z0-9]+','_',path).strip('_'),'parameters':[{'name':name,'in':'path','required':True,'schema':st()} for name in re.findall(r'\{([^}]+)\}',path)]})
@@ -1009,6 +1015,42 @@ def build_op(path,method,response,body=None,status='200',description=''):
  if body is not None:op['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
  return op
 
+
+# Public prebuilt images and verified registry publications.
+schemas['PublicImageSource']=obj({'id':st(),'name':st(),'reference':st(description='完整 registry/repository@sha256:64位摘要；同条目的源必须保持相同摘要，不包含认证信息')},['id','name','reference'])
+schemas['PublicImageEntry']=obj({'id':st(),'profileId':st(enum=['news2douyin','people-search','video-build','hyperframes','video-use','openmontage']),'profileVersion':st(),'codexVersion':st(),'platform':st(description='linux/amd64 等精确平台'),'sources':{'type':'array','minItems':1,'maxItems':8,'items':ref('PublicImageSource')}},['id','profileId','profileVersion','codexVersion','platform','sources'])
+schemas['PublicImageCatalog']=obj({'schemaVersion':{'const':1},'revision':st(),'items':{'type':'array','maxItems':128,'items':ref('PublicImageEntry')}},['schemaVersion','items'])
+schemas['PublicImageSnapshot']=obj({k:st() for k in ['id','sourceId','reference','platform','profileVersion','catalogRevision']},['id','sourceId','reference','platform','profileVersion','catalogRevision'])
+schemas['ImageBuild']['properties']['publicImage']=ref('PublicImageSnapshot')
+op=build_op('/setup/public-images','get',ref('PublicImageCatalog'),description='读取已配置的公共预构建镜像目录')
+op['description']='管理员读取外置目录。发行默认列表为空，不声称存在官方镜像；首次复制到数据目录config/public-images.json，RUNDESK_PUBLIC_IMAGES可指定运行文件。GET不会联网搜索、拉取镜像或验证公共访问。'
+op=build_op('/setup/public-images','put',ref('PublicImageCatalog'),ref('PublicImageCatalog'),description='按revision原子保存公共镜像目录')
+op['description']='须提交当前revision；冲突返回409。校验精确预设/Codex版本、平台及Digest引用；目录是管理员配置，保存不构成匿名下载或业务测试证明。不更新已有实例和任务快照。'
+runtime_image_input=obj({'codexRuntime':ref('BuildRuntimeOptions'),'profileId':st(),'codexVersion':st(),'source':st(enum=['build','pull','local']),'reference':st(),'publicImageId':st(),'publicSourceId':st(),'catalogRevision':st(),'requestId':st(pattern=r'^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$')})
+runtime_image_input['anyOf']=[{'required':['profileId','codexVersion','reference']},{'required':['publicImageId','publicSourceId','catalogRevision']}]
+paths['/setup/runtime-images']['post']['requestBody']={'required':True,'content':{'application/json':{'schema':runtime_image_input}}}
+paths['/setup/runtime-images']['post']['description']='管理员异步准备镜像。build/pull/local进入持久串行队列；公开目录选择按revision、平台、预设版本核对并冻结Digest。可选8–128位requestId在成功终态和目录变更后仍重放原任务；字段变化冲突。手工标签保留兼容，但不能称为不可变公共版本。成功必须通过本机身份与离线工具检查。拉取失败不会自动改成本机构建。'
+schemas['ImagePublicationReadiness']=obj({'eligible':bool_,**{k:st() for k in ['sourceBuildId','imageId','reason','offlineTestId','smokeTestId','profileId','profileVersion','codexVersion','platform']}},['eligible'])
+schemas['ImagePublication']=obj({k:st() for k in ['id','sourceBuildId','target','requestId','status','imageId','offlineTestId','smokeTestId','profileId','profileVersion','codexVersion','platform','digest','reference','created','updated','error','publicCheckedAt','publicAccessError']}|{'publicImage':ref('PublicImageEntry'),'publicAccessVerified':bool_,'publicChecking':bool_,'logTruncated':bool_},['id','sourceBuildId','target','requestId','status','imageId','offlineTestId','smokeTestId','profileId','profileVersion','codexVersion','platform','created','updated','publicAccessVerified','logTruncated'])
+build_op('/build-center/images/{key}/publication-readiness','get',ref('ImagePublicationReadiness'),description='读取固定镜像是否具备同源Offline和Smoke发布证据')
+build_op('/build-center/publications','get',obj({'items':arr(ref('ImagePublication'))},['items']),description='读取持久化发布任务与公开访问检查结果')
+op=build_op('/build-center/publications','post',ref('ImagePublication'),obj({'sourceBuildId':st(),'target':st(description='完整仓库/路径:固定版本标签，拒绝latest、Digest及凭据URL'),'requestId':request24,'confirm':{'const':True}},['sourceBuildId','target','requestId','confirm']),status='202',description='发布已通过同源Offline和Smoke测试的固定镜像')
+op['description']='管理员显式提交；只上传已冻结的预设镜像，不执行构建。使用服务账户Docker凭据。固定Image ID打标签后上传并核对仓库Digest；持久requestId去重。成功上传不表示仓库公开。重启或不确定结果不自动重推，不修改公开目录或应用绑定。'
+build_op('/build-center/publications/{id}','get',ref('ImagePublication'),description='读取发布状态、仓库摘要与可供目录使用的条目')
+op=build_op('/build-center/publications/{id}/log','get',obj({'text':st(),'next':{'type':'integer','format':'int64'},'status':st(),'truncated':bool_},['text','next','status','truncated']),description='读取有界脱敏的发布日志')
+op['parameters'].append({'name':'after','in':'query','schema':{'type':'integer','minimum':0,'default':0}})
+build_op('/build-center/publications/{id}/cancel','post',ref('ImagePublication'),description='停止排队或进行中的上传；已经传到仓库的内容不回滚')
+op=build_op('/build-center/publications/{id}/check-public','post',ref('ImagePublication'),description='使用空Docker配置核对匿名manifest访问、Digest和平台')
+op['description']='仅对成功发布的不可变引用进行有界只读检查；隔离已登录Docker凭据。publicAccessVerified只证明本次匿名manifest访问，不证明全部层下载、平台Cookie、模型或业务任务。不会修改第三方仓库可见性。'
+
+for publication_path in ['/build-center/publications','/build-center/publications/{id}/cancel','/build-center/publications/{id}/check-public']:
+ paths[publication_path]['post']['parameters'].append({'name':'Idempotency-Key','in':'header','required':True,'schema':st(minLength=8,maxLength=128)})
+
+op=build_op('/build-center/runtime-options','get',ref('BuildRuntimeAvailability'),description='读取精确Codex版本对应的受管本机运行时可用性')
+op['parameters'].append({'name':'codexVersion','in':'query','required':True,'schema':st()})
+op['description']='只读检查运行节点受管安装记录，不下载、不运行容器。nativeAvailable不代替入队时的归档完整性、平台和实际版本检查；base镜像在构建执行时验证。'
+op=build_op('/build-center/sources/defaults','get',ref('BuildSourceCatalog'),description='读取当前发行版附带的源列表供显式合并')
+op['description']='只读，不覆盖数据目录源列表。客户端仅将缺失分组、类型、字段和条目补入草稿，经既有PUT revision校验保存；同名自定义值保持不变。'
 op=build_op('/build-center/sources','get',ref('BuildSourceCatalog'),description='读取外置下载源列表与可扩展参数类型')
 op['description']='仅管理员。按构建节点读取运行列表；首次从发行文件复制到数据目录，之后修改无需重启。不承诺源的地域、速度或实际可达性。'
 op=build_op('/build-center/sources','put',ref('BuildSourceCatalog'),ref('BuildSourceCatalog'),description='按revision更新外置源列表')
@@ -1025,7 +1067,7 @@ op['requestBody']={'required':True,'content':{'multipart/form-data':{'schema':ob
 build_op('/build-center/recipes/{rid}','get',ref('BuildRecipe'),description='读取配方冻结元数据')
 op=build_op('/build-center/recipes/{rid}','delete',ref('BuildRecipe'),description='归档自定义配方，保留历史和输入，内置项不可更改')
 op['parameters'].append({'name':'revision','in':'query','required':True,'schema':integer})
-build_op('/build-center/recipes/{rid}/build','post',ref('ImageBuild'),obj({'recipeRevision':integer,'codexVersion':st(),'reference':st(),'noCache':bool_,'requestId':request24,'recipeSha':st(),'buildSources':ref('BuildSourceOptions')},['recipeRevision','requestId']),description='在现有队列构建已冻结配方，不修改默认助手')
+build_op('/build-center/recipes/{rid}/build','post',ref('ImageBuild'),obj({'recipeRevision':integer,'codexVersion':st(),'reference':st(),'noCache':bool_,'requestId':request24,'recipeSha':st(),'buildSources':ref('BuildSourceOptions'),'codexRuntime':ref('BuildRuntimeOptions')},['recipeRevision','requestId']),description='在现有队列构建已冻结配方，不修改默认助手')
 build_op('/build-center/builds','get',obj({'items':arr(ref('ImageBuild'))},['items']),description='读取setup、应用和平台全局构建')
 build_op('/build-center/builds/{bid}','get',ref('ImageBuild'),description='读取全局构建状态')
 build_op('/build-center/builds/{bid}/rebuild','post',ref('ImageBuild'),obj({'requestId':request24,'noCache':bool_},['requestId']),description='复制经过摘要校验的历史冻结输入，创建新构建')

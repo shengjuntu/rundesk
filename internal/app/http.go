@@ -70,6 +70,7 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 	s.buildRoutes(mux)
 	s.buildCenterRecipeRoutes(mux)
 	s.buildCenterImageRoutes(mux)
+	s.imagePublicationRoutes(mux)
 	s.buildAssistantRoutes(mux)
 	s.nativePluginRoutes(mux)
 	s.libraryRoutes(mux)

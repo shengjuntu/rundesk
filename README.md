@@ -46,9 +46,13 @@ The instance-centered WebUI does **not** yet synchronize instance configuration 
 
 ## Current source version
 
-**RunDesk 0.56.1 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.58.0 source · external Kun 0.17.0 · worker protocol 16**
 
-Version 0.56.1 starts new installations with a **three-step wizard**: **find and configure LLM → configure and install Codex → build Docker**. The first step discovers server hardware and model services, tests inference and function calling, and enables the dedicated Kun setup assistant on the same page. The third step also saves setup and opens the workbench. Installation and build failures can become traceable Kun repair tasks; verified repairs retain versioned evidence for later reuse. See [setup](docs/SETUP.md) for prerequisites and the limits of automatic discovery.
+Version 0.57.0 starts new installations with a **three-step wizard**: **find and configure LLM → configure and install Codex → prepare Docker environments**. The first step discovers server hardware and model services, tests inference and function calling, and enables the dedicated Kun setup assistant on the same page. The third step defaults to downloading a prebuilt image, with local builds and existing local images available as alternatives; it also saves setup and opens the workbench. Installation and build failures can become traceable Kun repair tasks; verified repairs retain versioned evidence for later reuse. See [setup](docs/SETUP.md) for prerequisites and the limits of automatic discovery.
+
+Publishers can upload an image after its matching offline and smoke checks pass, then distribute its digest through an editable public-image catalog. **The bundled catalog is empty until real images are published**; this release does not claim an official RunDesk image namespace or an anonymous-download test. See [image distribution](docs/IMAGE-DISTRIBUTION.md).
+
+Version 0.58.0 keeps one set of recipes with **China and international network settings**. Local builds can reuse a matching managed Linux Codex installation or an explicitly selected compatible base image, reducing repeated Codex downloads. OpenMontage supports a complete archive URL and a SHA-256-verified download cache; Aliyun Debian mirrors join the editable source list. Existing source settings are preserved when upgrading. See [build runtime reuse](docs/BUILD-RUNTIME.md) and [build sources](docs/BUILD-SOURCES.md).
 
 This source includes runtime/resource contracts, a unified observation model, the conversation trace reader, the build center, and two API entry points over the same task core:
 
@@ -76,7 +80,7 @@ chmod +x ./start-rundesk.sh
 ./start-rundesk.sh
 ```
 
-On Windows, extract the package and double-click `start-rundesk.cmd`. Open <http://127.0.0.1:3210>; a new installation starts with the three-step wizard. Reopen it later from the gear button labeled “Environment check” at the bottom of the navigation rail. Use an existing local model service or enter a remote endpoint. Docker Engine is optional and must be installed separately when you want to build containers.
+On Windows, extract the package and double-click `start-rundesk.cmd`. Open <http://127.0.0.1:3210>; a new installation starts with the three-step wizard. Reopen it later from the gear button labeled “Environment check” at the bottom of the navigation rail. Use an existing local model service or enter a remote endpoint. Docker Engine is optional and must be installed separately when you want to pull, build, check or run images.
 
 ### Build from source
 

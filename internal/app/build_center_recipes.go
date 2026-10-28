@@ -64,6 +64,7 @@ type BuildRecipe struct {
 }
 
 type RecipeBuildInput struct {
+	CodexRuntime *BuildRuntimeOptions `json:"codexRuntime,omitempty"`
 	RecipeSHA      string              `json:"recipeSha,omitempty"`
 	BuildSources   *BuildSourceOptions `json:"buildSources,omitempty"`
 	RecipeRevision int                 `json:"recipeRevision"`
@@ -624,11 +625,29 @@ func (m *Manager) StartRecipeBuild(id string, in RecipeBuildInput) (ImageBuild, 
 			}
 		}
 	}
+	var runtimeSnapshot *BuildRuntimeSnapshot
+	if in.CodexRuntime == nil && repairSource != nil && repairSource.CodexRuntime != nil {
+		copy := *repairSource.CodexRuntime
+		runtimeSnapshot = &copy
+		if !runtimeRecipeSupported(data, r.Dockerfile) || runtimeRecipeVersion(data, r.Dockerfile) != copy.Version {
+			return v, failure(409, "repair_runtime_changed", "修复配方移除了原运行时接口或改变了 Codex 版本，请显式选择新运行时")
+		}
+		if sources != nil && copy.Mode == "base" {
+			if base := sources.Arguments["RD_BASE_IMAGE"]; base != "" && base != copy.Reference && base != copy.ImageID {
+				return v, failure(409, "codex_runtime_source_conflict", "修复构建的基础镜像与冻结运行时不一致，请显式选择新运行时")
+			}
+		}
+	} else {
+		runtimeSnapshot, err = m.resolveBuildRuntime(in.CodexRuntime, data, r.Dockerfile, in.CodexVersion, sources, r.Kind == "builtin")
+		if err != nil { return v, err }
+	}
 	data, err = freezeBuildSources(data, sources)
 	if err != nil {
 		return v, err
 	}
-	snapshot := &ImageBuild{RecipeID: r.ID, RecipeRevision: r.Revision, RecipeSHA: r.RecipeSHA, RecipeSmoke: &r.Smoke, OwnerRunID: in.OwnerRunID, RequestID: in.RequestID, RequestSHA: digest, Reference: in.Reference, BuildSources: sources}
+	data, err = freezeBuildRuntime(data, runtimeSnapshot)
+	if err != nil { return v, err }
+	snapshot := &ImageBuild{CodexRuntime: runtimeSnapshot, RecipeID: r.ID, RecipeRevision: r.Revision, RecipeSHA: r.RecipeSHA, RecipeSmoke: &r.Smoke, OwnerRunID: in.OwnerRunID, RequestID: in.RequestID, RequestSHA: digest, Reference: in.Reference, BuildSources: sources}
 	snapshot.RebuildOf = in.RepairOf
 	name := r.Name
 	if suffix := " · " + r.Version; len(name)+len(suffix) <= 120 {
@@ -691,7 +710,13 @@ func (m *Manager) RebuildCenterBuild(id string, in RebuildCenterBuildInput) (Ima
 	}
 	var setup *RuntimeImageInput
 	if old.Scope == "setup" {
-		setup = &RuntimeImageInput{ProfileID: old.ProfileID, CodexVersion: old.CodexVersion, Source: "build", Reference: old.Reference}
+		source := "build"
+		if old.Source == "pull" || old.Source == "local" {
+			// A download retry reuses the frozen acquisition request. Building
+			// under a digest reference would be invalid and changes its meaning.
+			source = old.Source
+		}
+		setup = &RuntimeImageInput{ProfileID: old.ProfileID, CodexVersion: old.CodexVersion, Source: source, Reference: old.Reference}
 	}
 	frozen := old
 	frozen.RequestID, frozen.RequestSHA, frozen.RebuildOf = in.RequestID, digest, old.ID
@@ -716,6 +741,7 @@ func (m *Manager) RebuildCenterBuild(id string, in RebuildCenterBuildInput) (Ima
 func (s *Server) buildCenterRecipeRoutes(mux *http.ServeMux) {
 	s.buildSourceRoutes(mux)
 	s.buildRecipeFileRoutes(mux)
+	s.buildRuntimeRoutes(mux)
 	m := s.Manager
 	mux.HandleFunc("GET /api/build-center/recipes", func(w http.ResponseWriter, r *http.Request) {
 		items, err := m.BuildCenterRecipes()

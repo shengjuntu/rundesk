@@ -1,6 +1,8 @@
 # Editable independent upstream Dockerfile. Inspect upstream.json and install.sh before building.
 ARG RD_BASE_IMAGE=node:22-bookworm-slim
 FROM ${RD_BASE_IMAGE}
+# All managed profiles require the Node runtime and unprivileged node user.
+RUN node -e 'if (Number(process.versions.node.split(".")[0]) < 22) process.exit(1)' && npm --version >/dev/null && id node >/dev/null
 ARG RD_APT_MIRROR=http://deb.debian.org/debian
 ARG RD_APT_SECURITY_MIRROR=http://deb.debian.org/debian-security
 COPY tools/configure-apt.sh /opt/rundesk-profile/tools/configure-apt.sh
@@ -13,7 +15,10 @@ ENV PATH="/opt/rundesk-python/bin:${PATH}"
 COPY upstream/ /opt/rundesk-upstream/
 # Reviewed upstream source: https://codeload.github.com/calesthio/OpenMontage/tar.gz/c8066452325cb57c8fc1ba8c2a71b6e8842e6b65
 ARG RD_GITHUB_ARCHIVE_BASE=https://codeload.github.com
-RUN curl --fail --location --retry 3 --connect-timeout 30 --max-time 900 --output /opt/rundesk-upstream/source.tar.gz "${RD_GITHUB_ARCHIVE_BASE}/calesthio/OpenMontage/tar.gz/c8066452325cb57c8fc1ba8c2a71b6e8842e6b65"
+ARG RD_GITHUB_ARCHIVE_URL=
+COPY vendor/ /opt/rundesk-upstream/
+COPY tools/download-archive.sh /opt/rundesk-profile/tools/download-archive.sh
+RUN RD_GITHUB_ARCHIVE_URL="${RD_GITHUB_ARCHIVE_URL}" RD_GITHUB_ARCHIVE_BASE="${RD_GITHUB_ARCHIVE_BASE}" sh /opt/rundesk-profile/tools/download-archive.sh dff7cd1cdf2cb0522398e00b3f0b75f32336b695a8be34ac8e6b6913055aab25 /opt/rundesk-upstream/source.tar.gz https://codeload.github.com/calesthio/OpenMontage/tar.gz/c8066452325cb57c8fc1ba8c2a71b6e8842e6b65 /calesthio/OpenMontage/tar.gz/c8066452325cb57c8fc1ba8c2a71b6e8842e6b65
 RUN echo 'dff7cd1cdf2cb0522398e00b3f0b75f32336b695a8be34ac8e6b6913055aab25  /opt/rundesk-upstream/source.tar.gz' | sha256sum -c - && mkdir -p /opt/upstreams/openmontage && tar -xzf /opt/rundesk-upstream/source.tar.gz --strip-components=1 -C /opt/upstreams/openmontage
 RUN npm_config_registry="${RD_NPM_REGISTRY}" PIP_INDEX_URL="${RD_PIP_INDEX_URL}" sh /opt/rundesk-upstream/install.sh
 RUN test -f /opt/upstreams/openmontage/LICENSE
@@ -29,7 +34,10 @@ RUN test -f /opt/upstreams/openmontage/pipeline_defs/animated-explainer.yaml
 COPY skills/ /etc/codex/skills/
 COPY tools/ /opt/rundesk-profile/tools/
 ARG CODEX_VERSION=0.0.0
-RUN npm_config_registry="${RD_NPM_REGISTRY}" npm install --global "@openai/codex@${CODEX_VERSION}" && npm cache clean --force && codex --version && codex app-server --help >/dev/null
+ARG RD_CODEX_MODE=auto
+COPY runtime/ /opt/rundesk-runtime/
+COPY tools/install-codex.sh /opt/rundesk-profile/tools/install-codex.sh
+RUN CODEX_VERSION="${CODEX_VERSION}" RD_CODEX_MODE="${RD_CODEX_MODE}" RD_NPM_REGISTRY="${RD_NPM_REGISTRY}" sh /opt/rundesk-profile/tools/install-codex.sh
 LABEL org.opencontainers.image.title="RunDesk openmontage"
 LABEL org.opencontainers.image.version="1.0.0"
 LABEL io.rundesk.profile="openmontage"

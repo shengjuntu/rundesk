@@ -27,12 +27,22 @@ for route, method in [
     ('/setup/repairs/{sid}', 'get'), ('/setup/experiences', 'get'),
     ('/setup/experiences', 'post'), ('/setup/complete', 'post'),
     ('/setup/auto-repairs', 'get'), ('/setup/auto-repairs', 'post'),
+    ('/setup/public-images', 'get'), ('/setup/public-images', 'put'),
+    ('/build-center/sources/defaults', 'get'), ('/build-center/runtime-options', 'get'),
+    ('/build-center/publications', 'get'), ('/build-center/publications', 'post'),
+    ('/build-center/publications/{id}', 'get'),
+    ('/build-center/publications/{id}/log', 'get'),
+    ('/build-center/publications/{id}/cancel', 'post'),
+    ('/build-center/publications/{id}/check-public', 'post'),
+    ('/build-center/images/{key}/publication-readiness', 'get'),
 ]:
     operation = spec['paths'][route][method]
     assert operation['x-administrator-only'] is True, route
 for route in ['/setup/codex-install', '/setup/model-test', '/setup/kun',
               '/setup/codex-installs', '/setup/repairs', '/setup/experiences',
-              '/setup/complete', '/setup/auto-repairs']:
+              '/setup/complete', '/setup/auto-repairs', '/build-center/publications',
+              '/build-center/publications/{id}/cancel',
+              '/build-center/publications/{id}/check-public']:
     operation = spec['paths'][route]['post']
     assert any(p['name'] == 'Idempotency-Key' and p['required'] for p in operation['parameters']), route
 task_mcp = spec['paths']['/setup/agent-mcp']['post']

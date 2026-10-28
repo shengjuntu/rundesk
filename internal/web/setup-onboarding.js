@@ -6,7 +6,7 @@ window.RunDeskOnboarding = (() => {
   const steps = [
     ["llm", "寻找和配置 LLM", "Find and configure LLM", "发现模型，启用 Kun", "Discover models and enable Kun"],
     ["codex", "配置和安装 Codex", "Configure and install Codex", "复用已有安装或下载安装", "Reuse or install Codex"],
-    ["docker", "构建 Docker", "Build Docker", "选择预设，完成初始化", "Choose presets and finish setup"]
+    ["docker", "准备 Docker 环境", "Prepare Docker environments", "下载镜像或本机构建", "Download images or build locally"]
   ];
   let current, preferredInstance = "";
   const statusLabels = () => ({ready:tr("已就绪","Ready"),listed:tr("发现模型，待测试","Models found; untested"),succeeded:tr("已完成","Completed"),failed:tr("需要处理","Needs attention"),running:tr("进行中","Running"),queued:tr("排队中","Queued"),interrupted:tr("已中断","Interrupted"),unavailable:tr("未发现","Not found"),error:tr("检测失败","Check failed"),candidate:tr("候选经验","Candidate"),verified:tr("已验证经验","Verified"),auth_required:tr("需要认证","Authentication required"),empty:tr("未返回模型","No models returned"),incompatible:tr("协议不匹配","Protocol mismatch"),unreachable:tr("未连接","Unreachable"),canceled:tr("已取消","Canceled"),canceling:tr("正在取消","Canceling"),completed:tr("已完成","Completed"),idle:tr("待配置","Not configured"),waiting:tr("等待处理","Waiting"),watching:tr("已开启失败自动修复","Automatic repair enabled"),revalidating:tr("正在复查模型能力","Rechecking model capabilities"),submitted:tr("已交给 Kun","Sent to Kun"),blocked:tr("自动交接需要处理","Handoff needs attention"),disabled:tr("已关闭自动修复","Automatic repair disabled"),inference_only:tr("推理通过，工具未通过","Inference passed; tools failed")});
@@ -32,7 +32,7 @@ window.RunDeskOnboarding = (() => {
   }
   function draft() { try { return JSON.parse(sessionStorage.getItem("rundesk-onboarding-draft") || "{}"); } catch { return {}; } }
   function saveDraft(c) {
-    try { sessionStorage.setItem("rundesk-onboarding-draft", JSON.stringify({endpoint:c.endpoint,model:c.model,keyEnv:c.keyEnv,kunPath:c.kunPath,codexPath:c.codexPath,version:c.version,group:c.group,selected:[...c.selected],receipts:c.receipts,sourceDrafts:c.sourceDrafts,autoRepair:c.autoRepair,autoAuthorizations:c.autoAuthorizations,installAdoptRequestId:c.installAdoptRequestId,installAdopted:c.installAdopted})); } catch {}
+    try { sessionStorage.setItem("rundesk-onboarding-draft", JSON.stringify({endpoint:c.endpoint,model:c.model,keyEnv:c.keyEnv,kunPath:c.kunPath,codexPath:c.codexPath,version:c.version,group:c.group,selected:[...c.selected],receipts:c.receipts,sourceDrafts:c.sourceDrafts,autoRepair:c.autoRepair,autoAuthorizations:c.autoAuthorizations,installAdoptRequestId:c.installAdoptRequestId,installAdopted:c.installAdopted,dockerMode:c.dockerMode,runtimeDrafts:c.runtimeDrafts,codexRuntime:c.codexRuntime})); } catch {}
   }
   function readyKun(c) { return !!c.kun?.ready; }
   function setStep(c, index) { c.step = Math.max(0, Math.min(steps.length - 1, index)); render(c); c.page.scrollTop = 0; }
@@ -292,12 +292,23 @@ window.RunDeskOnboarding = (() => {
     if(!c.repairs.length&&!c.autoRows.length)target.append(note("失败时可以委托 Kun。修复过程保留任务、修改和验证记录。","Delegate to Kun when a step fails. The task, changes and validation results remain available."));
   }
   function docker(c) {
-    header(c,"构建 Docker","Build Docker","预设准备好依赖、工具和 Skills。只构建你选中的环境；模型认证和应用连接可以随后完成。","Presets prepare dependencies, tools and Skills. Build only the environments you select; configure model authentication and app connections afterward.");
+    header(c,"准备 Docker 环境","Prepare Docker environments","下载已发布的预设镜像，或按需要在本机构建。获取后会检查镜像身份与工具；只准备你选中的环境。","Download published preset images, or build locally when needed. Acquired images are checked for identity and tools; prepare only the environments you choose.");
     const dockerState=c.dockerCheck;
-    const status=card(tr("Docker Engine","Docker Engine"),el("div",{class:"ob-inline"},badge(dockerState?.ok?"ready":dockerState?"unavailable":"idle",dockerState?.ok?tr("Docker 检查通过","Docker check passed"):dockerState?tr("Docker 尚不可用","Docker is unavailable"):tr("尚未检查","Not checked")),action(c,tr("检查 Docker","Check Docker"),async()=>{c.dockerCheck=await api("/setup/check",{method:"POST",body:{kind:"docker"}});render(c);},"quiet",{id:"onboarding-check-docker"})),note("Docker 不可用时可以跳过此步，稍后从构建中心继续。","If Docker is unavailable, skip this step and continue later from the build center."));
+    const status=card("Docker Engine",el("div",{class:"ob-inline"},badge(dockerState?.ok?"ready":dockerState?"unavailable":"idle",dockerState?.ok?tr("Docker 检查通过","Docker check passed"):dockerState?tr("Docker 尚不可用","Docker is unavailable"):tr("尚未检查","Not checked")),action(c,tr("检查 Docker","Check Docker"),async()=>{c.dockerCheck=await api("/setup/check",{method:"POST",body:{kind:"docker"}});render(c);},"quiet",{id:"onboarding-check-docker"})),note("Docker 不可用时可以跳过此步，稍后从构建中心继续。","If Docker is unavailable, skip this step and continue later from the build center."));
     if(dockerState&&!dockerState.ok)status.append(el("p",{class:"ob-error"},dockerState.error||""));c.main.append(status);
+    const mode=el("select",{id:"onboarding-docker-mode"},el("option",{value:"pull"},tr("下载预构建镜像（推荐）","Download prebuilt image (recommended)")),el("option",{value:"build"},tr("本机构建","Build locally")),el("option",{value:"local"},tr("使用本机已有镜像","Use an existing local image")));mode.value=c.dockerMode;
+    mode.onchange=()=>{captureSources(c);c.dockerMode=mode.value;saveDraft(c);render(c);};
+    c.main.append(card(tr("准备方式","Preparation method"),el("label",{},tr("镜像来源","Image source"),mode)));
+    if(c.dockerMode==="build")buildDocker(c);else acquireDocker(c);
+    c.main.append(card(tr("准备进度","Preparation progress"),el("div",{id:"onboarding-build-history"})));renderBuilds(c);repairRegion(c);
+  }
+  function buildDocker(c) {
+    const dockerState=c.dockerCheck;
     if(!c.recipes.length){c.main.append(card(tr("正在读取预设","Loading presets"),action(c,tr("重新读取","Reload"),()=>loadDocker(c))));return;}
-    const version=el("input",{id:"onboarding-docker-version",value:c.version,placeholder:"0.157.1"});version.oninput=()=>{c.version=version.value.trim();saveDraft(c);};
+    let runtimeInput;
+    const version=el("input",{id:"onboarding-docker-version",value:c.version,placeholder:"0.157.1"});version.oninput=()=>{c.version=version.value.trim();runtimeInput?.invalidate();saveDraft(c);};
+    const runtimePanel=el("section",{class:"build-runtime-panel"});
+    runtimeInput=RunDeskBuildCenter.runtimeOptions(runtimePanel,{prefix:"onboarding-codex-runtime",value:c.codexRuntime,version:()=>c.version,onchange:value=>{c.codexRuntime=value;saveDraft(c);}});
     const group=sourceGroup(c,"onboarding-docker-group");
     const options=el("div",{class:"ob-recipes"},...c.recipes.filter(value=>!value.archived).map(value=>{
       const input=el("input",{type:"checkbox",value:value.id,checked:c.selected.has(value.id),"data-preset-id":value.id});
@@ -327,10 +338,10 @@ window.RunDeskOnboarding = (() => {
       if(!/^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$/.test(c.version))throw Error(tr("请填写镜像内 Codex 的精确版本。","Enter the exact Codex release for the image."));
       // Validate every selection before the first submission. Each successful
       // response is retained immediately so a later failure cannot hide it.
-      const inputs=[...c.selected].map(id=>{const r=c.recipes.find(value=>value.id===id),sources=c.sourceInputs.get(id);if(!r||!sources)throw Error(tr("请先重新读取完整的源配置。","Reload the complete source configuration first."));return{r,buildSources:sources()};});
+      const inputs=[...c.selected].map(id=>{const r=c.recipes.find(value=>value.id===id),sources=c.sourceInputs.get(id);if(!r||!sources)throw Error(tr("请先重新读取完整的源配置。","Reload the complete source configuration first."));return{r,buildSources:sources(),...(r.kind==="builtin"?{codexRuntime:runtimeInput.read()}:{})};});
       const completedKeys=[],registrationErrors=[];
-      for(const {r,buildSources} of inputs){
-        const input={recipeRevision:r.revision,recipeSha:r.recipeSha,...(r.kind==="builtin"?{codexVersion:c.version}:{}),buildSources};
+      for(const {r,buildSources,codexRuntime} of inputs){
+        const input={recipeRevision:r.revision,recipeSha:r.recipeSha,...(r.kind==="builtin"?{codexVersion:c.version,codexRuntime}:{}),buildSources};
         const key="build:"+r.id+":"+JSON.stringify(input),id=receipt(c,key),intent=autoIntent(c,"image-build",id);
         const value=await api("/build-center/recipes/"+enc(r.id)+"/build",{method:"POST",body:{...input,requestId:id}});
         completedKeys.push(key);saveDraft(c);
@@ -340,16 +351,79 @@ window.RunDeskOnboarding = (() => {
       for(const key of completedKeys)delete c.receipts[key];saveDraft(c);
       if(registrationErrors.length)throw Error(registrationErrors.join("\n"));
     },"primary",{id:"onboarding-build-selected"});start.disabled=!dockerState?.ok||!c.catalog;
-    c.main.append(card(tr("可用预设","Available presets"),options,el("div",{class:"ob-grid",style:"margin-top:20px"},el("label",{},tr("镜像内 Codex 精确版本","Exact Codex release in images"),version),el("label",{},tr("下载源分组","Download source group"),group)),note("切换下载源分组会重新填入所选预设的地址。单独修改的地址会随草稿保留。","Changing the source group refills the selected presets. Individual address edits are retained in your draft."),sources,autoControl(c,"onboarding-build-auto-repair"),el("div",{class:"ob-actions"},start,action(c,tr("编辑源列表","Edit source catalog"),()=>editSources(c,loadDocker))),note("构建在后台运行，关闭初始化页面不会停止任务。每个构建会保存本次配方和下载源快照。","Builds run in the background and continue when setup closes. Each build keeps its recipe and source configuration snapshot.")));renderSources();
-    c.main.append(card(tr("构建进度","Build progress"),el("div",{id:"onboarding-build-history"})));renderBuilds(c);repairRegion(c);
+    c.main.append(card(tr("可用预设","Available presets"),options,el("div",{class:"ob-grid",style:"margin-top:20px"},el("label",{},tr("镜像内 Codex 精确版本","Exact Codex release in images"),version),el("label",{},tr("网络配置","Network configuration"),group)),runtimePanel,note("切换下载源分组会重新填入所选预设的地址。单独修改的地址会随草稿保留。","Changing the source group refills the selected presets. Individual address edits are retained in your draft."),sources,autoControl(c,"onboarding-build-auto-repair"),el("div",{class:"ob-actions"},start,action(c,tr("编辑源列表","Edit source catalog"),()=>editSources(c,loadDocker))),note("构建在后台运行，关闭初始化页面不会停止任务。每个构建会保存本次配方和下载源快照。","Builds run in the background and continue when setup closes. Each build keeps its recipe and source configuration snapshot.")));renderSources();
+  }
+  function runtimeProfiles(c) {
+    return c.runtimeProfiles?.items || c.recipes.filter(value=>value.kind==="builtin"&&value.profileId).map(value=>({id:value.profileId,name:value.name}));
+  }
+  function runtimePlatform(c) { return c.runtimeProfiles?.platform || (c.discovery?.platform?.arch ? "linux/"+c.discovery.platform.arch : ""); }
+  function runtimeEntries(c,profileId) {
+    const recipe=c.recipes.find(value=>value.kind==="builtin"&&value.profileId===profileId),platform=runtimePlatform(c);
+    return (c.publicCatalog?.items||[]).filter(value=>value.profileId===profileId&&value.platform===platform&&(!recipe||value.profileVersion===recipe.version));
+  }
+  function setRuntimeEntry(c,draft,entry,sourceID) {
+    const source=entry?.sources?.find(value=>value.id===sourceID)||entry?.sources?.[0];
+    draft.entryId=entry?.id||"";draft.sourceId=source?.id||"";
+    if(entry&&source){draft.version=entry.codexVersion;draft.reference=source.reference;}
+    saveDraft(c);
+  }
+  async function editPublicImages(c) {
+    if(!window.RunDeskBuildCenter?.publicImages)throw Error(tr("公开镜像列表编辑器尚未加载，请刷新页面。","The public image editor has not loaded. Refresh the page."));
+    await RunDeskBuildCenter.publicImages();
+    const dialog=document.querySelector("#center-public-images-json")?.closest("dialog");
+    if(dialog?.open)await new Promise(resolve=>dialog.addEventListener("close",resolve,{once:true}));
+    if(!c.closed)await loadDocker(c);
+  }
+  function acquireDocker(c) {
+    const pulling=c.dockerMode==="pull",profiles=runtimeProfiles(c);
+    if(!profiles.length){c.main.append(card(tr("正在读取预设","Loading presets"),action(c,tr("重新读取","Reload"),()=>loadDocker(c))));return;}
+    const draft=c.runtimeDrafts[c.dockerMode]||=( {profileId:profiles[0].id,version:c.version,reference:""} );
+    if(!profiles.some(value=>value.id===draft.profileId))draft.profileId=profiles[0].id;
+    const profile=el("select",{id:"onboarding-runtime-profile"},...profiles.map(value=>el("option",{value:value.id},value.name||value.id)));profile.value=draft.profileId;
+    profile.onchange=()=>{draft.profileId=profile.value;draft.entryId=undefined;draft.sourceId="";draft.reference="";saveDraft(c);render(c);};
+    const entries=pulling?runtimeEntries(c,draft.profileId):[];
+    if(pulling&&draft.entryId===undefined&&entries.length)setRuntimeEntry(c,draft,entries.find(value=>value.codexVersion===draft.version)||entries[0]);
+    let entry=entries.find(value=>value.id===draft.entryId);
+    if(pulling&&draft.entryId&&!entry){draft.entryId="";draft.sourceId="";saveDraft(c);}
+    if(entry)setRuntimeEntry(c,draft,entry,draft.sourceId);
+    const version=el("input",{id:"onboarding-runtime-version",value:draft.version||c.version,placeholder:"0.157.1",readonly:!!entry});
+    const reference=el("input",{id:"onboarding-runtime-reference",value:draft.reference||"",placeholder:pulling?tr("填写发布方提供的镜像地址","Image reference supplied by the publisher"):tr("本机镜像标签或 Digest","Local image tag or digest"),readonly:!!entry,autocomplete:"off"});
+    version.oninput=()=>{draft.version=version.value.trim();saveDraft(c);};reference.oninput=()=>{draft.reference=reference.value.trim();draft.entryId="";saveDraft(c);};
+    const fields=el("div",{class:"ob-grid"},el("label",{},tr("预设","Preset"),profile));
+    if(pulling){
+      const released=el("select",{id:"onboarding-public-image"},...entries.map(value=>el("option",{value:value.id},"v"+value.profileVersion+" · Codex "+value.codexVersion+" · "+value.platform)),el("option",{value:""},tr("手工填写镜像地址","Enter an image reference manually")));released.value=entry?.id||"";
+      released.onchange=()=>{setRuntimeEntry(c,draft,entries.find(value=>value.id===released.value));render(c);};
+      fields.append(el("label",{},tr("已发布版本","Published release"),released));
+      if(entry){
+        const source=el("select",{id:"onboarding-public-source"},...(entry.sources||[]).map(value=>el("option",{value:value.id},value.name||value.id)));source.value=draft.sourceId;
+        source.onchange=()=>{setRuntimeEntry(c,draft,entry,source.value);render(c);};fields.append(el("label",{class:"ob-wide"},tr("镜像下载地址","Image download source"),source));
+      }
+    }
+    fields.append(el("label",{},tr("镜像内 Codex 精确版本","Exact Codex release in image"),version),el("label",{class:"ob-wide"},tr("镜像地址","Image reference"),reference));
+    const submit=action(c,pulling?tr("下载并检查镜像","Download and check image"):tr("检查已有镜像","Check existing image"),async()=>{
+      if(!/^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$/.test(draft.version||""))throw Error(tr("请填写镜像内 Codex 的精确版本。","Enter the exact Codex release in this image."));
+      if(!draft.reference?.trim())throw Error(tr("请先选择已发布版本，或填写真实镜像地址。","Select a published release or enter an existing image reference."));
+      const selected=entries.find(value=>value.id===draft.entryId),source=selected?.sources?.find(value=>value.id===draft.sourceId);
+      const input={profileId:draft.profileId,codexVersion:draft.version,source:c.dockerMode,reference:draft.reference.trim(),...(pulling&&selected&&source?{publicImageId:selected.id,publicSourceId:source.id,catalogRevision:c.publicCatalog.revision}:{})};
+      const key="runtime-image:"+JSON.stringify(input),id=receipt(c,key);
+      const job=await api("/setup/runtime-images",{method:"POST",body:{...input,requestId:id}});
+      delete c.receipts[key];saveDraft(c);c.builds=[job,...c.builds.filter(value=>value.id!==job.id)];renderBuilds(c);schedule(c);
+    },"primary",{id:"onboarding-prepare-image"});submit.disabled=!c.dockerCheck?.ok||c.runtimeProfiles?.supported===false;
+    const panel=card(pulling?tr("下载预构建镜像","Download a prebuilt image"):tr("复用本机镜像","Reuse a local image"),fields);
+    if(pulling&&!entries.length)panel.append(el("p",{class:"ob-notice",id:"onboarding-public-catalog-status"},c.publicCatalogError?tr("公开镜像列表读取失败：","Could not load the public image catalog: ")+c.publicCatalogError:tr("当前列表还没有与此预设和平台匹配的公开镜像。填写发布方提供的真实地址，或切换到本机构建。","No public image in the current catalog matches this preset and platform. Enter a real publisher-provided reference, or switch to a local build.")));
+    if(c.runtimeProfiles?.supported===false)panel.append(note("此功能需要 Linux 本机 Docker Engine；可以先完成初始化，稍后准备镜像。","This requires a local Docker Engine on Linux. You can finish setup and prepare images later."));
+    panel.append(note(pulling?"公开版本按 Digest 固定；手工地址也会校验预设、Codex 版本和离线工具。拉取失败时可更换地址，不会自动改成本机构建。":"只检查本机已有镜像，不下载或重新构建。预设、Codex 版本和离线工具检查通过后，才能继续使用。",pulling?"Published releases are pinned by digest. Manual references are also checked for preset identity, Codex release and offline tools. Failed downloads never switch to a local build automatically.":"Only inspect an existing local image; do not download or rebuild it. Preset, Codex release and offline tool checks must pass before use."),el("div",{class:"ob-actions"},submit,...(pulling?[action(c,tr("编辑公开镜像列表","Edit public image catalog"),()=>editPublicImages(c),"quiet",{id:"onboarding-edit-public-images"}),action(c,tr("刷新列表","Refresh catalog"),()=>loadDocker(c),"quiet",{id:"onboarding-refresh-public-images"})]:[])));
+    c.main.append(panel);saveDraft(c);
   }
   async function loadDocker(c) {
-    const [recipes,catalog,builds,check]=await Promise.allSettled([api("/build-center/recipes"),api("/build-center/sources"),api("/build-center/builds"),api("/setup/check",{method:"POST",body:{kind:"docker"}})]);
+    const [recipes,catalog,builds,check,published,profiles]=await Promise.allSettled([api("/build-center/recipes"),api("/build-center/sources"),api("/build-center/builds"),api("/setup/check",{method:"POST",body:{kind:"docker"}}),api("/setup/public-images"),api("/setup/runtime-profiles")]);
     if(c.closed)return;
     if(recipes.status==="fulfilled")c.recipes=recipes.value.items||[];
     if(catalog.status==="fulfilled"){c.catalog=catalog.value;if(!c.group)c.group=c.catalog.defaultGroup||"international";}
     if(builds.status==="fulfilled")c.builds=builds.value.items||[];
     if(check.status==="fulfilled")c.dockerCheck=check.value;
+    if(published.status==="fulfilled"){c.publicCatalog=published.value;c.publicCatalogError="";}else c.publicCatalogError=published.reason?.message||String(published.reason);
+    if(profiles.status==="fulfilled")c.runtimeProfiles=profiles.value;
     const capabilities=await Promise.allSettled(c.recipes.map(async value=>[value.id,await api("/build-center/recipes/"+enc(value.id)+"/sources")]));
     for(const result of capabilities)if(result.status==="fulfilled")c.capabilities[result.value[0]]=result.value[1];
     if(!c.closed){if(c.step===2)render(c);schedule(c);}
@@ -361,19 +435,37 @@ window.RunDeskOnboarding = (() => {
       const ops=el("div",{class:"ob-actions"},action(c,tr("查看日志","View log"),async()=>{
         await readBuildLog(c,value.id);renderBuilds(c);schedule(c);
       }));
+      if(value.codexRuntime)result.append(RunDeskBuildCenter.frozenRuntimeView(value.codexRuntime));
+      const acquired=value.source==="pull"||value.source==="local";
+      if(acquired)result.append(el("p",{class:"ob-help"},(value.source==="pull"?tr("仓库拉取","Registry download"):tr("本机镜像检查","Local image check"))+" · "+(value.reference||"")));
+      if(activeJob(value.status))ops.append(action(c,tr("取消准备","Cancel preparation"),async()=>{const updated=await RunDeskBuildCenter.mutate("/builds/"+enc(value.id)+"/cancel",{});c.builds=c.builds.map(row=>row.id===value.id?updated:row);renderBuilds(c);schedule(c);},"quiet",{"data-image-cancel":value.id}));
       if(["failed","interrupted","canceled"].includes(value.status)){
-        ops.append(action(c,tr("原配置重试","Retry original configuration"),async()=>{const v=await RunDeskBuildCenter.mutate("/builds/"+enc(value.id)+"/rebuild",{});c.builds=[v,...c.builds.filter(row=>row.id!==v.id)];renderBuilds(c);schedule(c);}));
-        const repair=action(c,tr("交给 Kun 修复","Ask Kun to repair"),async()=>{
-          const v=await RunDeskBuildCenter.mutate("/assistant-runs",{sourceBuildId:value.id,instanceId:c.kun.instanceId,workspaceId:c.kun.workspaceId,prompt:tr("诊断并修复这次失败构建。保持工具能力与验证要求，生成独立新配方，实际重建并完成offline/smoke验证，记录适用范围明确的修复经验。","Diagnose and repair this failed build. Preserve the required capabilities and tests. Produce a separate revised recipe, rebuild it, run offline/smoke checks, and record the repair with its applicability conditions.")});
-          c.repairs=[{...v,sourceBuildId:value.id},...c.repairs.filter(row=>row.id!==v.id)];renderRepairs(c);schedule(c);
-        },"quiet",{"data-build-repair":value.id});repair.disabled=!readyKun(c)||pendingAuto(c,"image-build",value.id);ops.append(repair);
+        if(acquired){
+          ops.append(action(c,value.source==="pull"?tr("更换地址或重试","Change source or retry"):tr("重新选择本机镜像","Choose a local image again"),()=>{
+            captureSources(c);c.dockerMode=value.source;c.runtimeDrafts[value.source]={profileId:value.profileId,version:value.codexVersion,reference:value.reference,entryId:"",sourceId:""};saveDraft(c);setStep(c,2);c.page.querySelector("#onboarding-runtime-reference")?.focus();
+          },"quiet",{"data-runtime-retry":value.id}));
+          result.append(note("可以查看日志后调整镜像地址或登录权限。此任务不会自动触发本机构建。","Review the log, then adjust the image reference or registry access. This task never triggers a local build automatically."));
+        }else{
+          ops.append(action(c,tr("原配置重试","Retry original configuration"),async()=>{const v=await RunDeskBuildCenter.mutate("/builds/"+enc(value.id)+"/rebuild",{});c.builds=[v,...c.builds.filter(row=>row.id!==v.id)];renderBuilds(c);schedule(c);}));
+          const repair=action(c,tr("交给 Kun 修复","Ask Kun to repair"),async()=>{
+            const v=await RunDeskBuildCenter.mutate("/assistant-runs",{sourceBuildId:value.id,instanceId:c.kun.instanceId,workspaceId:c.kun.workspaceId,prompt:tr("诊断并修复这次失败构建。保持工具能力与验证要求，生成独立新配方，实际重建并完成offline/smoke验证，记录适用范围明确的修复经验。","Diagnose and repair this failed build. Preserve the required capabilities and tests. Produce a separate revised recipe, rebuild it, run offline/smoke checks, and record the repair with its applicability conditions.")});
+            c.repairs=[{...v,sourceBuildId:value.id},...c.repairs.filter(row=>row.id!==v.id)];renderRepairs(c);schedule(c);
+          },"quiet",{"data-build-repair":value.id});repair.disabled=!readyKun(c)||pendingAuto(c,"image-build",value.id);ops.append(repair);
+        }
       }
-      if(value.status==="succeeded")result.append(note("镜像已生成；应用认证和实际业务验证仍需完成。","The image was built; application authentication and business validation remain to be completed."));
+      if(value.status==="succeeded"){
+        result.append(note("镜像已准备；应用认证和实际业务验证仍需完成。","The image is prepared; application authentication and business validation remain to be completed."));
+        if(value.imageId)ops.append(action(c,tr("完成初始化并查看镜像","Finish setup and view image"),async()=>{
+          const catalog=await api("/build-center/images"),image=catalog.items?.find(row=>row.imageId===value.imageId);
+          if(!image)throw Error(tr("镜像尚未出现在构建中心，请稍后刷新。","The image is not in the build center yet. Refresh shortly."));
+          await completeSetup(c,image.key);
+        },"quiet",{"data-runtime-open-image":value.id}));
+      }
       result.append(ops);
       if(c.logs[value.id])result.append(el("pre",{"data-build-log":value.id},c.logs[value.id].text||tr("尚无日志。","No logs yet.")));
       return result;
     }));
-    if(!c.builds.length)target.append(note("尚未提交构建。你可以选择预设，也可以稍后在构建中心继续。","No builds yet. Choose presets now or continue later from the build center."));
+    if(!c.builds.length)target.append(note("尚未提交镜像准备任务。选择预设下载或构建，也可以稍后继续。","No image preparation tasks yet. Download or build a preset now, or continue later."));
   }
   async function readBuildLog(c,id) {
     const previous=c.logs[id]||{next:0,text:""};
@@ -387,18 +479,23 @@ window.RunDeskOnboarding = (() => {
       summaryRow(tr("本机环境","Environment"),c.discovery?tr("已扫描","Scanned"):tr("尚未扫描","Not scanned")),
       summaryRow("Kun",readyKun(c)?badge("ready",tr("可执行修复任务","Ready for repair tasks")):badge("idle",tr("尚未就绪，可稍后配置","Not ready; configure later"))),
       summaryRow("Codex",c.codexPath?c.codexPath:tr("已跳过","Skipped")),
-      summaryRow(tr("Docker 镜像","Docker images"),succeeded+tr(" 个构建成功"," successful")+(running?" · "+running+tr(" 个进行中"," running"):"")));
+      summaryRow(tr("Docker 镜像","Docker images"),succeeded+tr(" 个准备成功"," ready")+(running?" · "+running+tr(" 个进行中"," running"):"")));
     c.main.append(summary);
     const work=el("select",{id:"onboarding-workspace"},...state.workspaces.map(value=>el("option",{value:value.id},value.name)));work.value=c.workspaceId||state.workspaces[0]?.id||"";work.onchange=()=>{c.workspaceId=work.value;};
-    c.completeButton=action(c,tr("完成并进入 RunDesk","Finish and enter RunDesk"),async()=>{
-      const saved=await api("/setup/complete",{method:"POST",body:{workspaceId:work.value,revision:c.setup.settings.revision,...(c.codexPath?{codex:c.codexPath}:{}),completed:true}});
-      c.setup.settings=saved.settings||saved;sessionStorage.removeItem("rundesk-setup-dismissed");
-      if(Object.values(c.autoAuthorizations).every(value=>value.state==="registered"))sessionStorage.removeItem("rundesk-onboarding-draft");else saveDraft(c);
-      if(readyKun(c)){preferredInstance=c.kun.instanceId;localStorage.setItem("rundesk-instance",preferredInstance);}
-      localStorage.setItem("rundesk-assistant-workspace",work.value);if($("#workspace"))$("#workspace").value=work.value;close(c,true);
-    },"primary",{id:"onboarding-complete"});
-    c.main.append(card(tr("完成初始化","Finish setup"),el("label",{},tr("默认工作区","Default workspace"),work),note("点击下方“完成并进入 RunDesk”保存配置。Docker 可以稍后构建；已经提交的安装、构建和修复任务会继续在后台运行。","Finish and enter RunDesk below to save your configuration. Docker builds are optional; submitted installation, build and repair tasks continue in the background.")));
+    c.completeButton=action(c,tr("完成并进入 RunDesk","Finish and enter RunDesk"),()=>completeSetup(c),"primary",{id:"onboarding-complete"});
+    c.main.append(card(tr("完成初始化","Finish setup"),el("label",{},tr("默认工作区","Default workspace"),work),note("点击下方“完成并进入 RunDesk”保存配置。Docker 环境可以稍后准备；已经提交的安装、拉取、构建和修复任务会继续在后台运行。","Finish and enter RunDesk below to save your configuration. Docker preparation is optional; submitted installation, pull, build and repair tasks continue in the background.")));
     const examples=card(tr("积累的修复经验","Repair experience"),el("div",{id:"onboarding-experiences"}));c.main.append(examples);renderExperiences(c);
+  }
+  async function completeSetup(c,imageKey="") {
+    const workspaceId=c.workspaceId||state.workspaces[0]?.id||"";
+    const saved=await api("/setup/complete",{method:"POST",body:{workspaceId,revision:c.setup.settings.revision,...(c.codexPath?{codex:c.codexPath}:{}),completed:true}});
+    c.setup.settings=saved.settings||saved;sessionStorage.removeItem("rundesk-setup-dismissed");
+    if(Object.values(c.autoAuthorizations).every(value=>value.state==="registered"))sessionStorage.removeItem("rundesk-onboarding-draft");else saveDraft(c);
+    if(readyKun(c)){preferredInstance=c.kun.instanceId;localStorage.setItem("rundesk-instance",preferredInstance);}
+    localStorage.setItem("rundesk-assistant-workspace",workspaceId);if($("#workspace"))$("#workspace").value=workspaceId;
+    if(imageKey)history.replaceState(null,"","#build-center/images/"+enc(imageKey));
+    close(c,true);
+    if(imageKey&&!c.initial)await RunDeskBuildCenter.open("images",imageKey);
   }
   function summaryRow(key,value) { return el("div",{class:"ob-summary-row"},el("span",{},key),el("span",{},value)); }
   function experienceText(value,limit=6000) {
@@ -482,7 +579,7 @@ window.RunDeskOnboarding = (() => {
   }
   async function open(options={}) {
     if(current){current.page.focus();return current.promise;}
-    const saved=draft(),c={step:0,closed:false,initial:!!options.initial,setup:options.setup||await api("/setup"),discovery:null,scanning:false,kun:null,installJobs:[],builds:[],logs:{},repairs:[],experiences:[],recipes:[],capabilities:{},catalog:null,dockerCheck:null,receipts:saved.receipts||{},sourceDrafts:saved.sourceDrafts||{},autoRepair:saved.autoRepair!==false,autoAuthorizations:saved.autoAuthorizations||{},autoRows:[],installAdoptRequestId:saved.installAdoptRequestId||"",installAdopted:!!saved.installAdopted,selected:new Set(saved.selected||[]),endpoint:saved.endpoint||"",model:saved.model||"",keyEnv:saved.keyEnv||"",kunPath:saved.kunPath||"",codexPath:saved.codexPath||"",version:saved.version||"0.157.1",group:saved.group||""};
+    const saved=draft(),c={step:0,closed:false,initial:!!options.initial,setup:options.setup||await api("/setup"),discovery:null,scanning:false,kun:null,installJobs:[],builds:[],logs:{},repairs:[],experiences:[],recipes:[],capabilities:{},catalog:null,publicCatalog:null,publicCatalogError:"",runtimeProfiles:null,dockerMode:["pull","build","local"].includes(saved.dockerMode)?saved.dockerMode:"pull",runtimeDrafts:saved.runtimeDrafts||{},codexRuntime:saved.codexRuntime||{mode:"auto"},dockerCheck:null,receipts:saved.receipts||{},sourceDrafts:saved.sourceDrafts||{},autoRepair:saved.autoRepair!==false,autoAuthorizations:saved.autoAuthorizations||{},autoRows:[],installAdoptRequestId:saved.installAdoptRequestId||"",installAdopted:!!saved.installAdopted,selected:new Set(saved.selected||[]),endpoint:saved.endpoint||"",model:saved.model||"",keyEnv:saved.keyEnv||"",kunPath:saved.kunPath||"",codexPath:saved.codexPath||"",version:saved.version||"0.157.1",group:saved.group||""};
     c.workspaceId=c.setup.settings.workspaceId||ws()?.id||state.workspaces[0]?.id||"";
     if(!c.codexPath&&c.setup.settings.codex)c.codexPath=c.setup.settings.codex;
     c.promise=new Promise(resolve=>{c.resolve=resolve;});current=c;

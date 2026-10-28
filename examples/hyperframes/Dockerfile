@@ -1,6 +1,8 @@
 # Editable independent upstream Dockerfile. Inspect upstream.json and install.sh before building.
 ARG RD_BASE_IMAGE=node:22-bookworm-slim
 FROM ${RD_BASE_IMAGE}
+# All managed profiles require the Node runtime and unprivileged node user.
+RUN node -e 'if (Number(process.versions.node.split(".")[0]) < 22) process.exit(1)' && npm --version >/dev/null && id node >/dev/null
 ARG RD_APT_MIRROR=http://deb.debian.org/debian
 ARG RD_APT_SECURITY_MIRROR=http://deb.debian.org/debian-security
 COPY tools/configure-apt.sh /opt/rundesk-profile/tools/configure-apt.sh
@@ -51,7 +53,10 @@ RUN test -f /opt/upstreams/hyperframes/skills/remotion-to-hyperframes/SKILL.md &
 RUN test -f /opt/upstreams/hyperframes/skills/slideshow/SKILL.md && test ! -e /etc/codex/skills/slideshow && ln -s /opt/upstreams/hyperframes/skills/slideshow /etc/codex/skills/slideshow
 RUN test -f /opt/upstreams/hyperframes/skills/talking-head-recut/SKILL.md && test ! -e /etc/codex/skills/talking-head-recut && ln -s /opt/upstreams/hyperframes/skills/talking-head-recut /etc/codex/skills/talking-head-recut
 ARG CODEX_VERSION=0.0.0
-RUN npm_config_registry="${RD_NPM_REGISTRY}" npm install --global "@openai/codex@${CODEX_VERSION}" && npm cache clean --force && codex --version && codex app-server --help >/dev/null
+ARG RD_CODEX_MODE=auto
+COPY runtime/ /opt/rundesk-runtime/
+COPY tools/install-codex.sh /opt/rundesk-profile/tools/install-codex.sh
+RUN CODEX_VERSION="${CODEX_VERSION}" RD_CODEX_MODE="${RD_CODEX_MODE}" RD_NPM_REGISTRY="${RD_NPM_REGISTRY}" sh /opt/rundesk-profile/tools/install-codex.sh
 LABEL org.opencontainers.image.title="RunDesk hyperframes"
 LABEL org.opencontainers.image.version="1.0.0"
 LABEL io.rundesk.profile="hyperframes"

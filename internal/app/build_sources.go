@@ -261,36 +261,52 @@ func (m *Manager) buildSourceCatalogFile() (string, error) {
 }
 
 func (m *Manager) readBuildSources() (BuildSourceCatalog, string, error) {
-	var catalog BuildSourceCatalog
 	path, err := m.buildSourceCatalogFile()
 	if err != nil {
-		return catalog, "", err
+		return BuildSourceCatalog{}, "", err
 	}
+	catalog, err := readBuildSourceCatalog(path)
+	return catalog, path, err
+}
+
+func readBuildSourceCatalog(path string) (BuildSourceCatalog, error) {
+	var catalog BuildSourceCatalog
 	f, err := os.Open(path)
 	if err != nil {
-		return catalog, "", err
+		return catalog, err
 	}
 	defer f.Close()
 	data, err := io.ReadAll(io.LimitReader(f, (1<<20)+1))
 	if err != nil || len(data) > 1<<20 {
-		return catalog, "", failure(400, "invalid_source_catalog", "源列表不可读或超过 1 MiB")
+		return catalog, failure(400, "invalid_source_catalog", "源列表不可读或超过 1 MiB")
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if decoder.Decode(&catalog) != nil {
-		return catalog, "", failure(400, "invalid_source_catalog", "外置源列表 JSON 格式无效")
+		return catalog, failure(400, "invalid_source_catalog", "外置源列表 JSON 格式无效")
 	}
 	var trailing any
 	if decoder.Decode(&trailing) != io.EOF {
-		return catalog, "", failure(400, "invalid_source_catalog", "源列表须为单个 JSON 对象")
+		return catalog, failure(400, "invalid_source_catalog", "源列表须为单个 JSON 对象")
 	}
 	catalog, err = normalizeBuildSourceCatalog(catalog)
 	if err != nil {
-		return catalog, "", err
+		return catalog, err
 	}
 	sum := sha256.Sum256(data)
 	catalog.Revision = hex.EncodeToString(sum[:])
-	return catalog, path, nil
+	return catalog, nil
+}
+
+// Defaults are deployment files, not an implicit migration of a user's catalog.
+// The UI can review missing entries and save an explicit merge using the normal
+// revision-checked PUT. Reading defaults never modifies persistent settings.
+func (m *Manager) BuildSourceDefaults() (BuildSourceCatalog, error) {
+	path, err := buildSourceDefaultFile()
+	if err != nil {
+		return BuildSourceCatalog{}, err
+	}
+	return readBuildSourceCatalog(path)
 }
 
 func (m *Manager) BuildSources() (BuildSourceCatalog, error) {
@@ -326,6 +342,10 @@ func (m *Manager) SaveBuildSources(in BuildSourceCatalog) (BuildSourceCatalog, e
 	}
 	defer os.Remove(temp.Name())
 	if _, err = temp.Write(data); err != nil {
+		temp.Close()
+		return in, err
+	}
+	if err = temp.Sync(); err != nil {
 		temp.Close()
 		return in, err
 	}
@@ -671,6 +691,10 @@ func freezeBuildSources(data []byte, snapshot *BuildSourceSnapshot) ([]byte, err
 
 func (s *Server) buildSourceRoutes(mux *http.ServeMux) {
 	m := s.Manager
+	mux.HandleFunc("GET /api/build-center/sources/defaults", func(w http.ResponseWriter, r *http.Request) {
+		catalog, err := m.BuildSourceDefaults()
+		respondBuildSource(w, catalog, err)
+	})
 	mux.HandleFunc("GET /api/build-center/sources", func(w http.ResponseWriter, r *http.Request) {
 		catalog, err := m.BuildSources()
 		respondBuildSource(w, catalog, err)

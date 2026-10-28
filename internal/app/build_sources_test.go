@@ -24,6 +24,47 @@ func sourceTestContext(t *testing.T) []byte {
 	return buildZip(t, map[string]string{"Dockerfile": "ARG RD_BASE_IMAGE=scratch\nFROM ${RD_BASE_IMAGE}\nARG RD_NPM_REGISTRY=https://registry.npmjs.org/\nARG RD_PIP_INDEX_URL=https://pypi.org/simple/\nRUN printf '%s' \"$RD_NPM_REGISTRY $RD_PIP_INDEX_URL\"\n"})
 }
 
+func TestBuildSourceDefaultsAreExplicitAndPreserveUserCatalog(t *testing.T) {
+	m := quietRecipeManager(t)
+	catalog, err := m.BuildSources()
+	if err != nil { t.Fatal(err) }
+	catalog.DefaultGroup = "china"
+	for gi := range catalog.Groups {
+		items := []BuildSourceEntry{}
+		for _, item := range catalog.Groups[gi].Sources {
+			if strings.HasPrefix(item.ID,"aliyun-debian") { continue }
+			if item.ID == "tuna-pypi" { item.Values["indexUrl"]="https://company.example/simple" }
+			items=append(items,item)
+		}
+		catalog.Groups[gi].Sources=items
+	}
+	catalog,err=m.SaveBuildSources(catalog)
+	if err != nil { t.Fatal(err) }
+	before,err:=os.ReadFile(filepath.Join(m.Data,"config","build-sources.json"))
+	if err!=nil { t.Fatal(err) }
+	mux:=http.NewServeMux()
+	(&Server{Manager:m}).buildSourceRoutes(mux)
+	rec:=httptest.NewRecorder()
+	mux.ServeHTTP(rec,httptest.NewRequest(http.MethodGet,"/api/build-center/sources/defaults",nil))
+	if rec.Code!=200 || !bytes.Contains(rec.Body.Bytes(),[]byte(`"id":"aliyun-debian"`)) || !bytes.Contains(rec.Body.Bytes(),[]byte(`"id":"archiveUrl"`)) { t.Fatal(rec.Code,rec.Body.String()) }
+	after,err:=os.ReadFile(filepath.Join(m.Data,"config","build-sources.json"))
+	if err!=nil || !bytes.Equal(before,after) { t.Fatal("defaults read overwrote user settings",err) }
+	current,err:=m.BuildSources()
+	if err!=nil || current.Revision!=catalog.Revision || current.DefaultGroup!="china" { t.Fatal(current,err) }
+}
+
+func TestBuildSourceCompleteArchiveURLIsFrozenAndRequiresSupport(t *testing.T) {
+	m:=quietRecipeManager(t)
+	full:="https://mirror.example/https://github.com/calesthio/OpenMontage/archive/commit.tar.gz"
+	context:=buildZip(t,map[string]string{"Dockerfile":"FROM scratch\nARG RD_GITHUB_ARCHIVE_URL\nARG RD_GITHUB_ARCHIVE_BASE=https://codeload.github.com\nRUN download \"${RD_GITHUB_ARCHIVE_URL}\" \"${RD_GITHUB_ARCHIVE_BASE}\"\n"})
+	snapshot,err:=m.resolveBuildSources(&BuildSourceOptions{Group:"china",Overrides:map[string]map[string]string{"github":{"archiveUrl":full}}},context,"Dockerfile")
+	if err!=nil || snapshot.Arguments["RD_GITHUB_ARCHIVE_URL"]!=full { t.Fatal(snapshot,err) }
+	args,err:=buildSourceArguments(snapshot)
+	if err!=nil || !strings.Contains(strings.Join(args," "),"RD_GITHUB_ARCHIVE_URL="+full) { t.Fatal(args,err) }
+	old:=buildZip(t,map[string]string{"Dockerfile":"FROM scratch\nARG RD_GITHUB_ARCHIVE_BASE=https://codeload.github.com\nRUN download \"${RD_GITHUB_ARCHIVE_BASE}\"\n"})
+	if _,err:=m.resolveBuildSources(&BuildSourceOptions{Group:"china",Overrides:map[string]map[string]string{"github":{"archiveUrl":full}}},old,"Dockerfile");err==nil { t.Fatal("unsupported complete URL accepted") }
+}
+
 func TestBuildSourceCatalogExternalFileAndHTTP(t *testing.T) {
 	m := quietRecipeManager(t)
 	catalog, err := m.BuildSources()

@@ -1,16 +1,18 @@
 # WebUI：以实例为中心 / Instance-centered WebUI
 
-本文描述 RunDesk 0.56.1（2026-10-27）的界面与当前后端边界。升级不改变存储布局，也不迁移或删除原有实例、工作区和历史数据。
+本文描述 RunDesk 0.58.0（2026-10-28）的界面与当前后端边界。升级不改变存储布局，也不迁移或删除原有实例、工作区和历史数据。
 
 RunDesk 的日常操作围绕实例展开：选择一个 Codex 或 Kun 实例，检查它的模型、Skills、MCP 和插件能力，选择工作区，再执行任务、查看制品与运行轨迹。应用接入和构建中心分别负责外部调用与运行环境准备，不要求用户先注册应用才能管理实例。
 
 ## 初始化首页
 
-首次非 Demo 安装先进入全屏初始化页，工作台在初始化结束或明确稍后配置之后显示。页面只有三步：**寻找和配置 LLM、配置和安装 Codex、构建 Docker**。环境发现和 Kun 模型配置放在第一步，完成概览和进入工作台放在第三步。可以自由返回或切换步骤，不要求先完成所有可选软件才能查看资源。已完成安装从实例管理开始；左侧导航栏底部的齿轮“环境检查”可重新打开向导。
+首次非 Demo 安装先进入全屏初始化页，工作台在初始化结束或明确稍后配置之后显示。页面只有三步：**寻找和配置 LLM、配置和安装 Codex、准备 Docker 环境**。环境发现和 Kun 模型配置放在第一步，完成概览和进入工作台放在第三步。可以自由返回或切换步骤，不要求先完成所有可选软件才能查看资源。已完成安装从实例管理开始；左侧导航栏底部的齿轮“环境检查”可重新打开向导。
 
 环境扫描展示运行 RunDesk 的服务器信息及本机模型服务，不代表浏览器所在电脑。选择模型后主动测试推理和自动函数调用，再保存专用 Kun 初始化助手。Codex 安装和 Docker 构建按明确选择提交后台任务，刷新后可继续查看状态和日志。失败可以重试，或交给已就绪的 Kun 生成独立修复任务，轨迹使用既有任务/会话界面。
 
-第三步同时列出已准备或跳过的组件以及版本化经验，保存设置后进入工作台。候选和已验证分别展示；扫描到工具、下载成功、Agent 说已解决，都不能替代相应的执行验证。初始化不改已有实例后端或应用镜像绑定。具体配置、期限和安装边界见[部署说明](SETUP.md)。
+第三步默认下载预构建镜像，另有本机构建与已有本地镜像检查。公开目录为空时明确显示未发布，可填写真实地址或选择其他准备方式；不会将示例地址当成可下载镜像。公开目录支持版本、平台与来源选择，保存目录使用 revision 防止覆盖他人的修改。第三步同时列出已准备或跳过的组件以及版本化经验，保存设置后进入工作台。候选和已验证分别展示；扫描到工具、下载成功、Agent 说已解决，都不能替代相应的执行验证。初始化不改已有实例后端或应用镜像绑定。具体配置、期限和安装边界见[部署说明](SETUP.md)。
+
+本机构建显示两个独立选择：下载网络与 Codex 来源。中国／国际分组预填下载地址，仍可逐项编辑；Codex 可自动复用匹配的受管 Linux 安装、明确要求原生包、指定已有兼容基础镜像或使用 npm。候选来源检查显示实际服务器记录，执行前仍会核对摘要和运行能力。源编辑器可把新版默认列表中的缺失项加入草稿，保留现有自定义值并通过 revision 保存。
 
 ## 实例、工作区和构建预设
 
@@ -51,8 +53,12 @@ RunDesk 的日常操作围绕实例展开：选择一个 Codex 或 Kun 实例，
 
 ## English summary
 
-New installations begin with a full-page initialization view for server discovery, a tested Kun model, managed Codex installation, and selected Docker presets. Optional components can be skipped; existing installations can reopen setup. Daily work centers on an Agent instance: inspect its capabilities, select a workspace, run tasks, and inspect artifacts and traces. Build presets produce images; images can support multiple independent instances. Application registration remains an integration concern.
+New installations begin with three steps: find and configure LLM, configure and install Codex, and prepare Docker environments. The last step defaults to a published prebuilt image and retains local build or existing-image options. The bundled public catalog stays empty until actual release references are provided. Optional components can be skipped; existing installations can reopen setup. Daily work centers on an Agent instance: inspect its capabilities, select a workspace, run tasks, and inspect artifacts and traces. Build presets produce images; images can support multiple independent instances. Application registration remains an integration concern.
+
+Local builds select network settings and Codex runtime sources independently. China and international settings use the same recipes. Matching managed Linux archives or compatible local bases can be reused, while exact-version npm installation remains available. Download-source updates are merged into an editable draft and saved explicitly; they do not overwrite an existing deployment during upgrade.
 
 This navigation change does not yet synchronize configuration across workspaces. Docker environments still have separate persistent homes for each instance/workspace pair. The four Kun research launchers have been withdrawn from everyday navigation while their APIs, stored records, and historical branch inspection remain available.
 
 构建中心在 0.55.0 增加[外置配方与下载源](BUILD-SOURCES.md)：查看 Dockerfile、下载完整目录，按配方实际能力在国际/中国镜像之间选择和修改地址；源列表与默认分组可在页面维护。
+
+构建中心提供公开镜像目录编辑与发布记录入口。镜像发布前展示同一来源镜像的 offline/smoke 条件，发布后显示固定 Digest；仓库公开可见性由维护者在托管平台设置，再单独检查匿名访问。具体行为见[镜像分发](IMAGE-DISTRIBUTION.md)。

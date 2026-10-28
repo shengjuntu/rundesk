@@ -51,7 +51,9 @@ const sourceCapability={types:[
  {type:'pip',detected:true,supported:true,arguments:['RD_PIP_INDEX_URL']},
  {type:'github',detected:true,supported:false,arguments:[]}
 ]};
-let catalogConflict=false, sourceReadError=false;
+let runtimeAvailable=false, runtimeGate, catalogConflict=false, sourceReadError=false, publicCatalogConflict=false, publicationLost=true, publicationReady=false, publicCheckAllowed=false;
+db.publicCatalog={schemaVersion:1,revision:'public-1',items:[]};db.publications=[];
+const publicEntry={id:'news-1',profileId:'news2douyin',profileVersion:'1.1.2',codexVersion:'0.157.1',platform:'linux/amd64',sources:[{id:'ghcr',name:'GHCR',reference:'ghcr.io/example/news2douyin@sha256:'+'c'.repeat(64)}]};
 const requests = [], receipts = new Map(); let uploadLost = true, launchCount = 0, launchError = false, checkCount = 0, deleted = false, imageGate, recipeGate, pluginGate;
 const fail = (text, status, code) => Object.assign(new Error(text), {status,code});
 function build(id, extra = {}) { return {id,name:'构建 '+id,status:'succeeded',scope:'recipe',recipeId:'builtin-video-build',recipeRevision:1,reference:'video:1',imageId:db.images[0]?.imageId || 'sha256:fixed',contextSha256:'frozen-context',created:'2026-10-20T10:00:00Z',...extra}; }
@@ -59,6 +61,14 @@ w.RunDeskDiagnostics = {recent:() => null,request:async (url, options = {}) => {
   const route = url.replace('/api/v1',''), method = options.method || 'GET', body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
   requests.push({route,method,body,headers:options.headers});
   if (method === 'GET') {
+    if(route==='/setup/public-images')return copy(db.publicCatalog);
+    if(/\/build-center\/images\/[^/]+\/publication-readiness$/.test(route))return{eligible:publicationReady,sourceBuildId:'build-verified',imageId:db.images[0].imageId,reason:publicationReady?'':'Smoke must pass for the same build',offlineTestId:'offline-verified',smokeTestId:publicationReady?'smoke-verified':'',profileId:'news2douyin',profileVersion:'1.1.2',codexVersion:'0.157.1',platform:'linux/amd64'};
+    if(route==='/build-center/publications')return{items:copy(db.publications)};
+    if(/^\/build-center\/publications\/[^/]+\/log\?after=/.test(route))return{text:route.endsWith('=0')?'upload done token=do-not-display\n':'',next:40};
+    if(/^\/build-center\/publications\/[^/]+$/.test(route))return copy(db.publications.find(v=>route.endsWith('/'+v.id)));
+
+    if (route.startsWith('/build-center/runtime-options?')) { if(runtimeGate)return runtimeGate.promise; return {platform:'linux/amd64',version:'0.163.0',nativeAvailable:runtimeAvailable,reason:runtimeAvailable?'verified fixture package':'no exact matching package'}; }
+    if (route === '/build-center/sources/defaults') { const value=copy(db.catalog);value.defaultGroup='international';value.types.find(t=>t.id==='github').fields.push({id:'archiveUrl',label:'完整归档地址',argument:'RD_GITHUB_ARCHIVE_URL',kind:'url'});value.groups[1].sources.push({id:'aliyun-debian',name:'阿里云 Debian',type:'apt',values:{mirror:'http://mirrors.aliyun.com/debian',securityMirror:'http://mirrors.aliyun.com/debian-security'}});return value; }
     if (route === '/build-center/sources') { if(sourceReadError) throw fail('source catalog unreadable',500,'build_sources_invalid'); return copy(db.catalog); }
     if (/^\/build-center\/recipes\/[^/]+\/sources$/.test(route)) return copy(sourceCapability);
     if (/^\/build-center\/recipes\/[^/]+\/dockerfile/.test(route)) return {path:'Dockerfile',template:!route.includes('codexVersion='),dockerfile:'FROM node:22-bookworm-slim\nARG CODEX_VERSION='+(route.includes('codexVersion=')?'0.157.1':'0.0.0')};
@@ -75,6 +85,21 @@ w.RunDeskDiagnostics = {recent:() => null,request:async (url, options = {}) => {
     if (route.startsWith('/instances/default/plugins')) { if (pluginGate) return pluginGate.promise; return {backend:'codex',runtime:'local',support:{nativeInventory:false,nativeMutation:false},readOnly:true,plugins:[{id:'editor@example',displayName:'Editor',configured:true,enabled:true,loaded:'unknown',inventoryState:'unknown',skills:[{name:'cut',path:'/plugins/cut/SKILL.md'}],mcpServers:[{name:'media'}]}],warnings:[]}; }
     if (route === '/workspaces/workspace/skills?instanceId=default') return {data:[{skills:[{name:'cut',path:'/home/codex/skills/cut/SKILL.md',pluginId:'editor@example',enabled:true},{name:'local',path:'/home/codex/skills/local/SKILL.md',enabled:true}]}]};
     throw Error('Unexpected GET '+route);
+  }
+  if(method==='PUT'&&route==='/setup/public-images'){
+    if(publicCatalogConflict||body.revision!==db.publicCatalog.revision)throw fail('catalog changed',409,'public_images_changed');
+    db.publicCatalog={schemaVersion:body.schemaVersion,items:copy(body.items),revision:'public-'+(Number(db.publicCatalog.revision.split('-')[1])+1)};return copy(db.publicCatalog);
+  }
+  if(method==='POST'&&route==='/build-center/publications'){
+    assert.equal(body.confirm,true);assert.equal(body.sourceBuildId,'build-verified');assert.match(body.requestId,/^[a-f0-9]{24}$/);assert(options.headers['Idempotency-Key']);
+    let value=receipts.get(body.requestId);if(!value){value={id:'publication-1',sourceBuildId:body.sourceBuildId,target:body.target,status:'running',imageId:db.images[0].imageId,created:'2026-10-27T10:00:00Z',publicAccessVerified:false};db.publications.push(value);receipts.set(body.requestId,value);}
+    if(publicationLost){publicationLost=false;throw fail('publication response lost');}return copy(value);
+  }
+  if(method==='POST'&&/^\/build-center\/publications\/[^/]+\/check-public$/.test(route)){
+    assert(options.headers['Idempotency-Key']);const value=db.publications.find(v=>route.includes('/'+v.id+'/'));value.publicAccessVerified=publicCheckAllowed;value.publicCheckedAt='2026-10-27T11:00:00Z';value.publicAccessError=publicCheckAllowed?'':'anonymous denied';return copy(value);
+  }
+  if(method==='POST'&&/^\/build-center\/publications\/[^/]+\/cancel$/.test(route)){
+    assert(options.headers['Idempotency-Key']);const value=db.publications.find(v=>route.includes('/'+v.id+'/'));value.status='canceled';return copy(value);
   }
   if (method === 'PUT' && route === '/build-center/sources') {
     if(catalogConflict || body.revision!==db.catalog.revision) throw fail('catalog changed',409,'build_sources_changed');
@@ -119,6 +144,13 @@ function deferred() { let resolve; const promise=new Promise(done=>{resolve=done
   const draft=JSON.parse(editor.value);draft.types.push({id:'gomod',name:'Go Modules',fields:[{id:'proxy',label:'GOPROXY',argument:'RD_GOPROXY',kind:'url'}]});draft.groups[1].sources.find(s=>s.id==='npm-cn').values.registry='https://mirror.company.example/npm/';editor.value=JSON.stringify(draft);
   const draftText=editor.value;catalogConflict=true;await submit(editor);assert.equal(editor.value,draftText);assert(catalogForm.querySelector('.error').textContent.includes('你的编辑仍保留'));
   catalogConflict=false;await submit(editor);assert(catalogForm.querySelector('[role=status]').textContent.includes('已保存'));assert.equal(db.catalog.groups[1].sources.find(s=>s.id==='npm-cn').values.registry,'https://mirror.company.example/npm/');assert(db.catalog.types.some(t=>t.id==='gomod'));$('.build-center-dialog').close();
+  // Upgrades add missing defaults to the draft, without replacing edited addresses or saving automatically.
+  $('[data-center-action="sources"]').click();await until(()=>!!$('#center-sources-json')&&!$('.build-center-dialog button[type=submit]').disabled);
+  const mergeDraft=JSON.parse($('#center-sources-json').value);mergeDraft.defaultGroup='china';$('#center-sources-json').value=JSON.stringify(mergeDraft);
+  const savesBeforeMerge=requests.filter(r=>r.method==='PUT'&&r.route==='/build-center/sources').length;
+  $('#center-sources-merge-defaults').click();await until(()=>JSON.parse($('#center-sources-json').value).groups[1].sources.some(v=>v.id==='aliyun-debian'));
+  const merged=JSON.parse($('#center-sources-json').value);assert.equal(merged.defaultGroup,'china');assert.equal(merged.groups[1].sources.find(v=>v.id==='npm-cn').values.registry,'https://mirror.company.example/npm/');assert(merged.types.find(t=>t.id==='github').fields.some(v=>v.id==='archiveUrl'));assert.equal(requests.filter(r=>r.method==='PUT'&&r.route==='/build-center/sources').length,savesBeforeMerge);assert($('.build-center-dialog [role=status]').textContent.includes('尚未写入'));
+  $('#center-sources-merge-defaults').click();await until(()=>$('.build-center-dialog [role=status]').textContent.includes('全部内置选项'));assert.equal(JSON.parse($('#center-sources-json').value).groups[1].sources.filter(v=>v.id==='aliyun-debian').length,1);$('.build-center-dialog').close();
   // A user can view the actual Dockerfile and export a version-resolved context.
   findButton($('[data-recipe-id="builtin-news2douyin"]'),'查看配方').click();await until(()=>$('#center-recipe-dockerfile-content')?.textContent.includes('FROM node'));
   const download=$('#center-recipe-context-download'), blocked=new w.MouseEvent('click',{bubbles:true,cancelable:true});download.dispatchEvent(blocked);assert(blocked.defaultPrevented);assert($('.build-center-dialog .error').textContent.includes('精确版本'));
@@ -130,13 +162,20 @@ function deferred() { let resolve; const promise=new Promise(done=>{resolve=done
   const uploads=requests.filter(row=>row.route==='/build-center/recipes'&&row.method==='POST'); assert.equal(uploads.length,2); assert.equal(uploads[0].body.get('requestId'),uploads[1].body.get('requestId'),'uncertain upload duplicated receipt'); assert.equal(db.recipes.length,7);
   Object.defineProperty(w,'crypto',{value:{getRandomValues:array=>webcrypto.getRandomValues(array)},configurable:true}); $('[data-center-action="upload"]').click(); await until(()=>!!$('#center-recipe-name')); $('#center-recipe-name').value='Plain HTTP tools'; setFile('#center-recipe-zip'); await submit($('#center-recipe-name')); await until(()=>$$('[data-recipe-id]').length===8); Object.defineProperty(w,'crypto',{value:webcrypto,configurable:true});
   $('[data-recipe-build="builtin-video-build"]').click(); await until(()=>!!$('#center-source-group')&&!$('.build-center-dialog button[type=submit]').disabled); $('#center-codex-version').value='0.163.0';
+  assert.equal($('#center-codex-runtime-mode').value,'auto');assert($('#center-codex-runtime-reference').disabled);
+  $('#center-codex-runtime-check').click();await until(()=>$('#center-codex-runtime-status').textContent.includes('未发现匹配'));assert($('#center-codex-runtime-status').textContent.includes('no exact matching'));
+  runtimeAvailable=true;$('#center-codex-runtime-check').click();await until(()=>$('#center-codex-runtime-status').textContent.includes('发现匹配的已验证'));
+  runtimeGate=deferred();$('#center-codex-runtime-check').click();await until(()=>$('#center-codex-runtime-status').textContent.includes('正在检查'));$('#center-codex-version').dispatchEvent(new w.Event('input'));runtimeGate.resolve({nativeAvailable:true,reason:'STALE_CACHE_RESULT'});runtimeGate=null;await flush();assert.equal($('#center-codex-runtime-status').textContent,'','a stale readiness response must not describe a different version');
+  $('#center-codex-runtime-mode').value='base';$('#center-codex-runtime-mode').dispatchEvent(new w.Event('change'));assert(!$('#center-codex-runtime-reference').disabled);assert($('#center-codex-runtime-check').hidden);
+  const beforeMissingBase=requests.filter(r=>r.route.endsWith('/build')&&r.method==='POST').length;await submit($('#center-codex-version'));assert.equal(requests.filter(r=>r.route.endsWith('/build')&&r.method==='POST').length,beforeMissingBase);assert($('.build-center-dialog .error').textContent.includes('本机基础镜像'));
+  $('#center-codex-runtime-reference').value='rundesk-codex:0.163.0';
   assert.equal($('#center-source-npm-registry').value,'https://registry.npmjs.org/');assert(!$('[data-source-type="conda"]'),'unused source type leaked into build form');assert($('[data-source-type="github"]').textContent.includes('未声明可配置'));assert(!$('#center-source-github-archiveBase'));
   $('#center-source-group').value='china';$('#center-source-group').dispatchEvent(new w.Event('change'));assert.equal($('#center-source-npm-registry').value,'https://mirror.company.example/npm/');
   // Per-type choices can mix the groups, and a manually edited address is sent as an override.
   $('#center-source-pip').value='pypi';$('#center-source-pip').dispatchEvent(new w.Event('change'));assert.equal($('#center-source-pip-indexUrl').value,'https://pypi.org/simple/');
   $('#center-source-npm-registry').value='https://build.company.example/npm/';$('#center-source-npm-registry').dispatchEvent(new w.Event('input'));
   const form=$('#center-codex-version').closest('form');await Promise.all([form.onsubmit({preventDefault(){}}),form.onsubmit({preventDefault(){}})]);await until(()=>!!$('#center-build-log'));assert.equal(requests.filter(row=>row.route.endsWith('/build')&&row.method==='POST').length,1);assert($('#center-build-log').textContent.includes('real frozen build log'));
-  const submitted=requests.find(row=>row.route.endsWith('/build')&&row.method==='POST').body.buildSources;assert.equal(submitted.group,'china');assert.equal(submitted.selections.pip,'pypi');assert.equal(submitted.overrides.npm.registry,'https://build.company.example/npm/');assert(!submitted.overrides.github);assert(!submitted.overrides.conda);assert($('.build-frozen-sources').textContent.includes('https://build.company.example/npm/'));
+  const firstBuild=requests.find(row=>row.route.endsWith('/build')&&row.method==='POST').body;assert.deepEqual(firstBuild.codexRuntime,{mode:'base',reference:'rundesk-codex:0.163.0'});const submitted=firstBuild.buildSources;assert.equal(submitted.group,'china');assert.equal(submitted.selections.pip,'pypi');assert.equal(submitted.overrides.npm.registry,'https://build.company.example/npm/');assert(!submitted.overrides.github);assert(!submitted.overrides.conda);assert($('.build-frozen-sources').textContent.includes('https://build.company.example/npm/'));
 
   await w.RunDeskBuildCenter.open('recipes');$('[data-center-action="sources"]').click();await until(()=>!!$('#center-sources-json')&&!$('.build-center-dialog button[type=submit]').disabled);
   const defaults=JSON.parse($('#center-sources-json').value);defaults.defaultGroup='china';$('#center-sources-json').value=JSON.stringify(defaults);await submit($('#center-sources-json'));assert.equal(db.catalog.defaultGroup,'china');$('.build-center-dialog').close();
@@ -161,6 +200,26 @@ function deferred() { let resolve; const promise=new Promise(done=>{resolve=done
   launchError=true; $('[data-center-action="launch"]').click(); await until(()=>!!$('#center-launch-name')); $('#center-launch-name').value='Uncertain instance'; await submit($('#center-launch-name')); assert($('.build-center-dialog .error').textContent.includes('partial-instance')); $('.build-center-dialog').close(); $('[data-center-action="launch"]').click(); await until(()=>!!$('#center-launch-name')); assert.equal($('#center-launch-name').value,'Uncertain instance'); assert($('#center-launch-name').disabled); await submit($('#center-launch-name')); const uncertain=requests.filter(row=>row.route.endsWith('/launch')).slice(-2); assert.equal(uncertain[0].body.requestId,uncertain[1].body.requestId,'409 unconfirmed launch lost its receipt'); findButton($('.build-center-dialog'),'开始另一实例请求').click(); await until(()=>!$('#center-launch-name').disabled); $('.build-center-dialog').close(); launchError=false;
   $('[data-center-test="smoke"]').click(); await until(()=>!!$('#center-build-log')&&$('#build-center-page').textContent.includes('declared command failed')); assert($('#build-center-page').textContent.includes('失败'));
   await w.RunDeskBuildCenter.open('images',db.images[0].key); $('[data-center-test="offline"]').click(); await until(()=>!!$('#center-build-log')&&$('#build-center-page').textContent.includes('Offline：'));
+  // Public catalog keeps edits on CAS conflict and never invents published addresses.
+  await w.RunDeskBuildCenter.publicImages();assert.deepEqual(JSON.parse($('#center-public-images-json').value).items,[]);
+  $('#center-public-images-json').value=JSON.stringify({schemaVersion:1,items:[publicEntry]});const publicDraft=$('#center-public-images-json').value;
+  publicCatalogConflict=true;await submit($('#center-public-images-json'));assert.equal($('#center-public-images-json').value,publicDraft);assert($('.build-center-dialog .error').textContent.includes('你的编辑仍保留'));
+  publicCatalogConflict=false;await submit($('#center-public-images-json'));assert.equal(db.publicCatalog.items[0].sources[0].reference,publicEntry.sources[0].reference);$('.build-center-dialog').close();
+  // Publication is gated by evidence; an uncertain submission is replayed after dialog reopen.
+  await w.RunDeskBuildCenter.open('images',db.images[0].key);await until(()=>!!$('[data-center-action="publish-image"]'));assert($('[data-center-action="publish-image"]').disabled);assert($('.image-detail').textContent.includes('Smoke must pass'));
+  publicationReady=true;await w.RunDeskBuildCenter.open('images',db.images[0].key);await until(()=>!!$('[data-center-action="publish-image"]')&&!$('[data-center-action="publish-image"]').disabled);$('[data-center-action="publish-image"]').click();
+  $('#center-publication-target').value='ghcr.io/example/news2douyin:1.1.2';await submit($('#center-publication-target'));assert.equal(db.publications.length,0);assert($('.build-center-dialog .error').textContent.includes('请确认上传'));
+  $('#center-publication-confirm').checked=true;await submit($('#center-publication-target'));assert($('.build-center-dialog .error').textContent.includes('response lost'));assert($('#center-publication-target').disabled);$('.build-center-dialog').close();
+  $('[data-center-action="publish-image"]').click();assert.equal($('#center-publication-target').value,'ghcr.io/example/news2douyin:1.1.2');assert($('#center-publication-target').disabled);await submit($('#center-publication-target'));await until(()=>!!$('#center-publication-log'));
+  const publicationPosts=requests.filter(r=>r.route==='/build-center/publications'&&r.method==='POST');assert.equal(publicationPosts.length,2);assert.equal(publicationPosts[0].body.requestId,publicationPosts[1].body.requestId);assert.equal(db.publications.length,1);assert(!$('#center-publication-log').textContent.includes('do-not-display'));assert($('#center-publication-log').textContent.includes('[redacted]'));
+  assert.equal(w.location.hash,'#build-center/publications/publication-1');$('[data-center-action="cancel-publication"]').click();await until(()=>$('#center-publication-status')?.textContent.includes('已取消'));assert.equal(db.publications[0].status,'canceled');
+  Object.assign(db.publications[0],{status:'succeeded',digest:'sha256:'+'c'.repeat(64),reference:publicEntry.sources[0].reference,publicImage:publicEntry});await w.RunDeskBuildCenter.open('publications','publication-1');
+  assert(![...$('#center-publication-detail').childNodes].some(node=>node.nodeType===3&&node.textContent.trim()==='null'),'optional publication fields must not render null text');
+  assert($('#center-publication-visibility').textContent.includes('匿名访问尚未验证'));assert.equal($('#center-publication-reference').value,publicEntry.sources[0].reference);assert($('#center-publication-catalog-entry').textContent.includes('news2douyin'));
+  assert($('[data-center-action="publication-catalog-draft"]').disabled);$('[data-center-action="check-publication-access"]').click();await until(()=>$('#center-publication-detail').textContent.includes('anonymous denied'));assert($('[data-center-action="publication-catalog-draft"]').disabled);
+  publicCheckAllowed=true;$('[data-center-action="check-publication-access"]').click();await until(()=>$('#center-publication-visibility')?.textContent.includes('检查已通过'));assert(!$('[data-center-action="publication-catalog-draft"]').disabled);
+  $('[data-center-action="publication-catalog-draft"]').click();await until(()=>!!$('#center-public-images-json')&&!$('#center-public-images-save').disabled);assert($('.build-center-dialog [role=status]').textContent.includes('同名版本'));$('.build-center-dialog').close();
+  const publicSaves=requests.filter(r=>r.route==='/setup/public-images'&&r.method==='PUT');assert.equal(publicSaves.length,2,'viewing publication must not save catalog automatically');
   await w.RunDeskBuildCenter.open('images',db.images[0].key); $('[data-center-action="delete-image"]').click(); await until(()=>deleted); await until(()=>$('.image-detail').textContent.includes('deleted')); assert($('[data-center-action="launch"]').disabled); assert($('[data-center-action="delete-image"]').disabled); assert(!requests.some(row=>row.route.includes('/prune')));
   // A late image response cannot replace a newer selection.
   db.images=[image('a'.repeat(24),'late:1'),image('b'.repeat(24),'current:2')]; imageGate=deferred(); const pending=w.RunDeskBuildCenter.open('images',db.images[0].key); await until(()=>$('[data-center-image-key="'+db.images[1].key+'"]')?.textContent.includes('current:2')); findButton($('[data-center-image-key="'+db.images[1].key+'"]'),'current:2').click(); await until(()=>$('.image-detail h2')?.textContent==='current:2'); imageGate.resolve(copy(db.images[0])); await pending; imageGate=null; assert.equal($('.image-detail h2').textContent,'current:2');

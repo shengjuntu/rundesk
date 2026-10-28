@@ -1,0 +1,16 @@
+{
+  "version": "0.57.0",
+  "passed": true,
+  "scope": "Actual shipped JavaScript exercised with JSDOM and HTTP fixtures. No live registry upload.",
+  "checks": [
+    "existing build-center and native plugin behavior",
+    "publication readiness and required confirmation",
+    "lost response durable request replay",
+    "publication progress, cancellation and redacted logs",
+    "anonymous access failure and success displayed correctly",
+    "public catalog CAS and conflicting-edit preservation",
+    "export saved catalog without revision",
+    "no automatic catalog mutation",
+    "no literal null UI artifacts"
+  ]
+}

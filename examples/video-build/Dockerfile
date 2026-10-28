@@ -1,6 +1,8 @@
 # Editable RunDesk Dockerfile. Keep profile.lock.json and source settings with this recipe.
 ARG RD_BASE_IMAGE=node:22-bookworm-slim
 FROM ${RD_BASE_IMAGE}
+# All managed profiles require the Node runtime and unprivileged node user.
+RUN node -e 'if (Number(process.versions.node.split(".")[0]) < 22) process.exit(1)' && npm --version >/dev/null && id node >/dev/null
 ARG RD_APT_MIRROR=http://deb.debian.org/debian
 ARG RD_APT_SECURITY_MIRROR=http://deb.debian.org/debian-security
 COPY tools/configure-apt.sh /opt/rundesk-profile/tools/configure-apt.sh
@@ -17,7 +19,10 @@ RUN npm_config_registry="${RD_NPM_REGISTRY}" npm ci --prefix /opt/hyperframes --
 ENV PATH="/opt/hyperframes/node_modules/.bin:${PATH}" HYPERFRAMES_BROWSER_PATH=/usr/bin/chromium HYPERFRAMES_NO_TELEMETRY=1 DO_NOT_TRACK=1
 RUN hyperframes --version && chromium --version && node -e "if (Number(process.versions.node.split('.')[0]) < 22) process.exit(1)"
 ARG CODEX_VERSION=0.0.0
-RUN npm_config_registry="${RD_NPM_REGISTRY}" npm install --global "@openai/codex@${CODEX_VERSION}" && npm cache clean --force && codex --version && codex app-server --help >/dev/null
+ARG RD_CODEX_MODE=auto
+COPY runtime/ /opt/rundesk-runtime/
+COPY tools/install-codex.sh /opt/rundesk-profile/tools/install-codex.sh
+RUN CODEX_VERSION="${CODEX_VERSION}" RD_CODEX_MODE="${RD_CODEX_MODE}" RD_NPM_REGISTRY="${RD_NPM_REGISTRY}" sh /opt/rundesk-profile/tools/install-codex.sh
 LABEL org.opencontainers.image.title="RunDesk video-build"
 LABEL org.opencontainers.image.version="1.4.0"
 LABEL io.rundesk.profile="video-build"

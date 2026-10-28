@@ -61,6 +61,7 @@ type BuildExperienceEvidence struct {
 	RecipeSHA       string                `json:"recipeSha,omitempty"`
 	Sources         *BuildSourceSnapshot  `json:"sources,omitempty"`
 	RuntimeIdentity *RuntimeImageIdentity `json:"runtimeIdentity,omitempty"`
+	CodexRuntime    *BuildRuntimeSnapshot `json:"codexRuntime,omitempty"`
 }
 
 type BuildExperienceValidation struct {
@@ -220,7 +221,7 @@ func (m *Manager) installExperience(in BuildExperienceInput, out *BuildExperienc
 }
 
 func imageExperienceSnapshot(v ImageBuild) BuildExperienceEvidence {
-	return BuildExperienceEvidence{ID: v.ID, Status: v.Status, Error: buildExperienceText(v.Error, 2048), Version: v.CodexVersion, ImageID: v.ImageID, ContextSHA256: v.ContextSHA256, RecipeSHA: v.RecipeSHA, Sources: v.BuildSources, RuntimeIdentity: v.RuntimeIdentity}
+	return BuildExperienceEvidence{ID: v.ID, Status: v.Status, Error: buildExperienceText(v.Error, 2048), Version: v.CodexVersion, ImageID: v.ImageID, ContextSHA256: v.ContextSHA256, RecipeSHA: v.RecipeSHA, Sources: v.BuildSources, RuntimeIdentity: v.RuntimeIdentity, CodexRuntime: v.CodexRuntime}
 }
 
 func (m *Manager) experienceBuildLog(id string) string {
@@ -432,7 +433,7 @@ func (m *Manager) imageExperience(in BuildExperienceInput, out *BuildExperience)
 		if err != nil {
 			return err
 		}
-		if v.Scope != "image-test" || v.SourceBuildID != success.ID || v.ImageID != success.ImageID || v.ContextSHA256 != success.ContextSHA256 || v.RecipeSHA != success.RecipeSHA || v.PlatformOS != success.PlatformOS || v.PlatformArch != success.PlatformArch {
+		if v.Scope != "image-test" || v.SourceBuildID != success.ID || v.ImageID != success.ImageID || v.ContextSHA256 != success.ContextSHA256 || v.RecipeSHA != success.RecipeSHA || v.PlatformOS != success.PlatformOS || v.PlatformArch != success.PlatformArch || !reflect.DeepEqual(v.CodexRuntime, success.CodexRuntime) {
 			return failure(409, "experience_verification_mismatch", "测试未绑定修复构建的同一镜像、冻结目录和平台")
 		}
 		if v.Status != "succeeded" {

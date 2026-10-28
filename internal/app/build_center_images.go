@@ -715,6 +715,7 @@ func (m *Manager) StartBuildCenterImageTest(key string, input BuildCenterImageTe
 	result.SourceBuildID, result.ContextSHA256 = source.ID, source.ContextSHA256
 	result.PlatformOS, result.PlatformArch = source.PlatformOS, source.PlatformArch
 	result.RuntimeIdentity = source.RuntimeIdentity
+	result.CodexRuntime = source.CodexRuntime
 	if source.Scope == "setup" {
 		result.ProfileID = source.ProfileID
 	}

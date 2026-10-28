@@ -316,7 +316,7 @@ func TestDockerBusyEnvironmentAndSessionCancellation(t *testing.T) {
 	if e = m.StopRun(s.ID, s.RunID); e != nil {
 		t.Fatal(e)
 	}
-	waitState(t, m, s.ID, "interrupted")
+	s = waitState(t, m, s.ID, "interrupted")
 	still, _ := m.Session(sibling.ID)
 	if still.Status != "waiting" {
 		t.Fatal("stopping one session affected sibling")
@@ -328,7 +328,53 @@ func TestDockerBusyEnvironmentAndSessionCancellation(t *testing.T) {
 	if e = m.Approve(sibling.ID, a[0].ID, "accept", nil, nil); e != nil {
 		t.Fatal(e)
 	}
-	waitState(t, m, sibling.ID, "completed")
+	sibling = waitState(t, m, sibling.ID, "completed")
+	// Terminal status is persisted before the native completion callback journals
+	// run/state and expires approvals. The interrupted run also has an operation
+	// goroutine to finish. Wait for that lifecycle and both connection locks to
+	// drain before asserting the environment can be stopped without a busy reply.
+	for _, settled := range []Session{s, sibling} {
+		h, err := m.getHandle(settled.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		deadline := time.Now().Add(5 * time.Second)
+		for {
+			events, err := m.Store.Events(settled.ID, 0, 1000)
+			if err != nil {
+				t.Fatal(err)
+			}
+			terminal, expired := false, false
+			for _, event := range events {
+				if event.Method == "run/state" {
+					var state struct {
+						RunID  string `json:"runId"`
+						Status string `json:"status"`
+					}
+					if json.Unmarshal(event.Data, &state) == nil && state.RunID == settled.RunID && state.Status == settled.Status {
+						terminal = true
+					}
+				}
+				if terminal && event.Method == "approval/expired" {
+					expired = true
+				}
+			}
+			if expired && h.op.TryLock() {
+				idle := h.mu.TryLock()
+				if idle {
+					h.mu.Unlock()
+				}
+				h.op.Unlock()
+				if idle {
+					break
+				}
+			}
+			if time.Now().After(deadline) {
+				t.Fatalf("session %s did not finish its terminal callback and release its connection", settled.ID)
+			}
+			time.Sleep(time.Millisecond)
+		}
+	}
 	v = m.Environments(i.ID)[0]
 	v, e = m.EnvironmentAction(v.ID, "stop", v.Revision)
 	if e != nil {

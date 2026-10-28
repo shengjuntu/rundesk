@@ -113,6 +113,8 @@ type Manager struct {
 	libraryMu           sync.Mutex
 	buildMu             sync.Mutex
 	buildCancels        map[string]context.CancelFunc
+	publicationMu       sync.Mutex
+	publicationCancels  map[string]context.CancelFunc
 	userMu              sync.Mutex
 	executionMu         sync.RWMutex
 	environmentMu       sync.Mutex
@@ -244,6 +246,9 @@ func New(data, codex string, demo bool) (*Manager, error) {
 	if e = m.initBuilds(); e != nil {
 		return fail(e)
 	}
+	if e = m.initImagePublications(); e != nil {
+		return fail(e)
+	}
 	if e = m.loadQueue(); e != nil {
 		return fail(e)
 	}
@@ -252,6 +257,8 @@ func New(data, codex string, demo bool) (*Manager, error) {
 	go m.collaborationLoop()
 	m.wg.Add(1)
 	go m.buildLoop()
+	m.wg.Add(1)
+	go m.imagePublicationLoop()
 	m.wg.Add(1)
 	go func() {
 		defer m.wg.Done()
@@ -1244,7 +1251,11 @@ func (m *Manager) reap() {
 }
 func (m *Manager) Done() <-chan struct{} { return m.ctx.Done() }
 func (m *Manager) Close() {
+	// Publication access checks add to wg under this lock. Close admission
+	// before cancellation can let the permanent workers drain to zero.
+	m.publicationMu.Lock()
 	m.cancel()
+	m.publicationMu.Unlock()
 	m.mu.Lock()
 	hs := []*handle{}
 	for _, h := range m.handles {

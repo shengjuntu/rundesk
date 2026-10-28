@@ -238,12 +238,13 @@ def render(profile, selection, codex_version, base_image, destination):
         for field in ("filesManifest", "patchFile"):
             shutil.copyfile(ROOT / "_shared" / a[field], destination / "vendor" / Path(a[field]).name)
         requirements += ["/opt/rundesk-profile/vendor/agent-reach"]
+    write(destination / "runtime/.keep", "Native Codex payload is supplied only by an explicitly resolved build runtime.\n")
     write(destination / "requirements.txt", "\n".join(requirements) + "\n")
     write(destination / "seed/config.toml", seed_config(selection))
     skill = profile["skill"]
     for rel in profile.get("skillFiles", ["SKILL.md", "agents/openai.yaml"]):
         write(destination / "skills" / skill / rel, (ROOT / profile["id"] / "skills" / skill / rel).read_text(encoding="utf-8"))
-    for filename in ("configure-apt.sh", "profile_doctor.py", "read_web.py", "video_smoke.py", "video_use_adapter.py", "video_use_smoke.py", "hyperframes_smoke.py", "mcporter", "agent_reach_config.py"):
+    for filename in ("configure-apt.sh", "install-codex.sh", "profile_doctor.py", "read_web.py", "video_smoke.py", "video_use_adapter.py", "video_use_smoke.py", "hyperframes_smoke.py", "mcporter", "agent_reach_config.py"):
         source = ROOT / "_shared" / filename
         write(destination / "tools" / filename, source.read_text(encoding="utf-8"), executable=True)
     resolved = {"schemaVersion": 1, "generatorVersion": VERSION, "profile": profile,
@@ -274,7 +275,7 @@ def render(profile, selection, codex_version, base_image, destination):
         shutil.copyfile(archive, destination / "vendor/video-use.tar.gz")
         write(destination / "vendor/video-use-pin.json", json.dumps({"repository": video_use["repository"], "commit": video_use["commit"], "sourceSHA256": video_use["sourceSHA256"], "license": "MIT"}, indent=2) + "\n")
     dockerfile_files.render(ROOT, profile, selection, codex_version, base_image, destination, write, labels)
-    write(destination / ".dockerignore", "**\n!Dockerfile\n!requirements.txt\n!profile.lock.json\n!THIRD_PARTY.md\n!seed/\n!seed/**\n!skills/\n!skills/**\n!tools/\n!tools/**\n!agent-tools/\n!agent-tools/**\n!vendor/\n!vendor/**\n!hyperframes/\n!hyperframes/**\n")
+    write(destination / ".dockerignore", "**\n!Dockerfile\n!runtime/\n!runtime/**\n!requirements.txt\n!profile.lock.json\n!THIRD_PARTY.md\n!seed/\n!seed/**\n!skills/\n!skills/**\n!tools/\n!tools/**\n!agent-tools/\n!agent-tools/**\n!vendor/\n!vendor/**\n!hyperframes/\n!hyperframes/**\n")
     write(destination / "THIRD_PARTY.md", (ROOT / "_shared/THIRD_PARTY.md").read_text(encoding="utf-8"))
     write(destination / "README.md", "# " + profile["title"] + "\n\n" + profile["description"] + "\n\n"
           "This is a generated Docker build context, not a built image. Dependencies are downloaded during build.\n"

@@ -15,7 +15,9 @@ const setup={settings:{completed:false,revision:0,workspaceId:"work"},codex:"cod
 state.instances=[copy(setup.instance)];state.workspaces=[{id:"work",name:"工作区",path:"/work"}];$("#workspace").append(new w.Option("工作区","work"));$("#instance").append(new w.Option("Codex","default"));
 const sources={schemaVersion:1,revision:"catalog-1",defaultGroup:"china",types:[{id:"npm",name:"npm",fields:[{id:"registry",label:"npm registry",argument:"RD_NPM_REGISTRY"}]}],groups:[{id:"international",name:"国际源",sources:[{id:"npm-us",type:"npm",name:"npm official",values:{registry:"https://registry.npmjs.org/"}}]},{id:"china",name:"中国镜像",sources:[{id:"npm-cn",type:"npm",name:"npm mirror",values:{registry:"https://registry.npmmirror.com/"}}]}]};
 const recipes=["news2douyin","people-search"].map(id=>({id:"builtin-"+id,name:id,profileId:id,kind:"builtin",revision:1,recipeSha:"sha-"+id,version:"1.1.2",description:"可复用工具环境"}));
-let modelTools=false,dockerOK=false,failInstallResponse=true,failAutoResponse=true;
+let modelTools=false,dockerOK=false,failInstallResponse=true,failAutoResponse=true,failRuntimeResponse=true;
+const publicImages={schemaVersion:1,revision:"public-1",items:[]};
+const runtimeProfiles={platform:"linux/amd64",supported:true,items:recipes.map(value=>({id:value.profileId,name:value.name}))};
 const calls=[],db={kun:{configured:false,available:false,ready:false,revision:0,kunPath:"/tools/kun"},installs:[{id:"history-old",status:"failed",input:{version:"0.157.1"},result:{ok:false,error:"historical failure"}}],repairs:[],builds:[],experiences:[],autoRows:[]};
 db.experiences=[{id:"verified-case",kind:"image-build",status:"verified",summary:"agent-reach 打包修复",changes:"移除重复 force-include，并内置 vendor/agent-reach。",scope:{os:"linux",arch:"amd64",version:"cf70302e"},failure:{id:"failed-build",error:"Duplicate wheel archive path"},success:{id:"success-build",status:"succeeded"},validation:{installVersionVerified:false,offline:true,smoke:true},patch:{available:true,changedFiles:2,files:[{path:"Dockerfile",change:"modified"},{path:"vendor/agent-reach/pyproject.toml",change:"modified"}],dockerfileDiff:"+COPY vendor/ /opt/vendor/\n+ENV API_KEY=must-hide-this\n"+"x".repeat(13000)}},{id:"candidate-case",kind:"codex-install",status:"candidate",summary:"下载通道候选修复",changes:"更换 npm 镜像，待版本核验。",scope:{os:"linux",arch:"amd64",version:"0.157.1"},failure:{id:"failed-install",error:"timeout"},success:{id:"candidate-install"},validation:{installVersionVerified:false,offline:false,smoke:false}}];
 const fail=(message,status=500)=>Object.assign(Error(message),{status});
@@ -24,10 +26,14 @@ w.api=async(route,options={})=>{
   if(route==="/setup")return copy(setup);
   if(method==="GET"){
     if(route==="/setup/kun")return copy(db.kun);
+    if(route==="/setup/public-images")return copy(publicImages);
+    if(route==="/setup/runtime-profiles")return copy(runtimeProfiles);
+    if(route==="/build-center/images")return {items:db.builds.filter(value=>value.imageId).map(value=>({key:"image-"+value.id,imageId:value.imageId}))};
     if(route==="/setup/codex-installs")return {items:copy(db.installs)};
     if(route==="/setup/repairs")return {items:copy(db.repairs)};
     if(route==="/setup/experiences")return {items:copy(db.experiences)};
     if(route==="/setup/auto-repairs")return {items:copy(db.autoRows)};
+    if(route.startsWith("/build-center/runtime-options?"))return {platform:"linux/amd64",version:"0.157.1",nativeAvailable:true,reason:"verified fixture package"};
     if(route==="/build-center/sources")return copy(sources);
     if(route==="/build-center/recipes")return {items:copy(recipes)};
     if(route==="/build-center/builds")return {items:copy(db.builds)};
@@ -37,6 +43,12 @@ w.api=async(route,options={})=>{
   }
   if(route==="/setup/discovery")return {scannedAt:"2026-10-27T00:00:00Z",platform:{os:"linux",arch:"amd64",cpuCount:16,memoryBytes:68719476736},gpus:[{vendor:"NVIDIA",name:"A100",memoryMiB:40960,driver:"550"}],tools:[{id:"kun",path:"/tools/kun",status:"ready",version:"kun 0.17.0"},{id:"codex",path:"codex",status:"unavailable"},{id:"docker",path:"/usr/bin/docker",status:"ready",version:"Docker 28"}],services:[{endpoint:"http://127.0.0.1:8000/v1",source:"loopback",status:"listed",authRequired:false,inferenceTested:false,models:[{id:"Qwen3-Coder"}]}],warnings:[]};
   if(route==="/setup/check")return {ok:dockerOK,error:dockerOK?"":"Docker daemon unavailable"};
+  if(method==="POST"&&route==="/setup/runtime-images"){
+    assert.match(body.requestId,/^[a-f0-9]{24}$/);assert(["pull","local"].includes(body.source));assert(!body.codexRuntime,"runtime installation settings must not leak into image acquisition");
+    let job=db.builds.find(value=>value.requestId===body.requestId);
+    if(!job){const failed=body.reference.endsWith(":broken");job={...copy(body),id:"runtime-"+(db.builds.filter(value=>value.scope==="setup").length+1),name:body.profileId+" · "+body.source,scope:"setup",status:failed?"failed":"succeeded",offlineReady:!failed,...(failed?{error:"registry connection failed"}:{imageId:"sha256:"+(db.builds.filter(value=>value.scope==="setup").length+1).toString(16).repeat(64)})};db.builds.unshift(job);}
+    if(failRuntimeResponse){failRuntimeResponse=false;throw fail("pull response lost");}return copy(job);
+  }
   if(method==="POST"&&route==="/setup/model-test")return {endpoint:body.endpoint,model:body.model,inferenceOK:true,toolsOK:modelTools,status:modelTools?"ready":"inference_only",error:modelTools?"":"No tool call returned"};
   if(method==="POST"&&route==="/setup/kun"){
     assert(!body.agentRuntime&&!body.instanceId,"setup must not overwrite the default instance");
@@ -59,13 +71,14 @@ w.api=async(route,options={})=>{
     if(failAutoResponse){failAutoResponse=false;throw fail("handoff response lost");}return copy(value);
   }
   if(method==="POST"&&route.startsWith("/build-center/recipes/")&&route.endsWith("/build")){
+    assert.deepEqual(copy(body.codexRuntime),{mode:"base",reference:"rundesk-codex:0.157.1"});
     assert.equal(body.buildSources.group,"china");assert.equal(body.buildSources.overrides.npm.registry,route.includes("news2douyin")?"https://company.example/npm/":"https://registry.npmmirror.com/");
-    const value={id:"build-"+(db.builds.length+1),name:route.includes("news2douyin")?"news2douyin":"people-search",status:"failed",error:"compile failed",recipeId:route.split("/")[3],requestId:body.requestId};db.builds.unshift(value);return copy(value);
+    const value={id:"build-"+(db.builds.filter(value=>!value.scope).length+1),name:route.includes("news2douyin")?"news2douyin":"people-search",status:"failed",error:"compile failed",recipeId:route.split("/")[3],requestId:body.requestId};db.builds.unshift(value);return copy(value);
   }
   if(method==="POST"&&route==="/build-center/assistant-runs"){
     assert.equal(body.instanceId,"setup-kun");assert(body.sourceBuildId);const value={id:"build-repair",sourceBuildId:body.sourceBuildId,status:"queued",sessionId:"build-repair-session"};db.repairs.push(value);return copy(value);
   }
-  if(method==="POST"&&route==="/setup/complete"){assert.equal(body.revision,0);assert.equal(body.completed,true);setup.settings.completed=true;setup.settings.revision++;return {settings:copy(setup.settings)};}
+  if(method==="POST"&&route==="/setup/complete"){assert.equal(body.revision,setup.settings.revision);assert.equal(body.completed,true);setup.settings.completed=true;setup.settings.revision++;return {settings:copy(setup.settings)};}
   throw Error("Unexpected request "+method+" "+route);
 };
 w.setProductPage=()=>{};w.stashProductDraft=()=>{};
@@ -110,15 +123,51 @@ const nav=step=>click('[data-setup-step="'+step+'"]');
   await click("[data-ob-next]");assert.equal($('[aria-current="step"]').dataset.setupStep,"docker","the next action must go directly from Codex to Docker");
   assert($("#onboarding-complete"),"Docker must offer completion without a separate fourth stage");
   assert(!$("[data-ob-next]"),"no fourth step may follow Docker");
-  await until(()=>$$("[data-preset-id]").length===2);assert($("#onboarding-build-selected").disabled,"Docker unavailable must disable builds");
-  dockerOK=true;await click("#onboarding-check-docker");await until(()=>!$("#onboarding-build-selected").disabled);
+  await until(()=>!!$("#onboarding-runtime-profile"));
+  assert.equal($("#onboarding-docker-mode").value,"pull","prebuilt download must be the default");assert(!$("#onboarding-codex-runtime-mode"),"download mode must not show build runtime controls");
+  assert($("#onboarding-public-catalog-status").textContent.includes("还没有"));
+  assert.equal($("#onboarding-runtime-reference").value,"","an empty catalog must not invent a usable published reference");
+  assert($("#onboarding-prepare-image").disabled,"Docker unavailable must disable image downloads");
+  dockerOK=true;await click("#onboarding-check-docker");await until(()=>!$("#onboarding-prepare-image").disabled);
+  await click("#onboarding-prepare-image");assert($("#onboarding-error").textContent.includes("真实镜像地址"));
+  const manual=$("#onboarding-runtime-reference");manual.value="registry.example/team/news:broken";manual.dispatchEvent(new w.Event("input"));
+  const autoBefore=db.autoRows.length;
+  await click("#onboarding-prepare-image");await until(()=>$("#onboarding-error").textContent.includes("pull response lost"));
+  await click("#onboarding-prepare-image");await until(()=>!!$('[data-build-id="runtime-1"]'));
+  const downloads=calls.filter(value=>value.route==="/setup/runtime-images"&&value.method==="POST");assert.equal(downloads.length,2);assert.equal(downloads[0].body.requestId,downloads[1].body.requestId);
+  assert.equal(db.builds.filter(value=>value.scope==="setup").length,1,"a lost pull response must preserve request identity");
+  assert.equal(db.autoRows.length,autoBefore,"pulls must not receive automatic build repair authorization");
+  assert(!$('[data-build-repair="runtime-1"]'),"failed pulls must not offer build repair");
+  const buildCallsBefore=calls.filter(value=>value.method==="POST"&&value.route.endsWith("/build")).length;
+  await click('[data-runtime-retry="runtime-1"]');assert.equal($("#onboarding-docker-mode").value,"pull");assert.equal($("#onboarding-runtime-reference").value,"registry.example/team/news:broken");
+  assert.equal(calls.filter(value=>value.method==="POST"&&value.route.endsWith("/build")).length,buildCallsBefore,"retrying a download must never silently switch to building");
+  const digest="sha256:"+"b".repeat(64),mirrorDigest=digest;
+  publicImages.items=[{id:"news-release",profileId:"news2douyin",profileVersion:"1.1.2",codexVersion:"0.157.1",platform:"linux/amd64",sources:[{id:"ghcr",name:"GHCR",reference:"ghcr.io/team/news@"+digest},{id:"mirror",name:"Mirror",reference:"registry.example/team/news@"+mirrorDigest}]},{id:"wrong-platform",profileId:"news2douyin",profileVersion:"1.1.2",codexVersion:"0.157.1",platform:"linux/arm64",sources:[{id:"wrong",name:"Wrong",reference:"ghcr.io/team/news@"+digest}]},{id:"old-preset",profileId:"news2douyin",profileVersion:"1.0.0",codexVersion:"0.157.1",platform:"linux/amd64",sources:[{id:"old",name:"Old",reference:"ghcr.io/team/news@"+digest}]}];
+  await click("#onboarding-refresh-public-images");await until(()=>$("#onboarding-public-image").options.length===2);
+  assert.equal($("#onboarding-runtime-reference").value,"registry.example/team/news:broken","refreshing must preserve a manually entered reference");
+  $("#onboarding-public-image").value="news-release";$("#onboarding-public-image").dispatchEvent(new w.Event("change"));
+  assert($("#onboarding-runtime-reference").readOnly);assert($("#onboarding-runtime-version").readOnly);assert($("#onboarding-runtime-reference").value.endsWith(digest));
+  $("#onboarding-public-source").value="mirror";$("#onboarding-public-source").dispatchEvent(new w.Event("change"));
+  await click("#onboarding-prepare-image");await until(()=>!!$('[data-build-id="runtime-2"]'));
+  const selected=calls.filter(value=>value.route==="/setup/runtime-images"&&value.method==="POST").at(-1).body;
+  assert.equal(selected.publicImageId,"news-release");assert.equal(selected.publicSourceId,"mirror");assert.equal(selected.catalogRevision,"public-1");assert(selected.reference.endsWith(mirrorDigest));assert.equal(db.autoRows.length,autoBefore);
+  assert($('[data-runtime-open-image="runtime-2"]'),"successful downloads should lead to image inspection and instance creation");
+  $("#onboarding-docker-mode").value="local";$("#onboarding-docker-mode").dispatchEvent(new w.Event("change"));
+  assert(!$("#onboarding-public-image"));$("#onboarding-runtime-reference").value="local-news:ready";$("#onboarding-runtime-reference").dispatchEvent(new w.Event("input"));
+  await click("#onboarding-prepare-image");await until(()=>!!$('[data-build-id="runtime-3"]'));
+  assert.equal(calls.filter(value=>value.route==="/setup/runtime-images"&&value.method==="POST").at(-1).body.source,"local");
+  $("#onboarding-docker-mode").value="build";$("#onboarding-docker-mode").dispatchEvent(new w.Event("change"));
+  await until(()=>$$("[data-preset-id]").length===2);assert(!$("#onboarding-build-selected").disabled);
+  assert.equal($("#onboarding-codex-runtime-mode").value,"auto");await click("#onboarding-codex-runtime-check");await until(()=>$("#onboarding-codex-runtime-status").textContent.includes("发现匹配"));
+  $("#onboarding-codex-runtime-mode").value="base";$("#onboarding-codex-runtime-mode").dispatchEvent(new w.Event("change"));$("#onboarding-codex-runtime-reference").value="rundesk-codex:0.157.1";$("#onboarding-codex-runtime-reference").dispatchEvent(new w.Event("input"));
   const first=$('[data-preset-id="builtin-news2douyin"]');first.checked=true;first.dispatchEvent(new w.Event("change"));
   let custom=$('[data-ob-source-recipe="builtin-news2douyin"] [data-source-field="registry"]');custom.value="https://company.example/npm/";custom.dispatchEvent(new w.Event("input"));
   const second=$('[data-preset-id="builtin-people-search"]');second.checked=true;second.dispatchEvent(new w.Event("change"));
   assert.equal($('[data-ob-source-recipe="builtin-news2douyin"] [data-source-field="registry"]').value,"https://company.example/npm/","selecting another preset must preserve edited sources");
   await nav("llm");await nav("docker");assert.equal($('[data-ob-source-recipe="builtin-news2douyin"] [data-source-field="registry"]').value,"https://company.example/npm/","navigation must preserve edited sources");
+  assert.equal($("#onboarding-codex-runtime-mode").value,"base");assert.equal($("#onboarding-codex-runtime-reference").value,"rundesk-codex:0.157.1","runtime source draft must survive navigation");
   const ids=$$("#onboarding-preset-sources [id]").map(value=>value.id);assert.equal(ids.length,new Set(ids).size,"multiple source forms must not duplicate IDs");
-  await click("#onboarding-build-selected");await until(()=>$$('[data-build-id]').length===2);assert.equal(db.builds.length,2);
+  await click("#onboarding-build-selected");await until(()=>$$('[data-build-id^="build-"]').length===2);assert.equal(db.builds.filter(value=>!value.scope).length,2);
   await until(()=>!!$('a[href*="auto-session-build-1"]'));assert($('[data-build-repair="build-1"]').disabled);assert.equal(db.autoRows.length,3,"each newly submitted source gets one backend authorization");
   const viewLog=$$('[data-build-id="build-1"] button').find(value=>value.textContent==="查看日志");viewLog.click();await until(()=>!!$('[data-build-log="build-1"]'));assert($('[data-build-log="build-1"]').textContent.includes("upstream"));
   const verified=$('[data-experience-details="verified-case"]'),candidate=$('[data-experience-id="candidate-case"]');
@@ -127,7 +176,7 @@ const nav=step=>click('[data-setup-step="'+step+'"]');
   const diff=$('[data-experience-diff="verified-case"]').textContent;assert(!diff.includes("must-hide-this"));assert(diff.includes("[redacted]"));assert(diff.length<12100);assert(diff.includes("展示内容已截断"));
   assert(verified.querySelector('a[href="/api/v1/build-center/builds/failed-build/log?after=0"]'));
   assert(candidate.textContent.includes("候选经验"));assert(candidate.textContent.includes("未验证"));assert(candidate.textContent.includes("尚未通过所需的完整验证"));assert(!candidate.querySelector('[data-state="ready"]'),"candidate must not be presented as passed");
-  await click("#onboarding-complete");assert.equal(await pending,true);assert(!$('[id="setup-onboarding"]'));assert(setup.settings.completed);
+  await click('[data-runtime-open-image="runtime-2"]');assert.equal(w.location.hash,"#build-center/images/image-runtime-2");assert.equal(await pending,true);assert(!$('[id="setup-onboarding"]'));assert(setup.settings.completed);
   // A completed setup is not reopened automatically; demo and explicit trace
   // links are also not captured by initialization.
   await w.RunDeskSetup.maybeOpen();assert(!$("#setup-onboarding"));
@@ -140,5 +189,5 @@ const nav=step=>click('[data-setup-step="'+step+'"]');
   assert.equal($('[aria-current="step"]').dataset.setupStep,"llm");assert.equal($$("[data-setup-step]").length,3);
   await nav("docker");assert($("#onboarding-complete"));assert(!$("#onboarding-complete").disabled);assert(!$("[data-ob-next]"));
   await click("#onboarding-dismiss");assert.equal(await resumed,false);
-  console.log(JSON.stringify({version:"0.56.1",passed:true,checks:["real api() supplies all initialization idempotency headers","real api() preserves header after transport failure","initial full-page setup","exactly three steps: LLM, Codex, Docker","LLM discovery and configuration share the first step","selecting a discovered service stays in LLM configuration","next actions follow LLM to Codex to Docker","completion and repair evidence belong to Docker with no fourth step","discovery does not infer or install","inference and tools both required","task-scoped Kun configuration","native installation defaults and mirror selection","lost-response receipt reuse","backend automatic handoff with bounded task scope","automatic registration receipt retry","historical failures remain opt in","manual duplicate repair prevented","Docker availability gating","multiple opt-in preset builds","source edits survive preset selection and navigation","isolated editable source forms","Kun build repair","build log inspection","collapsed repair evidence exposes issues, changes and validation","bounded redacted Dockerfile diff and source record links","candidate experience remains unverified","optional components and completion","completed/demo/deep-link entry","manual reopening starts at the LLM step","empty Docker catalog does not block completion"]}));
+  console.log(JSON.stringify({version:"0.57.0",passed:true,checks:["real api() supplies all initialization idempotency headers","real api() preserves header after transport failure","initial full-page setup","exactly three steps: LLM, Codex, Docker","LLM discovery and configuration share the first step","selecting a discovered service stays in LLM configuration","next actions follow LLM to Codex to Docker","completion and repair evidence belong to Docker with no fourth step","discovery does not infer or install","inference and tools both required","task-scoped Kun configuration","native installation defaults and mirror selection","lost-response receipt reuse","backend automatic handoff with bounded task scope","automatic registration receipt retry","historical failures remain opt in","manual duplicate repair prevented","Docker availability gating","multiple opt-in preset builds","source edits survive preset selection and navigation","isolated editable source forms","Kun build repair","build log inspection","collapsed repair evidence exposes issues, changes and validation","bounded redacted Dockerfile diff and source record links","candidate experience remains unverified","optional components and completion","completed/demo/deep-link entry","manual reopening starts at the LLM step","empty Docker catalog does not block completion","prebuilt downloads are the default","empty public catalog does not invent published images","Docker readiness gates downloads","download request receipts survive lost responses","pull failures never trigger local builds or Kun build repair","published images filtered by preset version and platform","manual references survive catalog refresh","catalog image source and revision are pinned on submission","local image checks remain separate from downloads","successful acquisition completes setup and routes to image management","build runtime controls do not leak into image acquisition","server cache result is displayed without inventing readiness","runtime source drafts survive navigation","every selected builtin receives the chosen runtime source"]}));
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -22,10 +22,18 @@ import (
 )
 
 type RuntimeImageInput struct {
-	ProfileID    string `json:"profileId"`
-	CodexVersion string `json:"codexVersion"`
-	Source       string `json:"source"` // build, pull, or local
-	Reference    string `json:"reference"`
+	CodexRuntime *BuildRuntimeOptions `json:"codexRuntime,omitempty"`
+	runtimeSnapshot *BuildRuntimeSnapshot
+	ProfileID       string `json:"profileId"`
+	CodexVersion    string `json:"codexVersion"`
+	Source          string `json:"source"` // build, pull, or local
+	Reference       string `json:"reference"`
+	PublicImageID   string `json:"publicImageId,omitempty"`
+	PublicSourceID  string `json:"publicSourceId,omitempty"`
+	CatalogRevision string `json:"catalogRevision,omitempty"`
+	RequestID       string `json:"requestId,omitempty"`
+	requestSHA      string
+	publicImage     *PublicImageSnapshot
 }
 
 var profileRelease = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$`)
@@ -132,17 +140,44 @@ func expandRuntimeImageContext(data []byte, version string) ([]byte, error) {
 func (m *Manager) PrepareRuntimeImage(in RuntimeImageInput) (ImageBuild, error) {
 	if in.Source == "" {
 		in.Source = "build"
+		if in.PublicImageID != "" {
+			in.Source = "pull"
+		}
 	}
 	if in.Source != "build" && in.Source != "pull" && in.Source != "local" {
 		return ImageBuild{}, failure(400, "invalid_image_source", "镜像来源应为 build、pull 或 local")
 	}
 	in.Reference = strings.TrimSpace(in.Reference)
+	if in.RequestID != "" {
+		if !safeRequestID.MatchString(in.RequestID) {
+			return ImageBuild{}, failure(400, "invalid_request_id", "请求编号须为 8–128 位字母、数字或安全分隔符")
+		}
+		data, _ := json.Marshal(in)
+		in.requestSHA = fmt.Sprintf("%x", sha256.Sum256(data))
+		m.buildMu.Lock()
+		previous, found, err := m.replayRuntimeImageLocked(&in)
+		m.buildMu.Unlock()
+		if err != nil || found {
+			return previous, err
+		}
+	}
+	if err := m.resolvePublicImage(&in); err != nil {
+		return ImageBuild{}, err
+	}
 	if !imageReference.MatchString(in.Reference) || (in.Source == "build" && (strings.Contains(in.Reference, "@") || strings.HasPrefix(in.Reference, "sha256:"))) {
 		return ImageBuild{}, failure(400, "invalid_image_reference", "请填写镜像标签；构建目标不能使用 Digest")
 	}
 	data, err := runtimeImageContext(in.ProfileID, in.CodexVersion)
 	if err != nil {
 		return ImageBuild{}, err
+	}
+	if in.Source == "build" {
+		in.runtimeSnapshot, err = m.resolveBuildRuntime(in.CodexRuntime, data, "Dockerfile", in.CodexVersion, nil, true)
+		if err != nil { return ImageBuild{}, err }
+		data, err = freezeBuildRuntime(data, in.runtimeSnapshot)
+		if err != nil { return ImageBuild{}, err }
+	} else if in.CodexRuntime != nil {
+		return ImageBuild{}, failure(400, "codex_runtime_acquisition", "下载或使用已有完整镜像时不能选择构建运行时")
 	}
 	return m.createBuild(DefaultInstance, in.ProfileID+" · "+in.Source+" · "+in.CodexVersion, "Dockerfile", 60, false, bytes.NewReader(data), &in)
 }
@@ -301,6 +336,17 @@ func (m *Manager) verifyRuntimeImage(parent context.Context, v ImageBuild, id st
 	if err != nil {
 		return err
 	}
+	if v.PublicImage != nil {
+		matched := false
+		for _, digest := range image.RepoDigests {
+			if canonicalImageDigestReference(digest) == canonicalImageDigestReference(v.PublicImage.Reference) {
+				matched = true
+			}
+		}
+		if !matched {
+			return failure(409, "public_image_digest_mismatch", "本机镜像的仓库 Digest 与所选公共版本不一致")
+		}
+	}
 	if !runtimeImageMatches(v, image) {
 		return fmt.Errorf("镜像与所选配置或 Codex 版本不匹配；需要 RunDesk %s profile %s 的完整工具镜像", v.ProfileID, runtimeProfileVersion(v.ProfileID))
 	}
@@ -324,6 +370,7 @@ func (m *Manager) verifyRuntimeImage(parent context.Context, v ImageBuild, id st
 }
 
 func (s *Server) setupImageRoutes(mux *http.ServeMux) {
+	s.publicImageRoutes(mux)
 	mux.HandleFunc("GET /api/setup/runtime-profiles", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, map[string]any{"items": []map[string]any{
 			{"id": "news2douyin", "name": "新闻研究 · Exa + Agent-Reach", "reference": "rundesk-news2douyin:exa-agent-reach"},

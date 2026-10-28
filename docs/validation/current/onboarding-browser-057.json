@@ -1,0 +1,148 @@
+{
+  "version": "0.57.0",
+  "passed": true,
+  "scope": "Real Chromium loads the full shipped HTML/CSS/JS with HTTP fixtures and a QA-only CJK font. No live package installation, Docker build or model inference.",
+  "checks": [
+    {
+      "entry": "full shipped app boot shows setup before loading workbench sessions/apps"
+    },
+    {
+      "navigation": "exactly three startup steps; discovery and LLM configuration share the first page"
+    },
+    {
+      "discovery": "selecting a discovered model fills configuration without adding or advancing a step"
+    },
+    {
+      "api": "full shipped api sends Idempotency-Key for real model-test and Kun configuration POSTs"
+    },
+    {
+      "distribution": "empty public catalog is explicit; pull is the default and no fake published image is offered"
+    },
+    {
+      "distribution": "failed pull retry only refills the pull form, never starts a rebuild or Kun build repair"
+    },
+    {
+      "distribution": "manual pull submits a durable runtime-image request and never silently builds or enables build repair"
+    },
+    {
+      "distribution": "local build remains an explicit mode with preset/source controls and Kun repair"
+    },
+    {
+      "distribution": "published preset selection sends exact catalog revision and selected registry source"
+    },
+    {
+      "step": "llm",
+      "viewport": 1440,
+      "width": 1440,
+      "clientWidth": 1440,
+      "scrollWidth": 1440,
+      "mainWidth": 792,
+      "scrollHeight": 1530,
+      "clientHeight": 1000
+    },
+    {
+      "step": "codex",
+      "viewport": 1440,
+      "width": 1440,
+      "clientWidth": 1440,
+      "scrollWidth": 1440,
+      "mainWidth": 792,
+      "scrollHeight": 1517,
+      "clientHeight": 1000
+    },
+    {
+      "step": "docker",
+      "viewport": 1440,
+      "width": 1440,
+      "clientWidth": 1440,
+      "scrollWidth": 1440,
+      "mainWidth": 792,
+      "scrollHeight": 2710,
+      "clientHeight": 1000
+    },
+    {
+      "step": "llm",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390,
+      "mainWidth": 354,
+      "scrollHeight": 1884,
+      "clientHeight": 844
+    },
+    {
+      "step": "codex",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390,
+      "mainWidth": 354,
+      "scrollHeight": 1868,
+      "clientHeight": 844
+    },
+    {
+      "step": "docker",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390,
+      "mainWidth": 354,
+      "scrollHeight": 3102,
+      "clientHeight": 844
+    },
+    {
+      "step": "llm",
+      "language": "en",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390
+    },
+    {
+      "step": "codex",
+      "language": "en",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390
+    },
+    {
+      "step": "docker",
+      "language": "en",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390
+    },
+    {
+      "publication": "image details block publication until server-side offline and smoke readiness passes"
+    },
+    {
+      "publication": "explicit confirmation sends a durable publish request, redacts logs, and does not confuse successful upload with anonymous visibility"
+    },
+    {
+      "publication": "catalog draft becomes available only after explicit anonymous-access check, without placeholder null text"
+    },
+    {
+      "publication": "publication status layout",
+      "viewport": 1440,
+      "width": 1440,
+      "body": 1440,
+      "document": 1440
+    },
+    {
+      "publication": "publication status layout",
+      "viewport": 390,
+      "width": 390,
+      "body": 390,
+      "document": 390
+    },
+    {
+      "publication": "public catalog editing preserves revision and saves only an explicit reviewed draft"
+    },
+    {
+      "authentication": "401 login is visible above startup mask and successful login enters initialization"
+    }
+  ],
+  "errors": []
+}

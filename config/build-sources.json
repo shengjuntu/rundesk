@@ -105,6 +105,12 @@
       "detectPattern": "(?i)github\\.com|githubusercontent\\.com|\\bgit\\s+clone",
       "fields": [
         {
+          "id": "archiveUrl",
+          "label": "完整归档 URL（优先于归档前缀，仅当前配方）",
+          "argument": "RD_GITHUB_ARCHIVE_URL",
+          "kind": "url"
+        },
+        {
           "id": "archiveBase",
           "label": "源码归档",
           "argument": "RD_GITHUB_ARCHIVE_BASE",
@@ -140,7 +146,7 @@
   "groups": [
     {
       "id": "international",
-      "name": "国际源（美国/官方为主）",
+      "name": "国际网络（官方源）",
       "sources": [
         {
           "id": "official-docker",
@@ -233,7 +239,8 @@
             "rawBase": "https://raw.githubusercontent.com",
             "releaseBase": "https://github.com",
             "gitBase": "https://github.com",
-            "apiBase": "https://api.github.com"
+            "apiBase": "https://api.github.com",
+            "archiveUrl": ""
           },
           "description": "归档、Raw、Release和Git分别配置；只有配方使用相应参数时才生效。"
         }
@@ -241,7 +248,7 @@
     },
     {
       "id": "china",
-      "name": "中国镜像",
+      "name": "中国网络（镜像源）",
       "sources": [
         {
           "id": "china-docker-original",
@@ -281,6 +288,26 @@
             "securityMirror": "https://security.debian.org/debian-security"
           },
           "description": "主仓镜像；安全更新默认保留Debian官方，可单独修改。仅适用于Debian。 HTTPS镜像适用于已具备ca-certificates的基础镜像；缺少CA时先修复基础镜像。"
+        },
+        {
+          "id": "aliyun-debian",
+          "name": "阿里云 Debian 镜像（HTTP 初始安装，保留签名校验）",
+          "type": "apt",
+          "values": {
+            "mirror": "http://mirrors.aliyun.com/debian",
+            "securityMirror": "http://security.debian.org/debian-security"
+          },
+          "description": "可用于尚未安装 CA 的 Debian 基础镜像；保留 APT 签名验证。安全更新默认沿用 Debian 官方地址，可独立修改。"
+        },
+        {
+          "id": "aliyun-debian-https",
+          "name": "阿里云 Debian 镜像（HTTPS，底图需含 CA）",
+          "type": "apt",
+          "values": {
+            "mirror": "https://mirrors.aliyun.com/debian",
+            "securityMirror": "https://security.debian.org/debian-security"
+          },
+          "description": "阿里云公网 Debian 镜像；底图需有 ca-certificates。保留发行版、组件、Signed-By 和签名验证；安全更新地址独立设置。"
         },
         {
           "id": "npmmirror",
@@ -345,7 +372,8 @@
             "rawBase": "",
             "releaseBase": "",
             "gitBase": "",
-            "apiBase": ""
+            "apiBase": "",
+            "archiveUrl": ""
           },
           "description": "不改写配方中的GitHub来源；中国组的包管理器镜像仍可独立生效。没有预设公共代理。"
         },
@@ -358,9 +386,10 @@
             "rawBase": "",
             "releaseBase": "",
             "gitBase": "",
-            "apiBase": ""
+            "apiBase": "",
+            "archiveUrl": ""
           },
-          "description": "未预设公共代理；空值沿用配方原值。如有企业镜像，按归档/Raw/Release/Git逐项填写并核对路径拼接。",
+          "description": "完整归档 URL 优先于归档前缀，按当前配方的固定 commit 填写；支持企业缓存或代理完整地址。原始 SHA256 必须匹配，不会自动放宽校验。Raw/Release/Git/API 地址分别配置。",
           "requiresConfiguration": true
         }
       ]

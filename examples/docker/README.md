@@ -54,8 +54,11 @@ RunDesk 覆盖镜像入口，以宿主机 UID/GID、挂载的工作目录、HOME
 
 ## 使用网页构建
 
-目前网页构建不传 build args。先将 Dockerfile 中的 `ARG CODEX_VERSION` 设置为已验证版本的默认值，
-再把本目录内容打成 ZIP，确保 ZIP 根目录是 Dockerfile 和 seed/。按 `docs/BUILDS.md` 上传构建。
+构建中心的内置配方支持在构建前选择精确 Codex 版本、下载源及运行时来源。下载内置配方时先填写版本，导出的 Dockerfile、版本标签和 profile.lock.json 会保持一致。
+
+本目录是独立通用模板。通过自定义配方上传时，先将 `ARG CODEX_VERSION` 设置为已验证版本；自定义配方继续保持导入的版本快照，不自动替换版本。打包时保留 Dockerfile、tools/、runtime/ 和 seed/。
+
+`RD_CODEX_MODE=auto` 会先验证基础镜像中已有的 Codex，匹配时复用，否则通过 npm 安装精确版本；`base` 必须复用并校验已有 Codex，`npm` 强制在线安装。`native` 使用 runtime/native/ 中完整的 Linux 平台文件树（bin/codex 或 codex/codex 及其随附文件）。RunDesk 管理的原生运行时由服务验证、缓存并注入，不能复制 Windows 可执行文件到 Linux 镜像。所有方式均检查实际版本和 app-server 能力。基础镜像必须保留 Node.js 22+、npm 和 node 用户；纯 Debian + Codex 不满足此模板要求。
 
 ## 本次验证范围
 

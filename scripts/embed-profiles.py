@@ -43,9 +43,10 @@ def main():
     # It is not another application profile and is not listed in the catalog.
     generic = args.output_dir / 'generic'
     expected = {}
-    for name in ('Dockerfile', '.dockerignore', 'README.md', 'build.sh', 'seed/config.toml'):
+    for name in ('Dockerfile', '.dockerignore', 'README.md', 'build.sh', 'seed/config.toml', 'runtime/.keep'):
         expected[name] = (ROOT / 'examples/docker' / name).read_bytes()
-    expected['tools/configure-apt.sh'] = (ROOT / 'examples/_shared/configure-apt.sh').read_bytes()
+    for helper in ('configure-apt.sh', 'install-codex.sh'):
+        expected['tools/' + helper] = (ROOT / 'examples/_shared' / helper).read_bytes()
     if args.check:
         if not generic.is_dir() or files(generic) != expected:
             raise SystemExit('Stale external generic template; run scripts/embed-profiles.py')

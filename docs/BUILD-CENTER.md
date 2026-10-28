@@ -1,18 +1,21 @@
 # 构建中心
 
-“构建中心”是跨应用的常驻入口，0.55.0 增加外置配方与构建前下载源配置，0.56.0 接入首次初始化、Kun 构建助手和失败修复经验。新闻搜索、媒体搜索、深度研究和视频制作可以共用配方或镜像；应用、Skills、MCP、插件、实例和任务自由组合，不要求定义工作流或应用层级。
+“构建中心”是跨应用的常驻入口，0.55.0 增加外置配方与构建前下载源配置，0.56.0 接入首次初始化、Kun 构建助手和失败修复经验；0.57.0 加入公开镜像目录和验证后发布，0.58.0 补充 Codex 运行时复用及归档缓存。新闻搜索、媒体搜索、深度研究和视频制作可以共用配方或镜像；应用、Skills、MCP、插件、实例和任务自由组合，不要求定义工作流或应用层级。
 
 | 资源 | 负责的内容 |
 | --- | --- |
 | 原生插件 | 按 Codex 格式分发 Skills、MCP 声明和资源 |
 | 构建配方 | Dockerfile、上下文 ZIP、来源、原生插件引用和本地 smoke 声明 |
 | 镜像 | 实际固定 Image ID、来源、引用、可用性和检查结果 |
+| 公开镜像目录 | 已发布镜像的预设版本、平台与固定仓库 Digest，不包含实例认证 |
 | 实例与环境 | 模型配置、独立 HOME、工作区及现有容器生命周期 |
 | 任务 | Codex/Kun 执行、进度、审批、轨迹和产物 |
 
 ## 使用
 
 打开左侧“构建中心”，选择已有配方构建，或导入自己的 manifest 与 Docker context ZIP。“查看配方”可预览 Dockerfile 并下载完整构建目录；“下载源设置”维护国际/中国镜像源列表，构建前按配方支持逐项选择或修改。内置六项为 news2douyin、people-search、video-build、HyperFrames、video-use、OpenMontage。构建在后台排队，可以查看日志、取消和重建。已有 setup/应用构建也在全局列表中显示；原有入口继续工作。
+
+本机构建的 Codex 来源与网络配置分别选择：自动复用匹配的受管 Linux 原生包、明确使用受管包、指定兼容的本地基础镜像，或通过 npm 安装。原生包摘要与基础镜像身份随任务冻结，失败不会通过修改版本或降低 smoke 来规避。具体条件见[构建运行时复用](BUILD-RUNTIME.md)。预构建镜像下载不需要选择这些构建参数。
 
 构建成功后在镜像区检查固定身份、查看引用、执行离线检查或声明的 smoke，或者创建并启动专用 Codex Docker 实例。启动环境不发起模型任务。已有应用的镜像更新仍需在其原管理界面显式操作。
 
@@ -23,6 +26,12 @@
 助手为每次任务 bootstrap 一个独立 Skill，并向对应 Codex 线程或 Kun 请求注入短期构建 MCP；回执返回 `runtimeKind`、可选 `sourceBuildId`，以及 `skillBootstrap:true`、`nativePluginInstalled:false`。MCP 提供上下文导出/打包、源能力读取和构建检查，Kun 不需要为打包而开启宿主 Bash。`build_wait` 可等待 1–45 秒后读取状态，避免长构建反复消耗模型轮询；服务端每项构建助手最多提交三次构建。初始化 Kun 构建任务的两小时预算不覆盖其他用户实例原有设置。原生插件源包见 [rundesk-build-tools](../plugins/rundesk-build-tools/README.md)，插件安装另见[原生插件支持](NATIVE-PLUGINS.md)。
 
 修复经验记录失败指纹、源快照、实际改动、成功镜像和验证编号。服务端从冻结目录比较文件摘要和有界 Dockerfile 差异；没有冻结目录时明确标记缺失，不读取后来变化的配方来补证据。成功构建仍须有精确绑定的 offline 和 smoke 才能形成已验证镜像经验，缺项保留候选。后续修复可检索匹配经验，不能据一次网络失败永久改写全局下载策略。完整边界见[初始化与经验](SETUP.md#修复经验与持续改进)。
+
+## 公开镜像分发
+
+普通用户可从初始化第三步下载预构建镜像，避免在本机重新下载和安装配方依赖。维护者在构建中心编辑公开镜像目录，或对已验证的固定镜像提交发布任务。发布入口核对同一来源构建、Image ID、冻结上下文和平台对应的 offline 与 smoke 结果；缺项会显示原因。上传成功记录仓库 Digest，供登记到公开目录，不会自动改变实例或应用绑定。
+
+仓库登录沿用 RunDesk 服务账户的 Docker 配置；托管平台公开可见性由维护者设置，之后可在发布记录中单独检查匿名访问。默认目录为空，代码不假定任何 RunDesk 官方账号已存在。完整步骤、文件格式及中断处理见[镜像分发](IMAGE-DISTRIBUTION.md)。
 
 ## 动态配方
 
@@ -70,7 +79,8 @@ manifest 示例：
 | --- | --- |
 | `/build-center/recipes` | GET 列表；POST multipart `manifest`、`context`、`requestId` 导入 |
 | `/build-center/recipes/{rid}` | GET 明细；DELETE `?revision=N` 归档自定义项 |
-| `/build-center/recipes/{rid}/build` | POST `recipeRevision`、`requestId`，可选 reference、codexVersion、noCache、buildSources |
+| `/build-center/recipes/{rid}/build` | POST `recipeRevision`、`requestId`，可选 reference、codexVersion、noCache、buildSources、codexRuntime |
+| `/build-center/runtime-options` | GET `?codexVersion=X.Y.Z` 查看匹配的受管 Linux 原生安装候选 |
 | `/build-center/sources` | GET 源列表；PUT 携带 revision 保存，文件即时生效 |
 | `/build-center/recipes/{rid}/sources` | GET 配方涉及的下载类型及参数支持 |
 | `/build-center/recipes/{rid}/dockerfile` | GET Dockerfile 内容，可选 codexVersion |
@@ -86,6 +96,12 @@ manifest 示例：
 | `/build-center/images/{key}/launch` | POST `name`、`requestId`，可选专用 instanceId/workspaceId |
 | `/build-center/images/{key}/tests` | POST `kind:offline\|smoke`、`requestId`，返回排队任务 |
 | `/build-center/tests/{id}`、`/{id}/log` | GET 检查结果和日志 |
+| `/setup/public-images` | GET 公开镜像目录；PUT 携带 revision 保存 |
+| `/build-center/images/{key}/publication-readiness` | GET 镜像来源与 offline/smoke 发布条件 |
+| `/build-center/publications` | GET 发布记录；POST sourceBuildId、target、requestId、confirm 创建发布任务 |
+| `/build-center/publications/{id}`、`/{id}/log` | GET 状态与增量脱敏日志 |
+| `/build-center/publications/{id}/cancel` | POST 取消排队或运行中的发布 |
+| `/build-center/publications/{id}/check-public` | POST 使用独立空 Docker 配置核对固定 manifest 的匿名访问、Digest 和平台 |
 | `/build-center/assistant-runs`、`/{id}` | POST prompt/requestId，可选 instanceId、workspaceId、sourceBuildId；GET Codex/Kun 助手与任务绑定 |
 | `/build-center/assistant-runs/{id}/revoke` | POST 撤销构建工具权限 |
 

@@ -1,0 +1,28 @@
+{
+  "version": "0.57.0",
+  "passed": true,
+  "testPassEventsIncludingSubtests": 18,
+  "testSkipEvents": 0,
+  "failEvents": 0,
+  "tests": [
+    "TestImagePublicationProcess",
+    "TestImagePublicationReadyPushAndPublicAccess/ghcr.io/example/news:1.1.2",
+    "TestImagePublicationReadyPushAndPublicAccess/docker.io/example/news:1.1.2",
+    "TestImagePublicationReadyPushAndPublicAccess",
+    "TestImagePublicationRejectsEvidenceAndTargets/missing-smoke",
+    "TestImagePublicationRejectsEvidenceAndTargets/wrong-source",
+    "TestImagePublicationRejectsEvidenceAndTargets/wrong-context",
+    "TestImagePublicationRejectsEvidenceAndTargets/new-failed",
+    "TestImagePublicationRejectsEvidenceAndTargets/wrong-image-labels",
+    "TestImagePublicationRejectsEvidenceAndTargets",
+    "TestImagePublicationFailureCancellationAndRestart/push-fail",
+    "TestImagePublicationFailureCancellationAndRestart/digest-mismatch",
+    "TestImagePublicationFailureCancellationAndRestart/slow",
+    "TestImagePublicationFailureCancellationAndRestart",
+    "TestImagePublicationAnonymousCancellation",
+    "TestImagePublicationAdministratorBoundary",
+    "TestImagePublicationHTTPIdempotencyAndCheck",
+    "TestImagePublicationPublicCheckManagerShutdown"
+  ],
+  "scope": "Docker process and HTTP fixtures, no live registry upload or layer download."
+}

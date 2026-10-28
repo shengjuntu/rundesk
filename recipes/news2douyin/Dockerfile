@@ -1,6 +1,8 @@
 # Editable RunDesk Dockerfile. Keep profile.lock.json and source settings with this recipe.
 ARG RD_BASE_IMAGE=node:22-bookworm-slim
 FROM ${RD_BASE_IMAGE}
+# All managed profiles require the Node runtime and unprivileged node user.
+RUN node -e 'if (Number(process.versions.node.split(".")[0]) < 22) process.exit(1)' && npm --version >/dev/null && id node >/dev/null
 ARG RD_APT_MIRROR=http://deb.debian.org/debian
 ARG RD_APT_SECURITY_MIRROR=http://deb.debian.org/debian-security
 COPY tools/configure-apt.sh /opt/rundesk-profile/tools/configure-apt.sh
@@ -19,7 +21,10 @@ ENV PATH="/opt/agent-tools/node_modules/.bin:${PATH}" NODE_PATH=/opt/agent-tools
 RUN mkdir -p /etc/codex/skills/agent-reach && python3 -c "from importlib.resources import files; from pathlib import Path; Path('/etc/codex/skills/agent-reach/SKILL.md').write_text(files('agent_reach').joinpath('skill/SKILL.md').read_text())"
 RUN agent-reach --version && gh --version && bird --version && mcporter --version
 ARG CODEX_VERSION=0.0.0
-RUN npm_config_registry="${RD_NPM_REGISTRY}" npm install --global "@openai/codex@${CODEX_VERSION}" && npm cache clean --force && codex --version && codex app-server --help >/dev/null
+ARG RD_CODEX_MODE=auto
+COPY runtime/ /opt/rundesk-runtime/
+COPY tools/install-codex.sh /opt/rundesk-profile/tools/install-codex.sh
+RUN CODEX_VERSION="${CODEX_VERSION}" RD_CODEX_MODE="${RD_CODEX_MODE}" RD_NPM_REGISTRY="${RD_NPM_REGISTRY}" sh /opt/rundesk-profile/tools/install-codex.sh
 LABEL org.opencontainers.image.title="RunDesk news2douyin"
 LABEL org.opencontainers.image.version="1.1.2"
 LABEL io.rundesk.profile="news2douyin"

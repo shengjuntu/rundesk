@@ -1,5 +1,7 @@
 **
 !Dockerfile
+!runtime/
+!runtime/**
 !seed/
 !seed/**
 !tools/

@@ -185,6 +185,8 @@ def render(root, profile, selection, codex_version, base_image, destination, wri
             shutil.copyfile(path, target)
             target.chmod(0o755 if path.stat().st_mode & 0o111 else 0o644)
     write(destination / "upstream/upstream.json", json.dumps(upstream, ensure_ascii=False, indent=2) + "\n")
+    write(destination / "runtime/.keep", "Native Codex payload is supplied only by an explicitly resolved build runtime.\n")
+    write(destination / "tools/install-codex.sh", (root / "_shared/install-codex.sh").read_text(), executable=True)
     write(destination / "tools/configure-apt.sh", (root / "_shared/configure-apt.sh").read_text(), executable=True)
     write(destination / "tools/profile_doctor.py", (root / "_shared/upstream_profile_doctor.py").read_text(), executable=True)
     write(destination / "tools/video_app_media.py", (root / "_shared/video_app_media.py").read_text(), executable=True)
@@ -208,8 +210,15 @@ def render(root, profile, selection, codex_version, base_image, destination, wri
     if "sourceArchive" in upstream:
         (destination / "vendor").mkdir()
         shutil.copyfile(base / upstream["sourceArchive"], destination / "vendor/source.tar.gz")
+    else:
+        write(destination / "vendor/.keep", "A pinned archive may be supplied from RunDesk's verified download cache.\n")
+        write(destination / "tools/download-archive.sh", (root / "_shared/download-archive.sh").read_text(), executable=True)
+        descriptor = {"schemaVersion": 1, "items": [{"id": "upstream-source", "url": upstream["sourceURL"],
+                      "sha256": upstream["sourceSHA256"], "destination": "vendor/source.tar.gz",
+                      "archiveBasePath": "/" + upstream["repository"].removeprefix("https://github.com/") + "/tar.gz/" + upstream["commit"]}]}
+        write(destination / "build-downloads.json", json.dumps(descriptor, indent=2) + "\n")
     dockerfile_files.render(root, profile, selection, codex_version, base_image, destination, write, labels)
-    write(destination / ".dockerignore", "**\n!Dockerfile\n!profile.lock.json\n!THIRD_PARTY.md\n!seed/\n!seed/**\n!skills/\n!skills/**\n!tools/\n!tools/**\n!upstream/\n!upstream/**\n!vendor/\n!vendor/**\n")
+    write(destination / ".dockerignore", "**\n!Dockerfile\n!runtime/\n!runtime/**\n!build-downloads.json\n!profile.lock.json\n!THIRD_PARTY.md\n!seed/\n!seed/**\n!skills/\n!skills/**\n!tools/\n!tools/**\n!upstream/\n!upstream/**\n!vendor/\n!vendor/**\n")
     scope = upstream.get("sourceScope", "complete-repository")
     description = ("The pinned native skills and repository metadata (not the complete monorepo) remain in "
                    if scope == "native-skills-and-metadata" else "The complete pinned upstream repository source remains in ")

@@ -1,0 +1,79 @@
+{
+  "version": "0.57.0",
+  "passed": true,
+  "date": "2026-10-27",
+  "go": {
+    "passed": true,
+    "testPassEventsIncludingSubtests": 809,
+    "testSkipEvents": 0,
+    "failEvents": 0,
+    "packagePasses": 17
+  },
+  "goVet": {
+    "passed": true
+  },
+  "focusedRace": {
+    "publicCatalog": {
+      "report": "public-images-race-057.json",
+      "passEvents": 39
+    },
+    "publication": {
+      "report": "publication-race-057.json",
+      "passEvents": 18
+    },
+    "environmentLifecycle": {
+      "report": "environment-race-057.json",
+      "passEvents": 3
+    }
+  },
+  "frontend": {
+    "wizard": {
+      "report": "onboarding-js-057.json",
+      "checks": 40
+    },
+    "buildCenter": {
+      "report": "build-center-js-057.json",
+      "passed": true
+    },
+    "browser": {
+      "report": "onboarding-browser-057.json",
+      "checks": 25
+    },
+    "compiledHTTP": {
+      "report": "onboarding-live-http-057.json",
+      "checks": 15
+    }
+  },
+  "portable": {
+    "report": "portable-smoke-057.json",
+    "checks": 10,
+    "platform": "linux/amd64"
+  },
+  "openAPI": {
+    "version": "0.57.0",
+    "paths": 240,
+    "operations": 288,
+    "administratorAndIdempotencyBoundariesVerified": true
+  },
+  "documentation": {
+    "documents": 102,
+    "localLinksPassed": true
+  },
+  "scope": {
+    "docker": "Process fixtures for digest resolution, pull/source-aware retry, test provenance, push/cancel/restart and anonymous manifest inspection.",
+    "ui": "Actual shipped HTML/CSS/JS; browser fixtures and compiled HTTP service.",
+    "kun": "Actual independent 0.17.0 worker; scripted model responses.",
+    "registry": "No actual RunDesk namespace or public image has been created or uploaded; bundled catalog remains empty."
+  },
+  "notValidated": [
+    "Actual public registry push or anonymous network access",
+    "Real image layer download or Docker image build",
+    "Windows native execution",
+    "Real model diagnostic quality",
+    "Regional registry reachability and throughput"
+  ],
+  "notes": [
+    "The existing environment cancellation test now waits for the terminal callback and connection locks, rather than assuming persisted completion means immediate release; production busy guards unchanged.",
+    "Package contents and source file hashes are checked separately during archive generation."
+  ]
+}

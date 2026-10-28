@@ -128,10 +128,12 @@ class ActualRecipeTest(unittest.TestCase):
                 if name == "openmontage":
                     self.assertIn(lock["upstream"]["sourceURL"], docker)
                     self.assertIn("ARG RD_GITHUB_ARCHIVE_BASE=https://codeload.github.com", docker)
-                    self.assertIn('"${RD_GITHUB_ARCHIVE_BASE}/calesthio/OpenMontage/tar.gz/' + lock["upstream"]["commit"] + '"', docker)
+                    self.assertIn("ARG RD_GITHUB_ARCHIVE_URL=", docker)
+                    self.assertIn("download-archive.sh", docker)
+                    self.assertIn(lock["upstream"]["commit"], docker)
                     self.assertIn(lock["upstream"]["sourceSHA256"] + "  /opt/rundesk-upstream/source.tar.gz", docker)
                     self.assertNotIn("sourceArchive", lock["upstream"])
-                    self.assertFalse((destination / "vendor").exists())
+                    self.assertFalse((destination / "vendor" / "source.tar.gz").exists())
                 else:
                     self.assertEqual(hashlib.sha256((destination / "vendor/source.tar.gz").read_bytes()).hexdigest(), lock["upstream"]["sourceSHA256"])
                 for row in (destination / "SHA256SUMS").read_text().splitlines():
