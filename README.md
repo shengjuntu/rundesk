@@ -46,7 +46,9 @@ The instance-centered WebUI does **not** yet synchronize instance configuration 
 
 ## Current source version
 
-**RunDesk 0.59.1 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.60.0 source · external Kun 0.17.0 · worker protocol 16**
+
+Version 0.60.0 names Agents automatically from Docker images and lets an authorized application bind each video project to its own workspace and container using an existing Agent. RunDesk injects the project ID into the container and snapshots the Agent's current configuration. The application's user interface can keep workspace IDs hidden. See [application project environments](docs/APPLICATION-PROJECT-ENVIRONMENTS.md).
 
 Version 0.59.1 shows each application's default and additional Agent environments on its main page. New application credentials preselect currently enabled presets; an existing credential keeps its original grants. An empty preset list under an application credential does not mean the image or Agent is missing. See [application runtime presets](docs/APPLICATION-RUNTIME-PRESETS.md).
 

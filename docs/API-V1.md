@@ -78,6 +78,8 @@ Content-Type: application/json
 
 ## 应用 Docker 环境
 
+0.60.0 新增 `application-project-environments`：应用凭据通过 `PUT /applications/{appId}/projects/{projectId}/environments/{presetId}` 为 24 位十六进制业务项目分配独立工作区，默认环境用 `__default__`。后续任务在 `source.projectId` 中提交项目编号，RunDesk 自动填充实例和工作区。详细权限、配置快照和 MCP 项目身份见 [应用项目环境](APPLICATION-PROJECT-ENVIRONMENTS.md)。旧固定绑定接口行为不变。
+
 0.50.0 增加 application-runtime-presets 能力。同一应用可登记多个独立 Codex Docker 实例/工作区，应用以 presetId 选择，旧默认绑定保持不变。新session/task/schedule保存source.presetId；凭据以presetBindings冻结精确tuple，旧key不自动扩权。管理员配置和完整新增字段见 [运行环境预设](APPLICATION-RUNTIME-PRESETS.md)。下列旧环境接口增加可选presetId，省略仍为原语义。
 
 读取 `/meta` 的 `application-runtime` 能力后，可使用：
@@ -136,11 +138,11 @@ curl --fail-with-body "$RUNDESK_URL/api/v1/tasks" \
 
 | 操作 | 路径 | 语义 |
 | --- | --- | --- |
-| 提交排队任务 | POST `/tasks` | TaskSpec，必填 workspaceId/input，需幂等键 |
+| 提交排队任务 | POST `/tasks` | TaskSpec，必填 input；旧方式给 workspaceId，新应用项目方式给 source.projectId；需幂等键 |
 | 列出任务 | GET `/tasks` | `{items,nextCursor}`；limit 1–500；可按 status/appId/instanceId 筛选 |
 | 查询任务 | GET `/tasks/{id}` | 返回当前 Task |
 | 取消任务 | POST `/tasks/{id}/cancel` | 排队任务不启动后端；运行中取消与完成可能竞争 |
-| 新建直接会话 | POST `/sessions` | 必填 workspaceId，需幂等键 |
+| 新建直接会话 | POST `/sessions` | 旧方式给 workspaceId，应用项目方式给 source.projectId；需幂等键 |
 | 继续会话 | POST `/sessions/{sid}/turns` | Input，需新的逻辑操作键；相同请求重试复用原键 |
 | 查询会话 | GET `/sessions/{sid}` | 当前 runId/turnId/status 与归属 |
 | 停止当前运行 | POST `/sessions/{sid}/stop` | `{expectedRunId}` 防止误停后续运行 |

@@ -18,7 +18,7 @@ import (
 	"github.com/shengjuntu/rundesk/internal/store"
 )
 
-const Version = "0.59.1"
+const Version = "0.60.0"
 
 type apiError struct {
 	Status        int
@@ -122,10 +122,11 @@ func (s *Server) apiBoundary(next http.Handler) http.Handler {
 }
 
 type SessionSource struct {
-	PresetID string `json:"presetId,omitempty"`
-	Kind     string `json:"kind,omitempty"`
-	AppID    string `json:"appId,omitempty"`
-	TaskID   string `json:"taskId,omitempty"`
+	PresetID  string `json:"presetId,omitempty"`
+	ProjectID string `json:"projectId,omitempty"`
+	Kind      string `json:"kind,omitempty"`
+	AppID     string `json:"appId,omitempty"`
+	TaskID    string `json:"taskId,omitempty"`
 }
 
 func (v *SessionSource) validate() error {
@@ -138,7 +139,10 @@ func (v *SessionSource) validate() error {
 	if v.PresetID != "" && (v.Kind != "application" || !applicationPresetID.MatchString(v.PresetID)) {
 		return failure(400, "invalid_source", "presetId仅用于有效的应用运行环境预设")
 	}
-	if (v.Kind != "human" && v.Kind != "application") || len(v.AppID) > 80 || len(v.TaskID) > 200 || strings.ContainsAny(v.AppID+v.TaskID, "\r\n\x00") || (v.Kind == "application" && strings.TrimSpace(v.AppID) == "") || (v.Kind == "human" && (v.AppID != "" || v.TaskID != "")) {
+	if v.ProjectID != "" && (v.Kind != "application" || !applicationProjectID.MatchString(v.ProjectID)) {
+		return failure(400, "invalid_source", "projectId 需要 24 位十六进制的应用项目编号")
+	}
+	if (v.Kind != "human" && v.Kind != "application") || len(v.AppID) > 80 || len(v.TaskID) > 200 || strings.ContainsAny(v.AppID+v.TaskID, "\r\n\x00") || (v.Kind == "application" && strings.TrimSpace(v.AppID) == "") || (v.Kind == "human" && (v.AppID != "" || v.TaskID != "" || v.ProjectID != "")) {
 		return failure(400, "invalid_source", "source 必须是 human，或带 appId 的 application；taskId 为可选业务编号")
 	}
 	return nil

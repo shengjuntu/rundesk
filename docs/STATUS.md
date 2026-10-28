@@ -1,6 +1,8 @@
 # 当前能力与后续工作
 
-**RunDesk 0.59.1 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。这里区分源码已实现、后端能力边界和目标环境验收；三个使命的产品定位见[中文 README](../README.zh-CN.md)。
+**RunDesk 0.60.0 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。这里区分源码已实现、后端能力边界和目标环境验收；三个使命的产品定位见[中文 README](../README.zh-CN.md)。
+
+0.60.0 增加[应用项目环境](APPLICATION-PROJECT-ENVIRONMENTS.md)：同一批准的 Agent 可以为不同视频项目建立独立工作区、容器和配置快照；应用提交带 projectId 的任务，RunDesk 核验归属并注入 MCP 项目 ID。构建中心从镜像自动命名 Agent。真实 VideoAPP 与 Docker 联调仍待验收。
 
 0.59.1 将应用可用环境从折叠项移到应用首页，展示默认环境、额外预设和有效凭据授权数；新凭据预选当前启用的环境。已签发 key 的精确授权和独立工作区规则不变。空列表排查见[运行预设](APPLICATION-RUNTIME-PRESETS.md)。
 

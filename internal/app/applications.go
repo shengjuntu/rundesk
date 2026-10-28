@@ -122,6 +122,11 @@ func (m *Manager) registerApplication(id string, p ApplicationInput, origin stri
 		if _, e := m.Workspace(p.WorkspaceID); e != nil {
 			return Application{}, e
 		}
+		if _, reserved, e := m.projectEnvironmentForWorkspace(p.WorkspaceID); e != nil {
+			return Application{}, e
+		} else if reserved {
+			return Application{}, failure(409, "application_binding_conflict", "项目工作区已由应用管理，不能作为默认环境重新登记")
+		}
 	}
 	rows, e := m.applicationRecords()
 	if e != nil {
@@ -167,6 +172,9 @@ func (m *Manager) registerApplication(id string, p ApplicationInput, origin stri
 	return next, nil
 }
 func (m *Manager) bindApplicationSource(source SessionSource, i Instance, wid string) error {
+	if source.ProjectID != "" {
+		return m.checkApplicationPresetExecution(source, i.ID, wid)
+	}
 	if source.Kind != "application" {
 		return m.checkApplicationPresetExecution(source, i.ID, wid)
 	}
@@ -274,6 +282,7 @@ func (m *Manager) migrateApplications() error {
 	return nil
 }
 func (s *Server) applicationRoutes(mux *http.ServeMux) {
+	s.applicationProjectRoutes(mux)
 	s.applicationRuntimePresetRoutes(mux)
 	s.applicationConnectRoutes(mux)
 	s.applicationRuntimeRoutes(mux)

@@ -369,6 +369,22 @@ func TestBuildCenterImagesLaunchCreatesDedicatedResourcesAndDoesNotRunModel(t *t
 	}
 }
 
+func TestBuildCenterLaunchAutomaticallyNamesAgentFromImage(t *testing.T) {
+	m, _, _, _, v := buildCenterTestApp(t)
+	key := BuildCenterImageKey(v.ImageID)
+	first, err := m.LaunchBuildCenterImage(key, BuildCenterImageLaunchInput{RequestID: store.ID()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := m.LaunchBuildCenterImage(key, BuildCenterImageLaunchInput{RequestID: store.ID()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.Instance.Name == "" || strings.EqualFold(first.Instance.Name, second.Instance.Name) || !strings.HasPrefix(first.Instance.Name, "news") || !strings.HasPrefix(second.Instance.Name, "news") {
+		t.Fatalf("image names should be short and distinguishable: %q, %q", first.Instance.Name, second.Instance.Name)
+	}
+}
+
 func TestBuildCenterImagesLaunchRejectsApplicationReservationsAndKeepsPartialFailure(t *testing.T) {
 	m, f, i, w, v := buildCenterTestApp(t)
 	i, err := m.SelectImage(i.ID, v.ID, i.Revision)

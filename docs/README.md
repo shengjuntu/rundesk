@@ -4,7 +4,7 @@
 
 RunDesk 的三个使命：为 Agent 落地提供调试工作台、连接领域应用与 Agent Harness、为 Harness 研究提供实验场。下面按使用者的任务导航，专题文档描述当前行为；旧版本经过与测试证据单独归档。
 
-当前源码：**RunDesk 0.59.1 / 独立 Kun 0.17.0 / worker 协议 16**。新安装先进入[初始化](SETUP.md#首次初始化)；完成后，日常界面从[Agent 与 WebUI](WEBUI.md)开始。构建中心准备运行基础，应用接入管理外部调用。
+当前源码：**RunDesk 0.60.0 / 独立 Kun 0.17.0 / worker 协议 16**。新安装先进入[初始化](SETUP.md#首次初始化)；完成后，日常界面从[Agent 与 WebUI](WEBUI.md)开始。构建中心准备运行基础，应用接入管理外部调用；应用按项目分配独立环境见[项目环境](APPLICATION-PROJECT-ENVIRONMENTS.md)。
 
 ## 1. Agent 落地与调试 / Agent debugging
 

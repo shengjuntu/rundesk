@@ -16,16 +16,17 @@ import (
 )
 
 type ApplicationKey struct {
-	PresetBindings []ApplicationPresetBinding `json:"presetBindings,omitempty"`
-	ID             string                     `json:"id"`
-	AppID          string                     `json:"appId"`
-	InstanceID     string                     `json:"instanceId"`
-	Name           string                     `json:"name"`
-	WorkspaceIDs   []string                   `json:"workspaceIds"`
-	Scopes         []string                   `json:"scopes"`
-	Created        string                     `json:"created"`
-	ExpiresAt      string                     `json:"expiresAt,omitempty"`
-	RevokedAt      string                     `json:"revokedAt,omitempty"`
+	ProjectBindings []ApplicationProjectEnvironment `json:"-"`
+	PresetBindings  []ApplicationPresetBinding      `json:"presetBindings,omitempty"`
+	ID              string                          `json:"id"`
+	AppID           string                          `json:"appId"`
+	InstanceID      string                          `json:"instanceId"`
+	Name            string                          `json:"name"`
+	WorkspaceIDs    []string                        `json:"workspaceIds"`
+	Scopes          []string                        `json:"scopes"`
+	Created         string                          `json:"created"`
+	ExpiresAt       string                          `json:"expiresAt,omitempty"`
+	RevokedAt       string                          `json:"revokedAt,omitempty"`
 }
 type KeyInput struct {
 	PresetIDs    []string `json:"presetIds,omitempty"`
@@ -84,6 +85,15 @@ func (k ApplicationKey) workspaceInstance(id string) (string, bool) {
 		}
 		result = p.InstanceID
 	}
+	for _, p := range k.ProjectBindings {
+		if p.WorkspaceID != id {
+			continue
+		}
+		if result != "" && result != p.InstanceID {
+			return "", false
+		}
+		result = p.InstanceID
+	}
 	return result, result != ""
 }
 func (k ApplicationKey) preset(id string) (ApplicationPresetBinding, bool) {
@@ -98,11 +108,51 @@ func (k ApplicationKey) owns(iid, wid string, source SessionSource) bool {
 	if source.Kind != "application" || source.AppID != k.AppID {
 		return false
 	}
+	if source.ProjectID != "" {
+		for _, p := range k.ProjectBindings {
+			if p.ProjectID == source.ProjectID && p.PresetID == source.PresetID && p.InstanceID == iid && p.WorkspaceID == wid {
+				return true
+			}
+		}
+		return false
+	}
 	if source.PresetID == "" {
 		return k.InstanceID == iid && k.legacyWorkspace(wid)
 	}
 	p, ok := k.preset(source.PresetID)
 	return ok && p.InstanceID == iid && p.WorkspaceID == wid
+}
+
+func (k ApplicationKey) allowsProjectPreset(a Application) bool {
+	if a.PresetID == "" {
+		return k.InstanceID == a.InstanceID && k.legacyWorkspace(a.WorkspaceID)
+	}
+	p, ok := k.preset(a.PresetID)
+	return ok && p.InstanceID == a.InstanceID && p.WorkspaceID == a.WorkspaceID
+}
+
+func (m *Manager) attachProjectBindings(k *ApplicationKey) error {
+	rows, e := m.Store.List("application-project-environment")
+	if e != nil {
+		return e
+	}
+	k.ProjectBindings = nil
+	for _, raw := range rows {
+		var p ApplicationProjectEnvironment
+		if e = json.Unmarshal(raw, &p); e != nil {
+			return e
+		}
+		if p.AppID != k.AppID {
+			continue
+		}
+		a, _, err := m.applicationPresetBinding(p.AppID, p.PresetID)
+		if err != nil || a.InstanceID != p.InstanceID || !k.allowsProjectPreset(a) {
+			continue
+		}
+		p.Path = ""
+		k.ProjectBindings = append(k.ProjectBindings, p)
+	}
+	return nil
 }
 func (m *Manager) ApplicationKeys(appID string) ([]ApplicationKey, error) {
 	rows, e := m.Store.List("application-key")
@@ -143,6 +193,11 @@ func (m *Manager) CreateApplicationKey(appID string, in KeyInput) (ApplicationKe
 		seen[id] = true
 		if _, e := m.Workspace(id); e != nil {
 			return ApplicationKey{}, "", e
+		}
+		if _, reserved, e := m.projectEnvironmentForWorkspace(id); e != nil {
+			return ApplicationKey{}, "", e
+		} else if reserved {
+			return ApplicationKey{}, "", failure(400, "invalid_key", "应用项目工作区由环境预设授权，不能登记为旧式工作区授权")
 		}
 	}
 	bindings := []ApplicationPresetBinding{}
@@ -256,6 +311,9 @@ func (m *Manager) authenticateApplication(secret string) (ApplicationKey, error)
 	}
 	if !same(keyHash(secret), r.Hash) || !r.Key.valid() {
 		return r.Key, invalid
+	}
+	if e := m.attachProjectBindings(&r.Key); e != nil {
+		return r.Key, failure(503, "credential_storage_unavailable", "无法核对项目授权")
 	}
 	return r.Key, nil
 }

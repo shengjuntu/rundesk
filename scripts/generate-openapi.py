@@ -925,6 +925,9 @@ schemas['UserGrant']['properties']['presetId']=preset_id
 schemas['ApplicationConnect']['properties']['presetId']={'anyOf':[{'const':''},preset_id],'description':'选择管理员已登记的运行预设；省略或空值沿用原默认绑定，不接收任意镜像。'}
 schemas['ApplicationConnectionResult']['properties']['presetId']=st()
 schemas['Source']['properties']['presetId']=st(maxLength=128,description='应用运行预设；与冻结的实例/工作区精确匹配，省略保留旧默认语义。')
+schemas['Source']['properties']['projectId']=st(pattern=r'^[a-f0-9]{24}$',description='应用项目；在已绑定的项目环境中由 RunDesk 解析专用工作区。')
+schemas['ApplicationProjectEnvironment']=obj({'appId':st(),'projectId':st(pattern=r'^[a-f0-9]{24}$'),'presetId':st(),'name':st(),'instanceId':st(),'workspaceId':st(),'created':st()},['appId','projectId','name','instanceId','workspaceId','created'])
+schemas['ApplicationProjectEnvironmentInput']=obj({'name':st(maxLength=160)})
 schemas['KeyInput']['properties']['presetIds']=dict(type='array',items=preset_id,maxItems=100,uniqueItems=True)
 schemas['KeyInput']['properties']['workspaceIds'].update(maxItems=100,uniqueItems=True)
 schemas['KeyInput']['required']=['name','scopes']
@@ -946,6 +949,19 @@ for method,path in [('get','/applications/{appId}/runtime-presets'),('put','/app
  op['responses']['200']={'description':'成功','content':{'application/json':{'schema':response}}}
  op['responses']['default']={'description':'归属、修订或权限错误','content':{'application/json':{'schema':ref('Error')}}}
  if method=='put':op['requestBody']={'required':True,'content':{'application/json':{'schema':ref('ApplicationRuntimePresetInput')}}}
+for method,path in [('get','/applications/{appId}/projects/{projectId}/environments'),('put','/applications/{appId}/projects/{projectId}/environments/{presetId}'),('get','/applications/{appId}/project-environments')]:
+ op={'operationId':method+'_'+re.sub(r'[^A-Za-z0-9]+','_',path).strip('_'),'summary':'应用项目的独立 Agent 工作区','parameters':[],'responses':{},'x-administrator-only':path.endswith('/project-environments')}
+ for name in re.findall(r'\{([^}]+)\}',path):
+  schema=st(pattern=r'^[a-f0-9]{24}$') if name=='projectId' else ({'anyOf':[{'const':'__default__'},preset_id]} if name=='presetId' else st())
+  op['parameters'].append({'name':name,'in':'path','required':True,'schema':schema})
+ if not op['x-administrator-only']:op['x-application-scopes']=['read'] if method=='get' else ['read','run']
+ op['description']='应用凭据只能选择授权的默认环境或额外预设。PUT 为一个 projectId 与一个预设创建不可变的独立工作区，重复请求返回原绑定；__default__ 表示应用默认环境。GET 仅显示当前凭据授权的绑定。项目文件与 Docker HOME 不跨项目共享；新建时快照复制已配置 Agent 的认证、MCP 和 Skills。项目容器内 VIDEO_APP_PROJECT_ID 由 RunDesk 注入，静态值被拒绝。'
+ op['responses']['200']={'description':'成功','content':{'application/json':{'schema':arr(ref('ApplicationProjectEnvironment')) if method=='get' else ref('ApplicationProjectEnvironment')}}}
+ op['responses']['default']={'description':'环境不可用或权限错误','content':{'application/json':{'schema':ref('Error')}}}
+ if method=='put':op['requestBody']={'required':True,'content':{'application/json':{'schema':ref('ApplicationProjectEnvironmentInput')}}}
+ paths[path]={method:op}
+schemas['TaskSpec']['required']=['input']
+schemas['TaskSpec']['anyOf']=[{'required':['workspaceId']},{'required':['source'],'properties':{'source':{'required':['projectId']}}}]
 paths['/applications/{appId}/runtime']['get']['parameters'].append({'name':'presetId','in':'query','schema':st(maxLength=128)})
 for path,method in [('/applications/{appId}/runtime','get'),('/applications/{appId}/runtime/prepare','post'),('/applications/{appId}/runtime/diagnostics','post')]:
  paths[path][method]['description']+=' 可选 presetId 选择已批准且获授权的精确绑定；省略保持原默认绑定。禁用预设仍可读取历史，不能开始新的执行。'

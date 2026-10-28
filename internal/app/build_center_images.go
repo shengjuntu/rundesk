@@ -381,6 +381,49 @@ func buildCenterLaunchResourceNote(result BuildCenterImageLaunchResult) string {
 	return "；已保留资源：" + strings.Join(ids, ", ") + "。请检查这些资源，避免用新 requestId 重复创建。"
 }
 
+func buildCenterAgentName(v BuildCenterImage, instances []Instance) string {
+	base := "Docker Agent"
+	for _, ref := range v.References {
+		if strings.HasPrefix(ref, "sha256:") {
+			continue
+		}
+		base = filepath.Base(ref)
+		if pos := strings.LastIndex(base, ":"); pos >= 0 {
+			base = base[:pos]
+		}
+		break
+	}
+	for _, source := range v.Sources {
+		if source.ProfileID != "" {
+			base = source.ProfileID
+			break
+		}
+		if source.RecipeID != "" {
+			base = strings.TrimPrefix(source.RecipeID, "builtin-")
+			break
+		}
+		if base == "Docker Agent" && strings.TrimSpace(source.Name) != "" && !strings.HasPrefix(source.Name, "sha256:") {
+			base = strings.TrimSpace(source.Name)
+		}
+	}
+	if len([]rune(base)) > 48 {
+		base = string([]rune(base)[:48])
+	}
+	used := map[string]bool{}
+	for _, instance := range instances {
+		used[strings.ToLower(instance.Name)] = true
+	}
+	for n := 1; ; n++ {
+		name := base
+		if n > 1 {
+			name = fmt.Sprintf("%s %d", base, n)
+		}
+		if !used[strings.ToLower(name)] {
+			return name
+		}
+	}
+}
+
 func (m *Manager) checkpointImageLaunch(requestID string, result BuildCenterImageLaunchResult) error {
 	var receipt buildCenterImageOperation
 	if err := m.Store.Get("build-center-image-operation", requestID, &receipt); err != nil {
@@ -511,6 +554,13 @@ func (m *Manager) DeleteBuildCenterImage(key string, input BuildCenterImageDelet
 // Caller holds applicationMu. App and preset reservations are never borrowed by
 // the global build center, even if that app currently has no active task.
 func (m *Manager) checkBuildCenterLaunchReservations(iid, wid string) error {
+	if wid != "" {
+		if _, reserved, e := m.projectEnvironmentForWorkspace(wid); e != nil {
+			return e
+		} else if reserved {
+			return failure(409, "application_binding_conflict", "项目工作区已由应用管理，不能从镜像中心重新占用")
+		}
+	}
 	apps, err := m.applicationRecords()
 	if err != nil {
 		return err
@@ -567,8 +617,8 @@ func (m *Manager) LaunchBuildCenterImage(key string, input BuildCenterImageLaunc
 		err = m.finishImageOperation(input.RequestID, result, err)
 	}()
 	name := strings.TrimSpace(input.Name)
-	if name == "" || len(name) > 160 || input.InstanceID == DefaultInstance {
-		return result, failure(400, "invalid_image_launch", "请填写独立实例名称；通用助手不能用于镜像启动")
+	if len(name) > 160 || input.InstanceID == DefaultInstance {
+		return result, failure(400, "invalid_image_launch", "Agent 名称过长，或试图复用默认助手")
 	}
 	v, err := m.BuildCenterImage(key)
 	if err != nil {
@@ -583,6 +633,9 @@ func (m *Manager) LaunchBuildCenterImage(key string, input BuildCenterImageLaunc
 	}
 	if !validatedSource {
 		return result, failure(409, "image_build_unverified", "此镜像只来自未成功验证的构建，可检查或清理；请先完成成功构建或明确登记后再启动")
+	}
+	if name == "" {
+		name = buildCenterAgentName(v, m.Instances())
 	}
 	// Validate user-selected resources before creating anything.
 	m.applicationMu.Lock()

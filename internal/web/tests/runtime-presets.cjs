@@ -22,6 +22,7 @@ w.RunDeskDiagnostics={recent:()=>null,request:async(url,options)=>{
   if(route==='/workspaces')return clone(db.workspaces);
   if(route==='/sessions')return clone(db.sessions);
   if(route==='/applications/video/runtime-presets')return clone(presets);
+  if(route==='/applications/video/project-environments')return [{appId:'video',projectId:'aaaaaaaaaaaaaaaaaaaaaaaa',presetId:'video-use',name:'新闻视频',instanceId:'preset-i',workspaceId:'project-w',created:'2026-10-28T00:00:00Z'}];
   if(route==='/applications/video/keys')return clone(db.keys);
   if(route==='/users')return clone(db.users);
   if(route==='/environments')return [{instanceId:'base-i',workspaceId:'base-w'},{instanceId:'preset-i',workspaceId:'preset-w'},{instanceId:'old-i',workspaceId:'old-w'},{instanceId:'base-i',workspaceId:'preset-w'},{instanceId:'preset-i',workspaceId:'other-w'}];
@@ -67,6 +68,7 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));async function until
  assert.equal(vm.runInContext("applicationForInstance('preset-i').appId",ctx),'video');assert.equal(vm.runInContext("applicationForInstance('old-i').appId",ctx),'video');
  const advanced=w.applicationAdvanced();assert(!advanced.textContent.includes('preset-i'),'preset instance appeared orphaned');assert(!advanced.textContent.includes('old-i'),'disabled preset instance appeared orphaned');
  await w.showApplication('video');assert.equal($$('.application-task').length,3,'default application page omitted preset history');
+ assert($('.application-project-host').textContent.includes('新闻视频'),'application project bindings were hidden');
  assert(!$('#runtime-presets').closest('details'),'available Agent environments were hidden in advanced settings');
  assert($('#runtime-presets .runtime-default-card').textContent.includes('base-i'));
  assert(button($('#runtime-presets'),'查看全局 Agent'));

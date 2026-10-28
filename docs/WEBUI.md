@@ -1,6 +1,6 @@
 # WebUI：以实例为中心 / Instance-centered WebUI
 
-本文描述 RunDesk 0.59.1（2026-10-28）的界面与当前后端边界。升级不改变存储布局，也不迁移或删除原有实例、工作区和历史数据。界面将长期保存的“实例”称为 **Agent**；它不等同于 Docker 容器。应用首页直接展示可用 Agent 环境、默认绑定和凭据授权数量；见[运行预设](APPLICATION-RUNTIME-PRESETS.md)。
+本文描述 RunDesk 0.60.0（2026-10-28）的界面与当前后端边界。升级不改变存储布局，也不迁移或删除原有实例、工作区和历史数据。界面将长期保存的“实例”称为 **Agent**；它不等同于 Docker 容器。应用首页直接展示可用 Agent 环境、默认绑定、凭据授权数量和项目工作区；见[运行预设](APPLICATION-RUNTIME-PRESETS.md)与[项目环境](APPLICATION-PROJECT-ENVIRONMENTS.md)。
 
 RunDesk 的日常操作围绕实例展开：选择一个 Codex 或 Kun 实例，检查它的模型、Skills、MCP 和插件能力，选择工作区，再执行任务、查看制品与运行轨迹。应用接入和构建中心分别负责外部调用与运行环境准备，不要求用户先注册应用才能管理实例。
 

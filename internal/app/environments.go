@@ -43,6 +43,25 @@ func environmentID(iid, wid string) string {
 	sum := sha256.Sum256([]byte(iid + "/" + wid))
 	return hex.EncodeToString(sum[:12])
 }
+func environmentContainerLabel(name string) string {
+	name = strings.ToLower(name)
+	var b strings.Builder
+	for _, ch := range name {
+		if ch >= 'a' && ch <= 'z' || ch >= '0' && ch <= '9' {
+			b.WriteRune(ch)
+		} else if b.Len() > 0 && !strings.HasSuffix(b.String(), "-") {
+			b.WriteByte('-')
+		}
+		if b.Len() >= 24 {
+			break
+		}
+	}
+	label := strings.Trim(b.String(), "-")
+	if label == "" {
+		return "agent"
+	}
+	return label
+}
 func (m *Manager) environmentRoot(id string) string { return filepath.Join(m.Data, "environments", id) }
 func (m *Manager) environmentOwner() string {
 	sum := sha256.Sum256([]byte(m.Data))
@@ -119,7 +138,7 @@ func (m *Manager) ensureEnvironmentLocked(i Instance, w Workspace) (Environment,
 			return Environment{}, e
 		}
 	}
-	v := Environment{ID: id, InstanceID: i.ID, WorkspaceID: w.ID, ContainerName: "rundesk-" + m.environmentOwner()[:8] + "-" + id, Spec: i.Execution.normalized(), CodexHome: filepath.Join(root, "codex"), State: "not_created", Revision: 1, Created: store.Now(), LastUsed: store.Now()}
+	v := Environment{ID: id, InstanceID: i.ID, WorkspaceID: w.ID, ContainerName: "rundesk-" + m.environmentOwner()[:8] + "-" + environmentContainerLabel(i.Name) + "-" + id, Spec: i.Execution.normalized(), CodexHome: filepath.Join(root, "codex"), State: "not_created", Revision: 1, Created: store.Now(), LastUsed: store.Now()}
 	if e := m.saveEnvironmentLocked(&v); e != nil {
 		return Environment{}, e
 	}
@@ -290,6 +309,16 @@ func (m *Manager) createContainerLocked(v *Environment, w Workspace) error {
 	}
 	root := m.environmentRoot(v.ID)
 	args := []string{"container", "create", "--name", v.ContainerName, "--label", "io.rundesk.owner=" + m.environmentOwner(), "--label", "io.rundesk.environment=" + v.ID, "--init", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true", "--user", user, "--cpus", strconv.Itoa(v.Spec.CPUs), "--memory", strconv.Itoa(v.Spec.MemoryMB) + "m", "--memory-swap", strconv.Itoa(v.Spec.MemoryMB) + "m", "--pids-limit", strconv.Itoa(v.Spec.PidsLimit), "--network", v.Spec.Network, "--restart", "no", "--log-driver", "local", "--log-opt", "max-size=10m", "--log-opt", "max-file=2", "--tmpfs", "/tmp:rw,nosuid,nodev,size=256m,mode=1777", "--tmpfs", "/run:rw,nosuid,nodev,size=16m,mode=755", "--workdir", w.Path, "--env", "CODEX_HOME=" + v.CodexHome, "--env", "CODEX_SQLITE_HOME=" + v.CodexHome, "--env", "HOME=" + filepath.Join(root, "home"), "--env", "XDG_CACHE_HOME=" + filepath.Join(root, "home", ".cache"), "--env", "XDG_CONFIG_HOME=" + filepath.Join(root, "home", ".config")}
+	project, bound, e := m.projectEnvironmentForWorkspace(w.ID)
+	if e != nil {
+		return e
+	}
+	if bound {
+		if project.InstanceID != v.InstanceID {
+			return failure(409, "application_project_binding_conflict", "容器与项目 Agent 不一致")
+		}
+		args = append(args, "--env", "VIDEO_APP_PROJECT_ID="+project.ProjectID)
+	}
 	if v.Spec.Network == "bridge" {
 		args = append(args, "--add-host", "host.docker.internal:host-gateway")
 	}

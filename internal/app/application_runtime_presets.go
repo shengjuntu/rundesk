@@ -279,6 +279,17 @@ func (m *Manager) checkApplicationPresetExecution(source SessionSource, iid, wid
 // An accepted run keeps its frozen resources after disable; new admission also
 // checks Enabled. Resource ownership is enforced in both cases.
 func (m *Manager) checkApplicationPresetSource(source SessionSource, iid, wid string, enforceEnabled bool) error {
+	if source.ProjectID != "" {
+		if source.Kind != "application" {
+			return forbidden()
+		}
+		return m.checkApplicationProjectSource(source, iid, wid, enforceEnabled)
+	}
+	if _, reserved, e := m.projectEnvironmentForWorkspace(wid); e != nil {
+		return e
+	} else if reserved {
+		return failure(409, "application_project_binding_conflict", "项目工作区需要准确的应用来源和projectId")
+	}
 	if source.PresetID == "" {
 		rows, e := m.allApplicationPresets()
 		if e != nil {

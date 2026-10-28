@@ -13,6 +13,7 @@
 
 .runtime-presets{margin-top:24px;padding-top:20px;border-top:1px solid var(--border,#e0e4e9)}
 .application-preset-host{max-width:1120px;margin:0 auto 22px}
+.application-project-host{max-width:1120px;margin:0 auto 26px;padding-top:15px;border-top:1px solid #e6eaf2}.application-project-host h2{font-size:16px}.application-project-host>.help{font-size:12px;color:#8791a3}.application-project-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}.application-project-card h3{margin:0 0 9px;font-size:14px}.application-project-card p{font-size:12px}.application-project-card summary{cursor:pointer;font-size:11px;color:#7382a0}.application-project-card pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px}
 .runtime-default-card{background:#f7f9fc;margin:14px 0}
 .runtime-key-status[data-key-count="0"]{color:#a86630}
 .runtime-preset-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px;margin:14px 0}

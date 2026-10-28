@@ -1,5 +1,7 @@
 # 同一应用的多个 Docker 运行预设
 
+0.60.0 起，应用可在已授权预设下按 `projectId` 创建独立工作区，见 [应用项目环境](APPLICATION-PROJECT-ENVIRONMENTS.md)。本文下方描述的固定实例/工作区绑定继续用于旧客户端、默认环境及预设初始配置。
+
 RunDesk 自 0.50.0 起允许同一应用登记多个管理员批准的运行预设，本源码包继续使用该契约。应用只提交 presetId，RunDesk 解析对应实例和工作区，再复用或启动该环境。不同预设不通过修改同一个全局镜像切换，已有任务和租约保持原归属。
 
 每个预设使用独立 Codex Docker 实例、工作区及对应环境 HOME。原 Application 的 instanceId/workspaceId 仍是旧默认绑定；不指定 presetId 的旧客户端和旧凭据保持原行为。Kun、RDCA 名称与 /api/v1 入口不变。

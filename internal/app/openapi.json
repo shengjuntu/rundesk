@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Control API (RDCA)",
-    "version": "0.59.1",
+    "version": "0.60.0",
     "description": "RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter；附加 UHP /v1 入口共用任务核心，具体范围与限制见 docs/UHP.md，不声明完整规范兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。当前应用接入、错误、幂等及示例见 docs/API-V1.md。"
   },
   "servers": [
@@ -960,6 +960,184 @@
           }
         },
         "x-administrator-only": true
+      }
+    },
+    "/applications/{appId}/project-environments": {
+      "get": {
+        "operationId": "get_applications_appId_project_environments",
+        "summary": "应用项目的独立 Agent 工作区",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationProjectEnvironment"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "环境不可用或权限错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "应用凭据只能选择授权的默认环境或额外预设。PUT 为一个 projectId 与一个预设创建不可变的独立工作区，重复请求返回原绑定；__default__ 表示应用默认环境。GET 仅显示当前凭据授权的绑定。项目文件与 Docker HOME 不跨项目共享；新建时快照复制已配置 Agent 的认证、MCP 和 Skills。项目容器内 VIDEO_APP_PROJECT_ID 由 RunDesk 注入，静态值被拒绝。"
+      }
+    },
+    "/applications/{appId}/projects/{projectId}/environments": {
+      "get": {
+        "operationId": "get_applications_appId_projects_projectId_environments",
+        "summary": "应用项目的独立 Agent 工作区",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationProjectEnvironment"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "环境不可用或权限错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read"
+        ],
+        "description": "应用凭据只能选择授权的默认环境或额外预设。PUT 为一个 projectId 与一个预设创建不可变的独立工作区，重复请求返回原绑定；__default__ 表示应用默认环境。GET 仅显示当前凭据授权的绑定。项目文件与 Docker HOME 不跨项目共享；新建时快照复制已配置 Agent 的认证、MCP 和 Skills。项目容器内 VIDEO_APP_PROJECT_ID 由 RunDesk 注入，静态值被拒绝。"
+      }
+    },
+    "/applications/{appId}/projects/{projectId}/environments/{presetId}": {
+      "put": {
+        "operationId": "put_applications_appId_projects_projectId_environments_presetId",
+        "summary": "应用项目的独立 Agent 工作区",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          },
+          {
+            "name": "presetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "const": "__default__"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+                  "maxLength": 128
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationProjectEnvironment"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "环境不可用或权限错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": false,
+        "x-application-scopes": [
+          "read",
+          "run"
+        ],
+        "description": "应用凭据只能选择授权的默认环境或额外预设。PUT 为一个 projectId 与一个预设创建不可变的独立工作区，重复请求返回原绑定；__default__ 表示应用默认环境。GET 仅显示当前凭据授权的绑定。项目文件与 Docker HOME 不跨项目共享；新建时快照复制已配置 Agent 的认证、MCP 和 Skills。项目容器内 VIDEO_APP_PROJECT_ID 由 RunDesk 注入，静态值被拒绝。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationProjectEnvironmentInput"
+              }
+            }
+          }
+        }
       }
     },
     "/applications/{appId}/runtime": {
@@ -24968,6 +25146,11 @@
             "type": "string",
             "maxLength": 128,
             "description": "应用运行预设；与冻结的实例/工作区精确匹配，省略保留旧默认语义。"
+          },
+          "projectId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$",
+            "description": "应用项目；在已绑定的项目环境中由 RunDesk 解析专用工作区。"
           }
         },
         "required": [],
@@ -25585,10 +25768,28 @@
           }
         },
         "required": [
-          "workspaceId",
           "input"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "workspaceId"
+            ]
+          },
+          {
+            "required": [
+              "source"
+            ],
+            "properties": {
+              "source": {
+                "required": [
+                  "projectId"
+                ]
+              }
+            }
+          }
+        ]
       },
       "Task": {
         "type": "object",
@@ -33185,6 +33386,53 @@
           "instanceId",
           "workspaceId"
         ],
+        "additionalProperties": false
+      },
+      "ApplicationProjectEnvironment": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "presetId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "created": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "appId",
+          "projectId",
+          "name",
+          "instanceId",
+          "workspaceId",
+          "created"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationProjectEnvironmentInput": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 160
+          }
+        },
+        "required": [],
         "additionalProperties": false
       },
       "ApplicationRuntimeSkills": {

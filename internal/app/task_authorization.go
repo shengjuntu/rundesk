@@ -29,6 +29,11 @@ func (m *Manager) checkTaskAuthorization(keyID string, spec TaskSpec, scheduled 
 		return &apiError{Status: 503, Code: "task_authorization_unavailable", Message: "无法复核任务授权，任务未启动", Cause: err}
 	}
 	k := record.Key
+	if err == nil {
+		if e := m.attachProjectBindings(&k); e != nil {
+			return e
+		}
+	}
 	if err != nil || !k.valid() || !k.scope("run") || !k.owns(spec.InstanceID, spec.WorkspaceID, spec.Source) || (scheduled && !k.scope("schedules")) {
 		return failure(403, "task_authorization_revoked", "提交凭据已撤销、过期或不再授权此任务，任务未启动；请使用有效凭据重新提交")
 	}

@@ -31,6 +31,23 @@ func normalizeTask(k *ApplicationKey, t *TaskSpec) error {
 	if t.Source.Kind != "" && t.Source.Kind != "application" || t.Source.AppID != "" && t.Source.AppID != k.AppID {
 		return forbidden()
 	}
+	if t.Source.ProjectID != "" {
+		if !applicationProjectID.MatchString(t.Source.ProjectID) {
+			return forbidden()
+		}
+		for _, p := range k.ProjectBindings {
+			if p.ProjectID != t.Source.ProjectID || p.PresetID != t.Source.PresetID {
+				continue
+			}
+			if t.InstanceID != "" && t.InstanceID != p.InstanceID || t.WorkspaceID != "" && t.WorkspaceID != p.WorkspaceID {
+				return forbidden()
+			}
+			t.InstanceID, t.WorkspaceID = p.InstanceID, p.WorkspaceID
+			t.Source.Kind, t.Source.AppID = "application", k.AppID
+			return nil
+		}
+		return forbidden()
+	}
 	presetID := t.Source.PresetID
 	if presetID == "" && !k.legacyWorkspace(t.WorkspaceID) {
 		for _, p := range k.PresetBindings {
@@ -148,6 +165,23 @@ func (s *Server) checkApplication(r *http.Request, k *ApplicationKey) error {
 			return forbidden()
 		}
 		if len(p) == 3 && p[2] == "runtime-presets" && method == "GET" && k.scope("read") {
+			return nil
+		}
+		if len(p) == 4 && p[2] == "projects" && p[3] != "" {
+			return forbidden()
+		}
+		if len(p) == 5 && p[2] == "projects" && p[4] == "environments" && method == "GET" && k.scope("read") && applicationProjectID.MatchString(p[3]) {
+			return nil
+		}
+		if len(p) == 6 && p[2] == "projects" && p[4] == "environments" && method == "PUT" && k.scope("run") && applicationProjectID.MatchString(p[3]) {
+			presetID := p[5]
+			if presetID == "__default__" {
+				presetID = ""
+			}
+			a, _, e := m.applicationPresetBinding(k.AppID, presetID)
+			if e != nil || !k.allowsProjectPreset(a) {
+				return forbidden()
+			}
 			return nil
 		}
 		if len(p) == 3 && p[2] == "connect" && method == "POST" && k.scope("read") {
