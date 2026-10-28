@@ -46,7 +46,9 @@ The instance-centered WebUI does **not** yet synchronize instance configuration 
 
 ## Current source version
 
-**RunDesk 0.59.0 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.59.1 source · external Kun 0.17.0 · worker protocol 16**
+
+Version 0.59.1 shows each application's default and additional Agent environments on its main page. New application credentials preselect currently enabled presets; an existing credential keeps its original grants. An empty preset list under an application credential does not mean the image or Agent is missing. See [application runtime presets](docs/APPLICATION-RUNTIME-PRESETS.md).
 
 Version 0.59.0 makes setup a three-page guide. Docker is optional: finish basic setup after the Codex page and return to it from **Environment setup**. The Agent list separates image preparation from adding an Agent based on an existing image. The chat composer shows the selected Agent and workspace; Skills, MCP and native plugins stay inside one settings dialog. Docker configuration still belongs to each Agent/workspace environment. See [WebUI](docs/WEBUI.md).
 

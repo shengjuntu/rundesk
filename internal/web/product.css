@@ -12,6 +12,9 @@
 .primary-nav a.nav-item{text-decoration:none}
 
 .runtime-presets{margin-top:24px;padding-top:20px;border-top:1px solid var(--border,#e0e4e9)}
+.application-preset-host{max-width:1120px;margin:0 auto 22px}
+.runtime-default-card{background:#f7f9fc;margin:14px 0}
+.runtime-key-status[data-key-count="0"]{color:#a86630}
 .runtime-preset-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px;margin:14px 0}
 .runtime-preset-card{min-width:0}.runtime-preset-card .actions{flex-wrap:wrap}.runtime-preset-card .help{overflow-wrap:anywhere}
 .runtime-preset-dialog label{display:block}.runtime-preset-dialog .key-choice{display:flex;align-items:center;gap:8px}

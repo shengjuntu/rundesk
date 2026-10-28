@@ -46,7 +46,9 @@ RunDesk 通过 Kun 集成提供模块状态检查和执行循环策略选择。�
 
 ## 当前源码版本
 
-**RunDesk 0.59.0 · 外部 Kun 0.17.0 · worker 协议 16**
+**RunDesk 0.59.1 · 外部 Kun 0.17.0 · worker 协议 16**
+
+0.59.1 将应用的默认和额外 Agent 环境放在应用首页。新签发的应用凭据默认勾选当前已启用的预设，已有凭据保持原授权。VideoAPP 读到空预设列表时，要检查环境是否已登记，以及它正在使用的凭据是否包含该环境；详见[运行预设](docs/APPLICATION-RUNTIME-PRESETS.md)。
 
 0.59.0 将初始化做成三页向导。Docker 是可选步骤：在 Codex 页即可完成基本设置，此后用左侧“环境设置”重开。Agent 列表分别提供准备镜像与从已有镜像添加 Agent；对话输入框显示 Agent 和工作区，Skills、MCP、插件仍在同一个设置对话框中。Docker 配置目前仍按 Agent 与工作区分别保存，详见 [WebUI](docs/WEBUI.md)。
 

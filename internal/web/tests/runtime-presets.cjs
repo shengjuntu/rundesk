@@ -67,6 +67,11 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));async function until
  assert.equal(vm.runInContext("applicationForInstance('preset-i').appId",ctx),'video');assert.equal(vm.runInContext("applicationForInstance('old-i').appId",ctx),'video');
  const advanced=w.applicationAdvanced();assert(!advanced.textContent.includes('preset-i'),'preset instance appeared orphaned');assert(!advanced.textContent.includes('old-i'),'disabled preset instance appeared orphaned');
  await w.showApplication('video');assert.equal($$('.application-task').length,3,'default application page omitted preset history');
+ assert(!$('#runtime-presets').closest('details'),'available Agent environments were hidden in advanced settings');
+ assert($('#runtime-presets .runtime-default-card').textContent.includes('base-i'));
+ assert(button($('#runtime-presets'),'查看全局 Agent'));
+ assert.equal($('[data-preset-id="video-use"] [data-key-count]').dataset.keyCount,'0');
+ assert(!$('[data-preset-id="disabled"]').textContent.includes('null'),'disabled environment rendered a literal null');
  await w.showApplication('video','disabled');assert.equal($('#instance').value,'old-i');assert.equal($('#workspace').value,'old-w');assert.equal($$('.application-task').length,1);assert($('.application-tasks').textContent.includes('历史任务'));
  assert(w.location.hash.includes('/preset/disabled'),'preset route was lost');assert.equal(vm.runInContext('currentApplication().appId',ctx),'video');
  const enabled=$('[data-preset-id="video-use"]');button(enabled,'Skills').click();await until(()=>w.lastSettings?.tab==='skills');assert.deepEqual(w.lastSettings,{tab:'skills',instanceId:'preset-i',workspaceId:'preset-w'});
@@ -98,11 +103,12 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));async function until
  // Issue explicit frozen preset grants; legacy workspace choices stay separate.
  await w.RunDeskKeys.open(state.applications[0]);button($('dialog.key-dialog[open]'), '创建凭据').click();await until(()=>!!$('#key-name'));
  assert(![...$('#key-workspaces').querySelectorAll('input')].some(n=>['preset-w','old-w','foreign-w'].includes(n.value)));
- $('#key-name').value='Video service';$('#key-presets [data-preset-id="video-use"]').checked=true;
+ $('#key-name').value='Video service';assert($('#key-presets [data-preset-id="video-use"]').checked);assert($('#key-presets [data-preset-id="existing-docker"]').checked,'new credentials should preselect enabled Agent environments');
+ $('#key-presets [data-preset-id="existing-docker"]').checked=false;
  await $('#key-name').closest('form').onsubmit({preventDefault(){}});
  const keyRequest=requests.find(r=>r.route==='/applications/video/keys'&&r.method==='POST');assert.deepEqual(keyRequest.body.presetIds,['video-use']);assert(!keyRequest.body.workspaceIds.includes('preset-w'));assert.equal(db.keys[0].presetBindings[0].instanceId,'preset-i');assert($('#key-secret'),'credential was not displayed once');
+ for(const d of $$('dialog[open]'))d.close();await w.showApplication('video');assert.equal($('[data-preset-id="video-use"] [data-key-count]').dataset.keyCount,'1');
  // Member grants match app + optional preset + workspace, including disabled history.
- for(const d of $$('dialog[open]'))d.close();
  await w.RunDeskUsers.open();
  const member=$('[data-user-id="member"]');assert(member.querySelector('.user-grants').textContent.includes('旧环境'));assert(member.querySelector('.user-grants').textContent.includes('已禁用'));
  button(member,'编辑授权').click();await until(()=>!!$('#user-name'));

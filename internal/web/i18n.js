@@ -14,6 +14,22 @@
   '从已登记的镜像添加 Codex Agent 和工作区，并为这对 Agent 与工作区启动容器。模型和登录在 Agent 设置中配置。':'Add a Codex Agent and workspace from the registered image, then start their container. Configure model and sign-in in Agent settings.',
   '返回 Agent':'Back to Agent'
  });
+ Object.assign(catalog,{
+  '应用可用的 Agent 环境':'Agent environments for this application',
+  '这里决定应用能选择哪些运行环境。镜像和 Agent 不会自动变成应用环境；默认环境始终单独保留。':'Choose the environments this application can use. Images and Agents are not added automatically; the default remains separate.',
+  '默认环境':'Default environment','不需要 presetId':'No presetId required',
+  'Agent：${0} · 工作区：${1}':'Agent: ${0} · Workspace: ${1}',
+  '只有默认环境时，应用的预设列表为空；省略 presetId 会使用这里。':'The preset list is empty when only the default exists. Omitting presetId uses this environment.',
+  '添加 Agent 环境':'Add Agent environment','管理应用凭据':'Manage application credentials','查看全局 Agent':'View all Agents','刷新环境':'Refresh environments',
+  '${0} 个有效应用凭据已授权':'${0} active application credentials have access',
+  '尚无有效凭据授权此环境；请签发新凭据并更新应用。':'No active credential can use this environment. Issue a new credential and update the application.',
+  '还没有额外的 Agent 环境。添加后，创建包含该环境的新应用凭据，VideoAPP 才能在列表中看到它。':'No additional Agent environments. Add one, then issue an application credential that includes it so the application can list it.',
+  '暂时无法读取应用凭据：':'Could not read application credentials: ',
+  '新增环境不会扩大已经签发的凭据权限。保存环境不会启动或重建容器。':'Adding an environment does not expand existing credentials. Saving does not start or rebuild containers.',
+  '专用 Agent':'Dedicated Agent',
+  '这里只列出尚未绑定的 Codex Docker Agent。已属于其他应用的 Agent 不能共用其工作区；可从相同镜像创建独立环境。':'Only unbound Codex Docker Agents appear here. An Agent already owned by another application cannot share its workspace; create a separate environment from the same image.',
+  '默认勾选当前已启用的环境；你可取消不需要的项。凭据签发后权限固定，新增环境需签发新凭据并更新应用。':'Currently enabled environments are selected by default. Deselect any you do not need. A credential has fixed access; issue a new one and update the application when adding environments.'
+ });
  const language=localStorage.getItem('rundesk-language')||(navigator.language.toLowerCase().startsWith('zh')?'zh':'en');
  document.documentElement.lang=language==='zh'?'zh-CN':'en';
  window.rdText=value=>{if(typeof value!=='string'||language==='zh')return value;const trim=value.trim();return catalog[value]??(catalog[trim]?value.replace(trim,catalog[trim]):value);};

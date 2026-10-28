@@ -1,6 +1,8 @@
 # 当前能力与后续工作
 
-**RunDesk 0.59.0 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。这里区分源码已实现、后端能力边界和目标环境验收；三个使命的产品定位见[中文 README](../README.zh-CN.md)。
+**RunDesk 0.59.1 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。这里区分源码已实现、后端能力边界和目标环境验收；三个使命的产品定位见[中文 README](../README.zh-CN.md)。
+
+0.59.1 将应用可用环境从折叠项移到应用首页，展示默认环境、额外预设和有效凭据授权数；新凭据预选当前启用的环境。已签发 key 的精确授权和独立工作区规则不变。空列表排查见[运行预设](APPLICATION-RUNTIME-PRESETS.md)。
 
 0.59.0 的三页向导允许在 Codex 页完成基本设置，Docker 可稍后再做；Agent 列表分开镜像准备与从镜像添加，输入框明确当前工作区，Skills/MCP/插件使用同一对话框。配置存储边界未变，详见 [WebUI](WEBUI.md)。
 
