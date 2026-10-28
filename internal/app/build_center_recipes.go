@@ -72,6 +72,7 @@ type RecipeBuildInput struct {
 	RequestID      string              `json:"requestId"`
 	NoCache        bool                `json:"noCache,omitempty"`
 	OwnerRunID     string              `json:"-"`
+	RepairOf       string              `json:"-"`
 }
 
 type RebuildCenterBuildInput struct {
@@ -580,15 +581,55 @@ func (m *Manager) StartRecipeBuild(id string, in RecipeBuildInput) (ImageBuild, 
 	if recipeDigest(r.BuildRecipeManifest, r.ContextSHA256) != r.RecipeSHA {
 		return v, failure(409, "recipe_snapshot_changed", "配方快照校验失败，请重新导入")
 	}
+	var repairSource *ImageBuild
+	if in.RepairOf != "" {
+		source, err := m.BuildCenterBuild(in.RepairOf)
+		if err != nil {
+			return v, err
+		}
+		if buildActive(source.Status) || source.Scope == "image-test" || source.Status == "succeeded" {
+			return v, failure(400, "invalid_repair_source", "修复来源必须是已结束的失败构建")
+		}
+		repairSource = &source
+		if source.ProfileID != "" && source.CodexVersion != "" {
+			setup = &RuntimeImageInput{ProfileID: source.ProfileID, CodexVersion: source.CodexVersion, Source: "build", Reference: in.Reference}
+		}
+	}
 	sources, err := m.resolveBuildSources(in.BuildSources, data, r.Dockerfile)
 	if err != nil {
 		return v, err
+	}
+	if in.BuildSources == nil && repairSource != nil && repairSource.BuildSources != nil {
+		encoded, _ := json.Marshal(repairSource.BuildSources)
+		if err = json.Unmarshal(encoded, &sources); err != nil {
+			return v, err
+		}
+		if _, err = buildSourceArguments(sources); err != nil {
+			return v, err
+		}
+		text, err := recipeDockerfile(data, r.Dockerfile)
+		if err != nil {
+			return v, err
+		}
+		caps := sourceCapabilitiesFor(text, sources.Definitions)
+		supported := map[string]bool{}
+		for _, c := range caps.Types {
+			for _, name := range c.Arguments {
+				supported[name] = true
+			}
+		}
+		for name := range sources.Arguments {
+			if !supported[name] {
+				return v, failure(409, "repair_source_arguments_changed", "修复配方移除了原下载源参数，请显式选择新的源配置")
+			}
+		}
 	}
 	data, err = freezeBuildSources(data, sources)
 	if err != nil {
 		return v, err
 	}
 	snapshot := &ImageBuild{RecipeID: r.ID, RecipeRevision: r.Revision, RecipeSHA: r.RecipeSHA, RecipeSmoke: &r.Smoke, OwnerRunID: in.OwnerRunID, RequestID: in.RequestID, RequestSHA: digest, Reference: in.Reference, BuildSources: sources}
+	snapshot.RebuildOf = in.RepairOf
 	name := r.Name
 	if suffix := " · " + r.Version; len(name)+len(suffix) <= 120 {
 		name += suffix

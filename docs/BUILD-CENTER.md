@@ -1,6 +1,6 @@
 # 构建中心
 
-“构建中心”是跨应用的常驻入口，0.55.0 增加外置配方与构建前下载源配置。新闻搜索、媒体搜索、深度研究和视频制作可以共用配方或镜像；应用、Skills、MCP、插件、实例和任务自由组合，不要求定义工作流或应用层级。
+“构建中心”是跨应用的常驻入口，0.55.0 增加外置配方与构建前下载源配置，0.56.0 接入首次初始化、Kun 构建助手和失败修复经验。新闻搜索、媒体搜索、深度研究和视频制作可以共用配方或镜像；应用、Skills、MCP、插件、实例和任务自由组合，不要求定义工作流或应用层级。
 
 | 资源 | 负责的内容 |
 | --- | --- |
@@ -8,7 +8,7 @@
 | 构建配方 | Dockerfile、上下文 ZIP、来源、原生插件引用和本地 smoke 声明 |
 | 镜像 | 实际固定 Image ID、来源、引用、可用性和检查结果 |
 | 实例与环境 | 模型配置、独立 HOME、工作区及现有容器生命周期 |
-| 任务 | Codex 执行、进度、审批、轨迹和产物 |
+| 任务 | Codex/Kun 执行、进度、审批、轨迹和产物 |
 
 ## 使用
 
@@ -16,9 +16,13 @@
 
 构建成功后在镜像区检查固定身份、查看引用、执行离线检查或声明的 smoke，或者创建并启动专用 Codex Docker 实例。启动环境不发起模型任务。已有应用的镜像更新仍需在其原管理界面显式操作。
 
-“让 Codex 添加”接受用途或开源项目地址，使用现有 Codex 实例发起一个普通队列任务。它在新专用工作区读取 `add-app-docker-image` Skill，分析依赖/来源/许可证，生成可审阅的配方和 ZIP，通过受限构建 MCP 构建、读日志、修复和测试。会话和任务仍在 RunDesk 中调试。引用项目仅为编号上下文，不直接借用其工作目录。需要可用的 Codex 和模型认证。
+构建助手接受用途或开源项目地址，使用所选的 Codex 或本机 Kun 实例发起普通队列任务。它在新专用工作区读取 `add-app-docker-image` Skill，分析依赖、来源和许可证，生成可审阅的配方及 ZIP，通过受限构建 MCP 构建、读日志、修复和测试。会话和任务继续在 RunDesk 中调试。引用项目仅为编号上下文，不直接借用其目录；实例需要可用的引擎、模型认证和工具能力。
 
-本版助手为每次任务 bootstrap 一个独立 Skill，并在当前原生线程配置中注入构建 MCP；回执明确返回 `skillBootstrap:true`、`nativePluginInstalled:false`。原生插件源包见 [rundesk-build-tools](../plugins/rundesk-build-tools/README.md)，插件安装另见[原生插件支持](NATIVE-PLUGINS.md)。
+初始化可为本次新构建启用后台失败自动交接，也可手动将明确选中的失败或中断构建交给 Kun。`sourceBuildId` 为该修复任务授权只读来源快照；助手能读取原日志、导出冻结上下文，在自身工作区修改后打包成新的独立配方。未显式选择的其他任务、配方和工作区不属于修复范围。修复构建保留原源配置，除非本次明确选择新的配置；旧配方、镜像及应用绑定不覆盖。
+
+助手为每次任务 bootstrap 一个独立 Skill，并向对应 Codex 线程或 Kun 请求注入短期构建 MCP；回执返回 `runtimeKind`、可选 `sourceBuildId`，以及 `skillBootstrap:true`、`nativePluginInstalled:false`。MCP 提供上下文导出/打包、源能力读取和构建检查，Kun 不需要为打包而开启宿主 Bash。`build_wait` 可等待 1–45 秒后读取状态，避免长构建反复消耗模型轮询；服务端每项构建助手最多提交三次构建。初始化 Kun 构建任务的两小时预算不覆盖其他用户实例原有设置。原生插件源包见 [rundesk-build-tools](../plugins/rundesk-build-tools/README.md)，插件安装另见[原生插件支持](NATIVE-PLUGINS.md)。
+
+修复经验记录失败指纹、源快照、实际改动、成功镜像和验证编号。服务端从冻结目录比较文件摘要和有界 Dockerfile 差异；没有冻结目录时明确标记缺失，不读取后来变化的配方来补证据。成功构建仍须有精确绑定的 offline 和 smoke 才能形成已验证镜像经验，缺项保留候选。后续修复可检索匹配经验，不能据一次网络失败永久改写全局下载策略。完整边界见[初始化与经验](SETUP.md#修复经验与持续改进)。
 
 ## 动态配方
 
@@ -82,7 +86,7 @@ manifest 示例：
 | `/build-center/images/{key}/launch` | POST `name`、`requestId`，可选专用 instanceId/workspaceId |
 | `/build-center/images/{key}/tests` | POST `kind:offline\|smoke`、`requestId`，返回排队任务 |
 | `/build-center/tests/{id}`、`/{id}/log` | GET 检查结果和日志 |
-| `/build-center/assistant-runs`、`/{id}` | POST prompt/requestId/可选 instanceId、workspaceId；GET 助手与任务绑定 |
+| `/build-center/assistant-runs`、`/{id}` | POST prompt/requestId，可选 instanceId、workspaceId、sourceBuildId；GET Codex/Kun 助手与任务绑定 |
 | `/build-center/assistant-runs/{id}/revoke` | POST 撤销构建工具权限 |
 
 唯一例外为 `POST /api/build-center/mcp`（及 v1 别名）：只接受任务短期 Bearer 能力，端点自己验证任务、会话、实例、工作区、路径和有效期。它只可导入自己工作区的配方、构建自己的/内置配方、查看或取消自己的构建、检查自己的产出；不能删除镜像、启动/改变实例、安装插件或访问其他任务。它不是通用管理 API，管理员令牌也不替代该任务能力。

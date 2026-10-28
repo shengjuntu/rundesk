@@ -1,0 +1,64 @@
+{
+  "version": "0.56.0",
+  "passed": true,
+  "command": "go test -race ./internal/app -run 'TestSetup(Kun|Repair)' -count=1 -json",
+  "testsPassed": 11,
+  "testsSkipped": 0,
+  "testNames": [
+    "TestSetupRepairRealKunManagedInstallAndExperience",
+    "TestSetupKunSeparateIdentityDraftAndVerifiedWorker",
+    "TestSetupKunReadinessUsesActualWorkerAndModelEvidence",
+    "TestSetupKunAcceptsAliasOfExplicitWorker",
+    "TestSetupRepairScopedTaskAndNoHostBash",
+    "TestSetupRepairAutomaticGrantBindsKunConfiguration",
+    "TestSetupRepairRetriesVersionScopeAndCrashRecovery",
+    "TestSetupRepairToolArgumentsAreExplicit",
+    "TestSetupRepairHTTPHasIndependentCapabilityBoundary",
+    "TestSetupKunIndependentAndAtomic",
+    "TestSetupKunMissingCredentialAndDraft"
+  ],
+  "skippedTestNames": [],
+  "worker": {
+    "engine": "Kun",
+    "version": "0.17.0",
+    "protocol": 16,
+    "realExecutable": true
+  },
+  "model": {
+    "kind": "fixture HTTP Chat Completions",
+    "realModelWeights": false,
+    "diagnosticQualityValidated": false
+  },
+  "integration": [
+    "worker hello and task execution",
+    "actual task-scoped MCP transport",
+    "local registry fixture returning 403 then serving a SHA-512-verified native platform package",
+    "actual managed executable version check",
+    "automatic verified repair experience",
+    "later task receives matching prior experience",
+    "complete model function-call/result round trip probe",
+    "automatic repair grant binds the original Kun configuration",
+    "effect admission rechecks instance config/permissions/execution fingerprint"
+  ],
+  "limitations": [
+    "No real LLM diagnosis acceptance",
+    "No Docker build",
+    "No China mirror or Windows runtime acceptance",
+    "Fixture model follows a scripted response sequence"
+  ],
+  "additionalWaitCheck": {
+    "command": "go test -race ./internal/app -run 'TestSetupRepair(Wait|RealKun|AutomaticGrant)' -count=1 -json",
+    "passEventsIncludingSubtests": 7,
+    "skipEvents": 0,
+    "testNames": [
+      "TestSetupRepairRealKunManagedInstallAndExperience",
+      "TestSetupRepairAutomaticGrantBindsKunConfiguration",
+      "TestSetupRepairWaitBoundScopeCancellationAndRevocation/deadline-and-foreign-scope",
+      "TestSetupRepairWaitBoundScopeCancellationAndRevocation/request-canceled",
+      "TestSetupRepairWaitBoundScopeCancellationAndRevocation/revoked-without-holding-admission-lock",
+      "TestSetupRepairWaitBoundScopeCancellationAndRevocation/manager-stopped",
+      "TestSetupRepairWaitBoundScopeCancellationAndRevocation"
+    ],
+    "scope": "Task-scoped install wait including revocation, foreign job, deadline and real Kun usage; scripted model and local registry."
+  }
+}

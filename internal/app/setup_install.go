@@ -21,11 +21,11 @@ var codexRelease = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+
 func npmCommand() (string, string, error) {
 	node, err := exec.LookPath("node")
 	if err != nil {
-		return "", "", fmt.Errorf("install Node.js and npm for the RunDesk service account first")
+		return "", "", fmt.Errorf("Node.js/npm are unavailable for this installation method; choose native installation or install them for the RunDesk service account")
 	}
 	npm, err := exec.LookPath("npm")
 	if err != nil {
-		return "", "", fmt.Errorf("npm is not on the service PATH")
+		return "", "", fmt.Errorf("npm is not on the service PATH; native installation does not require npm")
 	}
 	real, err := filepath.EvalSymlinks(npm)
 	if err != nil {
@@ -40,7 +40,7 @@ func npmCommand() (string, string, error) {
 			return node, candidate, nil
 		}
 	}
-	return "", "", fmt.Errorf("npm-cli.js could not be located; use the manual installation guide")
+	return "", "", fmt.Errorf("npm-cli.js could not be located; choose native installation or use the manual installation guide")
 }
 
 func installedCodex(root string) (string, error) {
@@ -52,15 +52,19 @@ func installedCodex(root string) (string, error) {
 	if runtime.GOOS == "windows" {
 		name += ".exe"
 	}
-	suffix := filepath.Join("vendor", platform, "codex", name)
+	suffixes := []string{filepath.Join("vendor", platform, "bin", name), filepath.Join("vendor", platform, "codex", name)}
 	var found string
 	err := filepath.WalkDir(filepath.Join(root, "node_modules"), func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if !entry.IsDir() && entry.Type().IsRegular() && strings.HasSuffix(path, string(filepath.Separator)+suffix) {
-			found = path
-			return fs.SkipAll
+		if !entry.IsDir() && entry.Type().IsRegular() {
+			for _, suffix := range suffixes {
+				if strings.HasSuffix(path, string(filepath.Separator)+suffix) {
+					found = path
+					return fs.SkipAll
+				}
+			}
 		}
 		return nil
 	})
@@ -68,21 +72,29 @@ func installedCodex(root string) (string, error) {
 		return "", err
 	}
 	if found == "" {
-		return "", fmt.Errorf("npm completed but no supported native Codex binary was found; check the selected release/platform")
+		return "", fmt.Errorf("installation completed but no supported native Codex binary was found; check the selected release/platform")
 	}
 	return found, nil
 }
 
 type CodexInstallResult struct {
-	OK      bool   `json:"ok"`
-	Version string `json:"version"`
-	Codex   string `json:"codex"`
-	Log     string `json:"log"`
-	Error   string `json:"error"`
+	OK             bool   `json:"ok"`
+	Version        string `json:"version"`
+	Codex          string `json:"codex"`
+	Log            string `json:"log"`
+	Error          string `json:"error"`
+	Method         string `json:"method,omitempty"`
+	Registry       string `json:"registry,omitempty"`
+	Integrity      string `json:"integrity,omitempty"`
+	PackageVersion string `json:"packageVersion,omitempty"`
 }
 
 func (m *Manager) installCodex(parent context.Context, version string) CodexInstallResult {
-	result := CodexInstallResult{Version: version}
+	return m.installCodexNPM(parent, version, "https://registry.npmjs.org")
+}
+
+func (m *Manager) installCodexNPM(parent context.Context, version, registry string) CodexInstallResult {
+	result := CodexInstallResult{Version: version, Method: "npm", Registry: registry}
 	node, npm, err := npmCommand()
 	if err != nil {
 		result.Error = err.Error()
@@ -104,7 +116,7 @@ func (m *Manager) installCodex(parent context.Context, version string) CodexInst
 	defer cancel()
 	stop := context.AfterFunc(m.ctx, cancel)
 	defer stop()
-	cmd := exec.CommandContext(ctx, node, npm, "install", "--prefix", dir, "--registry=https://registry.npmjs.org", "--ignore-scripts", "--no-audit", "--no-fund", "--save-exact", "@openai/codex@"+version)
+	cmd := exec.CommandContext(ctx, node, npm, "install", "--prefix", dir, "--registry="+registry, "--ignore-scripts", "--include=optional", "--no-audit", "--no-fund", "--save-exact", "@openai/codex@"+version)
 	cmd.Dir = dir
 	cmd.WaitDelay = 2 * time.Second
 	configureProbeProcess(cmd)
@@ -136,16 +148,18 @@ func (m *Manager) installCodex(parent context.Context, version string) CodexInst
 }
 
 func (s *Server) codexInstallRoutes(mux *http.ServeMux) {
+	s.codexInstallJobRoutes(mux)
 	mux.HandleFunc("POST /api/setup/codex-install", func(w http.ResponseWriter, r *http.Request) {
-		var in struct {
-			Version string `json:"version"`
-			Confirm bool   `json:"confirm"`
-		}
+		var in CodexInstallInput
 		if !decode(w, r, &in) {
 			return
 		}
-		if !in.Confirm || len(in.Version) > 64 || !codexRelease.MatchString(in.Version) {
-			respond(w, nil, failure(400, "invalid_install_request", "Choose an exact release and explicitly confirm installation"))
+		if in.Method == "" {
+			in.Method = "npm"
+		}
+		normalized, err := s.Manager.normalizeCodexInstall(in)
+		if err != nil {
+			respond(w, nil, err)
 			return
 		}
 		if s.Manager.Demo {
@@ -157,6 +171,6 @@ func (s *Server) codexInstallRoutes(mux *http.ServeMux) {
 			return
 		}
 		defer s.Manager.installMu.Unlock()
-		writeJSON(w, 200, s.Manager.installCodex(r.Context(), in.Version))
+		writeJSON(w, 200, s.Manager.installCodexWithOptions(r.Context(), normalized))
 	})
 }

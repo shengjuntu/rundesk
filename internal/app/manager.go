@@ -282,6 +282,7 @@ func New(data, codex string, demo bool) (*Manager, error) {
 			}
 		}
 	}()
+	m.startSetupAutoRepairs()
 	return m, nil
 }
 func active(s string) bool {

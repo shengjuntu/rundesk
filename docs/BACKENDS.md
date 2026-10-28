@@ -1,6 +1,6 @@
 # 后端能力与扩展边界
 
-当前源码包为 RunDesk 0.55.0，后端为独立 Kun 0.17.0（worker 协议 16）与 Codex App Server。RDCA 任务接口保持 `/api/v1`，附加 UHP `/v1` 入口复用同一任务核心。内部准入、运行与停止通过后端注册表分派。
+当前源码包为 RunDesk 0.56.0，后端为独立 Kun 0.17.0（worker 协议 16）与 Codex App Server。RDCA 任务接口保持 `/api/v1`，附加 UHP `/v1` 入口复用同一任务核心。内部准入、运行与停止通过后端注册表分派。
 
 | 能力 | Kun | Codex |
 | --- | --- | --- |
@@ -17,8 +17,11 @@
 | Codex 原生插件 | 不支持 | 配置/来源只读检查；安装与卸载未实现 |
 | 模型接入 | 支持工具调用的 Chat Completions | Codex 原生 Provider 配置 |
 | 核心编程动作 | 读、写、精确编辑、列目录、grep、find、可选 Bash | 由 Codex 原生工具提供 |
+| 构建中心助手与失败镜像修复 | 本机实例、工作区写入和任务专用 MCP | 原生线程和任务专用 MCP |
 
 `GET /api/v1/backends` 为管理员能力目录，不启动任何运行时。`GET /api/v1/setup/environment` 检查实例与项目的本机依赖，不测试推理。应用只需调用任务契约；具体模型和后端由管理员配置。
+
+首次初始化的 `discovery` 扫描与 `model-test` 主动测试分别进行。专用 `setup-kun` 需通过 worker 握手和模型自动函数调用检查，才能执行受限的 Codex 安装修复；这不赋予任意宿主命令或全局软件管理权限。详见[部署](SETUP.md)。
 
 新的运行使用实例当前配置，旧会话保留后端归属；切换后应新建会话。模型、Skills、MCP、权限和执行环境并非彼此等价。Kun 内部 `tool-loop-v1` / `plan-act-v1` 是循环策略，不是第三个后端。
 

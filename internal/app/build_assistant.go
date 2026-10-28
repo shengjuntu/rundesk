@@ -25,12 +25,15 @@ import (
 // An assistant run uses a new workspace and one queued Codex task. A referenced
 // project is metadata only: no existing application, HOME or workspace is edited.
 type BuildAssistantInput struct {
-	Prompt      string `json:"prompt"`
-	InstanceID  string `json:"instanceId,omitempty"`
-	WorkspaceID string `json:"workspaceId,omitempty"`
-	RequestID   string `json:"requestId"`
+	SourceBuildID string `json:"sourceBuildId,omitempty"`
+	Prompt        string `json:"prompt"`
+	InstanceID    string `json:"instanceId,omitempty"`
+	WorkspaceID   string `json:"workspaceId,omitempty"`
+	RequestID     string `json:"requestId"`
 }
 type BuildAssistantRun struct {
+	RuntimeKind           string `json:"runtimeKind,omitempty"`
+	SourceBuildID         string `json:"sourceBuildId,omitempty"`
 	ID                    string `json:"id"`
 	InstanceID            string `json:"instanceId"`
 	WorkspaceID           string `json:"workspaceId"`
@@ -47,12 +50,14 @@ type BuildAssistantRun struct {
 }
 type buildAssistantRecord struct {
 	BuildAssistantRun
-	Fingerprint    string `json:"fingerprint"`
-	CapabilityHash string `json:"capabilityHash"`
-	Endpoint       string `json:"endpoint"`
-	WorkspacePath  string `json:"workspacePath"`
+	RuntimeFingerprint string `json:"runtimeFingerprint,omitempty"`
+	Fingerprint        string `json:"fingerprint"`
+	CapabilityHash     string `json:"capabilityHash"`
+	Endpoint           string `json:"endpoint"`
+	WorkspacePath      string `json:"workspacePath"`
 }
 type buildAssistantCapability struct {
+	SourceBuildID string `json:"sourceBuildId,omitempty"`
 	RunID         string `json:"runId"`
 	SessionID     string `json:"sessionId"`
 	TaskID        string `json:"taskId"`
@@ -196,8 +201,21 @@ func (m *Manager) CreateBuildAssistantRun(input BuildAssistantInput, endpoint st
 	if err != nil {
 		return BuildAssistantRun{}, err
 	}
-	if runtimeKind(i.AgentRuntime.Kind) != "codex" {
-		return BuildAssistantRun{}, failure(400, "assistant_requires_codex", "构建助手只支持 Codex 原生后端")
+	kind := runtimeKind(i.AgentRuntime.Kind)
+	if kind != "codex" && kind != "kun" {
+		return BuildAssistantRun{}, failure(400, "assistant_requires_agent", "构建助手需要 Codex 或 Kun 后端")
+	}
+	if kind == "kun" && (i.Execution.normalized().Mode != "local" || !i.AgentRuntime.AllowWrite) {
+		return BuildAssistantRun{}, failure(400, "assistant_kun_tools_required", "Kun 构建助手需要本机执行及工作区写入能力")
+	}
+	if input.SourceBuildID != "" {
+		source, err := m.BuildCenterBuild(input.SourceBuildID)
+		if err != nil {
+			return BuildAssistantRun{}, err
+		}
+		if source.Scope == "image-test" || (source.Status != "failed" && source.Status != "interrupted" && source.Status != "canceled") {
+			return BuildAssistantRun{}, failure(400, "repair_source_required", "请选择一条失败或中断的构建记录")
+		}
 	}
 	parsed, err := url.Parse(endpoint)
 	if err != nil || parsed.Path != "/api/build-center/mcp" {
@@ -241,7 +259,15 @@ func (m *Manager) CreateBuildAssistantRun(input BuildAssistantInput, endpoint st
 	if err = os.MkdirAll(filepath.Join(w.Path, "artifacts"), 0700); err != nil {
 		return BuildAssistantRun{}, err
 	}
+	if input.SourceBuildID != "" {
+		if err = m.bootstrapBuildRepair(w, input.SourceBuildID); err != nil {
+			return BuildAssistantRun{}, err
+		}
+	}
 	instructions := "使用本工作区 .agents/skills/add-app-docker-image/SKILL.md 的 $add-app-docker-image Skill，实现下面的应用镜像要求。只使用 rundesk_build_center MCP 提交宿主构建；将配方、ZIP、来源与许可证审查、验证记录写入 artifacts/。保持既有应用不变，不自动发布、启动或替换实例。此工作区是专用构建任务，引用的项目仅为上下文编号，不授予其文件访问。完整跟进构建日志并进行适当的 smoke 检查；如遇外部阻塞，保留可审阅的产物并说明。\n\n用户要求：\n" + input.Prompt
+	if input.SourceBuildID != "" {
+		instructions += "\n\n修复来源构建：" + input.SourceBuildID + "。原始冻结上下文已复制到 artifacts/context/，原配方在 artifacts/recipe.json，失败记录在 artifacts/source-build.json。读取来源日志、检索适用经验后再修改。使用 build_context_pack 打包，无需 Bash。必须保留原 smoke 断言，通过 offline 和 smoke 测试后用 build_experience_record 保存真实修复证据；停止前写明各次假设、改动和结果。"
+	}
 	spec := TaskSpec{Title: "添加应用镜像", InstanceID: i.ID, WorkspaceID: w.ID, Source: SessionSource{Kind: "human"}, Input: Input{Text: instructions}}
 	t, session, err := m.prepareTask(spec, true)
 	if err != nil {
@@ -254,9 +280,9 @@ func (m *Manager) CreateBuildAssistantRun(input BuildAssistantInput, endpoint st
 	token := "rd-build-" + hex.EncodeToString(secretBytes)
 	tokenHash := keyHash(token)
 	expires := time.Now().UTC().Add(2 * time.Hour).Format(time.RFC3339Nano)
-	run := BuildAssistantRun{ID: id, InstanceID: i.ID, WorkspaceID: w.ID, ParentWorkspaceID: input.WorkspaceID, SessionID: session.ID, TaskID: t.ID, Status: t.Status, Created: store.Now(), ExpiresAt: expires, SkillBootstrap: true, NativePluginInstalled: false}
-	record := buildAssistantRecord{BuildAssistantRun: run, Fingerprint: fingerprint, CapabilityHash: tokenHash, Endpoint: endpoint, WorkspacePath: w.Path}
-	cap := buildAssistantCapability{RunID: id, SessionID: session.ID, TaskID: t.ID, InstanceID: i.ID, WorkspaceID: w.ID, WorkspacePath: w.Path, ExpiresAt: expires}
+	run := BuildAssistantRun{ID: id, RuntimeKind: kind, SourceBuildID: input.SourceBuildID, InstanceID: i.ID, WorkspaceID: w.ID, ParentWorkspaceID: input.WorkspaceID, SessionID: session.ID, TaskID: t.ID, Status: t.Status, Created: store.Now(), ExpiresAt: expires, SkillBootstrap: true, NativePluginInstalled: false}
+	record := buildAssistantRecord{BuildAssistantRun: run, RuntimeFingerprint: buildAssistantRuntimeFingerprint(i), Fingerprint: fingerprint, CapabilityHash: tokenHash, Endpoint: endpoint, WorkspacePath: w.Path}
+	cap := buildAssistantCapability{SourceBuildID: input.SourceBuildID, RunID: id, SessionID: session.ID, TaskID: t.ID, InstanceID: i.ID, WorkspaceID: w.ID, WorkspacePath: w.Path, ExpiresAt: expires}
 	secretPath := m.buildAssistantSecretPath(id)
 	if err = os.MkdirAll(filepath.Dir(secretPath), 0700); err != nil {
 		return BuildAssistantRun{}, err
@@ -383,8 +409,14 @@ func (m *Manager) checkBuildAssistantCapability(cap buildAssistantCapability) er
 		return errors.New("task binding changed")
 	}
 	session, err := m.Session(cap.SessionID)
-	if err != nil || session.TaskID != cap.TaskID || session.InstanceID != cap.InstanceID || session.WorkspaceID != cap.WorkspaceID || runtimeKind(session.RuntimeKind) != "codex" {
+	if err != nil || session.TaskID != cap.TaskID || session.InstanceID != cap.InstanceID || session.WorkspaceID != cap.WorkspaceID || runtimeKind(session.RuntimeKind) != runtimeKind(record.RuntimeKind) || record.SourceBuildID != cap.SourceBuildID {
 		return errors.New("session binding changed")
+	}
+	if record.RuntimeFingerprint != "" {
+		instance, err := m.Instance(cap.InstanceID)
+		if err != nil || buildAssistantRuntimeFingerprint(instance) != record.RuntimeFingerprint {
+			return errors.New("assistant instance configuration or permissions changed")
+		}
 	}
 	// Session completion precedes the queue's reconciliation tick. Do not leave
 	// a brief authorization window while its task still says "running".

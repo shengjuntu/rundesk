@@ -712,6 +712,9 @@ func (m *Manager) StartBuildCenterImageTest(key string, input BuildCenterImageTe
 	}
 	id, now := store.ID(), store.Now()
 	result = ImageBuild{ID: id, InstanceID: DefaultInstance, Scope: "image-test", Source: "local", TestKind: input.Kind, ImageID: v.ImageID, Name: input.Kind + " · " + v.ImageID, Reference: v.ImageID, Status: "queued", Created: now, Updated: now, TimeoutMinutes: 10, CodexVersion: source.CodexVersion, RecipeID: source.RecipeID, RecipeRevision: source.RecipeRevision, RecipeSHA: source.RecipeSHA, RecipeSmoke: source.RecipeSmoke, OwnerRunID: input.OwnerRunID}
+	result.SourceBuildID, result.ContextSHA256 = source.ID, source.ContextSHA256
+	result.PlatformOS, result.PlatformArch = source.PlatformOS, source.PlatformArch
+	result.RuntimeIdentity = source.RuntimeIdentity
 	if source.Scope == "setup" {
 		result.ProfileID = source.ProfileID
 	}

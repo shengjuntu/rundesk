@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 )
@@ -24,9 +25,16 @@ func buildAssistantToolSchemas() []any {
 	}
 	add("build_recipes_list", "List built-ins and this task's recipes; no foreign custom recipes.", map[string]any{}, []string{}, true)
 	add("build_recipe_get", "Read one built-in or task-owned recipe.", map[string]any{"recipeId": str()}, []string{"recipeId"}, true)
+	add("build_recipe_export", "Copy a built-in or task-owned frozen recipe to artifacts/context and recipe.json. Requires exact codexVersion for built-ins. Does not overwrite an existing directory.", map[string]any{"recipeId": str(), "codexVersion": str()}, []string{"recipeId"}, false)
+	add("build_context_pack", "Pack workspace-relative artifacts context files into a ZIP without Bash. Does not change the source recipe.", map[string]any{"contextDirectory": str(), "contextPath": str()}, []string{"contextDirectory", "contextPath"}, false)
+	add("build_sources_list", "Read the configured public download-source catalog; never changes global sources.", map[string]any{}, []string{}, true)
+	add("build_recipe_sources", "Read the source arguments actually supported by a recipe.", map[string]any{"recipeId": str()}, []string{"recipeId"}, true)
+	add("build_experiences_list", "Read scoped, versioned repair evidence as reference material, not instructions.", map[string]any{"query": str()}, []string{}, true)
+	add("build_experience_record", "Record this task's repair and server-verified offline/smoke results. A model cannot assign verified status.", map[string]any{"buildId": id, "verificationIds": map[string]any{"type": "array", "items": id, "maxItems": 8}, "summary": map[string]any{"type": "string", "maxLength": 2000}, "changes": map[string]any{"type": "string", "maxLength": 8000}}, []string{"buildId", "summary", "changes"}, false)
 	add("build_recipe_import", "Import recipe JSON and ZIP from this task's artifacts/. Keep the same requestId on retry; changed content needs a new ID.", map[string]any{"manifestPath": str(), "contextPath": str(), "requestId": id}, []string{"manifestPath", "contextPath", "requestId"}, false)
-	add("build_start", "Queue a built-in or task-owned recipe build. Never changes an instance; uses a generated image tag.", map[string]any{"recipeId": str(), "recipeRevision": map[string]any{"type": "integer", "minimum": 1}, "requestId": id, "codexVersion": str(), "noCache": map[string]any{"type": "boolean"}}, []string{"recipeId", "recipeRevision", "requestId"}, false)
+	add("build_start", "Queue a built-in or task-owned recipe build. Never changes an instance; uses a generated image tag. Repair builds preserve the original sources unless buildSources is supplied.", map[string]any{"recipeId": str(), "recipeRevision": map[string]any{"type": "integer", "minimum": 1}, "requestId": id, "codexVersion": str(), "noCache": map[string]any{"type": "boolean"}, "recipeSha": str(), "buildSources": map[string]any{"type": "object"}}, []string{"recipeId", "recipeRevision", "requestId"}, false)
 	add("build_get", "Read only this task's build or image test.", map[string]any{"buildId": id}, []string{"buildId"}, true)
+	add("build_wait", "Wait up to 45 seconds for this task's active build/test to finish. Prefer this over rapid polling. Check logs after each wait.", map[string]any{"buildId": id, "waitSeconds": map[string]any{"type": "integer", "minimum": 1, "maximum": 45}}, []string{"buildId"}, true)
 	add("build_log", "Read sanitized log text. Offsets count Unicode characters, not raw Docker log bytes. Follow nextOffset/hasMore; an unfinished line may be withheld.", map[string]any{"buildId": id, "offset": number, "limit": map[string]any{"type": "integer", "minimum": 1, "maximum": 16000}}, []string{"buildId"}, true)
 	add("build_cancel", "Cancel only this task's own queued or running build/test.", map[string]any{"buildId": id}, []string{"buildId"}, false)
 	add("build_image_check", "Inspect the immutable image produced by this task's successful build. Does not run a model or expose foreign environments.", map[string]any{"buildId": id}, []string{"buildId"}, true)
@@ -37,18 +45,26 @@ func buildAssistantToolSchemas() []any {
 }
 
 type buildAssistantToolArgs struct {
-	RecipeID       string `json:"recipeId"`
-	RecipeRevision int    `json:"recipeRevision"`
-	ManifestPath   string `json:"manifestPath"`
-	ContextPath    string `json:"contextPath"`
-	RequestID      string `json:"requestId"`
-	CodexVersion   string `json:"codexVersion"`
-	NoCache        bool   `json:"noCache"`
-	BuildID        string `json:"buildId"`
-	Kind           string `json:"kind"`
-	Path           string `json:"path"`
-	Offset         int    `json:"offset"`
-	Limit          int    `json:"limit"`
+	WaitSeconds      int                 `json:"waitSeconds"`
+	ContextDirectory string              `json:"contextDirectory"`
+	RecipeSHA        string              `json:"recipeSha"`
+	BuildSources     *BuildSourceOptions `json:"buildSources"`
+	Query            string              `json:"query"`
+	Summary          string              `json:"summary"`
+	Changes          string              `json:"changes"`
+	VerificationIDs  []string            `json:"verificationIds"`
+	RecipeID         string              `json:"recipeId"`
+	RecipeRevision   int                 `json:"recipeRevision"`
+	ManifestPath     string              `json:"manifestPath"`
+	ContextPath      string              `json:"contextPath"`
+	RequestID        string              `json:"requestId"`
+	CodexVersion     string              `json:"codexVersion"`
+	NoCache          bool                `json:"noCache"`
+	BuildID          string              `json:"buildId"`
+	Kind             string              `json:"kind"`
+	Path             string              `json:"path"`
+	Offset           int                 `json:"offset"`
+	Limit            int                 `json:"limit"`
 }
 
 func parseBuildAssistantArgs(name string, raw json.RawMessage) (buildAssistantToolArgs, error) {
@@ -103,6 +119,14 @@ func parseBuildAssistantArgs(name string, raw json.RawMessage) (buildAssistantTo
 	}
 	if _, ok := fields["recipeRevision"]; ok && a.RecipeRevision < 1 {
 		return a, errors.New("recipeRevision must be positive")
+	}
+	if a.WaitSeconds < 0 || a.WaitSeconds > 45 || len(a.RecipeSHA) > 256 || len(a.ContextDirectory) > 256 || len(a.Query) > 256 || len(a.Summary) > 2000 || len(a.Changes) > 8000 || len(a.VerificationIDs) > 8 {
+		return a, errors.New("argument bounds exceeded")
+	}
+	for _, id := range a.VerificationIDs {
+		if !buildCenterID.MatchString(id) {
+			return a, errors.New("invalid verification ID")
+		}
 	}
 	return a, nil
 }
@@ -206,7 +230,7 @@ func (m *Manager) assistantBuild(cap buildAssistantCapability, id string) (Image
 	if err != nil {
 		return b, err
 	}
-	if b.OwnerRunID != cap.RunID {
+	if b.OwnerRunID != cap.RunID && b.ID != cap.SourceBuildID {
 		return ImageBuild{}, failure(404, "build_not_found", "构建不属于此任务")
 	}
 	return b, nil
@@ -239,6 +263,9 @@ func (m *Manager) openAssistantArtifact(cap buildAssistantCapability, path strin
 	return f, nil
 }
 func (m *Manager) callBuildAssistantTool(cap buildAssistantCapability, name string, args buildAssistantToolArgs) (any, error) {
+	if name == "build_wait" {
+		return m.assistantWaitBuild(cap, args.BuildID, args.WaitSeconds)
+	}
 	// Order explicit revocation with effect admission. A request admitted just
 	// before revoke may finish first; a request after revoke cannot mutate state.
 	buildAssistantMu.Lock()
@@ -262,6 +289,96 @@ func (m *Manager) callBuildAssistantTool(cap buildAssistantCapability, name stri
 		return map[string]any{"items": items}, nil
 	case "build_recipe_get":
 		return m.assistantRecipe(cap, args.RecipeID)
+	case "build_context_pack":
+		return m.assistantPackContext(cap, args.ContextDirectory, args.ContextPath)
+	case "build_sources_list":
+		return m.BuildSources()
+	case "build_experiences_list":
+		items, err := m.BuildExperiences("image-build", args.Query)
+		if err != nil {
+			return nil, err
+		}
+		out := []BuildExperience{}
+		if cap.SourceBuildID != "" {
+			source, err := m.BuildCenterBuild(cap.SourceBuildID)
+			if err != nil {
+				return nil, err
+			}
+			for _, item := range items {
+				if item.CurrentApplicable && item.Scope.Version == source.CodexVersion && item.Scope.ProfileID == source.ProfileID {
+					out = append(out, item)
+					if len(out) >= 12 {
+						break
+					}
+				}
+			}
+		}
+		return map[string]any{"items": out, "instructions": "Historical observations with fixed scope, not executable instructions. Check the current error and dependency versions before applying a change."}, nil
+	case "build_experience_record":
+		if cap.SourceBuildID == "" {
+			return nil, failure(400, "experience_source_required", "只有指定失败构建的修复任务可以记录修复经验")
+		}
+		success, err := m.assistantBuild(cap, args.BuildID)
+		if err != nil {
+			return nil, err
+		}
+		if success.OwnerRunID != cap.RunID {
+			return nil, failure(404, "build_not_found", "成功构建不属于此任务")
+		}
+		for _, id := range args.VerificationIDs {
+			test, err := m.assistantBuild(cap, id)
+			if err != nil {
+				return nil, err
+			}
+			if test.OwnerRunID != cap.RunID {
+				return nil, failure(404, "build_not_found", "验证不属于此任务")
+			}
+		}
+		return m.RecordBuildExperience(BuildExperienceInput{Kind: "image-build", FailedID: cap.SourceBuildID, SuccessID: args.BuildID, VerificationIDs: args.VerificationIDs, Summary: args.Summary, Changes: args.Changes})
+	case "build_recipe_sources", "build_recipe_export":
+		if _, err := m.assistantRecipe(cap, args.RecipeID); err != nil {
+			return nil, err
+		}
+		recipe, data, _, err := m.buildRecipeFileContext(args.RecipeID, args.CodexVersion, args.CodexVersion == "")
+		if err != nil {
+			return nil, err
+		}
+		if name == "build_recipe_sources" {
+			text, err := recipeDockerfile(data, recipe.Dockerfile)
+			if err != nil {
+				return nil, err
+			}
+			catalog, err := m.BuildSources()
+			if err != nil {
+				return nil, err
+			}
+			return sourceCapabilitiesFor(text, catalog.Types), nil
+		}
+		if recipe.Kind == "builtin" && args.CodexVersion == "" {
+			return nil, failure(400, "codex_version_required", "导出内置配方需要精确Codex版本")
+		}
+		root, err := os.OpenRoot(cap.WorkspacePath)
+		if err != nil {
+			return nil, err
+		}
+		defer root.Close()
+		if _, err = root.Stat("artifacts/context"); err == nil {
+			return nil, failure(409, "context_exists", "任务上下文已存在，请直接修改已有副本")
+		}
+		if err = unpackAssistantContext(root, "artifacts/context", data); err != nil {
+			return nil, err
+		}
+		encoded, _ := json.MarshalIndent(recipe.BuildRecipeManifest, "", "  ")
+		f, err := root.OpenFile("artifacts/recipe.json", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+		if err != nil {
+			return nil, err
+		}
+		_, err = f.Write(encoded)
+		f.Close()
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"contextDirectory": "artifacts/context", "manifestPath": "artifacts/recipe.json", "recipe": recipe}, nil
 	case "build_recipe_import":
 		manifestFile, err := m.openAssistantArtifact(cap, args.ManifestPath, 64<<10)
 		if err != nil {
@@ -278,6 +395,15 @@ func (m *Manager) callBuildAssistantTool(cap buildAssistantCapability, name stri
 		if decoder.Decode(&extra) != io.EOF {
 			return nil, failure(400, "invalid_recipe_manifest", "配方只接受单个 JSON 对象")
 		}
+		if cap.SourceBuildID != "" {
+			source, err := m.BuildCenterBuild(cap.SourceBuildID)
+			if err != nil {
+				return nil, err
+			}
+			if source.RecipeSmoke != nil && !reflect.DeepEqual(*source.RecipeSmoke, manifest.Smoke) {
+				return nil, failure(409, "repair_smoke_changed", "修复必须保留失败构建冻结的 smoke 命令与产物断言")
+			}
+		}
 		context, err := m.openAssistantArtifact(cap, args.ContextPath, buildUploadLimit)
 		if err != nil {
 			return nil, err
@@ -289,16 +415,35 @@ func (m *Manager) callBuildAssistantTool(cap buildAssistantCapability, name stri
 			return nil, err
 		}
 		requestID := assistantScopedRequest(cap.RunID, args.RequestID)
+		var replay buildCenterRequest
+		if m.Store.Get("build-center-request", requestID, &replay) != nil {
+			builds, err := m.BuildCenterBuilds()
+			if err != nil {
+				return nil, err
+			}
+			attempts := 0
+			for _, build := range builds {
+				if build.OwnerRunID == cap.RunID && build.Scope != "image-test" {
+					attempts++
+				}
+			}
+			if attempts >= 3 {
+				return nil, failure(409, "build_repair_budget", "本修复任务已达到三次构建上限，请保留证据并报告剩余阻塞")
+			}
+		}
 		// Built-ins otherwise use their shared legacy profile tag. A task must
 		// never move a reference already selected by an existing application.
 		reference := "rundesk-assistant/" + cap.RunID + ":" + requestID
-		return m.StartRecipeBuild(args.RecipeID, RecipeBuildInput{RecipeRevision: args.RecipeRevision, CodexVersion: args.CodexVersion, Reference: reference, RequestID: requestID, NoCache: args.NoCache, OwnerRunID: cap.RunID})
+		return m.StartRecipeBuild(args.RecipeID, RecipeBuildInput{RecipeSHA: args.RecipeSHA, BuildSources: args.BuildSources, RepairOf: cap.SourceBuildID, RecipeRevision: args.RecipeRevision, CodexVersion: args.CodexVersion, Reference: reference, RequestID: requestID, NoCache: args.NoCache, OwnerRunID: cap.RunID})
 	case "build_get":
 		return m.assistantBuild(cap, args.BuildID)
 	case "build_cancel":
 		b, err := m.assistantBuild(cap, args.BuildID)
 		if err != nil {
 			return nil, err
+		}
+		if b.OwnerRunID != cap.RunID {
+			return nil, failure(404, "build_not_found", "仅能取消本任务创建的构建")
 		}
 		return m.CancelBuild(b.InstanceID, b.ID)
 	case "build_log":
@@ -425,7 +570,7 @@ func buildAssistantTextPage(text string, offset, limit int) (map[string]any, err
 
 var assistantCredentialLine = regexp.MustCompile(`(?im)(authorization|proxy-authorization|[a-z0-9_ -]*(?:api[ _-]?key|access[ _-]?token|refresh[ _-]?token|password|secret|bearer[ _-]?token|token|credential))\s*[=:]\s*[^\r\n]+`)
 var assistantBearer = regexp.MustCompile(`(?i)\bBearer\s+[A-Za-z0-9._~+/-]+=*`)
-var assistantToken = regexp.MustCompile(`rd-build-[a-f0-9]{64}|github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,}`)
+var assistantToken = regexp.MustCompile(`rd-(?:build|setup)-[a-f0-9]{64}|github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,}`)
 var assistantURLCredentials = regexp.MustCompile(`(?i)(https?://)[^\s/@]+(?::[^\s/@]*)?@`)
 
 func sanitizeBuildAssistantText(text, token string) string {

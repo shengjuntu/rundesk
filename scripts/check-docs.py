@@ -17,12 +17,39 @@ for file in files:
 version = re.search(r'const Version = "([^"]+)"', (root / 'internal/app/api_v1.go').read_text()).group(1)
 spec = json.loads((root / 'internal/app/openapi.json').read_text())
 assert spec['info']['version'] == version
-for route, method in [('/backends', 'get'), ('/setup/environment', 'get'), ('/setup/codex-install', 'post')]:
+for route, method in [
+    ('/backends', 'get'), ('/setup/environment', 'get'),
+    ('/setup/discovery', 'get'), ('/setup/discovery', 'post'),
+    ('/setup/model-test', 'post'), ('/setup/kun', 'get'), ('/setup/kun', 'post'),
+    ('/setup/codex-install', 'post'), ('/setup/codex-installs', 'get'),
+    ('/setup/codex-installs', 'post'), ('/setup/codex-installs/{cid}', 'get'),
+    ('/setup/repairs', 'get'), ('/setup/repairs', 'post'),
+    ('/setup/repairs/{sid}', 'get'), ('/setup/experiences', 'get'),
+    ('/setup/experiences', 'post'), ('/setup/complete', 'post'),
+    ('/setup/auto-repairs', 'get'), ('/setup/auto-repairs', 'post'),
+]:
     operation = spec['paths'][route][method]
     assert operation['x-administrator-only'] is True, route
-install = spec['paths']['/setup/codex-install']['post']
-assert any(p['name'] == 'Idempotency-Key' and p['required'] for p in install['parameters'])
+for route in ['/setup/codex-install', '/setup/model-test', '/setup/kun',
+              '/setup/codex-installs', '/setup/repairs', '/setup/experiences',
+              '/setup/complete', '/setup/auto-repairs']:
+    operation = spec['paths'][route]['post']
+    assert any(p['name'] == 'Idempotency-Key' and p['required'] for p in operation['parameters']), route
+task_mcp = spec['paths']['/setup/agent-mcp']['post']
+assert task_mcp['x-setup-task-capability-only'] is True
+assert task_mcp['security'] == [{'SetupTaskCapability': []}]
+def check_refs(value):
+    if isinstance(value, dict):
+        if '$ref' in value:
+            assert value['$ref'].startswith('#/components/schemas/')
+            assert value['$ref'].split('/')[-1] in spec['components']['schemas'], value['$ref']
+        for child in value.values():
+            check_refs(child)
+    elif isinstance(value, list):
+        for child in value:
+            check_refs(child)
+check_refs(spec)
 assert not any(p.name.startswith(('RELEASE-', 'KUN-DESIGN-', 'CAPABILITY-STATUS-')) for p in (root / 'docs').glob('*.md'))
 if errors:
     raise SystemExit('\n'.join(errors))
-print(json.dumps({'passed': True, 'version': version, 'documents': len(files), 'paths': len(spec['paths']), 'checks': ['local links', 'version', 'startup admin scope', 'install idempotency', 'no historical release duplicates']}))
+print(json.dumps({'passed': True, 'version': version, 'documents': len(files), 'paths': len(spec['paths']), 'checks': ['local links', 'version', 'startup admin scope', 'startup idempotency', 'task MCP scope', 'schema references', 'no historical release duplicates']}))

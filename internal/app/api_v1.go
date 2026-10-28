@@ -18,7 +18,7 @@ import (
 	"github.com/shengjuntu/rundesk/internal/store"
 )
 
-const Version = "0.55.0"
+const Version = "0.56.0"
 
 type apiError struct {
 	Status        int
@@ -162,6 +162,12 @@ func supportsIdempotency(r *http.Request) bool {
 		return false
 	}
 	p := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(p) == 3 && p[1] == "setup" {
+		switch p[2] {
+		case "codex-installs", "kun", "repairs", "auto-repairs", "complete", "model-test", "experiences":
+			return true
+		}
+	}
 	if len(p) == 4 && p[1] == "library" && p[3] == "snapshot" || len(p) == 5 && p[1] == "tasks" && p[3] == "resources" && p[4] == "export" {
 		return true
 	}

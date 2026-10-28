@@ -31,6 +31,9 @@ const buildContextLimit = 128 << 20
 const buildLogLimit = 4 << 20
 
 type ImageBuild struct {
+	PlatformOS      string                `json:"platformOS,omitempty"`
+	PlatformArch    string                `json:"platformArch,omitempty"`
+	SourceBuildID   string                `json:"sourceBuildId,omitempty"`
 	BuildSources    *BuildSourceSnapshot  `json:"buildSources,omitempty"`
 	RuntimeIdentity *RuntimeImageIdentity `json:"runtimeIdentity,omitempty"`
 	Scope           string                `json:"scope,omitempty"`
@@ -297,7 +300,7 @@ func (m *Manager) createBuildWithRecipe(iid, name, dockerfile string, timeout in
 	if name == "" {
 		name = "构建 " + id[:8]
 	}
-	v = ImageBuild{ID: id, InstanceID: iid, Name: name, Dockerfile: dockerfile, Reference: "rundesk-build/" + iid + ":" + id, Status: "draft", Created: store.Now(), Updated: store.Now(), ContextSHA256: hex.EncodeToString(hash.Sum(nil)), ContextBytes: size, Files: files, TimeoutMinutes: timeout, NoCache: noCache}
+	v = ImageBuild{ID: id, PlatformOS: runtime.GOOS, PlatformArch: runtime.GOARCH, InstanceID: iid, Name: name, Dockerfile: dockerfile, Reference: "rundesk-build/" + iid + ":" + id, Status: "draft", Created: store.Now(), Updated: store.Now(), ContextSHA256: hex.EncodeToString(hash.Sum(nil)), ContextBytes: size, Files: files, TimeoutMinutes: timeout, NoCache: noCache}
 	if setup != nil {
 		v.Scope, v.Source, v.ProfileID, v.CodexVersion = "setup", setup.Source, setup.ProfileID, setup.CodexVersion
 		v.Reference, v.Status = setup.Reference, "queued"
@@ -486,7 +489,15 @@ func (m *Manager) runNextBuild() {
 	m.buildMu.Unlock()
 	imageID, truncated, runErr := m.executeBuild(ctx, v)
 	m.buildMu.Lock()
-	defer m.buildMu.Unlock()
+	recordExperience := false
+	defer func() {
+		m.buildMu.Unlock()
+		if recordExperience {
+			if _, err := m.AutoRecordBuildRepair(v.ID); err != nil {
+				log.Printf("build %s experience record: %v", v.ID, err)
+			}
+		}
+	}()
 	defer cancel()
 	delete(m.buildCancels, v.ID)
 	latest, e := m.buildLocked(v.InstanceID, v.ID)
@@ -536,6 +547,7 @@ func (m *Manager) runNextBuild() {
 		log.Printf("build %s completion persistence: %v", v.ID, e)
 		return
 	}
+	recordExperience = v.Status == "succeeded"
 	_ = os.RemoveAll(filepath.Join(m.buildDir(v.ID), "context"))
 }
 func (m *Manager) executeBuild(ctx context.Context, v ImageBuild) (imageID string, truncated bool, err error) {

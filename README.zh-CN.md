@@ -46,7 +46,9 @@ RunDesk 通过 Kun 集成提供模块状态检查和执行循环策略选择。�
 
 ## 当前源码版本
 
-**RunDesk 0.55.0 · 外部 Kun 0.17.0 · worker 协议 16**
+**RunDesk 0.56.0 · 外部 Kun 0.17.0 · worker 协议 16**
+
+0.56.0 让新安装从初始化页面开始：发现服务器的硬件、工具和本机模型服务，测试模型推理与函数调用，配置独立的 Kun 初始化助手，再检查或安装 Codex，最后勾选要准备的 Docker 预设。安装和构建失败可交给可追踪的修复任务，成功修复保留版本化证据供以后复用。前置条件和自动发现范围见[启动与部署](docs/SETUP.md)。
 
 本源码包含运行与资源契约、统一观测模型、对话式轨迹阅读器、构建中心，以及共享同一任务核心的两个 API 入口：
 
@@ -65,6 +67,19 @@ RunDesk 独立运行，不依赖 HarnessRouter 服务。详见[当前状态](doc
 
 ## 快速开始
 
+Linux amd64 与 Windows amd64 可运行包包含 RunDesk、独立 Kun 程序、`recipes/` 和 `config/`，宿主无需先装 Go、Node.js 或 npm。
+
+Linux 解压后执行：
+
+```bash
+chmod +x ./start-rundesk.sh
+./start-rundesk.sh
+```
+
+Windows 解压后双击 `start-rundesk.cmd`。打开 <http://127.0.0.1:3210>，新安装先进入初始化页面。可以连接已有本机模型服务，也可以填写远程服务地址；需要构建容器时再准备 Docker Engine。
+
+### 从源码构建
+
 使用 **Go 1.25.12** 或兼容的更新版本。WebUI 已嵌入，无需前端构建。
 
 ```bash
@@ -74,7 +89,7 @@ make build
 
 将程序部署到源码目录之外时，还需把 `recipes/`、`config/` 放到可执行文件旁。其他配方目录使用 `RUNDESK_RECIPES_DIR`，自选源列表 JSON 使用 `RUNDESK_BUILD_SOURCES`。WebUI 继续内嵌，用户需要修改的构建资源改为外置文件。详见[部署](docs/SETUP.md)。
 
-打开 <http://127.0.0.1:3210>，在向导中配置 Codex 或 Kun。仅体验界面、不调用真实模型：
+打开 <http://127.0.0.1:3210> 开始初始化。扫描对象是运行 RunDesk 的机器，也可能是远程服务器；可手工填写模型服务地址，暂不需要的 Codex 或 Docker 可以跳过。仅体验界面、不调用真实模型：
 
 ```bash
 ./bin/rundesk --data ./demo-data --demo

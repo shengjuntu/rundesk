@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-27T07:51:10.224869Z",
+  "elapsedSeconds": 10.343712347,
+  "globalInstallChanged": false,
+  "installationActivated": false,
+  "liveModelCalled": false,
+  "result": {
+    "ok": true,
+    "version": "0.157.1",
+    "codex": "/tmp/TestCodexNativeLiveCheck4047582120/001/tools/codex/0.157.1-410762289/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin/codex",
+    "log": "Installing Codex 0.157.1 natively from https://registry.npmjs.org; Node/npm are not required\nReading exact package metadata and platform dependency for linux-x64\nDownloading native platform archive\nDownloaded 16 MiB\nDownloaded 32 MiB\nDownloaded 48 MiB\nDownloaded 64 MiB\nDownloaded 80 MiB\nDownloaded 96 MiB\nDownloaded 112 MiB\nDownloaded 128 MiB\nDownloaded 150336017 bytes; SHA-512 integrity verified\nExtracted native package and companion tools; checking executable version\nVerified codex-cli 0.157.1. Save this executable path in setup to select it; existing installations were not changed.\n",
+    "error": "",
+    "method": "native",
+    "registry": "https://registry.npmjs.org",
+    "integrity": "sha512-Eac8XlC0nCXSeUjDU9l8yLJ6P9evv1mO+AnvILoNwlegBC7B3AVXqJ05QcMhQX7RcJ3Lk2618ykCb2X2ui8VAQ==",
+    "packageVersion": "0.157.1-linux-x64"
+  },
+  "version": "0.56.0",
+  "scope": "Real Linux amd64 managed native installation from official npm registry, SHA-512 verification and codex --version. No global install or activation; no real model or Docker build.",
+  "unverified": [
+    "China mirror download",
+    "Windows runtime",
+    "real model authentication",
+    "Docker build"
+  ]
+}

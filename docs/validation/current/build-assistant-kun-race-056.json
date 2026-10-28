@@ -1,0 +1,41 @@
+{
+  "version": "0.56.0",
+  "passed": true,
+  "command": "RUNDESK_TEST_KUN=<independent Kun 0.17.0 executable> go test -race ./internal/app -run TestBuildAssistantRealKun -count=3 -json",
+  "passedRuns": 3,
+  "skippedRuns": 0,
+  "runs": [
+    {
+      "name": "TestBuildAssistantRealKunRepairPackImportBuildAndEvidence",
+      "elapsedSeconds": 7.45
+    },
+    {
+      "name": "TestBuildAssistantRealKunRepairPackImportBuildAndEvidence",
+      "elapsedSeconds": 7.25
+    },
+    {
+      "name": "TestBuildAssistantRealKunRepairPackImportBuildAndEvidence",
+      "elapsedSeconds": 7.12
+    }
+  ],
+  "scope": {
+    "kunWorker": "real independent Kun 0.17.0 process",
+    "mcp": "real HTTP task-scoped build MCP transport and schemas",
+    "workspace": "actual Kun file edits, ZIP packing/import, original frozen ZIP retained",
+    "model": "scripted HTTP Chat Completions fixture, 16 response rounds per run",
+    "docker": "recipeQueueDocker process fixture; no real Docker daemon"
+  },
+  "checks": [
+    "read explicit failed build/log and scoped prior experience",
+    "read source catalog and recipe capability",
+    "edit a separate Dockerfile through Kun file tools",
+    "pack context, import a distinct recipe, submit and wait",
+    "inspect immutable fixture image and run offline/smoke jobs",
+    "automatically retain verified experience and frozen-context diff"
+  ],
+  "limitations": [
+    "Does not establish real LLM diagnosis quality",
+    "No real Docker build or container execution",
+    "No real supplier model authentication"
+  ]
+}

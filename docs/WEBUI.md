@@ -1,8 +1,16 @@
 # WebUI：以实例为中心 / Instance-centered WebUI
 
-本文描述 RunDesk 0.55.0（2026-10-27）的界面与当前后端边界。升级不改变存储布局，也不迁移或删除原有实例、工作区和历史数据。
+本文描述 RunDesk 0.56.0（2026-10-27）的界面与当前后端边界。升级不改变存储布局，也不迁移或删除原有实例、工作区和历史数据。
 
 RunDesk 的日常操作围绕实例展开：选择一个 Codex 或 Kun 实例，检查它的模型、Skills、MCP 和插件能力，选择工作区，再执行任务、查看制品与运行轨迹。应用接入和构建中心分别负责外部调用与运行环境准备，不要求用户先注册应用才能管理实例。
+
+## 初始化首页
+
+首次非 Demo 安装先进入全屏初始化页，工作台在初始化结束或明确稍后配置之后显示。页面依次提供环境发现、Kun 模型、Codex 安装、Docker 预设和完成概览，可以自由返回或切换步骤，不要求先完成所有可选软件才能查看资源。已完成安装从实例管理开始；环境设置可重新打开初始化。
+
+环境扫描展示运行 RunDesk 的服务器信息及本机模型服务，不代表浏览器所在电脑。选择模型后主动测试推理和自动函数调用，再保存专用 Kun 初始化助手。Codex 安装和 Docker 构建按明确选择提交后台任务，刷新后可继续查看状态和日志。失败可以重试，或交给已就绪的 Kun 生成独立修复任务，轨迹使用既有任务/会话界面。
+
+最后页面列出已准备或跳过的组件以及版本化经验。候选和已验证分别展示；扫描到工具、下载成功、Agent 说已解决，都不能替代相应的执行验证。初始化不改已有实例后端或应用镜像绑定。具体配置、期限和安装边界见[部署说明](SETUP.md)。
 
 ## 实例、工作区和构建预设
 
@@ -43,7 +51,7 @@ RunDesk 的日常操作围绕实例展开：选择一个 Codex 或 Kun 实例，
 
 ## English summary
 
-The WebUI centers daily work on an Agent instance: inspect its capabilities, select a workspace, run tasks, and inspect artifacts and traces. Build presets produce images; images can support multiple independent instances. Application registration remains an integration concern.
+New installations begin with a full-page initialization view for server discovery, a tested Kun model, managed Codex installation, and selected Docker presets. Optional components can be skipped; existing installations can reopen setup. Daily work centers on an Agent instance: inspect its capabilities, select a workspace, run tasks, and inspect artifacts and traces. Build presets produce images; images can support multiple independent instances. Application registration remains an integration concern.
 
 This navigation change does not yet synchronize configuration across workspaces. Docker environments still have separate persistent homes for each instance/workspace pair. The four Kun research launchers have been withdrawn from everyday navigation while their APIs, stored records, and historical branch inspection remain available.
 

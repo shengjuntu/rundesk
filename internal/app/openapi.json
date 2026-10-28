@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Control API (RDCA)",
-    "version": "0.55.0",
+    "version": "0.56.0",
     "description": "RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter；附加 UHP /v1 入口共用任务核心，具体范围与限制见 docs/UHP.md，不声明完整规范兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。当前应用接入、错误、幂等及示例见 docs/API-V1.md。"
   },
   "servers": [
@@ -1701,7 +1701,7 @@
     "/build-center/assistant-runs": {
       "post": {
         "operationId": "post_build_center_assistant_runs",
-        "summary": "管理员：发起现有Codex队列任务，bootstrap Skill并注入限时构建MCP，不安装原生插件",
+        "summary": "管理员：发起现有Codex或本机Kun队列任务，bootstrap Skill并注入限时构建MCP，不安装原生插件",
         "parameters": [
           {
             "name": "X-Request-ID",
@@ -1735,7 +1735,7 @@
           }
         },
         "x-administrator-only": true,
-        "description": "发起现有Codex队列任务，bootstrap Skill并注入限时构建MCP，不安装原生插件。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。",
+        "description": "发起现有Codex或本机Kun队列任务，bootstrap Skill并注入限时构建MCP，不安装原生插件。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。",
         "requestBody": {
           "required": true,
           "content": {
@@ -1754,6 +1754,10 @@
                   "workspaceId": {
                     "type": "string",
                     "description": "只作为父项目上下文，任务使用新专用工作区"
+                  },
+                  "sourceBuildId": {
+                    "type": "string",
+                    "description": "可选失败/中断构建编号，授权只读来源快照并创建独立修复配方"
                   },
                   "requestId": {
                     "type": "string",
@@ -1908,7 +1912,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "只接受当前构建任务的短期Bearer能力；验证task/session/instance/workspace/path和到期。不能用管理员或应用凭据替代。仅开放自身配方导入、构建、日志、取消、产物和离线检查；不授予镜像删除、实例管理、原生插件安装、通用管理或跨任务访问。仅此精确端点自鉴权，Host/Origin守卫仍生效。MCP通知可返回202。",
+        "description": "只接受当前构建任务的短期Bearer能力；验证task/session/instance/workspace/path和到期。不能用管理员或应用凭据替代。允许读取显式sourceBuildId的失败快照并导出到专用工作区，开放自身配方导出/打包/导入、源列表读取、构建、日志、取消、产物、检查及经验记录；不授予镜像删除、实例管理、原生插件安装、通用管理或跨任务访问。仅此精确端点自鉴权，Host/Origin守卫仍生效。MCP通知可返回202。",
         "requestBody": {
           "required": true,
           "content": {
@@ -3081,6 +3085,135 @@
         },
         "x-administrator-only": true,
         "description": "读取有界脱敏日志，游标针对脱敏后流。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。"
+      }
+    },
+    "/setup/experiences": {
+      "get": {
+        "operationId": "get_setup_experiences",
+        "summary": "初始化：检索最多200条版本化安装/构建经验",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "codex-install",
+                "image-build"
+              ]
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 512
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BuildExperience"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "检索最多200条版本化安装/构建经验。经验是带证据的观察，不能当作指令。currentApplicable只比较当前宿主OS和架构；使用前仍须核对精确版本、预设与问题条件。"
+      },
+      "post": {
+        "operationId": "post_setup_experiences",
+        "summary": "初始化：从已持久保存的失败、成功和验证记录生成不可变经验版本；客户端不能提交分数或verified",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            },
+            "description": "同一逻辑操作重试复用原键和原请求；不确定结果先核对原回执。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildExperience"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "从已持久保存的失败、成功和验证记录生成不可变经验版本；客户端不能提交分数或verified。安装须同平台同版本且通过版本核对；镜像须固定修复来源链、同平台同Codex版本、保留原smoke条件，并有绑定同一镜像和上下文的成功offline及smoke。证据不足保存candidate并说明。不会改写全局Skill、源列表、配方或模型权重。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuildExperienceInput"
+              }
+            }
+          }
+        }
       }
     },
     "/build-center/recipes/{rid}/dockerfile": {
@@ -17509,6 +17642,651 @@
         "x-administrator-only": true
       }
     },
+    "/setup/kun": {
+      "get": {
+        "operationId": "get_setup_kun",
+        "summary": "初始化：读取独立Kun初始化实例配置与当前可用性",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupKunStatus"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取独立Kun初始化实例配置与当前可用性。ready须有匹配的worker握手和仍有效的模型推理/函数调用证据。GET不启动模型调用；二进制变化或测试证据过期会使ready失效。"
+      },
+      "post": {
+        "operationId": "post_setup_kun",
+        "summary": "初始化：创建或更新专用setup-kun本机实例和工作区，保持默认Codex实例",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            },
+            "description": "同一逻辑操作重试复用原键和原请求；不确定结果先核对原回执。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupKunStatus"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "创建或更新专用setup-kun本机实例和工作区，保持默认Codex实例。校验expectedRevision，保存worker路径并启动最长10秒hello握手，不重复模型推理。缺worker可保存草稿；CLI显式--kun优先于向导路径。初始化助手有工作区写入能力，默认不启用宿主Bash。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupKunInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/setup/repairs": {
+      "post": {
+        "operationId": "post_setup_repairs",
+        "summary": "初始化：为已失败的受管Codex安装创建普通Kun修复任务",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            },
+            "description": "同一逻辑操作重试复用原键和原请求；不确定结果先核对原回执。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupRepairRun"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "为已失败的受管Codex安装创建普通Kun修复任务。要求初始化Kun和模型已就绪；任务绑定原安装版本、专用工作区与30分钟时限，最多3次受管重试。短期MCP只能读取该任务记录、选择已有源、安装、验证及记录经验，不授予通用宿主Shell或全局配置修改。requestId持久去重。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupRepairInput"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "get_setup_repairs",
+        "summary": "初始化：读取初始化修复任务列表及原任务/会话绑定",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SetupRepairRun"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取初始化修复任务列表及原任务/会话绑定。"
+      }
+    },
+    "/setup/repairs/{sid}": {
+      "get": {
+        "operationId": "get_setup_repairs_sid",
+        "summary": "初始化：读取指定初始化修复任务与受管重试编号",
+        "parameters": [
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupRepairRun"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取指定初始化修复任务与受管重试编号。任务完成不代替安装结果检查。"
+      }
+    },
+    "/setup/agent-mcp": {
+      "post": {
+        "operationId": "post_setup_agent_mcp",
+        "summary": "初始化：初始化修复任务专用MCP JSON-RPC端点",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": false,
+        "description": "初始化修复任务专用MCP JSON-RPC端点。只接受本任务的短期Bearer能力；每次调用校验任务、会话、实例、工作区和到期，不接受管理员/应用凭据替代。不允许跨任务读取、任意命令、提权或全局软件安装。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "x-setup-task-capability-only": true,
+        "security": [
+          {
+            "SetupTaskCapability": []
+          }
+        ]
+      }
+    },
+    "/setup/auto-repairs": {
+      "get": {
+        "operationId": "get_setup_auto_repairs",
+        "summary": "初始化：读取最多200条自动交接授权和状态",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SetupAutoRepair"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取最多200条自动交接授权和状态。submitted只表示已创建修复任务，须按taskId/sessionId查看执行结果。"
+      },
+      "post": {
+        "operationId": "post_setup_auto_repairs",
+        "summary": "初始化：为一个明确来源安装/镜像构建持久注册或关闭失败自动交接",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            },
+            "description": "同一逻辑操作重试复用原键和原请求；不确定结果先核对原回执。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupAutoRepair"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "为一个明确来源安装/镜像构建持久注册或关闭失败自动交接。最多同时监视32项，每个来源至多一个修复任务；不扫描全部历史或递归修复Agent自己的重试。绑定当时Kun配置、worker、凭据及来源指纹，授权最长2小时。构建较久而仅模型测试证据过期时，授权内允许一次无副作用的完整能力复测，状态revalidating；配置/worker/凭据变化、授权到期或复测失败时blocked，不把全局模型测试30分钟有效期改成2小时。关闭页面后后台继续；enabled=false只阻止未派发交接，不取消已创建的修复任务。requestId重试保持原值和原请求。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupAutoRepairInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/setup/complete": {
+      "post": {
+        "operationId": "post_setup_complete",
+        "summary": "初始化：保存初始化选择并按revision防止覆盖并发修改",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            },
+            "description": "同一逻辑操作重试复用原键和原请求；不确定结果先核对原回执。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "settings": {
+                      "$ref": "#/components/schemas/SetupState"
+                    }
+                  },
+                  "required": [
+                    "settings"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "保存初始化选择并按revision防止覆盖并发修改。可跳过尚不需要的Codex或Docker；填写Codex路径时核对可执行文件和版本。completed=false保存草稿，默认完成；不切换现有实例后端或替换应用镜像。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupCompleteInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/setup/discovery": {
+      "get": {
+        "operationId": "get_setup_discovery",
+        "summary": "初始化：只读扫描运行RunDesk的服务器环境",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupDiscovery"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "只读扫描运行RunDesk的服务器环境。检查平台、GPU与常用工具，并对本机loopback常见端口和Linux监听端口做有界模型目录探测；不扫描局域网或安装软件。POST可指定最多16个HTTP(S)服务；凭据只附加到显式服务。发现模型不表示模型推理或工具调用通过。"
+      },
+      "post": {
+        "operationId": "post_setup_discovery",
+        "summary": "初始化：只读扫描运行RunDesk的服务器环境",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupDiscovery"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "只读扫描运行RunDesk的服务器环境。检查平台、GPU与常用工具，并对本机loopback常见端口和Linux监听端口做有界模型目录探测；不扫描局域网或安装软件。POST可指定最多16个HTTP(S)服务；凭据只附加到显式服务。发现模型不表示模型推理或工具调用通过。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupDiscoveryInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/setup/model-test": {
+      "post": {
+        "operationId": "post_setup_model_test",
+        "summary": "初始化：主动执行小型Chat Completions推理、自动函数调用及工具结果回送后的完整往返，最多45秒/三次请求",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            },
+            "description": "同一逻辑操作重试复用原键和原请求；不确定结果先核对原回执。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupModelTestResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "主动执行小型Chat Completions推理、自动函数调用及工具结果回送后的完整往返，最多45秒/三次请求。探测只返回固定无副作用的ping结果，不执行真实外部工具。结果报告inferenceOK、roundTripOK和toolsOK，完整往返通过后toolsOK才为true。测试证据绑定endpoint/model/密钥变量及当前凭据，30分钟后过期；Demo拒绝真实模型调用。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupModelTestInput"
+              }
+            }
+          }
+        }
+      }
+    },
     "/setup/environment": {
       "get": {
         "operationId": "get_setup_environment",
@@ -17748,7 +18526,7 @@
     "/setup/codex-install": {
       "post": {
         "operationId": "post_setup_codex_install",
-        "summary": "/setup/codex-install",
+        "summary": "初始化：兼容的同步受管安装入口",
         "parameters": [
           {
             "name": "X-Request-ID",
@@ -17771,42 +18549,17 @@
         ],
         "responses": {
           "200": {
-            "description": "成功。202 仅表示任务已接收。",
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CodexInstallResult"
                 }
               }
-            },
-            "headers": {
-              "X-Request-ID": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "RunDesk-API-Version": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "v1"
-                  ]
-                }
-              },
-              "Idempotency-Replayed": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "true",
-                    "false"
-                  ]
-                },
-                "description": "仅适用于幂等提交；true 表示返回原始回执。"
-              }
             }
           },
           "default": {
-            "description": "结构化错误。retryable=true 仅允许按相同操作与 Key 重试。",
+            "description": "结构化权限、参数、配置或执行错误。",
             "content": {
               "application/json": {
                 "schema": {
@@ -17821,28 +18574,171 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "version": {
-                    "type": "string",
-                    "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$",
-                    "maxLength": 64
-                  },
-                  "confirm": {
-                    "const": true
-                  }
-                },
-                "required": [
-                  "version",
-                  "confirm"
-                ],
-                "additionalProperties": false
+                "$ref": "#/components/schemas/CodexInstallInput"
               }
             }
           }
         },
         "x-administrator-only": true,
-        "description": "Explicit administrator confirmation; pinned release; managed local prefix; requires Node/npm. Up to 5 minutes. Does not activate the binary or log in. Result ok=false records a failed installation; HTTP acceptance alone is not success. Unknown outcome must be reconciled with the original idempotency receipt."
+        "description": "兼容的同步受管安装入口。省略method时仍使用已有npm安装方式；native无需Node/npm。需精确版本和明确confirm，最长5分钟，不自动激活或登录；结果不明先核对原幂等回执。新界面使用可恢复查询的后台任务入口。"
+      }
+    },
+    "/setup/codex-installs": {
+      "post": {
+        "operationId": "post_setup_codex_installs",
+        "summary": "初始化：后台下载安装精确版本Codex到数据目录",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            },
+            "description": "同一逻辑操作重试复用原键和原请求；不确定结果先核对原回执。"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "后台任务已接收；需查询终态。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodexInstallJob"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "后台下载安装精确版本Codex到数据目录。默认直接从选定npm registry读取平台包，核对SHA-512后解包并执行版本检查，无需Node/npm。源设置在准入时冻结；不覆盖全局安装、不登录、不自动激活。进程重启后的未确认安装标interrupted，不自动重试。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodexInstallInput"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "get_setup_codex_installs",
+        "summary": "初始化：读取最近100条受管Codex安装记录与当前日志",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CodexInstallJob"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取最近100条受管Codex安装记录与当前日志。刷新页面可继续查询。"
+      }
+    },
+    "/setup/codex-installs/{cid}": {
+      "get": {
+        "operationId": "get_setup_codex_installs_cid",
+        "summary": "初始化：读取指定Codex安装的状态、原源配置、日志和验证结果",
+        "parameters": [
+          {
+            "name": "cid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodexInstallJob"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取指定Codex安装的状态、原源配置、日志和验证结果。"
       }
     },
     "/workspaces/{wid}/skill-bundles": {
@@ -22804,6 +23700,11 @@
         "type": "http",
         "scheme": "bearer",
         "description": "仅构建助手MCP接受的短期任务能力，不是管理员或应用令牌。"
+      },
+      "SetupTaskCapability": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "仅初始化修复MCP接受的短期任务能力，不是管理员或应用令牌。"
       }
     },
     "schemas": {
@@ -28457,6 +29358,15 @@
           "codexVersion": {
             "type": "string"
           },
+          "platformOS": {
+            "type": "string"
+          },
+          "platformArch": {
+            "type": "string"
+          },
+          "sourceBuildId": {
+            "type": "string"
+          },
           "offlineReady": {
             "type": "boolean"
           },
@@ -30125,6 +31035,24 @@
           },
           "error": {
             "type": "string"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "native",
+              "npm"
+            ]
+          },
+          "registry": {
+            "type": "string"
+          },
+          "integrity": {
+            "type": "string",
+            "description": "下载平台包经核对的SHA-512 SRI值；不表示第三方镜像提供独立可信签名。"
+          },
+          "packageVersion": {
+            "type": "string"
           }
         },
         "required": [
@@ -30133,6 +31061,1052 @@
           "codex",
           "log",
           "error"
+        ],
+        "additionalProperties": false
+      },
+      "SetupDiscoveryPlatform": {
+        "type": "object",
+        "properties": {
+          "os": {
+            "type": "string"
+          },
+          "arch": {
+            "type": "string"
+          },
+          "cpuCount": {
+            "type": "integer"
+          },
+          "memoryBytes": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "os",
+          "arch",
+          "cpuCount",
+          "memoryBytes"
+        ],
+        "additionalProperties": false
+      },
+      "SetupDiscoveryGPU": {
+        "type": "object",
+        "properties": {
+          "vendor": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "memoryMiB": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "driver": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "vendor",
+          "name",
+          "memoryMiB",
+          "driver"
+        ],
+        "additionalProperties": false
+      },
+      "SetupDiscoveryTool": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "unavailable",
+              "error"
+            ]
+          },
+          "version": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "path",
+          "status",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "SetupDiscoveryModel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "SetupDiscoveryService": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "loopback",
+              "explicit"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "listed",
+              "auth_required",
+              "unreachable",
+              "empty",
+              "incompatible"
+            ]
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SetupDiscoveryModel"
+            }
+          },
+          "error": {
+            "type": "string"
+          },
+          "authRequired": {
+            "type": "boolean"
+          },
+          "inferenceTested": {
+            "const": false
+          }
+        },
+        "required": [
+          "endpoint",
+          "source",
+          "status",
+          "models",
+          "authRequired",
+          "inferenceTested"
+        ],
+        "additionalProperties": false
+      },
+      "SetupDiscovery": {
+        "type": "object",
+        "properties": {
+          "scannedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/SetupDiscoveryPlatform"
+          },
+          "gpus": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SetupDiscoveryGPU"
+            }
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SetupDiscoveryTool"
+            }
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SetupDiscoveryService"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "scannedAt",
+          "platform",
+          "gpus",
+          "tools",
+          "services",
+          "warnings"
+        ],
+        "additionalProperties": false
+      },
+      "SetupDiscoveryInput": {
+        "type": "object",
+        "properties": {
+          "endpoints": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "string",
+              "maxLength": 2048
+            }
+          },
+          "apiKeyEnv": {
+            "type": "string",
+            "maxLength": 160,
+            "description": "服务进程中的环境变量名称；只发送给显式填写的服务。"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "SetupModelTestInput": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "apiKeyEnv": {
+            "type": "string",
+            "maxLength": 160
+          }
+        },
+        "required": [
+          "endpoint",
+          "model"
+        ],
+        "additionalProperties": false
+      },
+      "SetupModelTestResult": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "inferenceOK": {
+            "type": "boolean"
+          },
+          "toolsOK": {
+            "type": "boolean"
+          },
+          "roundTripOK": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "inference_only",
+              "failed",
+              "auth_required"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "latencyMs": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "endpoint",
+          "model",
+          "inferenceOK",
+          "toolsOK",
+          "roundTripOK",
+          "status",
+          "checkedAt",
+          "latencyMs"
+        ],
+        "additionalProperties": false
+      },
+      "CodexInstallInput": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$",
+            "maxLength": 64
+          },
+          "confirm": {
+            "const": true
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "native",
+              "npm"
+            ],
+            "description": "新后台任务默认auto，使用无需Node/npm的native平台包；旧同步入口省略时保持npm。"
+          },
+          "sourceGroup": {
+            "type": "string"
+          },
+          "catalogRevision": {
+            "type": "string"
+          },
+          "npmSourceId": {
+            "type": "string"
+          },
+          "registry": {
+            "type": "string",
+            "description": "可选公开npm registry地址，不接受URL凭据或查询参数。"
+          },
+          "requestId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$",
+            "description": "可选持久去重标识；同一逻辑操作重试保持原请求。"
+          }
+        },
+        "required": [
+          "version",
+          "confirm"
+        ],
+        "additionalProperties": false
+      },
+      "CodexInstallJob": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed",
+              "interrupted"
+            ]
+          },
+          "input": {
+            "$ref": "#/components/schemas/CodexInstallInput"
+          },
+          "result": {
+            "$ref": "#/components/schemas/CodexInstallResult"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "input",
+          "result",
+          "platform",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "SetupState": {
+        "type": "object",
+        "properties": {
+          "applicationsOnly": {
+            "type": "boolean"
+          },
+          "completed": {
+            "type": "boolean"
+          },
+          "codex": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "runtimeKind": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "applicationsOnly",
+          "completed",
+          "codex",
+          "workspaceId",
+          "revision",
+          "runtimeKind"
+        ],
+        "additionalProperties": false
+      },
+      "SetupCompleteInput": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string"
+          },
+          "codex": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "completed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "revision"
+        ],
+        "additionalProperties": false
+      },
+      "BuildExperienceInput": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "codex-install",
+              "image-build"
+            ]
+          },
+          "failedId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "successId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "verificationIds": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          },
+          "changes": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16384
+          }
+        },
+        "required": [
+          "kind",
+          "failedId",
+          "successId",
+          "summary",
+          "changes"
+        ],
+        "additionalProperties": false
+      },
+      "BuildExperienceScope": {
+        "type": "object",
+        "properties": {
+          "os": {
+            "type": "string"
+          },
+          "arch": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "profileId": {
+            "type": "string"
+          },
+          "profileVersion": {
+            "type": "string"
+          },
+          "recipeId": {
+            "type": "string"
+          },
+          "recipeRevision": {
+            "type": "integer"
+          },
+          "recipeSha": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "os",
+          "arch",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "BuildExperienceEvidence": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "logExcerpt": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "registry": {
+            "type": "string"
+          },
+          "integrity": {
+            "type": "string"
+          },
+          "packageVersion": {
+            "type": "string"
+          },
+          "imageId": {
+            "type": "string"
+          },
+          "contextSha256": {
+            "type": "string"
+          },
+          "recipeSha": {
+            "type": "string"
+          },
+          "sources": {
+            "$ref": "#/components/schemas/BuildSourceSnapshot"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "BuildExperienceValidation": {
+        "type": "object",
+        "properties": {
+          "installVersionVerified": {
+            "type": "boolean"
+          },
+          "offline": {
+            "type": "boolean"
+          },
+          "smoke": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "installVersionVerified",
+          "offline",
+          "smoke"
+        ],
+        "additionalProperties": false
+      },
+      "BuildExperienceFileChange": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "change": {
+            "type": "string",
+            "enum": [
+              "added",
+              "removed",
+              "modified"
+            ]
+          },
+          "beforeSha256": {
+            "type": "string"
+          },
+          "afterSha256": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "change"
+        ],
+        "additionalProperties": false
+      },
+      "BuildExperiencePatch": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "changedFiles": {
+            "type": "integer"
+          },
+          "files": {
+            "type": "array",
+            "maxItems": 256,
+            "items": {
+              "$ref": "#/components/schemas/BuildExperienceFileChange"
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "dockerfileDiff": {
+            "type": "string",
+            "description": "脱敏且有界的Dockerfile差异；最多4096个Unicode字符。"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "available",
+          "changedFiles",
+          "files",
+          "truncated"
+        ],
+        "additionalProperties": false
+      },
+      "BuildExperience": {
+        "type": "object",
+        "properties": {
+          "schema": {
+            "const": 1
+          },
+          "id": {
+            "type": "string"
+          },
+          "familyId": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "previousId": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "codex-install",
+              "image-build"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "candidate",
+              "verified"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "failureFingerprint": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "changes": {
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/BuildExperienceScope"
+          },
+          "failure": {
+            "$ref": "#/components/schemas/BuildExperienceEvidence"
+          },
+          "success": {
+            "$ref": "#/components/schemas/BuildExperienceEvidence"
+          },
+          "verificationIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "validation": {
+            "$ref": "#/components/schemas/BuildExperienceValidation"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "currentApplicable": {
+            "type": "boolean"
+          },
+          "patch": {
+            "$ref": "#/components/schemas/BuildExperiencePatch"
+          }
+        },
+        "required": [
+          "schema",
+          "id",
+          "familyId",
+          "version",
+          "kind",
+          "status",
+          "createdAt",
+          "failureFingerprint",
+          "summary",
+          "changes",
+          "scope",
+          "failure",
+          "success",
+          "verificationIds",
+          "validation",
+          "warnings",
+          "currentApplicable"
+        ],
+        "additionalProperties": false
+      },
+      "SetupKunWorker": {
+        "type": "object",
+        "properties": {
+          "engine": {
+            "type": "string"
+          },
+          "engineVersion": {
+            "type": "string"
+          },
+          "protocolVersion": {
+            "type": "integer"
+          },
+          "pid": {
+            "type": "integer"
+          },
+          "capabilities": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          }
+        },
+        "required": [
+          "engine",
+          "engineVersion",
+          "protocolVersion",
+          "pid",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "SetupKunInput": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "apiKeyEnv": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "kunPath": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "expectedRevision": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "endpoint",
+          "model"
+        ],
+        "additionalProperties": false
+      },
+      "SetupKunStatus": {
+        "type": "object",
+        "properties": {
+          "configured": {
+            "type": "boolean"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "ready": {
+            "type": "boolean"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "kunPath": {
+            "type": "string"
+          },
+          "worker": {
+            "$ref": "#/components/schemas/SetupKunWorker"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "apiKeyEnv": {
+            "type": "string"
+          },
+          "modelTest": {
+            "$ref": "#/components/schemas/SetupModelTestResult"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "configured",
+          "available",
+          "ready",
+          "instanceId",
+          "workspaceId",
+          "revision",
+          "kunPath",
+          "worker",
+          "endpoint",
+          "model"
+        ],
+        "additionalProperties": false
+      },
+      "SetupRepairInput": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "const": "codex-install"
+          },
+          "installId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "requestId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          }
+        },
+        "required": [
+          "kind",
+          "installId",
+          "requestId"
+        ],
+        "additionalProperties": false
+      },
+      "SetupRepairRun": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "taskId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "sourceInstallId": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "attemptIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "instanceId",
+          "workspaceId",
+          "sessionId",
+          "taskId",
+          "status",
+          "createdAt",
+          "expiresAt",
+          "sourceInstallId",
+          "attemptIds"
+        ],
+        "additionalProperties": false
+      },
+      "SetupAutoRepairInput": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "codex-install",
+              "image-build"
+            ]
+          },
+          "sourceId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "requestId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          }
+        },
+        "required": [
+          "kind",
+          "sourceId",
+          "enabled",
+          "requestId"
+        ],
+        "additionalProperties": false
+      },
+      "SetupAutoRepair": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "codex-install",
+              "image-build"
+            ]
+          },
+          "sourceId": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "watching",
+              "revalidating",
+              "submitted",
+              "failed",
+              "disabled",
+              "completed",
+              "blocked"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "refreshAttempted": {
+            "type": "boolean"
+          },
+          "modelRefreshedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "kunRevision": {
+            "type": "integer"
+          },
+          "repairId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "taskId": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "sourceId",
+          "enabled",
+          "status",
+          "refreshAttempted",
+          "createdAt",
+          "updatedAt"
         ],
         "additionalProperties": false
       },
@@ -30942,6 +32916,12 @@
             "type": "string"
           },
           "error": {
+            "type": "string"
+          },
+          "runtimeKind": {
+            "type": "string"
+          },
+          "sourceBuildId": {
             "type": "string"
           },
           "skillBootstrap": {

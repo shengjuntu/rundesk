@@ -96,7 +96,7 @@ async function hasPendingSubmission(path,body) {return pendingAPI.has(await subm
 async function api(path, options = {}) {
   const headers = { ...options.headers };
   const method=options.method||"GET", body=options.body;
-  const deduplicate=method==="POST" && (path==="/setup/codex-install"||path==="/setup/runtime-images"||/^\/kun-benchmarks(?:\/[^/]+\/(?:start|stop|evaluate))?$/.test(path)||/^\/kun-skills(?:\/[^/]+\/(?:validations|promote|disable))?$/.test(path)||/^\/kun-skill-validations\/[^/]+\/(?:start|evaluate)$/.test(path)||/^\/kun-case-runs(?:\/[^/]+\/start)?$/.test(path)||/^\/kun-(?:rubrics|evaluations|task-sets)$/.test(path)||/^\/kun-forks(?:\/[^/]+\/(?:start|hypotheses))?$/.test(path)||/^\/experiments(?:\/[^/]+\/branches)?$/.test(path)||/^\/sessions\/[^/]+\/kun\/resume$/.test(path)||/^\/workspaces\/[^/]+\/mcp-tests(?:\?|$)/.test(path)||/^\/(instances|workspaces|sessions|tasks|schedules)$/.test(path)||/^\/sessions\/[^/]+\/(turns|recover)$/.test(path));
+  const deduplicate=method==="POST" && (/^\/setup\/(?:codex-install|codex-installs|runtime-images|kun|repairs|auto-repairs|complete|model-test|experiences|discovery)$/.test(path)||/^\/kun-benchmarks(?:\/[^/]+\/(?:start|stop|evaluate))?$/.test(path)||/^\/kun-skills(?:\/[^/]+\/(?:validations|promote|disable))?$/.test(path)||/^\/kun-skill-validations\/[^/]+\/(?:start|evaluate)$/.test(path)||/^\/kun-case-runs(?:\/[^/]+\/start)?$/.test(path)||/^\/kun-(?:rubrics|evaluations|task-sets)$/.test(path)||/^\/kun-forks(?:\/[^/]+\/(?:start|hypotheses))?$/.test(path)||/^\/experiments(?:\/[^/]+\/branches)?$/.test(path)||/^\/sessions\/[^/]+\/kun\/resume$/.test(path)||/^\/workspaces\/[^/]+\/mcp-tests(?:\?|$)/.test(path)||/^\/(instances|workspaces|sessions|tasks|schedules)$/.test(path)||/^\/sessions\/[^/]+\/(turns|recover)$/.test(path));
   let signature;
   if(deduplicate) {
     signature=await submissionSignature(path,body);
@@ -144,6 +144,10 @@ function prettySize(n) {
       : n + " B";
 }
 async function boot() {
+ try {
+  document.body.classList.add("rd-starting");
+  $("#startup-loading")?.classList.remove("hidden");
+  const rememberedInstance=localStorage.getItem("rundesk-instance")||"default";
   const identity=await api("/whoami");
   if(identity.kind==="user"){location.replace("/member.html");return;}
   const meta = await api("/meta");
@@ -153,8 +157,7 @@ async function boot() {
   $("#mode").textContent = meta.demo ? "DEMO" : "CODEX";
   $("#login").classList.add("hidden");
   state.instances = await api("/instances");
-  renderInstanceOptions("default");
-  state.applications = await api("/applications");
+  renderInstanceOptions(rememberedInstance);
   state.workspaces = await api("/workspaces");
   const last =
     localStorage.getItem("rundesk-assistant-workspace") ||
@@ -165,14 +168,28 @@ async function boot() {
   );
   if (state.workspaces.some((w) => w.id === last)) $("#workspace").value = last;
   updateWorkspaceLabel();
+  await RunDeskSetup.maybeOpen();
+  state.instances = await api("/instances");
+  const requestedInstance=window.RunDeskOnboarding?.preferredInstance||rememberedInstance;
+  const setupInstance=state.instances.some(row=>row.id===requestedInstance)?requestedInstance:"";
+  renderInstanceOptions(setupInstance || $("#instance").value || "default");
+  state.applications = await api("/applications");
+  state.workspaces = await api("/workspaces");
+  const selectedWorkspace=$("#workspace").value;
+  $("#workspace").replaceChildren(...state.workspaces.map(w=>el("option",{value:w.id},w.name)));
+  if(state.workspaces.some(w=>w.id===selectedWorkspace))$("#workspace").value=selectedWorkspace;
+  updateWorkspaceLabel();
   await refreshSessions();
   state.booted = true;
-  await RunDeskSetup.maybeOpen();
+  document.body.classList.remove("rd-starting");
+  $("#startup-loading")?.remove();
   if(await RunDeskLanguage.restoreDraft())return;
   const linkedSession=new URLSearchParams(location.search).get("session");
   if(linkedSession){const linked=await api("/sessions/"+encodeURIComponent(linkedSession));renderInstanceOptions(linked.instanceId);$("#workspace").value=linked.workspaceId;updateWorkspaceLabel();await refreshSessions();setProductPage("conversation");await selectSession(linked.id);return;}
   if (await restoreProductRoute()) return;
-  await RunDeskInstances.open();
+  if(setupInstance&&setupInstance!=="default")await RunDeskInstances.conversation(setupInstance);
+  else await RunDeskInstances.open();
+ } catch(error) {window.RunDeskOnboarding?.bootFailed(error);throw error;}
 }
 function updateWorkspaceLabel() {
   const w = ws();
@@ -1079,7 +1096,7 @@ document.onkeydown = (e) => {
   }
 };
 setInterval(() => {
-  if (!document.hidden && $("#login").classList.contains("hidden"))
+  if (state.booted && !document.hidden && $("#login").classList.contains("hidden"))
     safe(async () => {
       await refreshSessions();
       if (active(state.session?.status)) await refreshApprovals();

@@ -17,6 +17,7 @@ func TestBuildLogRedactionAcrossEveryChunkBoundary(t *testing.T) {
 		"fetch https://private-token@example.invalid/resource\n",
 		"npm_abcdefghijklmnopqrstuvwxyz0123456789\n",
 		"rd-build-" + strings.Repeat("a", 64) + "\n",
+		"rd-setup-" + strings.Repeat("b", 64) + "\n",
 		"secret=chunk-boundary-private-value", // No trailing newline.
 	}
 	for _, line := range lines {
@@ -38,7 +39,7 @@ func TestBuildLogRedactionAcrossEveryChunkBoundary(t *testing.T) {
 					t.Fatalf("split %d leaked %q: %q", split, secret, got)
 				}
 			}
-			if strings.Contains(got, "rd-build-") {
+			if strings.Contains(got, "rd-build-") || strings.Contains(got, "rd-setup-") {
 				t.Fatalf("split %d leaked task capability: %q", split, got)
 			}
 			if !strings.Contains(got, "[redacted]") {

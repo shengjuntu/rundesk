@@ -1,6 +1,26 @@
 # 验证范围与复验
 
-本页区分 0.55.0 外置配方与构建源、0.54.1 研究预置构建修复、0.54.0 WebUI、0.53.0 UHP 加固、此前 0.52.0 文档整理与功能验证，以及更早的发布记录。测试替身通过不等于真实模型、Docker 或业务制品已验收。
+本页区分 0.56.0 初始化与修复、0.55.0 外置配方与构建源、0.54.1 研究预置构建修复、0.54.0 WebUI、0.53.0 UHP 加固、此前 0.52.0 文档整理与功能验证，以及更早的发布记录。测试替身通过不等于真实模型、Docker 或业务制品已验收。
+
+## 0.56.0 首次初始化与修复
+
+本轮[总验证报告](validation/current/onboarding-056.json)记录 Go 全套 **764 个通过事件（含子测试）、0 跳过、0 失败**，初始化专项 race 50 个通过事件，`go vet` 通过；轻量 SDK 三个包测试通过。Python 配方 20 项、独立上游 7 项通过，外置配方与生成器、SDK 文件完整性核对通过。这些数字只属于本轮执行，不继承早期报告。
+
+[原生 Codex 实测](validation/current/codex-native-live-056.json)在本轮 Linux amd64 环境中通过官方 npm registry 下载 `0.157.1-linux-x64` 平台包（150,336,017 字节），由产品安装代码核对 SHA-512、解包伴随工具并实际执行 `codex-cli 0.157.1`。一次记录耗时约 10.34 秒，只代表当时环境；未激活该路径、修改全局安装或调用真实模型。它不证明中国镜像下载、其他平台运行或模型认证已验收。
+
+[Kun 修复专项 race](validation/current/setup-agent-race-056.json)通过 11 项测试、无跳过，其中一项使用真实独立 Kun 0.17.0 worker、脚本模型 HTTP 服务、真实任务 MCP 和本地 registry，走通 403 失败→切换受管原生安装→完整性/版本核对→自动保存已验证经验→后续任务读取匹配经验。模型响应是测试脚本，不证明真实 LLM 的诊断质量或公网安装成功率。
+
+[Kun 构建助手专项 race](validation/current/build-assistant-kun-race-056.json)使用真实独立 Kun 与 HTTP MCP，重复三次通过，覆盖读取失败快照、实际文件补丁、打包/导入新配方、构建状态等待、offline/smoke 记录及自动验证经验和差异。模型为 16 轮脚本响应，Docker 使用进程测试替身；这些结果不等于真实模型自主诊断或实际容器构建验收。
+
+[前端行为](validation/current/onboarding-js-056.json)通过 23 组检查，使用产品 JavaScript 与实际 `api()` 请求辅助函数，覆盖首次入口、推理/工具状态、幂等头、丢失响应重试、后台自动交接、历史失败不自动提交、Docker 多选与源编辑保留、跳过和完成。
+
+[真实 Chromium](validation/current/onboarding-browser-056.json)通过 18 项检查：完整产品 HTML/CSS/JS 搭配 HTTP fixture，在 1440px/390px 检查五步页面、390px 英文布局、首次登录与初始化先于工作台加载；没有水平溢出或页面异常。QA 字体不属于产品运行依赖，也不随包交付截图。
+
+[编译程序 HTTP 与浏览器闭环](validation/current/onboarding-live-http-056.json)通过 12 项检查，使用实际 RunDesk 服务、完整未改动 WebUI、独立 Kun worker 和脚本模型 HTTP，覆盖登录、三轮模型探测、worker 握手、跳过 Codex/Docker、完成初始化、刷新保留 Kun 选择与默认 Codex 实例独立。模型目录可达、完整工具往返通过、Agent 任务完成和业务产物质量仍分别判断。
+
+[Linux 可运行包](validation/current/portable-smoke-056.json)实际解压后，在包含空格的目录、不同工作目录和不含 Node/npm/Codex/Docker 的最小 PATH 下启动，通过 8 项检查：旁置 Kun、嵌入界面、六套配方、八类源、最终 OpenAPI、跳过可选组件及服务重启后的状态保留。
+
+本环境没有完整 Docker 构建验收或真实供应商模型调用。Windows 交叉编译也不代表原生运行通过。目标机器的 GPU 驱动、vLLM/llama.cpp 工具调用配置、Docker Engine 权限、下载源连通性和代表性应用任务仍需实际验收。
 
 ## 0.55.0 外置配方与构建源
 

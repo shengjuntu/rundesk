@@ -46,7 +46,9 @@ The instance-centered WebUI does **not** yet synchronize instance configuration 
 
 ## Current source version
 
-**RunDesk 0.55.0 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.56.0 source · external Kun 0.17.0 · worker protocol 16**
+
+Version 0.56.0 starts new installations with an initialization page: discover the server's hardware, tools and local model services; test a model's inference and function calling; configure a dedicated Kun setup assistant; detect or install Codex; then select the Docker presets to prepare. Installation and build failures can become traceable repair tasks. Successful repairs retain versioned evidence for later reuse. See [setup](docs/SETUP.md) for prerequisites and the limits of automatic discovery.
 
 This source includes runtime/resource contracts, a unified observation model, the conversation trace reader, the build center, and two API entry points over the same task core:
 
@@ -65,6 +67,19 @@ RunDesk runs independently of HarnessRouter. See [current status](docs/STATUS.md
 
 ## Quick start
 
+The Linux amd64 and Windows amd64 ready-to-run packages include RunDesk, the standalone Kun executable, `recipes/` and `config/`. They do not require Go, Node.js or npm on the host.
+
+On Linux, extract the package and run:
+
+```bash
+chmod +x ./start-rundesk.sh
+./start-rundesk.sh
+```
+
+On Windows, extract the package and double-click `start-rundesk.cmd`. Open <http://127.0.0.1:3210>; a new installation starts with initialization. Use an existing local model service or enter a remote endpoint. Docker Engine is optional and must be installed separately when you want to build containers.
+
+### Build from source
+
 Use **Go 1.25.12** or a compatible newer toolchain. The WebUI is embedded; no frontend build is required.
 
 ```bash
@@ -74,7 +89,7 @@ make build
 
 When deploying the binary outside this source checkout, also deploy `recipes/` and `config/` beside it. Set `RUNDESK_RECIPES_DIR` for another recipe directory and `RUNDESK_BUILD_SOURCES` for a chosen source-list JSON file. The WebUI remains embedded; editable build assets are external. See [deployment](docs/SETUP.md).
 
-Open <http://127.0.0.1:3210> and configure Codex or Kun in the setup wizard. To explore the interface without real model calls:
+Open <http://127.0.0.1:3210> to initialize the installation. Discovery checks the machine running RunDesk, which may be a remote server. You can enter a model endpoint manually and skip Codex or Docker when they are not needed yet. To explore the interface without real model calls:
 
 ```bash
 ./bin/rundesk --data ./demo-data --demo

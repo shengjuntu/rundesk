@@ -1,6 +1,6 @@
 # RunDesk Control API（RDCA）v1
 
-RunDesk 自身 API 的名称为 **RunDesk Control API（RDCA）**。当前契约随 RunDesk 0.55.0 发布。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
+RunDesk 自身 API 的名称为 **RunDesk Control API（RDCA）**。当前契约随 RunDesk 0.56.0 发布。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
 
 RunDesk 不依赖 HarnessRouter。附加 UHP 服务已在 `/v1` 提供入口，与 RDCA 共用任务核心和资源服务；各协议的授权与幂等细节分别定义。本版目标协议为 `2026-10-19`，不声明完整规范兼容，详见 [API 定位](API-STRATEGY.md) 和 [UHP 服务与限制](UHP.md)。
 
@@ -34,6 +34,33 @@ Content-Type: application/json
 应用请求可省略 instanceId/source，由凭据绑定。显式提交其他归属会拒绝；`source.taskId` 仅为业务标签，不负责去重。模型、Skills、MCP、安装、全局并发及凭据管理属于管理员。
 
 [注册与集中配置](APPLICATION-CONNECT.md) · [凭据生命周期和范围](APPLICATION-CREDENTIALS.md)
+
+## 初始化与修复（管理员）
+
+0.56.0 的初始化接口只面向管理员；普通应用和成员不能扫描服务器、安装软件或启动初始化 Agent。扫描不等于推理测试，任务接收不等于安装或构建成功。完整交互见[启动与部署](SETUP.md)。
+
+| 路径 | 操作与结果 |
+| --- | --- |
+| `GET /setup/discovery` | 只读发现服务器硬件、工具和本机模型服务目录 |
+| `POST /setup/discovery` | 可附最多 16 个显式 endpoint 和密钥环境变量名称 |
+| `POST /setup/model-test` | 主动验证文本推理、自动函数调用与结果往返，返回 inferenceOK/roundTripOK/toolsOK |
+| `GET /setup/kun` | 查看专用 Kun 初始化实例、worker 握手与模型测试状态 |
+| `POST /setup/kun` | endpoint/model、可选 apiKeyEnv/kunPath/expectedRevision；保存专用实例 |
+| `POST /setup/codex-installs` | version/confirm，选 method、源组或 registry；202 返回后台安装任务 |
+| `GET /setup/codex-installs`、`/{cid}` | 查看持久安装记录、日志、验证与中断状态 |
+| `POST /setup/repairs` | kind:codex-install、installId、24 位 requestId，创建 Kun 修复任务 |
+| `GET /setup/repairs`、`/{sid}` | 查看修复任务、会话及本次重试安装编号 |
+| `POST /setup/auto-repairs` | 为明确的 sourceId 注册或关闭失败自动交接，带 kind/enabled/requestId |
+| `GET /setup/auto-repairs` | 查看持久自动交接状态和已创建的修复任务编号 |
+| `GET /setup/experiences` | 按 kind/query 检索版本化经验，最多 200 条 |
+| `POST /setup/experiences` | 引用失败、成功及验证记录形成候选或已验证经验 |
+| `POST /setup/complete` | 按 revision 保存初始化选择和完成状态，不改变现有实例后端 |
+
+除只读 discovery 外，产生模型调用、配置、安装、修复、经验或完成状态的 POST 使用 `Idempotency-Key`；具体字段以 OpenAPI 为准。修复的 requestId 另固定逻辑任务身份，重试保持原请求；未知结果先核对原回执。旧 `POST /setup/codex-install` 同步入口保留，省略 method 时仍使用 npm；新后台入口默认无需 Node/npm 的原生平台包安装。
+
+`POST /setup/agent-mcp` 只接受当前初始化任务的短期能力，管理员与应用令牌不能替代。它不是通用软件管理入口。`setup-kun` 默认具有工作区写入能力和受限安装工具，不启用宿主 Bash；安装版本、重试次数、任务时限和来源范围由服务端校验。
+
+经验的 verified 由实际记录决定，不能通过客户端文字或分数声明。安装须同平台同精确版本并完成验证；镜像须有同一固定镜像和冻结上下文的 offline、smoke 与可追溯修复来源。`currentApplicable` 只表示宿主系统和架构匹配，仍需核对版本及预设；经验不会自动修改全局 Skill、源列表、配方或模型权重。
 
 ## 构建配方与下载源（管理员）
 

@@ -13,11 +13,12 @@
     <link rel="stylesheet" href="/images.css" />
     <link rel="stylesheet" href="/builds.css" />
     <link rel="stylesheet" href="/build-center.css" />
+    <link rel="stylesheet" href="/setup-onboarding.css" />
 <link rel="stylesheet" href="/library.css" />
     <link rel="stylesheet" href="/users.css" />
     <link rel="stylesheet" href="/diagnostics.css" />
     <link rel="stylesheet" href="/recovery.css" />
-    <script defer src="/i18n.js"></script><script defer src="/setup-images.js"></script><script defer src="/setup.js"></script><script defer src="/layout.js"></script><link rel="stylesheet" href="/layout.css"/><script defer src="/recovery.js"></script>
+    <script defer src="/i18n.js"></script><script defer src="/setup-images.js"></script><script defer src="/setup-onboarding.js"></script><script defer src="/setup.js"></script><script defer src="/layout.js"></script><link rel="stylesheet" href="/layout.css"/><script defer src="/recovery.js"></script>
     <script defer src="/diagnostics.js"></script>
     <script defer src="/conversation.js"></script>
     <script defer src="/app.js"></script>
@@ -60,7 +61,8 @@
     <link rel="stylesheet" href="/trace-reader.css"/>
     <script defer src="/trace.js"></script>
   </head>
-  <body>
+  <body class="rd-starting">
+    <div id="startup-loading" class="startup-loading" role="status"><span class="brandmark">r.</span><strong>RunDesk</strong><span class="startup-message">正在读取初始化状态 / Checking setup…</span></div>
     <div id="login" class="login hidden">
       <form id="login-form" class="card">
         <span class="brandmark">r.</span>

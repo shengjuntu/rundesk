@@ -26,6 +26,12 @@ func (m *Manager) kunExecutable() string {
 	if m.Kun != "" {
 		return m.Kun
 	}
+	var saved struct {
+		KunPath string `json:"kunPath"`
+	}
+	if m.Store.Get("system", "setup-kun", &saved) == nil && saved.KunPath != "" {
+		return saved.KunPath
+	}
 	exe, _ := os.Executable()
 	name := "kun"
 	if runtime.GOOS == "windows" {

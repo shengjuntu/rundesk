@@ -121,7 +121,15 @@ func (s kunPreparationHost) InputSkills(w Workspace, i Instance, skills []Skill)
 	return s.m.kunInputSkills(w, i, skills)
 }
 func (s kunPreparationHost) AttachSkill(session Session, w Workspace, in Input, request p.Start) (p.Start, error) {
-	return s.m.attachKunSkill(session, w, in, request)
+	request, err := s.m.attachKunSkill(session, w, in, request)
+	if err != nil {
+		return request, err
+	}
+	request, err = s.m.configureSetupAgent(session, w, request)
+	if err != nil {
+		return request, err
+	}
+	return s.m.configureKunBuildAssistant(session, w, request)
 }
 func (s kunPreparationHost) ValidateResume(session Session, w Workspace, h *handle, in Input) ([]Skill, error) {
 	return s.m.validateKunResume(session, w, h, in)

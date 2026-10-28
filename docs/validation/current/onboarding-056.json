@@ -1,0 +1,102 @@
+{
+  "version": "0.56.0",
+  "passed": true,
+  "date": "2026-10-27",
+  "go": {
+    "passed": true,
+    "testPassEventsIncludingSubtests": 764,
+    "testSkipEvents": 0,
+    "failEvents": 0,
+    "packagePasses": 17
+  },
+  "onboardingRace": {
+    "passed": true,
+    "testPassEventsIncludingSubtests": 50,
+    "testSkipEvents": 0,
+    "failEvents": 0,
+    "packagePasses": 1
+  },
+  "goVet": {
+    "passed": true
+  },
+  "independentSDK": {
+    "passed": true,
+    "testPackages": 3,
+    "integrityVerified": true
+  },
+  "python": {
+    "profiles": {
+      "passed": true,
+      "tests": 20
+    },
+    "upstream": {
+      "passed": true,
+      "tests": 7
+    },
+    "externalRecipeSynchronization": {
+      "passed": true
+    }
+  },
+  "frontend": {
+    "js": {
+      "report": "onboarding-js-056.json",
+      "checks": 23
+    },
+    "browser": {
+      "report": "onboarding-browser-056.json",
+      "checks": 18
+    },
+    "live-http": {
+      "report": "onboarding-live-http-056.json",
+      "checks": 12
+    }
+  },
+  "openAPI": {
+    "paths": 233,
+    "operations": 279,
+    "version": "0.56.0",
+    "imageBuildFields": [
+      "platformOS",
+      "platformArch",
+      "sourceBuildId"
+    ],
+    "checks": [
+      "startup administrator scope",
+      "startup idempotency headers",
+      "independent task MCP capabilities",
+      "all schema references",
+      "local documentation links"
+    ]
+  },
+  "integrationReports": [
+    "codex-native-live-056.json",
+    "setup-agent-race-056.json",
+    "build-assistant-kun-race-056.json",
+    "onboarding-live-http-056.json"
+  ],
+  "scope": {
+    "nativeCodex": "Actual official-registry Linux amd64 package download, SHA-512 verification and codex-cli 0.157.1 execution; no global installation or activation.",
+    "kun": "Actual standalone Kun 0.17.0 worker and MCP transport; scripted HTTP model fixtures.",
+    "frontend": "Shipped HTML/CSS/JavaScript; JSDOM behavior, Chromium layout/entry/authentication and compiled-service HTTP initialization.",
+    "docker": "Process and HTTP fixtures for build/repair/check behavior; no real Docker daemon."
+  },
+  "notValidated": [
+    "Real LLM diagnostic quality or supplier authentication",
+    "Actual Docker image build or container smoke on the deployment host",
+    "Windows native runtime",
+    "China mirror reachability/speed and all registry variants",
+    "GPU driver or real vLLM/llama.cpp deployment readiness",
+    "Business artifact quality or statistical learning improvements"
+  ],
+  "portable": {
+    "linux": {
+      "passed": true,
+      "report": "portable-smoke-056.json",
+      "checks": 8
+    },
+    "windows": {
+      "crossCompiled": true,
+      "nativeRuntimeTested": false
+    }
+  }
+}

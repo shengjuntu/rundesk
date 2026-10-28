@@ -63,6 +63,11 @@ func writableDirectory(path string) error {
 func (s *Server) setupRoutes(mux *http.ServeMux) {
 	m := s.Manager
 	s.setupEnvironmentRoutes(mux)
+	s.setupDiscoveryRoutes(mux)
+	s.setupAgentRoutes(mux)
+	s.setupCompleteRoutes(mux)
+	s.setupExperienceRoutes(mux)
+	s.setupAutoRepairRoutes(mux)
 	s.codexInstallRoutes(mux)
 	s.setupImageRoutes(mux)
 	mux.HandleFunc("GET /api/setup", func(w http.ResponseWriter, r *http.Request) {
@@ -77,7 +82,7 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 		if u != nil {
 			username = u.Username
 		}
-		writeJSON(w, 200, map[string]any{"settings": v, "codex": m.codexExecutable(), "codexHome": i.CodexHome, "instance": i, "backends": backendCatalog(), "data": m.Data, "user": username, "model": i.DefaultModel, "firstRun": !v.Completed && len(m.Sessions()) == 0 && !m.Demo, "protected": s.Token != "", "localOnly": s.Local, "publicOrigin": s.PublicOrigin})
+		writeJSON(w, 200, map[string]any{"settings": v, "codex": m.codexExecutable(), "codexHome": i.CodexHome, "instance": i, "backends": backendCatalog(), "data": m.Data, "user": username, "model": i.DefaultModel, "firstRun": !v.Completed && !m.Demo, "protected": s.Token != "", "localOnly": s.Local, "publicOrigin": s.PublicOrigin})
 	})
 	mux.HandleFunc("PUT /api/setup", func(w http.ResponseWriter, r *http.Request) {
 		var p SetupInput

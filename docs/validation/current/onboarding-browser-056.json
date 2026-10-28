@@ -1,0 +1,157 @@
+{
+  "passed": true,
+  "scope": "Real Chromium loads the full shipped HTML/CSS/JS with HTTP fixtures and a QA-only CJK font. No live package installation, Docker build or model inference.",
+  "checks": [
+    {
+      "entry": "full shipped app boot shows setup before loading workbench sessions/apps"
+    },
+    {
+      "api": "full shipped api sends Idempotency-Key for real model-test and Kun configuration POSTs"
+    },
+    {
+      "step": "environment",
+      "viewport": 1440,
+      "width": 1440,
+      "clientWidth": 1440,
+      "scrollWidth": 1440,
+      "mainWidth": 792,
+      "scrollHeight": 1417,
+      "clientHeight": 1000
+    },
+    {
+      "step": "kun",
+      "viewport": 1440,
+      "width": 1440,
+      "clientWidth": 1440,
+      "scrollWidth": 1440,
+      "mainWidth": 792,
+      "scrollHeight": 1355,
+      "clientHeight": 1000
+    },
+    {
+      "step": "codex",
+      "viewport": 1440,
+      "width": 1440,
+      "clientWidth": 1440,
+      "scrollWidth": 1440,
+      "mainWidth": 792,
+      "scrollHeight": 1517,
+      "clientHeight": 1000
+    },
+    {
+      "step": "docker",
+      "viewport": 1440,
+      "width": 1440,
+      "clientWidth": 1440,
+      "scrollWidth": 1440,
+      "mainWidth": 792,
+      "scrollHeight": 2563,
+      "clientHeight": 1000
+    },
+    {
+      "step": "finish",
+      "viewport": 1440,
+      "width": 1440,
+      "clientWidth": 1440,
+      "scrollWidth": 1440,
+      "mainWidth": 792,
+      "scrollHeight": 1162,
+      "clientHeight": 1000
+    },
+    {
+      "step": "environment",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390,
+      "mainWidth": 354,
+      "scrollHeight": 1607,
+      "clientHeight": 844
+    },
+    {
+      "step": "kun",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390,
+      "mainWidth": 354,
+      "scrollHeight": 1727,
+      "clientHeight": 844
+    },
+    {
+      "step": "codex",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390,
+      "mainWidth": 354,
+      "scrollHeight": 1867,
+      "clientHeight": 844
+    },
+    {
+      "step": "docker",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390,
+      "mainWidth": 354,
+      "scrollHeight": 3781,
+      "clientHeight": 844
+    },
+    {
+      "step": "finish",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390,
+      "mainWidth": 354,
+      "scrollHeight": 1266,
+      "clientHeight": 844
+    },
+    {
+      "step": "environment",
+      "language": "en",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390
+    },
+    {
+      "step": "kun",
+      "language": "en",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390
+    },
+    {
+      "step": "codex",
+      "language": "en",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390
+    },
+    {
+      "step": "docker",
+      "language": "en",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390
+    },
+    {
+      "step": "finish",
+      "language": "en",
+      "viewport": 390,
+      "width": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390
+    },
+    {
+      "authentication": "401 login is visible above startup mask and successful login enters initialization"
+    }
+  ],
+  "errors": [],
+  "version": "0.56.0"
+}

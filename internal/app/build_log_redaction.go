@@ -14,7 +14,7 @@ const buildLogRedactionLineLimit = 64 << 10
 
 var buildLogHeaderSecret = regexp.MustCompile(`(?i)((?:authorization|proxy-authorization|cookie|set-cookie)["']?[ \t]*[:=][ \t]*)[^\r\n]*`)
 var buildLogAssignedSecret = regexp.MustCompile(`(?i)((?:api[ _-]*key|access[ _-]*token|refresh[ _-]*token|client[ _-]*secret|token|password|passwd|secret)["']?[ \t]*[:=][ \t]*)("[^"\r\n]*"|'[^'\r\n]*'|[^\s&,;]+)`)
-var buildLogLiteralSecret = regexp.MustCompile(`(?:sk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{16,}|github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|npm_[A-Za-z0-9]{20,}|rd_(?:app|user|browser)_[A-Za-z0-9._-]{16,}|rd-build-[a-f0-9]{64})`)
+var buildLogLiteralSecret = regexp.MustCompile(`(?:sk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{16,}|github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|npm_[A-Za-z0-9]{20,}|rd_(?:app|user|browser)_[A-Za-z0-9._-]{16,}|rd-(?:build|setup)-[a-f0-9]{64})`)
 var buildLogURLCredentials = regexp.MustCompile(`(?i)(https?://)[^\s/@]+(?::[^\s/@]*)?@`)
 
 func redactBuildLogLine(line []byte) []byte {

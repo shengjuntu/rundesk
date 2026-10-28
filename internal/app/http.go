@@ -365,7 +365,7 @@ func (s *Server) guard(next http.Handler) http.Handler {
 		}
 		// This one MCP endpoint authenticates a short-lived task capability itself.
 		// Keep Host, Origin and cross-site checks above, and never widen this to a prefix.
-		buildCapability := r.Method == "POST" && r.URL.Path == "/api/build-center/mcp"
+		buildCapability := r.Method == "POST" && (r.URL.Path == "/api/build-center/mcp" || r.URL.Path == "/api/setup/agent-mcp")
 		if strings.HasPrefix(r.URL.Path, "/api/") && !buildCapability {
 			var err error
 			r, err = s.authorize(r)

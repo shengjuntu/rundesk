@@ -1,6 +1,7 @@
 "use strict";
 window.RunDeskBuildCenter = (() => {
   const base = "/build-center", enc = encodeURIComponent;
+  const tr = (zh, en) => document.documentElement.lang === "en" ? en : zh;
   const labels = {draft:"待启动",queued:"排队中",running:"运行中",canceling:"正在取消",canceled:"已取消",interrupted:"状态未确认",failed:"失败",succeeded:"已完成"};
   const active = status => ["queued", "running", "canceling"].includes(status);
   let generation = 0, timer, back, currentTab = "recipes", selected = "", selectedTest = false;
@@ -49,7 +50,7 @@ window.RunDeskBuildCenter = (() => {
     if ($("#settings").open) $("#settings").close(); setProductPage("build-center");
     history.replaceState(null, "", "#build-center/" + currentTab + (id ? "/" + enc(id) : "") + (isTest ? "/test" : ""));
     const page = $("#build-center-page"), content = el("div", {class:"build-center-content"}), error = el("p", {class:"error",role:"status","data-center-error":""});
-    page.replaceChildren(el("div", {class:"page-intro"}, el("div", {}, button(rdText("← 返回"), close, "quiet back-link"), el("p", {class:"eyebrow"}, "BUILD CENTER"), el("h1", {}, rdText("构建中心")), el("p", {}, rdText("准备工具环境，查看镜像，启动独立实例。配方、插件、Skills 和 MCP 可以按任务自由组合。"))), el("div", {class:"actions"}, action("让 Codex 添加", assistant, "primary", {"data-center-action":"assistant"}), action("添加构建配方", upload, "quiet", {"data-center-action":"upload"}), action("下载源设置", sourceCatalog, "quiet", {"data-center-action":"sources"}))), el("nav", {class:"tabs build-center-tabs","aria-label":rdText("构建中心分类")}, ...[["recipes","构建配方"],["builds","构建与测试"],["images","镜像"]].map(([key, label]) => button(rdText(label), () => open(key), key === currentTab ? "selected" : ""))), error, content);
+    page.replaceChildren(el("div", {class:"page-intro"}, el("div", {}, button(rdText("← 返回"), close, "quiet back-link"), el("p", {class:"eyebrow"}, "BUILD CENTER"), el("h1", {}, rdText("构建中心")), el("p", {}, rdText("准备工具环境，查看镜像，启动独立实例。配方、插件、Skills 和 MCP 可以按任务自由组合。"))), el("div", {class:"actions"}, action(tr("让 Agent 添加","Ask an Agent to add"), assistant, "primary", {"data-center-action":"assistant"}), action("添加构建配方", upload, "quiet", {"data-center-action":"upload"}), action("下载源设置", sourceCatalog, "quiet", {"data-center-action":"sources"}))), el("nav", {class:"tabs build-center-tabs","aria-label":rdText("构建中心分类")}, ...[["recipes","构建配方"],["builds","构建与测试"],["images","镜像"]].map(([key, label]) => button(rdText(label), () => open(key), key === currentTab ? "selected" : ""))), error, content);
     setLoading(content);
     try {
       if (currentTab === "recipes") await recipes(content, g);
@@ -300,9 +301,9 @@ window.RunDeskBuildCenter = (() => {
     } catch (e) { error.textContent = e.message; name.disabled = true; reset.hidden = false; submit.textContent = rdText("重试原请求"); result.replaceChildren(el("p", {class:"help"}, rdText("重试会查询同一请求结果。若已创建资源，请按错误中的编号处理；开始另一请求会创建另一实例。"))); } finally { busy = false; submit.disabled = false; } };
   }
   async function assistant() {
-    const {node, form} = dialog("让 Codex 添加构建配方"), prompt = el("textarea", {id:"center-assistant-prompt",rows:6,required:true,placeholder:rdText("描述需要的工具环境、项目地址、依赖和简单测试。Codex 会准备配方并验证。")}), instances = el("select", {id:"center-assistant-instance",required:true}), workspaces = el("select", {id:"center-assistant-workspace",required:true}), error = el("p", {class:"error",role:"status"}), result = el("div", {role:"status"}), submit = el("button", {type:"submit",class:"primary"}, rdText("交给 Codex"));
-    form.append(el("label", {}, rdText("已有 Codex 实例"), instances), el("label", {}, rdText("参考工作区"), workspaces), el("label", {}, rdText("任务要求"), prompt), el("p", {class:"help"}, rdText("参考选定项目，在独立目录创建可追踪任务。构建权限由服务端限制为本次任务，凭据不进入浏览器或提示词。")), error, result, submit); submit.disabled = true;
-    try { const [all, works] = await Promise.all([api("/instances"), api("/workspaces")]); if (!node.open) return; const codex = all.filter(row => (row.agentRuntime?.kind || "codex") === "codex"); instances.replaceChildren(...codex.map(row => el("option", {value:row.id}, row.name))); workspaces.replaceChildren(...works.map(row => el("option", {value:row.id}, row.name))); if (codex.some(row => row.id === instance()?.id)) instances.value = instance().id; if (works.some(row => row.id === ws()?.id)) workspaces.value = ws().id; submit.disabled = !instances.value || !workspaces.value; } catch (e) { error.textContent = e.message; }
+    const {node, form} = dialog(tr("让 Agent 添加构建配方","Ask an Agent to add a recipe")), prompt = el("textarea", {id:"center-assistant-prompt",rows:6,required:true,placeholder:tr("描述需要的工具环境、项目地址、依赖和简单测试。Kun 或 Codex 会准备配方并验证。","Describe the environment, project, dependencies and smoke checks. Kun or Codex will prepare and test the recipe.")}), instances = el("select", {id:"center-assistant-instance",required:true}), workspaces = el("select", {id:"center-assistant-workspace",required:true}), error = el("p", {class:"error",role:"status"}), result = el("div", {role:"status"}), submit = el("button", {type:"submit",class:"primary"}, tr("交给 Agent","Start Agent task"));
+    form.append(el("label", {}, tr("已有 Kun / Codex 实例","Existing Kun / Codex instance"), instances), el("label", {}, rdText("参考工作区"), workspaces), el("label", {}, rdText("任务要求"), prompt), el("p", {class:"help"}, rdText("参考选定项目，在独立目录创建可追踪任务。构建权限由服务端限制为本次任务，凭据不进入浏览器或提示词。")), error, result, submit); submit.disabled = true;
+    try { const [all, works] = await Promise.all([api("/instances"), api("/workspaces")]); if (!node.open) return; const agents = all.filter(row => ["codex","kun"].includes(row.agentRuntime?.kind || "codex")); instances.replaceChildren(...agents.map(row => el("option", {value:row.id}, row.name + " · " + (row.agentRuntime?.kind === "kun" ? "Kun" : "Codex")))); workspaces.replaceChildren(...works.map(row => el("option", {value:row.id}, row.name))); if (agents.some(row => row.id === instance()?.id)) instances.value = instance().id; if (works.some(row => row.id === ws()?.id)) workspaces.value = ws().id; submit.disabled = !instances.value || !workspaces.value; } catch (e) { error.textContent = e.message; }
     let busy = false, runTimer; node.addEventListener("close", () => clearTimeout(runTimer), {once:true});
     async function watch(id) {
       if (!node.open) return;
@@ -319,5 +320,5 @@ window.RunDeskBuildCenter = (() => {
     target.replaceChildren(el("h3", {}, rdText("构建助手任务")), metadata([["任务",value.taskId],["状态",value.status || "unknown"],["实例",value.instanceId],["专用工作区",value.workspaceId]]), value.error ? el("p", {class:"error"}, value.error) : null, value.sessionId ? el("a", {href:"/?session=" + enc(value.sessionId),class:"app-open"}, rdText("查看任务对话与轨迹 ↗")) : null, el("p", {class:"help"}, value.skillBootstrap ? rdText("已准备 Skill 引导；原生插件安装状态未改变。") : rdText("原生插件安装状态未改变。")));
   }
   $("#nav-build-center").onclick = () => safe(() => open());
-  return {open, close};
+  return {open, close, sourceOptions, sourceCatalog, mutate};
 })();

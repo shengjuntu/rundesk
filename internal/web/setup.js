@@ -3,11 +3,16 @@ window.RunDeskSetup=(()=>{
  const tr=(zh,en)=>document.documentElement.lang==='en'?en:zh;
  async function maybeOpen(){
   const v=await api('/setup');
+  if(window.RunDeskOnboarding){
+   if(!state.demo&&!v.settings.completed&&!new URLSearchParams(location.search).has('session')&&!sessionStorage.getItem('rundesk-setup-dismissed'))await RunDeskOnboarding.open({initial:true,setup:v});
+   return;
+  }
   const wid=v.settings.workspaceId||ws()?.id||state.workspaces[0]?.id||'';
   const environment=await api('/setup/environment?workspaceId='+encodeURIComponent(wid));
   if(!environment.demo&&(v.firstRun||!environment.ready)&&!sessionStorage.getItem('rundesk-setup-dismissed'))await open();
  }
  async function open(app){
+  if(!app&&window.RunDeskOnboarding)return RunDeskOnboarding.open();
   const v=await api('/setup'), configured=app?state.instances.find(i=>i.id===app.instanceId):v.instance;
   const i=configured||v.instance, cfg={...i.agentRuntime}, d=el('dialog',{class:'setup-dialog'}),error=el('p',{class:'error',role:'alert'});
   let revision=v.settings.revision,instanceRevision=i.revision,busy=false;
