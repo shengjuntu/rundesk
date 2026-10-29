@@ -20,3 +20,24 @@
 .runtime-preset-card{min-width:0}.runtime-preset-card .actions{flex-wrap:wrap}.runtime-preset-card .help{overflow-wrap:anywhere}
 .runtime-preset-dialog label{display:block}.runtime-preset-dialog .key-choice{display:flex;align-items:center;gap:8px}
 #application-preset-filter{max-width:260px;margin-left:auto}#key-presets .help{margin:10px 0 0}
+
+/* Keep the settings dialog steady when switching between short and long tabs. */
+#settings[open]{height:min(680px,88dvh)}
+#settings-content{flex:1 1 auto}
+.application-section-tabs{display:flex;gap:8px;max-width:1120px;margin:0 auto 18px;border-bottom:1px solid #e6eaf2}
+.application-section-tab{border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;padding:12px 16px;color:#778397;font-weight:600}
+.application-section-tab.selected{color:#435bc1;border-bottom-color:#5268d5}
+.application-settings-panel,.application-task-panel{max-width:1120px;margin:0 auto}
+.application-settings-panel .application-preset-host{margin:0 0 22px}
+.application-settings-panel .application-config{margin-top:18px}
+.runtime-selector{display:flex;align-items:end;gap:12px;margin:18px 0;flex-wrap:wrap}
+.runtime-selector label{display:grid;gap:7px;flex:1;min-width:min(100%,260px);font-size:12px;color:#738097}
+.runtime-selector select{width:100%;max-width:520px}
+.runtime-selector button{flex:none}
+.runtime-selected-detail>.card{margin:0}
+.runtime-selected-detail .runtime-advanced{margin-top:16px;padding-top:12px;border-top:1px solid #e7ebf2}
+.runtime-selected-detail .runtime-advanced summary{cursor:pointer;font-size:12px;color:#74829b}
+.runtime-selected-detail .runtime-advanced button{margin:12px 0 0}
+.application-project-details{border-top:1px solid #e6eaf2;padding-top:15px}
+.application-project-details>summary{cursor:pointer;font-weight:600;font-size:13px;color:#61718e}
+.application-project-details .application-project-host{border:0;margin-top:0}

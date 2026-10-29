@@ -6,7 +6,7 @@ window.RunDeskImages=(()=>{
  function endpoint(a){return `/instances/${a.instanceId}/images`;}
  async function overview(a,target){
   try{const c=await api(endpoint(a));if(!target.isConnected)return;const v=c.versions.find(x=>x.id===c.execution.imageVersionId),native=c.execution.mode!=="docker";
-   target.replaceChildren(el("div",{},el("span",{class:"eyebrow"},native?rdText("运行方式"):rdText("应用镜像")),el("strong",{},native?rdText("本机 Codex"):c.execution.image),el("p",{class:"help"},native?rdText("可在运行环境中配置 Docker。"):rdFormat("${0} · ${1} 个环境 · ${2} 个待更新",v?rdText("固定版本 ")+short(v.imageId):rdText("尚未登记固定版本"),c.environments.length,c.pendingUpdates))),button(rdText("镜像与构建"),()=>open(a),"quiet"));
+   target.replaceChildren(el("div",{},el("span",{class:"eyebrow"},native?rdText("运行方式"):rdText("应用镜像")),el("strong",{},native?rdText("本机 Codex"):c.execution.image),el("p",{class:"help"},native?rdText("可在运行环境中配置 Docker。"):rdFormat("${0} · ${1} 个环境 · ${2} 个待更新",v?rdText("固定版本 ")+short(v.imageId):rdText("尚未登记固定版本"),c.environments.length,c.pendingUpdates))));
   }catch(e){if(target.isConnected)target.replaceChildren(el("p",{class:"error"},e.message),button(rdText("重新加载"),()=>overview(a,target),"quiet"));}
  }
  async function updateEnvironment(a,c,v,after){

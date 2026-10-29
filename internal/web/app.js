@@ -903,20 +903,23 @@ async function previewFile(file) {
 }
 async function openSettings(tab = "overview") {
   window.RunDeskTraceUI?.close();
+  if (state.view === "application" && tab === "overview") tab = "instances";
   state.settingsTab = tab;
   $("#settings").showModal();
   await renderSettings();
 }
 async function renderSettings() {
   const shared=instance()?.id==="default"&&!!state.taskAppID;
-  $("#settings-title").textContent=(shared?rdText("通用助手（历史任务共享）"):contextTitle())+rdText(" · 设置");
+  const appBinding=state.view==="application"?currentApplicationBinding():null;
+  $("#settings-title").textContent=appBinding?appBinding.name+rdText(" · 能力配置"):(shared?rdText("通用助手（历史任务共享）"):contextTitle())+rdText(" · 设置");
   $("#settings-eyebrow").textContent="INSTANCE SETTINGS";
   $("#settings-context").textContent=shared?rdText("这条历史应用任务沿用通用助手配置；保存也影响通用助手。"):rdFormat("配置对象：${0} · 当前项目：${1}",contextTitle(),ws()?.name||"");
   const target = el("div");
   $("#settings-content").replaceChildren(target);
-  $$("[data-settings-tab]").forEach((b) =>
-    b.classList.toggle("selected", b.dataset.settingsTab === state.settingsTab),
-  );
+  $$("[data-settings-tab]").forEach((b) => {
+    b.classList.toggle("selected", b.dataset.settingsTab === state.settingsTab);
+    b.classList.toggle("hidden", state.view==="application"&&!["instances","plugins","skills","mcp"].includes(b.dataset.settingsTab));
+  });
   setLoading(target);
   const tab = state.settingsTab;
   try {
