@@ -115,11 +115,11 @@ func (m *Manager) registerApplication(id string, p ApplicationInput, origin stri
 	if p.InstanceID == "" || p.InstanceID == DefaultInstance {
 		return Application{}, failure(409, "assistant_reserved", "通用助手的默认配置不能登记为应用，请使用专用配置")
 	}
-	if _, e := m.Instance(p.InstanceID); e != nil {
+	if e := m.requireDailyInstance(p.InstanceID); e != nil {
 		return Application{}, e
 	}
 	if p.WorkspaceID != "" {
-		if _, e := m.Workspace(p.WorkspaceID); e != nil {
+		if e := m.requireDailyWorkspace(p.WorkspaceID); e != nil {
 			return Application{}, e
 		}
 		if _, reserved, e := m.projectEnvironmentForWorkspace(p.WorkspaceID); e != nil {
@@ -172,6 +172,9 @@ func (m *Manager) registerApplication(id string, p ApplicationInput, origin stri
 	return next, nil
 }
 func (m *Manager) bindApplicationSource(source SessionSource, i Instance, wid string) error {
+	if source.Kind == "application" && runtimeKind(i.AgentRuntime.Kind) != "codex" {
+		return failure(409, "kun_maintenance_only", "应用任务统一使用 Codex；请重新绑定 Codex 环境")
+	}
 	if source.ProjectID != "" {
 		return m.checkApplicationPresetExecution(source, i.ID, wid)
 	}

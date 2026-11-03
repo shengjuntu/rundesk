@@ -68,7 +68,7 @@ func TestKunExternalVersionAndDiagnosticCapabilityBoundary(t *testing.T) {
 	if _, err = m.SetAgentRuntime(i.ID, i.Revision, cfg); err != nil {
 		t.Fatal(err)
 	}
-	source, err := m.CreateSession(m.Workspaces()[0].ID, "legacy core", "")
+	source, err := createInternalSessionFixture(m, m.Workspaces()[0].ID, "legacy core", "")
 	if err != nil {
 		t.Fatal(err)
 	}

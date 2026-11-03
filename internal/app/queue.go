@@ -81,7 +81,15 @@ func (m *Manager) loadQueue() error {
 	m.queueMu.Unlock()
 	return nil
 }
-func (m *Manager) prepareTask(spec TaskSpec, validate bool) (Task, Session, error) {
+func (m *Manager) prepareTask(spec TaskSpec, validate bool, maintenance ...bool) (Task, Session, error) {
+	if len(maintenance) == 0 || !maintenance[0] {
+		if err := m.requireDailyInstance(spec.InstanceID); err != nil {
+			return Task{}, Session{}, err
+		}
+		if err := m.requireDailyWorkspace(spec.WorkspaceID); err != nil {
+			return Task{}, Session{}, err
+		}
+	}
 	if strings.TrimSpace(spec.Input.Text) == "" || len(spec.Input.Text) > 256*1024 {
 		return Task{}, Session{}, failure(400, "invalid_input", "任务消息需为 1–256 KiB")
 	}

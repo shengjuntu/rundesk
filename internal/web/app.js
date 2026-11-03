@@ -152,6 +152,7 @@ async function boot() {
   if(identity.kind==="user"){location.replace("/member.html");return;}
   const meta = await api("/meta");
   state.demo = meta.demo;
+  $("#app-version").textContent = meta.version ? "v" + meta.version : "";
   $("#toast").classList.add("hidden");
   $("#demo-banner").classList.toggle("hidden", !meta.demo);
   $("#mode").textContent = meta.demo ? "DEMO" : "CODEX";
@@ -194,17 +195,12 @@ async function boot() {
 function updateWorkspaceLabel() {
   const w = ws();
   $("#workspace-name").textContent = w?.name || rdText("默认项目");
-  const context = $("#composer-workspace");
-  const currentInstance = instance();
-  $("#composer-agent").textContent = rdFormat("Agent：${0}",currentInstance?.name||"");
-  context.replaceChildren(...(currentInstance ? (window.RunDeskInstances?.workspacesFor(currentInstance)||state.workspaces) : []).map(row=>el("option",{value:row.id},row.name)));
-  context.value = w?.id || "";
-  context.disabled = !w || !!window.RunDeskInstances?.binding(currentInstance?.id)?.presetId;
   updateProductNavigation();
   localStorage.setItem("rundesk-instance", instance()?.id || "default");
   if (!state.session) $("#model").value = instance()?.agentRuntime?.kind==="kun"?instance().agentRuntime.model:(instance()?.defaultModel || "");
   localStorage.setItem("rundesk-workspace", w?.id || "");
   if(w&&instance())window.RunDeskInstances?.remember(instance().id,w.id);
+  if(state.view==="conversation"&&state.session?.workspaceId===w?.id)window.RunDeskConversations?.remember(w.id,instance()?.id,state.session.id);
   if(instance()?.id==="default"&&!state.taskAppID)localStorage.setItem("rundesk-assistant-workspace",w?.id||"");
 }
 async function refreshSessions() {
@@ -264,7 +260,7 @@ async function newSession() {
   const model = $("#model").value.trim();
   const s = await api("/sessions", {
     method: "POST",
-    body: { workspaceId: ws().id, instanceId: instance().id, model, source:RunDeskInstances.source(instance().id) },
+    body: { workspaceId: ws().id, instanceId: instance().id, model, source:window.RunDeskConversations?RunDeskConversations.source(instance().id,ws().id):RunDeskInstances.source(instance().id) },
   });
   await refreshSessions();
   if(state.selection!==creationSelection)throw Error(rdText("会话已创建；页面已切换，消息尚未发送"));
@@ -287,7 +283,7 @@ async function selectSession(id) {
   $("#session-scope").value = session.archived ? "archived" : "active";
   $("#workspace").replaceChildren(...state.workspaces.map(w=>el("option",{value:w.id},w.name)));
   $("#workspace").value = session.workspaceId;
-  $("#instance").value = session.instanceId;
+  renderInstanceOptions(session.instanceId);
   updateWorkspaceLabel();
   $("#model").value = session.model || "";
   if(session.instanceId==="default"&&session.source?.kind!=="application")localStorage.setItem("rundesk-session",id);
@@ -918,7 +914,7 @@ async function renderSettings() {
   $("#settings-content").replaceChildren(target);
   $$("[data-settings-tab]").forEach((b) => {
     b.classList.toggle("selected", b.dataset.settingsTab === state.settingsTab);
-    b.classList.toggle("hidden", state.view==="application"&&!["instances","plugins","skills","mcp"].includes(b.dataset.settingsTab));
+    b.classList.toggle("hidden", b.dataset.settingsTab==="kun" || state.view==="application"&&!["instances","plugins","skills","mcp"].includes(b.dataset.settingsTab));
   });
   setLoading(target);
   const tab = state.settingsTab;
@@ -1008,33 +1004,10 @@ $("#logout").onclick = () =>
     if (state.stream) state.stream.close();
     location.reload();
   });
-$("#new-session").onclick = () =>
-  safe(async () => {
-    await RunDeskInstances.conversation(instance()?.id||"default",ws()?.id,true);
-  });
-$("#instance").onchange = () => safe(()=>RunDeskInstances.conversation($("#instance").value));
-$("#workspace").onchange = () =>
-  safe(async () => {
-    await RunDeskInstances.conversation(instance().id,$("#workspace").value);
-  });
-$("#composer-workspace").onchange = () => safe(async () => {
-  await RunDeskInstances.conversation(instance().id,$("#composer-workspace").value,true);
-});
-$("#add-workspace").onclick = () =>
-  safe(async () => {
-    const name = prompt(rdText("工作区名称"));
-    if (!name) return;
-    const path = prompt(rdText("已有目录的绝对路径；留空会创建托管目录。"), "");
-    if (path === null) return;
-    const w = await api("/workspaces", {
-      method: "POST",
-      body: { name, path },
-    });
-    state.workspaces.push(w);
-    $("#workspace").append(el("option", { value: w.id }, w.name));
-    $("#workspace").value = w.id;
-    await RunDeskInstances.conversation(instance().id,w.id,true);
-  });
+$("#new-session").onclick = () => safe(()=>RunDeskConversations.open(ws()?.id,{fresh:true}));
+$("#instance").onchange = () => safe(()=>RunDeskConversations.changeEngine($("#instance").value));
+$("#workspace").onchange = () => safe(()=>RunDeskConversations.open($("#workspace").value));
+$("#add-workspace").onclick = () => safe(()=>RunDeskConversations.createWorkspace());
 $("#composer").onsubmit = (e) => {
   e.preventDefault();
   safe(sendMessage);

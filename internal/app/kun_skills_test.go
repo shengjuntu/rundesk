@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	p "github.com/your-org/kun/sdk/protocol"
+	"github.com/shengjuntu/rundesk/internal/store"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -109,7 +110,9 @@ func TestKunSkillEndToEndIndependentGateAndApplicationScope(t *testing.T) {
 	if len(candidate.Program.Steps) != 3 || candidate.Program.Steps[0].Args["content"].Ref != "input#/content" {
 		t.Fatal("not parameterized", candidate.Program)
 	}
-	app, err := m.RegisterApplication("skill-app", ApplicationInput{Name: "Skill app", InstanceID: i.ID, WorkspaceID: w.ID})
+	// Seed a retained research fixture; public applications now accept Codex only.
+	app := Application{AppID: "skill-app", Name: "Skill app", InstanceID: i.ID, WorkspaceID: w.ID, Revision: 1, Origin: "registered", Created: store.Now()}
+	err = m.Store.Put("application", app.AppID, app)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,8 +151,12 @@ func TestKunSkillEndToEndIndependentGateAndApplicationScope(t *testing.T) {
 	if _, err = m.PromoteKunSkill(candidate.ID, candidate.Hash, report.ID, report.Hash, app.AppID, app.Revision); err != nil {
 		t.Fatal(err)
 	}
-	session, err := m.CreateSessionWithSource(w.ID, "production", "", i.ID, SessionSource{Kind: "application", AppID: app.AppID})
+	session, err := createInternalSessionFixture(m, w.ID, "production", "", i.ID)
 	if err != nil {
+		t.Fatal(err)
+	}
+	session.Source = SessionSource{Kind: "application", AppID: app.AppID}
+	if err = m.update(session.ID, func(s *Session) { s.Source = session.Source }); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = m.Start(session.ID, Input{Text: skillCase("production", "GAMMA").Input, FastSkillID: candidate.ID}); err != nil {
@@ -159,7 +166,7 @@ func TestKunSkillEndToEndIndependentGateAndApplicationScope(t *testing.T) {
 	if calls.Load() != 2 {
 		t.Fatal("promoted fast path did not run", calls.Load())
 	}
-	human, err := m.CreateSession(w.ID, "human", "")
+	human, err := createInternalSessionFixture(m, w.ID, "human", "")
 	if err != nil {
 		t.Fatal(err)
 	}

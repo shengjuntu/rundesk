@@ -35,7 +35,7 @@ func TestObservationSwitchDefaultPersistenceAndUpgrade(t *testing.T) {
 		}
 	}()
 	w := m.Workspaces()[0]
-	first, err := m.CreateSession(w.ID, "default off", "")
+	first, err := createInternalSessionFixture(m, w.ID, "default off", "")
 	if err != nil || first.ObserveHTTP || first.Observation == nil || first.Observation.AppliedEnabled || first.Observation.Pending {
 		t.Fatalf("new session did not default off: %+v %v", first, err)
 	}
@@ -45,7 +45,7 @@ func TestObservationSwitchDefaultPersistenceAndUpgrade(t *testing.T) {
 	if m.observation != nil {
 		t.Fatal("configuring defaults opened a listener")
 	}
-	second, err := m.CreateSession(w.ID, "new default on", "")
+	second, err := createInternalSessionFixture(m, w.ID, "new default on", "")
 	if err != nil || !second.ObserveHTTP || second.Observation == nil || !second.Observation.Pending || second.Observation.AppliedEnabled {
 		t.Fatalf("new default was not saved pending: %+v %v", second, err)
 	}
@@ -65,7 +65,7 @@ func TestObservationSwitchDefaultPersistenceAndUpgrade(t *testing.T) {
 	if _, err = m.PatchSession(second.ID, SessionPatch{ObserveHTTP: &off}); err != nil {
 		t.Fatal(err)
 	}
-	legacy, err := m.CreateSession(w.ID, "old serialized record", "")
+	legacy, err := createInternalSessionFixture(m, w.ID, "old serialized record", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +100,7 @@ func TestObservationSwitchDefaultPersistenceAndUpgrade(t *testing.T) {
 func TestObservationSwitchOffSkipsDiscoveryAndListener(t *testing.T) {
 	m := testManager(t)
 	w := m.Workspaces()[0]
-	s, err := m.CreateSession(w.ID, "off", "")
+	s, err := createInternalSessionFixture(m, w.ID, "off", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func TestObservationSwitchAuthorizationAndKun(t *testing.T) {
 	if err = m.ConfigureHTTPObservation(ObservationOptions{DefaultEnabled: true}); err != nil {
 		t.Fatal(err)
 	}
-	kun, err := m.CreateSession(w.ID, "Kun", "", i.ID)
+	kun, err := createInternalSessionFixture(m, w.ID, "Kun", "", i.ID)
 	if err != nil || kun.ObserveHTTP {
 		t.Fatalf("Codex default applied to Kun: %+v %v", kun, err)
 	}
@@ -178,7 +178,7 @@ func TestObservationSwitchLateCaptureCannotMarkNewConnectionObserved(t *testing.
 	defer func() { releaseOnce.Do(func() { close(release) }); upstream.Close() }()
 	m := testManager(t)
 	w := m.Workspaces()[0]
-	s, err := m.CreateSession(w.ID, "late capture", "native-model")
+	s, err := createInternalSessionFixture(m, w.ID, "late capture", "native-model")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -381,7 +381,7 @@ func TestObservationSwitchAppliesNextTurnWithoutInterruptingRequest(t *testing.T
 	if err := m.ConfigureHTTPObservation(ObservationOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	s, err := m.CreateSession(m.Workspaces()[0].ID, "switch lifecycle", "native-model")
+	s, err := createInternalSessionFixture(m, m.Workspaces()[0].ID, "switch lifecycle", "native-model")
 	if err != nil {
 		t.Fatal(err)
 	}

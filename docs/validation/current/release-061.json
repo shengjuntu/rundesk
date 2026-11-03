@@ -1,0 +1,61 @@
+{
+  "date": "2026-10-31",
+  "version": "0.61.0",
+  "base": "0.60.0 source revision with Codex/Kun maintenance split",
+  "checks": [
+    {
+      "name": "go test ./...",
+      "result": "passed"
+    },
+    {
+      "name": "go vet ./...",
+      "result": "passed"
+    },
+    {
+      "name": "Maintenance and OpenAPI projection regression tests",
+      "result": "passed"
+    },
+    {
+      "name": "Linux amd64 static build and --version",
+      "result": "passed",
+      "output": "RunDesk 0.61.0"
+    },
+    {
+      "name": "Windows amd64 cross-build",
+      "result": "passed",
+      "notes": "Compiled PE32+; not executed on Windows."
+    },
+    {
+      "name": "Generated OpenAPI reproducibility and documentation/version checks",
+      "result": "passed",
+      "notes": "245 paths, 293 operations; current overview/upgrade versions and maintenance fields checked."
+    },
+    {
+      "name": "Changed JavaScript syntax",
+      "result": "passed"
+    },
+    {
+      "name": "Playwright workspace and maintenance navigation",
+      "result": "passed",
+      "notes": "Real non-demo isolated service; verifies UI version against /api/v1/meta, desktop/mobile workspace flow and no daily Kun choice."
+    },
+    {
+      "name": "Playwright application presets",
+      "result": "passed",
+      "notes": "Real isolated demo service with image catalog fixture; multiple bindings, retry and missing historical path recovery, responsive submit visibility."
+    }
+  ],
+  "fixed": [
+    "RunDesk software version now 0.61.0 throughout public metadata, contract and current documentation",
+    "Visible UI version comes from the running server",
+    "Maintenance, trace source and workspace purpose projections documented in strict OpenAPI schemas",
+    "Upgrade guide explains retained Kun history and rejected daily Kun submissions",
+    "Release guards catch current documentation/contract version drift"
+  ],
+  "limits": [
+    "No live LLM, external Kun worker or Docker daemon acceptance test; external worker tests skip without RUNDESK_TEST_KUN",
+    "No replacement of the user server executable",
+    "Skill extraction and Skill/MCP automatic optimization remain future work",
+    "Kun stays 0.17.0; worker protocol remains 16; historical evidence keeps its original version"
+  ]
+}

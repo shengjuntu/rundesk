@@ -261,7 +261,7 @@ func TestV1OpenAPIAndPayloadBounds(t *testing.T) {
 	h := NewHandler(m, "", true)
 	r := v1Request(h, "GET", "/openapi.json", "", "")
 	spec := object(t, r)
-	if spec["openapi"] != "3.1.0" {
+	if spec["openapi"] != "3.1.0" || spec["info"].(map[string]any)["version"] != Version {
 		t.Fatal(spec)
 	}
 	paths := spec["paths"].(map[string]any)

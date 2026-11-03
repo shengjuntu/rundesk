@@ -36,7 +36,7 @@ window.RunDeskInstances = (() => {
     const b = binding(i.id);
     if (b?.presetId) return state.workspaces.filter(w => w.id === b.workspaceId);
     const reserved = new Set(state.applications.flatMap(a => (a.runtimePresets || []).map(p => p.workspaceId)));
-    return state.workspaces.filter(w => !reserved.has(w.id) && (i.execution?.mode !== "docker" || !(state.environments || []).some(e => e.workspaceId === w.id && e.instanceId !== i.id)));
+    return state.workspaces.filter(w => w.purpose !== "maintenance" && !reserved.has(w.id) && (!window.RunDeskConversations?.owner(w.id) || RunDeskConversations.owner(w.id).instanceId === i.id));
   }
   function chooseWorkspace(i, wid) {
     const choices = workspacesFor(i), b = binding(i.id);
@@ -93,12 +93,12 @@ window.RunDeskInstances = (() => {
       const grid = el("div", {class:"instance-grid"});
       const paint = () => {
         const text = query.value.trim().toLowerCase();
-        const rows = state.instances.filter(i => (!filter.value || (i.agentRuntime?.kind || "codex") === filter.value) && [i.name,i.description,engine(i),i.execution?.image].join(" ").toLowerCase().includes(text));
+        const rows = state.instances.filter(i => i.agentRuntime?.kind !== "kun" && (!filter.value || (i.agentRuntime?.kind || "codex") === filter.value) && [i.name,i.description,engine(i),i.execution?.image].join(" ").toLowerCase().includes(text));
         grid.replaceChildren(...rows.map(card));
         if (!rows.length) grid.append(el("div", {class:"instance-empty"}, el("h2", {}, rdText("没有匹配的 Agent")), el("p", {}, rdText("调整筛选条件，或先准备 Docker 镜像。"))));
       };
-      query.oninput = paint; filter.onchange = paint;
-      page.replaceChildren(heading(rdText("Agents"), rdText("Agent 保存模型和运行配置；选定工作区后开始对话。Docker 容器按 Agent 与工作区组合创建。"), el("div", {class:"actions"}, button(rdText("刷新"), open, "quiet"), button(rdText("准备 Docker 镜像"), () => RunDeskBuildCenter.open("recipes"), "quiet"), button(rdText("从镜像添加 Agent"), () => RunDeskBuildCenter.open("images"), "primary"))), el("div", {class:"instance-toolbar"}, query, filter, el("span", {class:"muted"}, rdFormat("${0} 个 Agent",state.instances.length))), grid);
+      query.oninput = paint; filter.onchange = paint; filter.hidden = true;
+      page.replaceChildren(heading(rdText("Agents"), rdText("日常会话与应用统一使用 Codex。Agent 保存不同的模型、Skills、MCP 与运行环境配置。"), el("div", {class:"actions"}, button(rdText("刷新"), open, "quiet"), button(rdText("准备 Docker 镜像"), () => RunDeskBuildCenter.open("recipes"), "quiet"), button(rdText("从镜像添加 Agent"), () => RunDeskBuildCenter.open("images"), "primary"))), el("div", {class:"instance-toolbar"}, query, filter, el("span", {class:"muted"}, rdFormat("${0} 个 Agent",state.instances.filter(i=>i.agentRuntime?.kind!=="kun").length))), grid);
       paint(); updateProductNavigation();
     } catch (error) { if (current(g, selection, "instances")) failure(page,error,open); }
   }
@@ -132,7 +132,7 @@ window.RunDeskInstances = (() => {
     const work = el("select", {id:"instance-workspace","aria-label":rdText("当前工作区"),disabled:preset||!choices.length}, ...choices.map(x => el("option", {value:x.id}, x.name)));
     work.value = w?.id || ""; work.onchange = () => safe(() => show(i.id,work.value));
     const chat = button(rdText("新建对话"), () => conversation(i.id,w?.id,true), "primary");
-    chat.disabled = !w || (preset && !b.enabled);
+    chat.disabled = i.agentRuntime?.kind === "kun" || !w || (preset && !b.enabled);
     const capabilities = el("div", {class:"instance-capabilities"});
     for (const [title,description,tab,icon] of [["模型与认证","模型、账号与运行权限","instances","◉"],["Skills","管理完整技能目录与项目技能","skills","S"],["MCP","配置外部工具与服务连接","mcp","M"],["原生插件","查看原生包与组件归属（只读）","plugins","P"]]) {
       const action = button("", () => openSettings(tab), "instance-capability");
@@ -186,6 +186,11 @@ window.RunDeskInstances = (() => {
     dialog.append(form);document.body.append(dialog);dialog.addEventListener("close",() => dialog.remove(),{once:true});dialog.showModal();name.focus();
   }
   async function conversation(iid, wid, fresh = false) {
+    if(state.instances.find(i=>i.id===iid)?.agentRuntime?.kind === "kun") throw Error(rdText("Kun 仅用于内部维护和轨迹分析，请选择 Codex 环境。"));
+    if(window.RunDeskConversations && !(binding(iid)?.presetId&&!binding(iid).enabled)){
+      const i=state.instances.find(i=>i.id===iid),target=wid||i&&chooseWorkspace(i)?.id;
+      return RunDeskConversations.open(target,{fresh,instanceId:iid});
+    }
     resetConversation();
     clearSelection();
     const g = ++generation, selection = state.selection;

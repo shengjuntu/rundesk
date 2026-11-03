@@ -43,7 +43,7 @@ func TestHybridHostLifecycle(t *testing.T) {
 	}
 	ws := m.Workspaces()[0]
 	os.WriteFile(filepath.Join(ws.Path, "input.txt"), []byte("private-recorded-body"), 0600)
-	source, err := m.CreateSession(ws.ID, "source", "")
+	source, err := createInternalSessionFixture(m, ws.ID, "source", "")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -76,9 +76,10 @@ function deferred() { let resolve; const promise = new Promise(done => {resolve=
   assert.equal(state.view,'instances'); assert.equal(w.location.hash,'#instances');
   button($('#instances-page'),'从镜像添加 Agent').click();assert.deepEqual(w.buildCenterOpen,['images']);
   button($('#instances-page'),'准备 Docker 镜像').click();assert.deepEqual(w.buildCenterOpen,['recipes']);
-  for (const id of ['default','video','other','kun']) assert($('#instances-page').textContent.includes(id),'missing instance '+id);
+  for (const id of ['default','video','other']) assert($('#instances-page').textContent.includes(id),'missing instance '+id);
+  assert(!$('#instances-page [data-instance-id="kun"]'),'maintenance Agent leaked into daily list');
   assert.equal(requests.filter(row => row.method !== 'GET').length,0,'opening instances changed runtime');
-  checks.push('all local, Docker and Kun identities appear without application registration or runtime writes');
+  checks.push('local and Docker Codex identities appear; Kun hidden without application registration or runtime writes');
 
   // Never inherit another instance\'s globally selected project.
   $('#workspace').value = 'w-other';
@@ -101,18 +102,17 @@ function deferred() { let resolve; const promise = new Promise(done => {resolve=
 
   await w.RunDeskInstances.conversation('video','w-b',true);
   assertTarget('video','w-b'); assert.equal(state.view,'conversation');
-  assert.equal($('#composer-workspace').value,'w-b');assert($('#composer-agent').textContent.includes('video'));
-  $('#composer-workspace').value='w-a';$('#composer-workspace').dispatchEvent(new w.Event('change'));
-  await until(() => $('#workspace').value==='w-a' && $('#composer-workspace').value==='w-a');
+  assert(!$('#composer-workspace'),'duplicate workspace selector remained in composer');
+  assert(!$('#composer-agent'),'duplicate Agent selector remained in composer');
   await w.RunDeskInstances.conversation('video','w-b',true);
-  $('#new-session').click(); await until(() => state.view === 'conversation' && !state.session);
+  await w.RunDeskInstances.conversation('video','w-b',true);
   assertTarget('video','w-b');
   $('#assistant-settings').click(); await until(() => $('#settings').open);
   assertTarget('video','w-b'); $('#settings').close();
   await w.newSession();
   let created = requests.filter(row => row.method === 'POST' && row.route === '/sessions').at(-1);
   assert.equal(created.body.instanceId,'video'); assert.equal(created.body.workspaceId,'w-b');
-  checks.push('composer workspace choice, new chat, settings and actual session POST keep the chosen Agent and workspace');
+  checks.push('new chat, settings and actual session POST keep the chosen Agent and workspace');
 
   await w.RunDeskInstances.conversation('preset','w-p',true);
   await w.newSession();

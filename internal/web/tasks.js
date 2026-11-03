@@ -25,7 +25,7 @@ window.RunDeskTasks=(()=>{
   const bindings=state.applications.flatMap(a=>(a.runtimePresets||[]).map(p=>({a,p})));
   const owner=iid=>bindings.find(({p})=>p.instanceId===iid);
   const title=el("input",{id:"task-title",value:spec.title||"",maxlength:120,required:true});
-  const selectedInstance=el("select",{id:"task-instance",required:true},...state.instances.map(i=>el("option",{value:i.id},i.name+" · "+(i.agentRuntime?.kind==="kun"?"Kun":"Codex"))));
+  const selectedInstance=el("select",{id:"task-instance",required:true},...state.instances.filter(i=>i.agentRuntime?.kind!=="kun").map(i=>el("option",{value:i.id},i.name)));
   const app=el("select",{id:"task-app"},el("option",{value:""},rdText("手动任务")),...state.applications.map(a=>el("option",{value:a.appId},a.name)));
   const preset=el("select",{id:"task-preset"}),work=el("select",{id:"task-workspace",required:true});
   const text=el("textarea",{id:"task-text",rows:5,required:true},spec.input?.text||""),model=el("input",{id:"task-model",value:spec.model||"",placeholder:rdText("留空使用默认模型")});
@@ -38,7 +38,7 @@ window.RunDeskTasks=(()=>{
   function availableWorkspaces(iid,p){
    if(p)return state.workspaces.filter(w=>w.id===p.workspaceId);
    const docker=state.instances.find(i=>i.id===iid)?.execution?.mode==="docker";
-   return state.workspaces.filter(w=>!bindings.some(b=>b.p.workspaceId===w.id)&&(!docker||!(state.environments||environments).some(e=>e.workspaceId===w.id&&e.instanceId!==iid)));
+   return state.workspaces.filter(w=>w.purpose!=="maintenance"&&!bindings.some(b=>b.p.workspaceId===w.id)&&(!docker||!(state.environments||environments).some(e=>e.workspaceId===w.id&&e.instanceId!==iid)));
   }
   function updateWorkspaces(preferred,p){
    const iid=selectedInstance.value,available=availableWorkspaces(iid,p),requested=p?.workspaceId||preferred;
@@ -75,7 +75,7 @@ window.RunDeskTasks=(()=>{
    if(a)updateBinding();else updateInstance();
   };
   preset.onchange=()=>updateBinding();
-  chooseInstance(spec.instanceId||instance()?.id||"default");
+  chooseInstance(spec.instanceId||(instance()?.agentRuntime?.kind!=="kun"?instance()?.id:"")||"default");
   if(spec.source?.appId){
    if(![...app.options].some(o=>o.value===spec.source.appId))app.append(el("option",{value:spec.source.appId,disabled:true},rdText("历史应用 · ")+spec.source.appId));
    app.value=spec.source.appId;presetOptions(state.applications.find(a=>a.appId===app.value),spec.source.presetId||"");updateBinding(spec.workspaceId);
@@ -84,6 +84,7 @@ window.RunDeskTasks=(()=>{
    const a=state.applications.find(a=>a.appId===app.value),p=(a?.runtimePresets||[]).find(p=>p.id===preset.value),iid=selectedInstance.value;
    if(preset.value&&!p)throw Error(rdText("历史预设已不可用，请重新选择制作环境"));
    if(app.value&&!a)throw Error(rdText("历史应用已不可用，请重新选择来源"));
+   if(state.instances.find(i=>i.id===iid)?.agentRuntime?.kind==="kun")throw Error(rdText("Kun 仅用于内部维护和轨迹分析，请选择 Codex 环境。"));
    if(!state.instances.some(i=>i.id===iid))throw Error(rdText("实例已不可用，请重新选择"));
    if(p&&!p.enabled&&!(spec.source?.appId===a.appId&&spec.source?.presetId===p.id&&spec.instanceId===p.instanceId&&spec.workspaceId===p.workspaceId))throw Error(rdText("应用预设已停用，不能提交新任务"));
    const reserved=owner(iid);

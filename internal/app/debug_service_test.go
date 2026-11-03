@@ -179,7 +179,7 @@ func TestDebugMemberBoundaryAndKunOffline(t *testing.T) {
 	if _, e := km.SetAgentRuntime(i.ID, i.Revision, p.Config{Kind: "kun", Endpoint: "http://127.0.0.1:1/v1", Model: "offline"}); e != nil {
 		t.Fatal(e)
 	}
-	ks, e := km.CreateSession(w.ID, "offline", "")
+	ks, e := createInternalSessionFixture(km, w.ID, "offline", "")
 	if e != nil {
 		t.Fatal(e)
 	}

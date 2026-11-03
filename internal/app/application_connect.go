@@ -89,7 +89,7 @@ func (m *Manager) ConnectApplication(id string, in ApplicationConnect) (Applicat
 	}
 	if record.InstanceID == "" {
 		if in.InstanceID != "" {
-			if _, err := m.Instance(in.InstanceID); err != nil {
+			if err := m.requireDailyInstance(in.InstanceID); err != nil {
 				return out, err
 			}
 		}

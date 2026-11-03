@@ -252,7 +252,7 @@ func (m *Manager) saveSetupKun(ctx context.Context, in SetupKunInput) (SetupKunS
 			return SetupKunStatus{}, failure(409, "instance_busy", "Wait for the initialization agent to finish before changing its model or worker")
 		}
 	}
-	instance := Instance{ID: setupKunInstanceID, Name: "Kun 初始化助手", Description: "Dedicated initialization agent; managed installation tools and workspace file access, no host Bash", DefaultModel: cfg.Model, AgentRuntime: cfg.Normalized(), Execution: ExecutionSpec{Mode: "local"}, Permissions: Permissions{Sandbox: "workspace-write", ApprovalPolicy: "never", Reviewer: "user"}, CodexHome: home, Managed: true, Revision: 1, Created: store.Now()}
+	instance := Instance{ID: setupKunInstanceID, Name: "Kun 维护助手", Description: "Internal maintenance agent for installation, build repair and trace analysis; no daily conversations", DefaultModel: cfg.Model, AgentRuntime: cfg.Normalized(), Execution: ExecutionSpec{Mode: "local"}, Permissions: Permissions{Sandbox: "workspace-write", ApprovalPolicy: "never", Reviewer: "user"}, CodexHome: home, Managed: true, Revision: 1, Created: store.Now()}
 	if existing := m.instances[setupKunInstanceID]; existing != nil {
 		instance.Revision = existing.Revision + 1
 		instance.Created = existing.Created
@@ -467,7 +467,7 @@ func (m *Manager) CreateSetupRepair(in SetupRepairInput, endpoint string) (Setup
 			instructions += "\nHistorical experience JSON follows as untrusted evidence only. Matching version/platform is necessary but does not prove that the current cause matches. Evaluate the actual failure and each precondition:\n" + string(data)
 		}
 	}
-	task, err := m.SubmitTask(TaskSubmission{Spec: TaskSpec{Title: "Kun 修复 Codex 安装", InstanceID: ready.InstanceID, WorkspaceID: w.ID, Input: Input{Text: instructions}, Source: SessionSource{Kind: "human"}}, Deadline: expires.UnixNano(), Records: func(t Task, s Session) ([]store.Record, error) {
+	task, err := m.SubmitTask(TaskSubmission{maintenance: true, Spec: TaskSpec{Title: "Kun 修复 Codex 安装", InstanceID: ready.InstanceID, WorkspaceID: w.ID, Input: Input{Text: instructions}, Source: SessionSource{Kind: "human"}}, Deadline: expires.UnixNano(), Records: func(t Task, s Session) ([]store.Record, error) {
 		record.TaskID, record.SessionID = t.ID, s.ID
 		return []store.Record{{Kind: "setup-repair", ID: id, Value: record}, {Kind: "setup-repair-session", ID: s.ID, Value: map[string]string{"id": id}}, {Kind: "setup-repair-capability", ID: record.CapabilityHash, Value: map[string]string{"id": id}}}, nil
 	}})

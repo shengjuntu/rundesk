@@ -41,7 +41,7 @@ func TestRuntimeAdmissionKeepsNativeCapabilitiesSeparate(t *testing.T) {
 // connection, even if the stop dispatch is delayed until after replacement.
 func TestRuntimeStaleCodexStopDoesNotCloseReplacement(t *testing.T) {
 	m := testManager(t)
-	s, err := m.CreateSession(m.Workspaces()[0].ID, "", "")
+	s, err := createInternalSessionFixture(m, m.Workspaces()[0].ID, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func TestRuntimeStaleCodexStopDoesNotCloseReplacement(t *testing.T) {
 
 func TestRuntimeKunJournalKeepsCursorAndProjectionAtomic(t *testing.T) {
 	m := testManager(t)
-	s, _ := m.CreateSession(m.Workspaces()[0].ID, "", "")
+	s, _ := createInternalSessionFixture(m, m.Workspaces()[0].ID, "", "")
 	if err := m.update(s.ID, func(s *Session) { s.RunID = "current"; s.Status = "starting" }); err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +148,7 @@ func TestRuntimeKunRequestConsumesResourceAndPolicyServices(t *testing.T) {
 		t.Fatal(err)
 	}
 	w := m.Workspaces()[0]
-	s, err := m.CreateSession(w.ID, "", "")
+	s, err := createInternalSessionFixture(m, w.ID, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}

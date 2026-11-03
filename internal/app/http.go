@@ -162,9 +162,9 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 		var e error
 		if v.TraceAnalysis != nil {
 			if v.WorkspaceID != "" || v.InstanceID != "" || v.Model != "" || v.Title != "" || v.Source.Kind != "" || v.Source.AppID != "" || v.Source.TaskID != "" {
-				e = failure(400, "invalid_trace_analysis", "轨迹分析沿用来源的模型与配置，请勿同时指定其他配置")
+				e = failure(400, "invalid_trace_analysis", "轨迹问答使用系统维护配置，请勿同时指定日常会话的模型与环境")
 			} else {
-				result, e = m.CreateTraceAnalysis(*v.TraceAnalysis)
+				result, e = m.CreateMaintenanceTraceAnalysis(*v.TraceAnalysis)
 			}
 		} else {
 			result, e = m.CreateSessionWithSource(v.WorkspaceID, v.Title, v.Model, v.InstanceID, v.Source)
@@ -176,6 +176,10 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 		respond(w, result, e)
 	})
 	mux.HandleFunc("POST /api/sessions/{sid}/turns", func(w http.ResponseWriter, r *http.Request) {
+		if err := m.allowInteractiveSession(r.PathValue("sid")); err != nil {
+			respond(w, nil, err)
+			return
+		}
 		var in Input
 		if !decode(w, r, &in) {
 			return
@@ -189,6 +193,10 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 		writeJSON(w, 202, s)
 	})
 	mux.HandleFunc("POST /api/sessions/{sid}/steer", func(w http.ResponseWriter, r *http.Request) {
+		if err := m.allowInteractiveSession(r.PathValue("sid")); err != nil {
+			respond(w, nil, err)
+			return
+		}
 		var in SteerInput
 		if !decode(w, r, &in) {
 			return

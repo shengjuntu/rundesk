@@ -20,7 +20,7 @@ func TestExternalKunDebugCapabilitiesAreObserved(t *testing.T) {
 	if _, err = m.SetAgentRuntime(i.ID, i.Revision, p.Config{Kind: "kun", Endpoint: "http://127.0.0.1:1/v1", Model: "unused"}); err != nil {
 		t.Fatal(err)
 	}
-	s, err := m.CreateSession(m.Workspaces()[0].ID, "external capabilities", "")
+	s, err := createInternalSessionFixture(m, m.Workspaces()[0].ID, "external capabilities", "")
 	if err != nil {
 		t.Fatal(err)
 	}

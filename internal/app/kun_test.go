@@ -60,7 +60,7 @@ func TestKunProcessConversationAndDebugHTTP(t *testing.T) {
 	defer m.Close()
 	m.Kun = buildKunTestBinary(t)
 	w := m.Workspaces()[0]
-	old, err := m.CreateSession(w.ID, "old", "")
+	old, err := createInternalSessionFixture(m, w.ID, "old", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func TestKunProcessConversationAndDebugHTTP(t *testing.T) {
 	if _, err = m.Start(old.ID, Input{Text: "wrong backend"}); err == nil {
 		t.Fatal("old Codex session silently migrated")
 	}
-	session, err := m.CreateSession(w.ID, "Kun test", "")
+	session, err := createInternalSessionFixture(m, w.ID, "Kun test", "")
 	if err != nil {
 		t.Fatal(err)
 	}

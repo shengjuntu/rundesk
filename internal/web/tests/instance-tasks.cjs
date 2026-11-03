@@ -33,10 +33,11 @@ function fields(spec){const f=w.RunDeskTasks.taskFields(spec);holder.replaceChil
 const change=(id,value)=>{$('#'+id).value=value;$('#'+id).onchange()};
 const normalize=value=>JSON.parse(JSON.stringify(value));
 (async()=>{
- let f=fields();assert.equal($('#task-instance').options.length,7);
+ let f=fields();assert.equal($('#task-instance').options.length,6);
  change('task-instance','free');let value=f.value();assert.equal(value.instanceId,'free');assert.equal(value.workspaceId,'free-w');assert.deepEqual(normalize(value.source),{kind:'human'});
  assert(![...$('#task-workspace').options].some(o=>['preset-w','disabled-w','foreign-w'].includes(o.value)),'reserved workspace offered to independent Docker instance');
- change('task-instance','kun');assert.equal(f.value().instanceId,'kun');assert.deepEqual(normalize(f.value().source),{kind:'human'});
+ assert(![...$('#task-instance').options].some(o=>o.value==='kun'));
+ f=fields({instanceId:'kun',workspaceId:'loose-w'});assert.throws(()=>f.value(),/Kun 仅用于内部维护/);f=fields();
  change('task-instance','preset');value=f.value();assert.deepEqual(normalize(value.source),{kind:'application',appId:'video',presetId:'video-use'});assert.equal(value.workspaceId,'preset-w');assert($('#task-workspace').disabled);
  change('task-app','');assert.equal(f.value().source.presetId,'video-use','preset identity was cleared by choosing manual source');
  change('task-instance','free');assert.equal($('#task-app').value,'');assert.equal($('#task-preset').value,'');assert(!$('#task-workspace').disabled);assert.equal(f.value().instanceId,'free');
@@ -54,6 +55,6 @@ const normalize=value=>JSON.parse(JSON.stringify(value));
  $('#queue-settings').click();const form=$('#queue-max').closest('form');assert(form.textContent.includes('Instance free'));assert(form.textContent.includes('Instance kun'));await form.onsubmit({preventDefault(){}});
  const queue=requests.find(r=>r.method==='PUT'&&r.route==='/queue').body;assert.equal(queue.perInstance.free,3);assert.equal(queue.perInstance.retired,4,'unlisted historical limit was erased');
  assert(!requests.some(r=>r.route.includes('/actions')||r.method==='POST'&&r.route==='/environments'),'configuration form started or created an environment');
- console.log(JSON.stringify({passed:true,checks:['all instances in task creation and concurrency','independent Codex and Kun human tasks','preset identity, disabled and missing history','reserved workspace rejection','actual task POST retains chosen target','queue labels and unrelated limits'],scope:'shipped JavaScript in JSDOM with API fixtures; no browser, model or Docker'}));
+ console.log(JSON.stringify({passed:true,checks:['Codex task choices; all instance concurrency limits retained','Codex human tasks; legacy Kun rejected','preset identity, disabled and missing history','reserved workspace rejection','actual task POST retains chosen target','queue labels and unrelated limits'],scope:'shipped JavaScript in JSDOM with API fixtures; no browser, model or Docker'}));
  dom.window.close();
 })().catch(e=>{console.error(e);dom.window.close();process.exitCode=1});

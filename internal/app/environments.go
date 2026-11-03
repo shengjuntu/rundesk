@@ -115,6 +115,11 @@ func (m *Manager) ensureEnvironment(i Instance, w Workspace) (Environment, error
 	return m.ensureEnvironmentLocked(i, w)
 }
 func (m *Manager) ensureEnvironmentLocked(i Instance, w Workspace) (Environment, error) {
+	// Ordinary project files can be shared by multiple session engines. App
+	// workspaces retain their owner; each allowed pair still has its own HOME.
+	if e := m.checkEnvironmentWorkspaceOwner(i.ID, w.ID); e != nil {
+		return Environment{}, e
+	}
 	id := environmentID(i.ID, w.ID)
 	if v := m.environments[id]; v != nil {
 		copy := *v
@@ -127,11 +132,6 @@ func (m *Manager) ensureEnvironmentLocked(i Instance, w Workspace) (Environment,
 	if e := m.validateDockerWorkspace(w); e != nil {
 		return Environment{}, e
 	}
-	for _, v := range m.environments {
-		if v.WorkspaceID == w.ID && v.InstanceID != i.ID {
-			return Environment{}, failure(409, "workspace_already_bound", "此项目已绑定另一个 Docker 应用，请创建独立项目")
-		}
-	}
 	root := m.environmentRoot(id)
 	for _, dir := range []string{"codex", "home", "leases", "traces"} {
 		if e := os.MkdirAll(filepath.Join(root, dir), 0700); e != nil {
@@ -143,6 +143,43 @@ func (m *Manager) ensureEnvironmentLocked(i Instance, w Workspace) (Environment,
 		return Environment{}, e
 	}
 	return v, nil
+}
+
+func (m *Manager) checkEnvironmentWorkspaceOwner(iid, wid string) error {
+	conflict := func(owner string) error {
+		if owner != "" && owner != iid {
+			return failure(409, "workspace_already_bound", "此工作区属于应用的专用环境，请选择普通工作区")
+		}
+		return nil
+	}
+	project, found, err := m.projectEnvironmentForWorkspace(wid)
+	if err != nil {
+		return err
+	}
+	if found {
+		return conflict(project.InstanceID)
+	}
+	presets, err := m.allApplicationPresets()
+	if err != nil {
+		return err
+	}
+	for _, p := range presets {
+		if p.WorkspaceID == wid {
+			return conflict(p.InstanceID)
+		}
+	}
+	apps, err := m.applicationRecords()
+	if err != nil {
+		return err
+	}
+	for _, a := range apps {
+		if a.WorkspaceID == wid {
+			if err = conflict(a.InstanceID); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 func (m *Manager) EnsureApplicationEnvironment(iid, wid string) (Environment, error) {
 	m.executionMu.RLock()

@@ -34,7 +34,7 @@
     <script defer src="/reliability.js"></script>
     <script defer src="/configuration.js"></script>
     <script defer src="/applications.js"></script>
-    <script defer src="/instances.js"></script>
+    <script defer src="/instances.js"></script><script defer src="/workspace-conversations.js"></script>
     <script defer src="/environments.js"></script>
     <script defer src="/images.js"></script>
     <script defer src="/builds.js"></script>
@@ -90,25 +90,15 @@
           <a href="/collaboration.html" title="协作" aria-label="协作" class="nav-item"><span class="nav-symbol"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><path d="m10 8-4 8m8-8 4 8M8 19h8"/></svg></span><span class="rail-label">协作</span></a>
           <button id="nav-library" title="我的文件" aria-label="我的文件" type="button" class="nav-item"><span class="nav-symbol"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 7h7l2-3h9v16H3Z"/><path d="M7 12h10M7 16h7"/></svg></span><span class="rail-label">我的文件</span></button>
 <button id="nav-users" title="用户与授权" aria-label="用户与授权"><span class="nav-symbol"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 6"/></svg></span><span class="rail-label">用户与授权</span></button>
-        </nav><div class="rail-bottom"><button id="system-setup" title="重新打开初始化向导" aria-label="重新打开初始化向导"><span aria-hidden="true">⚙</span><span class="setup-label">环境设置</span></button><button id="language-toggle" title="English / 中文" aria-label="English / 中文">EN</button></div></aside>
-      <aside id="history-sidebar" class="sidebar" aria-label="助手与应用">
+        </nav><div class="rail-bottom"><button id="system-setup" title="重新打开初始化向导" aria-label="重新打开初始化向导"><span aria-hidden="true">⚙</span><span class="setup-label">环境设置</span></button><button id="language-toggle" title="English / 中文" aria-label="English / 中文">EN</button></div><small id="app-version" class="app-version"></small></aside>
+      <aside id="history-sidebar" class="sidebar" aria-label="工作区与会话">
         <button id="sidebar-close" class="quiet sidebar-close" aria-label="关闭会话列表">关闭</button>
-<div class="history-heading"><strong>会话</strong><button id="history-collapse" class="quiet" title="收起会话列表" aria-label="收起会话列表">◧</button></div>
-
-        <div class="instance-context"><label for="instance">当前 Agent</label><select id="instance"></select></div><button id="manage-instances" class="hidden" tabindex="-1">高级配置</button>
-        <p id="history-label" class="sidebar-label">通用助手</p>
-        <div class="workspace">
-          <label for="workspace">工作区</label>
-          <div class="row">
-            <select id="workspace"></select
-            ><button id="add-workspace" class="icon" title="添加项目">
-              ＋
-            </button>
-          </div>
+<div class="history-heading"><strong>工作区</strong><div class="row"><button id="add-workspace" class="workspace-add" title="新建工作区" aria-label="新建工作区">＋</button><button id="history-collapse" class="quiet" title="收起会话列表" aria-label="收起会话列表">◧</button></div></div>
+        <div id="conversation-control-store" hidden>
+          <select id="instance" aria-label="执行实例"></select><select id="workspace" aria-label="当前工作区"></select>
+          <button id="manage-instances" tabindex="-1">高级配置</button><p id="history-label"></p>
+          <button id="new-session" class="new-session">＋ 新会话 <kbd>⌘ K</kbd></button>
         </div>
-        <button id="new-session" class="new-session">
-          ＋ 新对话 <kbd>⌘ K</kbd>
-        </button>
         <div class="session-filters">
           <input
             id="session-search"
@@ -159,7 +149,7 @@
         <div class="main-row">
           <section class="conversation">
             <div class="conversation-header">
-              <h2 id="session-title">新对话</h2>
+              <div class="conversation-title-group"><h2 id="session-title">新会话</h2><button id="session-engine" class="session-engine" type="button" aria-haspopup="dialog">Codex</button></div>
               <div class="row">
                 <span id="run-status" class="badge muted">就绪</span>
                 <details id="session-menu" class="session-menu hidden">
@@ -202,7 +192,7 @@
             </div>
             <div id="approvals" class="approvals"></div>
             <div class="composer-wrap">
-              <div id="composer-context" class="composer-context"><span id="composer-agent"></span><label for="composer-workspace">工作区</label><select id="composer-workspace" aria-label="此对话的工作区"></select></div>
+              
               <div id="attachments" class="attachments"></div>
               <form id="composer" class="composer">
                 <textarea

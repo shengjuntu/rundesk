@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Control API (RDCA)",
-    "version": "0.60.0",
-    "description": "RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter；附加 UHP /v1 入口共用任务核心，具体范围与限制见 docs/UHP.md，不声明完整规范兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。当前应用接入、错误、幂等及示例见 docs/API-V1.md。"
+    "version": "0.61.0",
+    "description": "RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter；附加 UHP /v1 入口共用任务核心，具体范围与限制见 docs/UHP.md，不声明完整规范兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。0.61.0 起日常会话与应用任务仅接受 Codex，Kun 用于维护、轨迹问答及保留的研究 API；普通 Kun 提交返回 kun_maintenance_only。当前应用接入、错误、幂等及示例见 docs/API-V1.md。"
   },
   "servers": [
     {
@@ -1879,7 +1879,7 @@
     "/build-center/assistant-runs": {
       "post": {
         "operationId": "post_build_center_assistant_runs",
-        "summary": "管理员：发起现有Codex或本机Kun队列任务，bootstrap Skill并注入限时构建MCP，不安装原生插件",
+        "summary": "管理员：界面使用配置的本机 Kun 维护助手；Codex 构建 API 保留兼容。新 Kun 任务采用计划协议 v1，最多三次候选，成功由同源 offline/smoke 证据决定。bootstrap Skill 并注入限时构建 MCP，不安装原生插件",
         "parameters": [
           {
             "name": "X-Request-ID",
@@ -1913,7 +1913,7 @@
           }
         },
         "x-administrator-only": true,
-        "description": "发起现有Codex或本机Kun队列任务，bootstrap Skill并注入限时构建MCP，不安装原生插件。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。",
+        "description": "界面使用配置的本机 Kun 维护助手；Codex 构建 API 保留兼容。新 Kun 任务采用计划协议 v1，最多三次候选，成功由同源 offline/smoke 证据决定。bootstrap Skill 并注入限时构建 MCP，不安装原生插件。普通应用凭据与成员默认拒绝。创建型操作使用body/form中的24位requestId持久去重；不使用通用JSON Idempotency-Key拦截multipart。",
         "requestBody": {
           "required": true,
           "content": {
@@ -25206,6 +25206,12 @@
           },
           "title": {
             "type": "string"
+          },
+          "sourceInstanceId": {
+            "type": "string"
+          },
+          "sourceWorkspaceId": {
+            "type": "string"
           }
         },
         "required": [
@@ -25502,6 +25508,13 @@
           },
           "revision": {
             "type": "integer"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "maintenance"
+            ],
+            "description": "宿主管理的维护目录；不能提交普通会话或应用任务"
           }
         },
         "required": [
@@ -33763,6 +33776,129 @@
         ],
         "additionalProperties": false
       },
+      "BuildMaintenancePlan": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$",
+            "description": "同一逻辑操作重试保持不变；更改参数需新值。"
+          },
+          "goal": {
+            "type": "string"
+          },
+          "hypothesis": {
+            "type": "string"
+          },
+          "preserve": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "requestId",
+          "goal",
+          "hypothesis",
+          "preserve",
+          "checks"
+        ],
+        "additionalProperties": false
+      },
+      "BuildMaintenanceAttempt": {
+        "type": "object",
+        "properties": {
+          "plan": {
+            "$ref": "#/components/schemas/BuildMaintenancePlan"
+          },
+          "buildId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "imageId": {
+            "type": "string"
+          },
+          "contextSha256": {
+            "type": "string"
+          },
+          "verificationIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "offline": {
+            "type": "boolean"
+          },
+          "smoke": {
+            "type": "boolean"
+          },
+          "verificationFailed": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan",
+          "status",
+          "verificationIds",
+          "offline",
+          "smoke",
+          "verificationFailed"
+        ],
+        "additionalProperties": false
+      },
+      "BuildMaintenanceView": {
+        "type": "object",
+        "properties": {
+          "phase": {
+            "type": "string",
+            "enum": [
+              "planning",
+              "building",
+              "verifying",
+              "replanning",
+              "verified",
+              "blocked"
+            ]
+          },
+          "maxAttempts": {
+            "type": "integer"
+          },
+          "attempts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuildMaintenanceAttempt"
+            }
+          },
+          "verifiedBuildId": {
+            "type": "string"
+          },
+          "experienceId": {
+            "type": "string"
+          },
+          "stopReason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "phase",
+          "maxAttempts",
+          "attempts"
+        ],
+        "additionalProperties": false
+      },
       "BuildAssistantRun": {
         "type": "object",
         "properties": {
@@ -33810,6 +33946,12 @@
           },
           "nativePluginInstalled": {
             "const": false
+          },
+          "protocolVersion": {
+            "type": "integer"
+          },
+          "maintenance": {
+            "$ref": "#/components/schemas/BuildMaintenanceView"
           }
         },
         "required": [

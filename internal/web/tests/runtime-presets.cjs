@@ -68,7 +68,7 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));async function until
  sync();
  assert.equal(vm.runInContext("applicationForInstance('preset-i').appId",ctx),'video');assert.equal(vm.runInContext("applicationForInstance('old-i').appId",ctx),'video');
  const advanced=w.applicationAdvanced();assert(!advanced.textContent.includes('preset-i'),'preset instance appeared orphaned');assert(!advanced.textContent.includes('old-i'),'disabled preset instance appeared orphaned');
- w.renderApplications();button($('[data-app-id="video"]'),'设置').click();await until(()=>w.location.hash.endsWith('/settings'));
+ w.renderApplications();button($('[data-app-id="video"]'),'设置').click();await until(()=>w.location.hash.endsWith('/settings')&&!!$('.application-settings-panel'));
  assert(!$('.application-settings-panel').classList.contains('hidden'),'application card settings opened Agent dialog instead');
  await w.showApplication('video');assert.equal($$('.application-task').length,3,'default application page omitted preset history');
  assert($('.application-settings-panel').classList.contains('hidden'),'task view exposed settings before selecting them');
@@ -79,10 +79,11 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));async function until
  assert($('#runtime-presets .runtime-default-card').textContent.includes('base-i'));
  assert.equal($$('#runtime-presets .runtime-default-card .actions button').length,1,'default environment duplicated configuration entry points');
  assert(!$('#runtime-presets').textContent.includes('镜像与构建'),'application settings duplicated the build center');
- $('#application-environment-select').value='video-use';$('#application-environment-select').onchange();
- assert.equal($$('#runtime-presets .runtime-preset-card').length,1,'settings rendered multiple preset action panels');
+ assert.equal($$('#runtime-presets .runtime-preset-card').length,2,'existing presets were hidden behind a single selection');
+ assert($('#runtime-presets').textContent.includes('已绑定 2 个预设'));
+ assert.equal($$('#runtime-presets .runtime-add-preset').length,1,'add preset entry was duplicated');
+ assert($('#runtime-presets .runtime-add-preset').classList.contains('primary'),'add action was still low contrast');
  assert.equal($('[data-preset-id="video-use"] [data-key-count]').dataset.keyCount,'0');
- $('#application-environment-select').value='disabled';$('#application-environment-select').onchange();
  assert(!$('[data-preset-id="disabled"]').textContent.includes('null'),'disabled environment rendered a literal null');
  await w.showApplication('video','disabled');assert.equal($('#instance').value,'old-i');assert.equal($('#workspace').value,'old-w');assert.equal($$('.application-task').length,1);assert($('.application-tasks').textContent.includes('历史任务'));
  assert(w.location.hash.includes('/preset/disabled'),'preset route was lost');assert.equal(vm.runInContext('currentApplication().appId',ctx),'video');
@@ -91,12 +92,12 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));async function until
  button(enabled,'管理容器').click();await until(()=>!!$('#environment-project'));
  assert(w.location.hash.includes('from=settings'),'container management lost its settings return route');
  assert.equal($('#environment-project').options.length,1,'preset environment offered another workspace');assert.equal($('#environment-project').value,'preset-w');assert($('#execution-mode').disabled,'preset offered local runtime');assert(!requests.some(r=>r.route.includes('/actions')),'opening preset changed container state');
- button($('#applications-page'),'← 返回应用设置').click();await until(()=>w.location.hash.endsWith('/settings'));
+ button($('#applications-page'),'← 返回应用设置').click();await until(()=>w.location.hash.endsWith('/settings')&&!!$('.application-settings-panel'));
  assert(!$('.application-settings-panel').classList.contains('hidden'),'return from container management opened tasks');
  // Bind an unoccupied Codex Docker Agent with one selection and a new private workspace.
  workspaceLost=false;
  let bound=await w.RunDeskRuntimePresets.edit(state.applications[0],null,async()=>{});
- assert.equal($('#preset-name').tagName,'SELECT','preset name was still free text');$('#preset-mode').value='existing';$('#preset-mode').onchange();
+ assert.equal($('#preset-name').tagName,'SELECT','preset name was still free text');assert($('#preset-submit').closest('.runtime-preset-footer'),'submit was not in persistent footer');assert($('#preset-id').closest('details')&&!$('#preset-id').closest('details').open,'technical fields cluttered the initial form');$('#preset-mode').value='existing';$('#preset-mode').onchange();
  assert.deepEqual([...$('#preset-name').options].map(o=>o.value),['','free-i'],'assigned/default/Kun instance offered for binding');
  $('#preset-name').value='free-i';$('#preset-name').onchange();assert.equal($('#preset-id').value,'free-i');assert(!$('#preset-workspace'),'workspace selection was duplicated');
  await bound.querySelector('form').onsubmit({preventDefault(){}});assert(!bound.open);assert.equal(instanceWrites,0);assert.equal(workspaceWrites,1);assert(!requests.some(r=>r.method==='PUT'&&r.route.includes('/execution')),'binding existing preset changed runtime');workspaceLost=true;presetLost=true;
@@ -125,7 +126,7 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));async function until
  $('#key-presets [data-preset-id="free-i"]').checked=false;
  await $('#key-name').closest('form').onsubmit({preventDefault(){}});
  const keyRequest=requests.find(r=>r.route==='/applications/video/keys'&&r.method==='POST');assert.deepEqual(keyRequest.body.presetIds,['video-use']);assert(!keyRequest.body.workspaceIds.includes('preset-w'));assert.equal(db.keys[0].presetBindings[0].instanceId,'preset-i');assert($('#key-secret'),'credential was not displayed once');
- for(const d of $$('dialog[open]'))d.close();await w.showApplication('video','','settings');$('#application-environment-select').value='video-use';$('#application-environment-select').onchange();assert.equal($('[data-preset-id="video-use"] [data-key-count]').dataset.keyCount,'1');
+ for(const d of $$('dialog[open]'))d.close();await w.showApplication('video','','settings');assert.equal($('[data-preset-id="video-use"] [data-key-count]').dataset.keyCount,'1');
  // Member grants match app + optional preset + workspace, including disabled history.
  await w.RunDeskUsers.open();
  const member=$('[data-user-id="member"]');assert(member.querySelector('.user-grants').textContent.includes('旧环境'));assert(member.querySelector('.user-grants').textContent.includes('已禁用'));
@@ -141,6 +142,15 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));async function until
  const createdGrants=requests.find(r=>r.route==='/users'&&r.method==='POST').body.grants;
  assert.deepEqual(createdGrants,[{appId:'video',workspaceId:'base-w',role:'viewer'},{appId:'video',presetId:'video-use',workspaceId:'preset-w',role:'viewer'}]);assert($('#user-access-code'),'new user access code was not displayed');
  assert(!requests.some(r=>r.route==='/interrupt'||r.route.includes('/actions')),'preset management interrupted an environment');
- console.log(JSON.stringify({passed:true,checks:['preset navigation and disabled history','environment scoped to fixed binding','lost POST and PUT responses reuse identities across dialog reopen','rename/disable does not mutate runtime','task source.presetId and exact workspace','explicit key presetIds and frozen bindings','member grants preserve exact preset identity in POST and PUT, including disabled history'],scope:'real shipped JavaScript, JSDOM and mocked authenticated API; browser layout and Docker not exercised'}));
+ // Add another preset from the same image. Every binding and the default survive reopening.
+ const previousBindings=clone(presets),defaultBefore={instanceId:db.applications[0].instanceId,workspaceId:db.applications[0].workspaceId};
+ dialog=await w.RunDeskRuntimePresets.edit(state.applications[0],null,async()=>{});
+ $('#preset-name').value='sha256:hyperframes';$('#preset-name').onchange();assert.equal($('#preset-id').value,'hyperframes-2');
+ await dialog.querySelector('form').onsubmit({preventDefault(){}});assert(!dialog.open);
+ for(const previous of previousBindings)assert.deepEqual(presets.find(p=>p.id===previous.id),previous,'new preset replaced an existing binding');
+ assert.deepEqual({instanceId:db.applications[0].instanceId,workspaceId:db.applications[0].workspaceId},defaultBefore);
+ await w.showApplication('video','','settings');assert.equal($$('#runtime-presets .runtime-preset-card').length,presets.length);
+ assert($('[data-preset-id="hyperframes-2"]'));assert($('[data-preset-id="video-use"]'));
+ console.log(JSON.stringify({passed:true,checks:['multiple preset bindings visible together and retained across additions','one prominent add entry and compact form with persistent submit','preset navigation and disabled history','environment scoped to fixed binding','lost POST and PUT responses reuse identities across dialog reopen','rename/disable does not mutate runtime','task source.presetId and exact workspace','explicit key presetIds and frozen bindings','member grants preserve exact preset identity in POST and PUT, including disabled history'],scope:'real shipped JavaScript, JSDOM and mocked authenticated API; browser layout and Docker not exercised'}));
  dom.window.close();
 })().catch(error=>{console.error(error);dom.window.close();process.exitCode=1});

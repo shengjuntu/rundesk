@@ -32,21 +32,23 @@ type BuildAssistantInput struct {
 	RequestID     string `json:"requestId"`
 }
 type BuildAssistantRun struct {
-	RuntimeKind           string `json:"runtimeKind,omitempty"`
-	SourceBuildID         string `json:"sourceBuildId,omitempty"`
-	ID                    string `json:"id"`
-	InstanceID            string `json:"instanceId"`
-	WorkspaceID           string `json:"workspaceId"`
-	ParentWorkspaceID     string `json:"parentWorkspaceId,omitempty"`
-	SessionID             string `json:"sessionId"`
-	TaskID                string `json:"taskId"`
-	Status                string `json:"status"`
-	Created               string `json:"created"`
-	ExpiresAt             string `json:"expiresAt"`
-	RevokedAt             string `json:"revokedAt,omitempty"`
-	SkillBootstrap        bool   `json:"skillBootstrap"`
-	NativePluginInstalled bool   `json:"nativePluginInstalled"`
-	Error                 string `json:"error,omitempty"`
+	ProtocolVersion       int                   `json:"protocolVersion,omitempty"`
+	Maintenance           *BuildMaintenanceView `json:"maintenance,omitempty"`
+	RuntimeKind           string                `json:"runtimeKind,omitempty"`
+	SourceBuildID         string                `json:"sourceBuildId,omitempty"`
+	ID                    string                `json:"id"`
+	InstanceID            string                `json:"instanceId"`
+	WorkspaceID           string                `json:"workspaceId"`
+	ParentWorkspaceID     string                `json:"parentWorkspaceId,omitempty"`
+	SessionID             string                `json:"sessionId"`
+	TaskID                string                `json:"taskId"`
+	Status                string                `json:"status"`
+	Created               string                `json:"created"`
+	ExpiresAt             string                `json:"expiresAt"`
+	RevokedAt             string                `json:"revokedAt,omitempty"`
+	SkillBootstrap        bool                  `json:"skillBootstrap"`
+	NativePluginInstalled bool                  `json:"nativePluginInstalled"`
+	Error                 string                `json:"error,omitempty"`
 }
 type buildAssistantRecord struct {
 	BuildAssistantRun
@@ -265,11 +267,14 @@ func (m *Manager) CreateBuildAssistantRun(input BuildAssistantInput, endpoint st
 		}
 	}
 	instructions := "使用本工作区 .agents/skills/add-app-docker-image/SKILL.md 的 $add-app-docker-image Skill，实现下面的应用镜像要求。只使用 rundesk_build_center MCP 提交宿主构建；将配方、ZIP、来源与许可证审查、验证记录写入 artifacts/。保持既有应用不变，不自动发布、启动或替换实例。此工作区是专用构建任务，引用的项目仅为上下文编号，不授予其文件访问。完整跟进构建日志并进行适当的 smoke 检查；如遇外部阻塞，保留可审阅的产物并说明。\n\n用户要求：\n" + input.Prompt
+	if kind == "kun" {
+		instructions += "\n\n本任务采用维护闭环 v1。先读取来源证据，以一个小而完整的目标调用 build_plan_record：填写 goal、hypothesis、preserve、checks，requestId 必须与随后 build_start 相同。每次新构建都需要独立计划，保留上一轮证据；最多三次构建。计划中的 checks 只是验收要求，不是通过证明。候选构建通过后，必须由服务端独立执行 offline 和 smoke 验证，固定镜像与上下文；不得修改测试来消除失败。成功后保存经验并结束，不再扩展其他功能。任务完成不代表修复已验证；剩余阻塞需如实报告。"
+	}
 	if input.SourceBuildID != "" {
 		instructions += "\n\n修复来源构建：" + input.SourceBuildID + "。原始冻结上下文已复制到 artifacts/context/，原配方在 artifacts/recipe.json，失败记录在 artifacts/source-build.json。读取来源日志、检索适用经验后再修改。使用 build_context_pack 打包，无需 Bash。必须保留原 smoke 断言，通过 offline 和 smoke 测试后用 build_experience_record 保存真实修复证据；停止前写明各次假设、改动和结果。"
 	}
 	spec := TaskSpec{Title: "添加应用镜像", InstanceID: i.ID, WorkspaceID: w.ID, Source: SessionSource{Kind: "human"}, Input: Input{Text: instructions}}
-	t, session, err := m.prepareTask(spec, true)
+	t, session, err := m.prepareTask(spec, true, true)
 	if err != nil {
 		return BuildAssistantRun{}, err
 	}
@@ -281,6 +286,9 @@ func (m *Manager) CreateBuildAssistantRun(input BuildAssistantInput, endpoint st
 	tokenHash := keyHash(token)
 	expires := time.Now().UTC().Add(2 * time.Hour).Format(time.RFC3339Nano)
 	run := BuildAssistantRun{ID: id, RuntimeKind: kind, SourceBuildID: input.SourceBuildID, InstanceID: i.ID, WorkspaceID: w.ID, ParentWorkspaceID: input.WorkspaceID, SessionID: session.ID, TaskID: t.ID, Status: t.Status, Created: store.Now(), ExpiresAt: expires, SkillBootstrap: true, NativePluginInstalled: false}
+	if kind == "kun" {
+		run.ProtocolVersion = 1
+	}
 	record := buildAssistantRecord{BuildAssistantRun: run, RuntimeFingerprint: buildAssistantRuntimeFingerprint(i), Fingerprint: fingerprint, CapabilityHash: tokenHash, Endpoint: endpoint, WorkspacePath: w.Path}
 	cap := buildAssistantCapability{SourceBuildID: input.SourceBuildID, RunID: id, SessionID: session.ID, TaskID: t.ID, InstanceID: i.ID, WorkspaceID: w.ID, WorkspacePath: w.Path, ExpiresAt: expires}
 	secretPath := m.buildAssistantSecretPath(id)
@@ -332,6 +340,13 @@ func (m *Manager) BuildAssistantRun(id string) (BuildAssistantRun, error) {
 		result.Error = session.Error
 	}
 	result.Error = sanitizeBuildAssistantText(result.Error, "")
+	if record.ProtocolVersion > 0 {
+		view, err := m.buildMaintenanceView(id, result.Status)
+		if err != nil {
+			return BuildAssistantRun{}, err
+		}
+		result.Maintenance = &view
+	}
 	var cap buildAssistantCapability
 	if err := m.Store.Get("build-assistant-capability", record.CapabilityHash, &cap); err == nil {
 		if cap.RevokedAt == "" && m.checkBuildAssistantCapability(cap) != nil {

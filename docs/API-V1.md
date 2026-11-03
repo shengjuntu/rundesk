@@ -4,6 +4,12 @@ RunDesk 自身 API 的名称为 **RunDesk Control API（RDCA）**。当前契约
 
 RunDesk 不依赖 HarnessRouter。附加 UHP 服务已在 `/v1` 提供入口，与 RDCA 共用任务核心和资源服务；各协议的授权与幂等细节分别定义。本版目标协议为 `2026-10-19`，不声明完整规范兼容，详见 [API 定位](API-STRATEGY.md) 和 [UHP 服务与限制](UHP.md)。
 
+## 0.61.0 执行分工
+
+日常会话、队列及应用任务只接受 Codex 配置；Kun 用于内部维护、只读轨迹问答和保留的研究 API。普通 Kun 提交返回 `409 kun_maintenance_only`，维护目录用于普通任务时返回 `maintenance_workspace_reserved`。已有记录不会删除。正常 Codex 轨迹问答需要环境设置中的 Kun 配置，缺少时返回 `maintenance_kun_not_configured`。
+
+`Workspace.purpose` 可选值 `maintenance` 表示宿主管理的维护目录。`TraceOrigin.sourceInstanceId` 与 `sourceWorkspaceId` 保存跨实例诊断的固定来源。`BuildAssistantRun.protocolVersion` 和 `maintenance` 为可选扩展；后者包含计划、各次候选、验证状态与经验编号。不要将任务 `completed` 解释为修复 `verified`，详见[内部维护](MAINTENANCE.md)。
+
 ## 稳定范围
 
 应用依赖任务、会话、文件、事件信封、错误与幂等语义。保持既有必需字段与含义，新增可选字段、错误码或原生事件时客户端应容忍未知值。后端原生 `data`、模型配置、Kun 内部调试/实验接口不等于跨后端统一能力；使用前读取对应能力声明。

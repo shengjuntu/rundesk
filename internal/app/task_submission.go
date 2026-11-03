@@ -21,8 +21,11 @@ func (m *Manager) SubmitTask(sub TaskSubmission) (Task, error) {
 		if sub.ExpectedRunID != "" {
 			return t, failure(400, "invalid_task", "新会话不能指定先前运行")
 		}
-		t, s, err = m.prepareTask(sub.Spec, true)
+		t, s, err = m.prepareTask(sub.Spec, true, sub.maintenance)
 	} else {
+		if err = m.requireDailySession(sub.SessionID); err != nil {
+			return t, err
+		}
 		// Use the same session operation lock as manual starts, edits and deletion.
 		// Wait for terminal-process cleanup, but reject a running or reserved turn
 		// promptly instead of waiting behind native execution.

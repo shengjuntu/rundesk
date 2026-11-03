@@ -26,7 +26,11 @@ func (m *Manager) kunDiagnosticRequest(s Session, w Workspace, in Input, cfg p.C
 	if err != nil {
 		return p.Start{}, err
 	}
-	if source.WorkspaceID != s.WorkspaceID || source.InstanceID != s.InstanceID {
+	expectedInstance, expectedWorkspace := s.InstanceID, s.WorkspaceID
+	if origin.SourceInstanceID != "" {
+		expectedInstance, expectedWorkspace = origin.SourceInstanceID, origin.SourceWorkspaceID
+	}
+	if source.WorkspaceID != expectedWorkspace || source.InstanceID != expectedInstance {
 		return p.Start{}, failure(409, "diagnostic_source_changed", "来源归属已改变")
 	}
 	snapshot := filepath.Join(m.Data, "kun", "sessions", s.ID, "trace-source.db")

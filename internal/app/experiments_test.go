@@ -15,7 +15,7 @@ import (
 
 func TestExperimentFrozenOfflineBranches(t *testing.T) {
 	m := kunMCPManager(t)
-	source, err := m.CreateSession(m.Workspaces()[0].ID, strings.Repeat("来源", 250), "")
+	source, err := createInternalSessionFixture(m, m.Workspaces()[0].ID, strings.Repeat("来源", 250), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestExperimentFrozenOfflineBranches(t *testing.T) {
 	last := add(source.ID, "selected", "kun/run.finished", 5, map[string]any{"status": "completed"})
 	future := add(source.ID, "selected", "kun/tool.completed", 6, map[string]any{"output": "FUTURE-NOT-COPIED"})
 	add(source.ID, "different", "kun/run.started", 7, map[string]any{"text": "OTHER-RUN-NOT-COPIED"})
-	other, _ := m.CreateSession(source.WorkspaceID, "other", "")
+	other, _ := createInternalSessionFixture(m, source.WorkspaceID, "other", "")
 	foreign := add(other.ID, "selected", "kun/run.started", 1, map[string]any{"text": "OTHER-SESSION-NOT-COPIED"})
 	before, _ := m.Store.Events(source.ID, 0, 1000)
 	sessionBefore, _ := m.Session(source.ID)

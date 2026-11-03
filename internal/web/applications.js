@@ -5,7 +5,7 @@ function currentApplication(){return applicationForInstance(instance()?.id);}
 function currentApplicationBinding(){const a=currentApplication();return a?applicationBindings(a).find(b=>b.instanceId===instance()?.id&&(!b.presetId||b.workspaceId===ws()?.id)):null;}
 function applicationBindingRoute(a){return "#application/"+encodeURIComponent(a.appId)+(a.presetId?"/preset/"+encodeURIComponent(a.presetId):"");}
 function contextTitle(){return instance()?.name||rdText("Agent");}
-function sessionInContext(s){return s.instanceId===instance()?.id&&(s.instanceId!=="default"||(state.taskAppID?s.source?.appId===state.taskAppID:s.source?.kind!=="application"));}
+function sessionInContext(s){return s.workspaceId===ws()?.id;}
 function draftKey(){return instance()?.id+":"+ws()?.id+":"+(state.session?.id||"new");}
 function stashProductDraft(){if(!state.draftContext||state.view!=="conversation")return;state.drafts.set(state.draftContext,{text:$("#prompt").value,uploads:[...state.uploads],skills:[...state.chosenSkills]});}
 function restoreProductDraft(){state.draftContext=draftKey();const d=state.drafts.get(state.draftContext);if(d){$("#prompt").value=d.text;state.uploads=[...d.uploads];state.chosenSkills=[...d.skills];renderAttachments();}}
@@ -15,16 +15,16 @@ function updateProductNavigation(){
   const node=$("#"+id);if(!node)continue;node.classList.toggle("selected",on);if(on)node.setAttribute("aria-current","page");else node.removeAttribute("aria-current");
  }
  $("#application-count").textContent=state.applications.length||"";
- $("#page-label").textContent=({instances:rdText("Agents"),"build-center":rdText("构建中心"),users:rdText("用户与授权"),tasks:rdText("任务"),applications:rdText("应用接入")})[view]||contextTitle();
+ $("#page-label").textContent=({instances:rdText("Agents"),"build-center":rdText("构建中心"),users:rdText("用户与授权"),tasks:rdText("任务"),applications:rdText("应用接入")})[view]||(conversation?rdText("会话"):contextTitle());
  $("#history-label").textContent=contextTitle();
  $("#settings-button").textContent=rdText("Agent 设置");$("#settings-button").classList.toggle("hidden",!["conversation","instance"].includes(view)||!ws()||!!state.instanceResolving);
  $("#new-session").classList.toggle("hidden",!conversation);
- $("#back-applications").classList.toggle("hidden",!["conversation","instance","application"].includes(view));
+ $("#back-applications").classList.toggle("hidden",!["instance","application"].includes(view));
  $("#back-applications").textContent=apps?rdText("应用 /"):rdText("Agents /");
  $("#back-applications").setAttribute("aria-label",apps?rdText("返回应用"):rdText("返回 Agent"));
  const fixed=window.RunDeskInstances?.binding(instance()?.id)?.presetId;
- $("#workspace").disabled=!!fixed;$("#add-workspace").disabled=!!fixed;
- for(const q of ["#trace-button","#debug-button","#workspace-name",".breadcrumb-divider",".sidebar>.workspace",".instance-context",".session-filters","#session-list","#history-label","#sidebar-toggle","#mode"])$(q)?.classList.toggle("hidden",!conversation);
+ $("#workspace").disabled=!!fixed;$("#add-workspace").disabled=false;
+ for(const q of ["#trace-button","#debug-button","#workspace-name",".breadcrumb-divider",".session-filters","#session-list","#sidebar-toggle"])$(q)?.classList.toggle("hidden",!conversation);
 }
 function setProductPage(view){
  state.view=view;document.body.dataset.view=view;if(!["instances","instance"].includes(view))state.instanceResolving=false;
@@ -32,7 +32,7 @@ function setProductPage(view){
  updateProductNavigation();closeConversationSidebar();
 }
 async function refreshApplicationCatalog(){const selection=state.selection;const [a,i,s]=await Promise.all([api("/applications"),api("/instances"),api("/sessions")]);if(selection!==state.selection)return;const id=instance()?.id||"default";state.applications=a;state.instances=i;state.sessions=s;renderInstanceOptions(id);}
-async function enterAssistant(){resetConversation();renderInstanceOptions("default");const wid=localStorage.getItem("rundesk-assistant-workspace");if(state.workspaces.some(w=>w.id===wid))$("#workspace").value=wid;setProductPage("conversation");updateWorkspaceLabel();history.replaceState(null,"","#assistant");const sid=localStorage.getItem("rundesk-session"),last=state.sessions.find(s=>s.id===sid&&s.instanceId==="default"&&s.source?.kind!=="application");if(state.drafts.has(draftKey())){restoreProductDraft();renderStatus();}else if(last)await selectSession(last.id);else await selectFirst();renderSessions();}
+async function enterAssistant(){if(window.RunDeskConversations)return RunDeskConversations.open();resetConversation();renderInstanceOptions("default");const wid=localStorage.getItem("rundesk-assistant-workspace");if(state.workspaces.some(w=>w.id===wid))$("#workspace").value=wid;setProductPage("conversation");updateWorkspaceLabel();history.replaceState(null,"","#assistant");const sid=localStorage.getItem("rundesk-session"),last=state.sessions.find(s=>s.id===sid&&s.instanceId==="default"&&s.source?.kind!=="application");if(state.drafts.has(draftKey())){restoreProductDraft();renderStatus();}else if(last)await selectSession(last.id);else await selectFirst();renderSessions();}
 async function showApplications(){resetConversation();setProductPage("applications");history.replaceState(null,"","#applications");setLoading($("#applications-page"));await refreshApplicationCatalog();if(state.view==="applications")renderApplications();}
 function applicationMark(name){return el("div",{class:"application-mark","aria-hidden":"true"},name.trim().slice(0,1).toUpperCase());}
 function applicationLink(a){if(!a.entryUrl)return null;try{const u=new URL(a.entryUrl);if(!["http:","https:"].includes(u.protocol)||u.username||u.password)return null;}catch{return null;}return el("a",{class:"app-open",href:a.entryUrl,target:"_blank",rel:"noopener noreferrer"},rdText("打开应用 ↗"));}
@@ -91,6 +91,7 @@ function contextRoute(){
  if(["instances","instance"].includes(state.view)||location.hash.startsWith("#instance/"))return location.hash||"#instances";
  if(state.view==="applications")return "#applications";
  if(state.view==="application"&&currentApplicationBinding())return location.hash.startsWith("#application/")?location.hash:applicationBindingRoute(currentApplicationBinding());
+ if(state.view==="conversation")return ws()?"#workspace/"+encodeURIComponent(ws().id):"#conversations";
  return window.RunDeskInstances?RunDeskInstances.route(instance()?.id||"default",ws()?.id):"#assistant";
 }
 async function showCapabilityPage(tab){
@@ -101,6 +102,8 @@ function skillCanBeSelected(){return state.view==="conversation";}
 function compactConfigurationForms(target,kind){for(const card of [...target.children]){const title=card.querySelector(":scope>h3")?.textContent;if(!title||!(kind==="skills"&&title.includes(rdText("编辑 SKILL.md"))||kind==="mcp"&&title===rdText("添加 / 编辑 MCP")))continue;const d=el("details",{class:"card configuration-editor"},el("summary",{},kind==="skills"?rdText("编辑 SKILL.md / 创建简单技能"):rdText("添加 / 编辑 MCP 服务")));card.before(d);card.classList.remove("card");card.querySelector(":scope>h3").remove();d.append(card);}}
 async function restoreProductRoute(){
  const [route,query=""]=location.hash.slice(1).split("?");const params=new URLSearchParams(query),parts=route.split("/");let id;try{id=decodeURIComponent(parts[1]||"");}catch{return false;}
+ if(parts[0]==="conversations"){await RunDeskConversations.open();return true;}
+ if(parts[0]==="workspace"){await RunDeskConversations.open(id,{fresh:params.get("new")==="1"});return true;}
  if(parts[0]==="instances"){await RunDeskInstances.open();return true;}
  if(parts[0]==="instance"){
   const wid=params.get("workspace")||undefined;
@@ -121,7 +124,7 @@ async function restoreProductRoute(){
  if(parts[0]==="session"&&state.sessions.some(s=>s.id===id)){await selectSession(id);return true;}return false;
 }
 $("#nav-instances").onclick=()=>safe(()=>RunDeskInstances.open());
-$("#nav-assistant").onclick=()=>safe(()=>RunDeskInstances.conversation(instance()?.id||"default"));
+$("#nav-assistant").onclick=()=>safe(()=>RunDeskConversations.open());
 $("#nav-applications").onclick=()=>safe(showApplications);
 $("#back-applications").onclick=()=>safe(()=>state.view==="application"?showApplications():RunDeskInstances.open());
 $("#assistant-settings").onclick=()=>safe(()=>openSettings());
@@ -159,53 +162,38 @@ window.RunDeskRuntimePresets=(()=>{
  }
  async function render(a,target,initialPresetId=""){
   const section=el("section",{class:"runtime-presets",id:"runtime-presets","aria-label":rdText("应用预设绑定")});target.append(section);
-  let selectedId=initialPresetId;
+  let highlightedId=initialPresetId;
   async function selectDefault(){
    resetConversation();state.workspaces=await api("/workspaces");
    $("#workspace").replaceChildren(...state.workspaces.map(w=>el("option",{value:w.id},w.name)));
    renderInstanceOptions(a.instanceId);$("#workspace").value=a.workspaceId;updateWorkspaceLabel();
    return {...a,returnToSettings:true};
   }
-  async function refresh(preferredId){
-   if(typeof preferredId==="string")selectedId=preferredId;
-   section.replaceChildren(el("h2",{},rdText("应用预设绑定")),el("p",{class:"help"},rdText("先选择应用环境，再配置它的能力。任务筛选在“任务记录”；Docker 镜像请到左侧“构建中心”准备。")));
+  async function refresh(addedId){
+   if(typeof addedId==="string")highlightedId=addedId;
+   section.replaceChildren(el("h2",{},rdText("应用预设绑定")),el("p",{class:"help runtime-presets-intro"},rdText("一个应用可以绑定多个预设，每个任务选择其中一个。添加新预设会保留已有绑定。")));
    try{
     const rows=await load(a);
-    if(selectedId&&!rows.some(p=>p.id===selectedId))selectedId="";
     let keys=[],keyError="";try{keys=await api("/applications/"+encodeURIComponent(a.appId)+"/keys");}catch(error){keyError=error.message;}
     const activeKeys=keys.filter(k=>!k.revokedAt&&(!k.expiresAt||new Date(k.expiresAt)>new Date()));
     const keyCount=p=>activeKeys.filter(k=>(k.presetBindings||[]).some(b=>b.presetId===p.id&&b.instanceId===p.instanceId&&b.workspaceId===p.workspaceId)).length;
-    const picker=el("select",{id:"application-environment-select","aria-label":rdText("选择应用环境")},el("option",{value:""},rdText("默认环境")),...rows.map(p=>el("option",{value:p.id},p.name+(p.enabled?"":rdText(" · 已停用")))));
-    picker.value=selectedId;
-    const detail=el("div",{class:"runtime-selected-detail"});
-    function showSelected(){
-     selectedId=picker.value;const p=rows.find(v=>v.id===selectedId);
-     if(!p){
-      const agent=state.instances.find(i=>i.id===a.instanceId);
-      const card=el("article",{class:"card runtime-default-card"},
-       el("div",{class:"environment-card-heading"},el("h3",{},rdText("默认环境")),el("span",{class:"badge"},rdText("省略 presetId 时使用"))),
-       el("p",{class:"help"},rdFormat("Agent：${0} · 工作区：${1}",agent?.name||a.instanceId,state.workspaces.find(w=>w.id===a.workspaceId)?.name||a.workspaceId)),
-       el("div",{class:"actions"},button(rdText("配置能力"),async()=>{await selectDefault();await openSettings("instances");},"primary")),
-       el("details",{class:"runtime-advanced"},el("summary",{},rdText("容器与技术操作")),button(rdText("管理容器"),async()=>RunDeskEnvironments.open(await selectDefault()),"quiet")));
-      detail.replaceChildren(card);
-      return;
-     }
+    section.append(el("div",{class:"runtime-presets-toolbar"},el("p",{class:"runtime-presets-count",role:"status"},rdFormat("已绑定 ${0} 个预设 · ${1} 个已启用",rows.length,rows.filter(p=>p.enabled).length)),button(savedDraft(a)?rdText("继续添加预设"):rdText("添加预设"),()=>edit(a,null,refresh),"primary runtime-add-preset")));
+    const list=el("div",{class:"runtime-preset-list","aria-label":rdText("已绑定预设")});
+    for(const p of rows){
      const agent=state.instances.find(i=>i.id===p.instanceId),count=keyCount(p);
-     const card=el("article",{class:"card runtime-preset-card","data-preset-id":p.id},
-      el("div",{class:"environment-card-heading"},el("h3",{},p.name),el("span",{class:"badge"},p.enabled?rdText("已启用"):rdText("已停用 · 保留历史"))),
-      p.description?el("p",{},p.description):null,
-      el("p",{class:"help"},rdFormat("Agent：${0} · 镜像：${1}",agent?.name||p.instanceId,agent?.execution?.image||rdText("待配置"))),
-      p.enabled&&!keyError?el("p",{class:"help runtime-key-status","data-key-count":count},count?rdFormat("${0} 个应用凭据已授权",count):rdText("尚无有效凭据授权；在下方“接入信息与高级操作”中创建凭据。")):null,
-      el("div",{class:"actions"},button(rdText("配置能力"),async()=>{await select(a,p);await openSettings("instances");},"primary"),button(rdText("说明与启停"),()=>edit(a,p,refresh),"quiet")),
-      el("details",{class:"runtime-advanced"},el("summary",{},rdText("容器与技术操作")),button(rdText("管理容器"),async()=>RunDeskEnvironments.open({...await select(a,p),returnToSettings:true}),"quiet"),el("p",{class:"help"},rdText("管理容器会进入独立页面；返回后仍停留在应用设置。"))));
-     detail.replaceChildren(card);
+     const card=el("article",{class:"card runtime-preset-card"+(highlightedId===p.id?" runtime-preset-highlight":""),"data-preset-id":p.id},
+      el("div",{class:"environment-card-heading"},el("h3",{},p.name),el("span",{class:"runtime-preset-status "+(p.enabled?"enabled":"disabled")},p.enabled?rdText("已启用"):rdText("已停用 · 保留历史"))),
+      el("p",{class:"runtime-preset-description"},p.description||rdText("可为此预设添加用途说明。")),
+      p.enabled&&!keyError?el("p",{class:"help runtime-key-status","data-key-count":count},count?rdFormat("${0} 个应用凭据已授权",count):rdText("尚无凭据授权；请在下方“接入信息与高级操作”签发包含此预设的凭据。")):null,
+      el("div",{class:"actions"},button(rdText("配置能力"),async()=>{await select(a,p);await openSettings("instances");},"runtime-configure"),button(rdText("说明与启停"),()=>edit(a,p,refresh),"runtime-edit")),
+      el("details",{class:"runtime-advanced"},el("summary",{},rdText("容器与技术信息")),el("p",{class:"help"},rdFormat("Agent：${0} · 镜像：${1}",agent?.name||p.instanceId,agent?.execution?.image||rdText("待配置"))),el("p",{class:"help"},rdFormat("预设编号：${0}",p.id)),button(rdText("管理容器"),async()=>RunDeskEnvironments.open({...await select(a,p),returnToSettings:true}),"runtime-edit")));
+     list.append(card);
     }
-    picker.onchange=showSelected;
-    section.append(el("div",{class:"runtime-selector"},el("label",{for:"application-environment-select"},rdText("应用环境"),picker),button(savedDraft(a)?rdText("继续添加预设"):rdText("添加预设"),()=>edit(a,null,refresh),"quiet")),detail);
-    showSelected();
-    if(!rows.length)section.append(el("p",{class:"help"},rdText("目前只有默认环境。新增预设后，需要在下方“接入信息与高级操作”签发包含该预设的新凭据。")));
-    if(keyError)section.append(el("p",{class:"help"},rdText("暂时无法读取应用凭据：")+keyError));
-   }catch(error){section.append(el("p",{class:"error",role:"status"},error.message),button(rdText("重试读取预设"),refresh,"quiet"));}
+    section.append(list);
+    if(!rows.length)section.append(el("p",{class:"runtime-presets-empty"},rdText("还没有额外预设。点击“添加预设”，选择已准备好的镜像或 Agent。")));
+    section.append(el("details",{class:"runtime-default-card"},el("summary",{},rdText("默认环境 · 未指定预设的任务使用")),el("p",{class:"help"},rdText("默认环境独立保留，不占用预设名额。")),el("p",{class:"help"},rdFormat("Agent：${0}",state.instances.find(i=>i.id===a.instanceId)?.name||a.instanceId)),el("div",{class:"actions"},button(rdText("配置能力"),async()=>{await selectDefault();await openSettings("instances");},"runtime-configure")),el("details",{class:"runtime-advanced"},el("summary",{},rdText("容器与技术信息")),button(rdText("管理容器"),async()=>RunDeskEnvironments.open(await selectDefault()),"runtime-edit"))));
+    if(keyError)section.append(el("p",{class:"error",role:"status"},rdText("暂时无法读取应用凭据：")+keyError));
+   }catch(error){section.append(el("p",{class:"error",role:"status"},error.message),button(rdText("重试读取预设"),refresh,"runtime-edit"));}
   }
   await refresh();return section;
  }
@@ -215,22 +203,36 @@ window.RunDeskRuntimePresets=(()=>{
   let built=[],catalogError="";if(!existing)try{const catalog=await api("/build-center/images");built=(catalog.items||[]).filter(v=>!["deleted","missing"].includes(v.availability)).map(v=>{const source=(v.sources||[]).find(s=>s.profileId||s.recipeId),ref=(v.references||[]).find(r=>!r.startsWith("sha256:"));const base=source?.profileId||source?.recipeId?.replace(/^builtin-/,"")||ref?.split("/").pop()?.split(":")[0]||"";return ref?{key:v.imageId,name:source?.name||base||ref,id:base||ref,image:ref}:null;}).filter(Boolean);}catch(error){catalogError=error.message;}
   const slug=value=>(value||"agent").toLowerCase().replace(/[^a-z0-9_.-]+/g,"-").replace(/^[^a-z0-9]+|[^a-z0-9]+$/g,"").slice(0,110)||"agent";
   const uniqueID=value=>{const base=slug(value),used=new Set((a.runtimePresets||[]).map(p=>p.id));let id=base,n=2;while(used.has(id))id=base+"-"+n++;return id;};
-  const d=el("dialog",{class:"application-register runtime-preset-dialog"}),id=el("input",{id:"preset-id",readonly:true,value:existing?.id||saved?.id||""}),name=el("select",{id:"preset-name",required:true}),description=el("textarea",{id:"preset-description",rows:2,maxlength:4096},existing?.description||saved?.description||""),enabled=el("input",{id:"preset-enabled",type:"checkbox",checked:existing?existing.enabled:saved?saved.enabled:true}),mode=el("select",{id:"preset-mode"},el("option",{value:"new",disabled:!built.length},rdText("从已构建镜像新建环境")),el("option",{value:"existing",disabled:!available.length},rdText("绑定未占用的 Docker Agent"))),image=el("input",{id:"preset-image",readonly:true,value:saved?.image||""});
+  const d=el("dialog",{class:"application-register runtime-preset-dialog","aria-labelledby":"runtime-preset-title"}),id=el("input",{id:"preset-id",readonly:true,value:existing?.id||saved?.id||""}),name=el("select",{id:"preset-name",required:true,autofocus:true}),description=el("textarea",{id:"preset-description",rows:2,maxlength:4096},existing?.description||saved?.description||""),enabled=el("input",{id:"preset-enabled",type:"checkbox",checked:existing?existing.enabled:saved?saved.enabled:true}),mode=el("select",{id:"preset-mode"},el("option",{value:"new",disabled:!built.length},rdText("从已构建镜像新建环境")),el("option",{value:"existing",disabled:!available.length},rdText("绑定未占用的 Docker Agent"))),image=el("input",{id:"preset-image",readonly:true,value:saved?.image||""});
   mode.value=saved?.mode||(!built.length&&available.length?"existing":"new");
-  const newFields=el("div",{},el("label",{},rdText("所选 Docker 镜像"),image)),existingFields=el("p",{class:"help"},rdText("选择已有 Agent 后自动创建独立工作区；不会改动它的镜像配置。")),error=el("p",{class:"error",role:"status"}),submit=el("button",{type:"submit",class:"primary"},rdText("保存预设"));
+  const newFields=el("p",{class:"help"},rdText("使用已构建镜像创建专用 Agent，工作目录自动准备。")),existingFields=el("p",{class:"help"},rdText("使用此 Agent，并自动创建独立工作目录。")),error=el("p",{class:"error runtime-preset-error",role:"alert"}),progress=el("p",{class:"runtime-preset-progress",role:"status"}),submit=el("button",{id:"preset-submit",type:"submit",class:"primary"},existing?rdText("保存更改"):saved?rdText("重试添加"):rdText("添加预设"));
   let pending=false,plan=saved;
   const choices=()=>mode.value==="new"?built:available.map(i=>({key:i.id,name:i.name,id:i.name,image:i.execution.image}));
   const selected=()=>choices().find(c=>c.key===name.value);
   const updateName=()=>{const c=selected();if(!c)return;id.value=uniqueID(c.id);image.value=c.image||"";};
-  const updateMode=()=>{newFields.hidden=mode.value!=="new";existingFields.hidden=mode.value!=="existing";if(existing)return;name.replaceChildren(el("option",{value:""},rdText("选择预设环境")), ...choices().map(c=>el("option",{value:c.key},c.name+" · "+(c.image||c.key))));name.value="";id.value="";image.value="";};mode.onchange=updateMode;name.onchange=updateName;updateMode();
+  const updateMode=()=>{newFields.hidden=mode.value!=="new";existingFields.hidden=mode.value!=="existing";if(existing)return;name.replaceChildren(el("option",{value:""},rdText("选择预设环境")), ...choices().map(c=>el("option",{value:c.key},c.name)));name.value="";id.value="";image.value="";};mode.onchange=updateMode;name.onchange=updateName;updateMode();
   if(existing){name.replaceChildren(el("option",{value:existing.name},existing.name));name.value=existing.name;}else if(saved){const c=choices().find(c=>c.image===saved.image&&c.name===saved.name||c.key===saved.instanceId);if(c){name.value=c.key;updateName();}else{name.append(el("option",{value:"saved"},saved.name+" · "+rdText("继续未完成的创建")));name.value="saved";}id.value=saved.id;image.value=saved.image;}
   const inputs=[id,name,description,enabled,mode,image];
   const freeze=()=>inputs.forEach(input=>input.disabled=true);
   if(plan)freeze();
-  const close=button(rdText("关闭"),()=>{if(!pending)d.close();},"quiet"),form=el("form",{},el("div",{class:"dialog-head"},el("h2",{},existing?rdText("修改制作环境预设"):rdText("添加制作环境预设")),close),el("label",{},rdText("预设名称（选择已构建镜像或 Agent）"),name),el("label",{},rdText("预设编号（自动生成）"),id),el("label",{},rdText("用途说明"),description),el("label",{class:"key-choice"},enabled,rdText("允许新任务选择此预设")),existing?el("p",{class:"help"},rdText("此预设的名称和环境已固定；可修改说明和启停状态。")):el("div",{},el("label",{},rdText("环境来源"),mode),newFields,existingFields),!existing&&!built.length?el("p",{class:"help"},catalogError?rdText("无法读取已构建镜像：")+catalogError:rdText("没有已构建镜像。可先去构建中心完成构建，或绑定未占用的 Docker Agent。")):null,el("p",{class:"help"},rdText("新环境会创建专用 Agent 和目录；错误重试复用已创建的资源。")),error,submit);
+  const close=button(rdText("关闭"),()=>{if(!pending)d.close();},"runtime-edit"),form=el("form",{class:"runtime-preset-form"},
+   el("div",{class:"dialog-head"},el("h2",{id:"runtime-preset-title"},existing?rdText("修改预设"):rdText("添加应用预设")),close),
+   el("div",{class:"runtime-preset-form-body"},
+    !existing?el("p",{class:"runtime-preset-notice"},rdText("可添加多个预设。此次添加不会替换已有预设，也不会改变默认环境。")):null,
+    !existing?el("label",{},rdText("环境来源"),mode):null,
+    el("label",{},rdText("预设名称"),name),
+    !existing?el("div",{},newFields,existingFields):null,
+    el("label",{},rdText("用途说明（可选）"),description),
+    el("label",{class:"key-choice"},enabled,rdText("允许新任务选择此预设")),
+    existing?el("p",{class:"help"},rdText("此预设的名称和环境已固定；可修改说明和启停状态。")):null,
+    !existing&&!built.length?el("p",{class:"help"},catalogError?rdText("无法读取已构建镜像：")+catalogError:rdText("没有已构建镜像。可先去左侧构建中心准备镜像，或选择未占用的 Docker Agent。")):null,
+    el("details",{class:"runtime-preset-technical"},el("summary",{},rdText("技术详情（自动生成）")),el("label",{},rdText("预设编号"),id),!existing?el("label",{},rdText("Docker 镜像"),image):null)),
+   el("footer",{class:"runtime-preset-footer"},error,progress,submit));
+  if(existing)name.disabled=true;
+  if(saved)progress.textContent=rdText("上次添加尚未完成，重试会复用已创建的资源。");
   d.addEventListener("cancel",event=>{if(pending)event.preventDefault();});
   form.onsubmit=async event=>{
-   event.preventDefault();if(pending)return;pending=true;submit.disabled=true;close.disabled=true;error.textContent="";
+   event.preventDefault();if(pending)return;pending=true;submit.disabled=true;close.disabled=true;error.textContent="";progress.textContent=existing?rdText("正在保存更改…"):rdText("正在准备并绑定预设…");form.setAttribute("aria-busy","true");
    try{
     if(existing){await persist(a,existing.id,{name:existing.name,description:description.value,enabled:enabled.checked,instanceId:existing.instanceId,workspaceId:existing.workspaceId,revision:existing.revision});}
     else{
@@ -242,8 +244,8 @@ window.RunDeskRuntimePresets=(()=>{
     }
     const savedPresetID=existing?.id||plan?.id||"";
     await refreshApplicationCatalog();state.workspaces=await api("/workspaces");d.close();await refresh(savedPresetID);
-   }catch(failure){error.textContent=failure.message;if(plan&&!plan.instanceId&&!plan.workspaceId&&failure.status>=400&&failure.status<500&&!["request_in_progress","request_unconfirmed"].includes(failure.code)){plan=null;remember(a,null);inputs.forEach(input=>input.disabled=false);updateMode();}else if(plan&&["runtime_preset_binding_immutable","invalid_runtime_preset"].includes(failure.code)){await load(a);plan.id=uniqueID(plan.id);id.value=plan.id;remember(a,plan);error.textContent+=" · "+rdText("已自动换用新编号，请重试；已创建的环境继续复用。");}}
-   finally{pending=false;submit.disabled=false;close.disabled=false;}
+   }catch(failure){error.textContent=failure.message;progress.textContent=plan?rdText("添加未完成，已创建的资源已保留。点击“重试添加”继续。"):"";if(plan&&!plan.instanceId&&!plan.workspaceId&&failure.status>=400&&failure.status<500&&!["request_in_progress","request_unconfirmed"].includes(failure.code)){plan=null;remember(a,null);inputs.forEach(input=>input.disabled=false);updateMode();}else if(plan&&["runtime_preset_binding_immutable","invalid_runtime_preset"].includes(failure.code)){await load(a);plan.id=uniqueID(plan.id);id.value=plan.id;remember(a,plan);error.textContent+=" · "+rdText("已自动换用新编号，请重试；已创建的环境继续复用。");}}
+   finally{pending=false;submit.disabled=false;close.disabled=false;form.removeAttribute("aria-busy");submit.textContent=existing?rdText("保存更改"):plan?rdText("重试添加"):rdText("添加预设");}
   };
   d.append(form);document.body.append(d);d.addEventListener("close",()=>d.remove(),{once:true});d.showModal();return d;
  }

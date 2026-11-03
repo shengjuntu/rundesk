@@ -440,8 +440,14 @@ func TestDockerOwnershipIsolationAndDaemonErrors(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	_, e = m.CreateSession(w.ID, "bad", "", other.ID)
-	expectDockerCode(t, e, "workspace_already_bound")
+	shared, e := m.CreateSession(w.ID, "another engine", "", other.ID)
+	if e != nil {
+		t.Fatal("ordinary workspace rejected another engine", e)
+	}
+	otherEnv, e := m.EnsureApplicationEnvironment(other.ID, w.ID)
+	if e != nil || shared.EnvironmentID != otherEnv.ID || otherEnv.ID == v.ID || otherEnv.CodexHome == v.CodexHome || otherEnv.ContainerName == v.ContainerName {
+		t.Fatal("shared files did not keep separate execution identities", shared, otherEnv, e)
+	}
 	f.mu.Lock()
 	f.unavailable = true
 	f.mu.Unlock()
@@ -461,6 +467,41 @@ func TestDockerOwnershipIsolationAndDaemonErrors(t *testing.T) {
 	defer f.mu.Unlock()
 	if f.containers[v.ContainerName] == nil {
 		t.Fatal("foreign container removed")
+	}
+}
+
+func TestDockerSharedWorkspaceKeepsApplicationReservations(t *testing.T) {
+	m, _, a, preset := runtimePresetRegistryFixture(t)
+	other, ordinary := freshRuntimePresetPair(t, m, "Ordinary workspace engine")
+	for _, wid := range []string{a.WorkspaceID, preset.WorkspaceID} {
+		_, err := m.EnsureApplicationEnvironment(other.ID, wid)
+		expectDockerCode(t, err, "workspace_already_bound")
+	}
+	project, err := m.PutApplicationProjectEnvironment(a.AppID, "aaaaaaaaaaaaaaaaaaaaaaaa", preset.ID, ApplicationProjectEnvironmentInput{Name: "Private project"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = m.EnsureApplicationEnvironment(other.ID, project.WorkspaceID)
+	expectDockerCode(t, err, "workspace_already_bound")
+	first, err := m.CreateSession(ordinary.ID, "first engine", "", other.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := m.CreateInstance(InstancePatch{Name: "Second workspace engine"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err = m.SetExecution(second.ID, second.Revision, ExecutionSpec{Mode: "docker", Image: "another-engine:test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	next, err := m.CreateSession(ordinary.ID, "second engine", "", second.ID)
+	if err != nil || first.WorkspaceID != next.WorkspaceID || first.InstanceID == next.InstanceID || first.EnvironmentID == next.EnvironmentID {
+		t.Fatal("shared workspace lost per-session identity", first, next, err)
+	}
+	read, err := m.Session(first.ID)
+	if err != nil || read.InstanceID != first.InstanceID || read.EnvironmentID != first.EnvironmentID {
+		t.Fatal("second engine changed the first session", read, err)
 	}
 }
 func TestDockerTraceSnapshotScope(t *testing.T) {

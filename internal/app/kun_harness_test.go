@@ -51,7 +51,7 @@ func TestKunPlanActProcessAndConfigHTTP(t *testing.T) {
 	if !strings.Contains(res.Body.String(), "explicit-plan-v1") {
 		t.Fatal("composition defaults missing", res.Body.String())
 	}
-	session, err := m.CreateSession(m.Workspaces()[0].ID, "Plan-Act", "")
+	session, err := createInternalSessionFixture(m, m.Workspaces()[0].ID, "Plan-Act", "")
 	if err != nil {
 		t.Fatal(err)
 	}

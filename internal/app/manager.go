@@ -24,6 +24,7 @@ import (
 )
 
 type Workspace struct {
+	Purpose  string `json:"purpose,omitempty"`
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Path     string `json:"path"`
@@ -301,7 +302,11 @@ func (m *Manager) Workspaces() []Workspace {
 	defer m.mu.Unlock()
 	out := []Workspace{}
 	for _, w := range m.workspaces {
-		out = append(out, *w)
+		copy := *w
+		if m.maintenanceWorkspace(copy) {
+			copy.Purpose = "maintenance"
+		}
+		out = append(out, copy)
 	}
 	return out
 }
@@ -391,6 +396,12 @@ func (m *Manager) CreateSession(wid, title, model string, ids ...string) (Sessio
 	return m.CreateSessionWithSource(wid, title, model, instanceID(ids), SessionSource{})
 }
 func (m *Manager) CreateSessionWithSource(wid, title, model, iid string, source SessionSource) (Session, error) {
+	if err := m.requireDailyInstance(iid); err != nil {
+		return Session{}, err
+	}
+	if err := m.requireDailyWorkspace(wid); err != nil {
+		return Session{}, err
+	}
 	return m.createSession(wid, title, model, iid, source, nil)
 }
 func (m *Manager) prepareSession(wid, title, model, iid string, source SessionSource, origin *TraceOrigin) (Session, error) {

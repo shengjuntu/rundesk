@@ -4,7 +4,7 @@
 
 **A debugging workbench, application connector, and research environment for Agent Harnesses.**
 
-RunDesk makes agent execution observable and usable by applications. It connects to Codex and the independently developed Kun engine, providing a web workbench and APIs for tasks, progress, approvals, execution traces, and artifacts.
+RunDesk makes agent execution observable and usable by applications. Codex executes everyday conversations and application tasks. The independently developed Kun engine handles internal maintenance and trace questions. A shared web workbench and APIs expose tasks, progress, approvals, execution traces, and artifacts.
 
 An **Agent Harness** is the runtime around a model: it manages context, the execution loop, tools, and runtime state. RunDesk connects applications and developers to that runtime. Skills, plugins, MCP services, and execution environments can be combined for each use case without imposing a fixed workflow.
 
@@ -38,7 +38,7 @@ Start with [Harness controls](docs/KUN-HARNESS.md). The [runtime fork](docs/KUN-
 
 ## Work with instances
 
-An **instance** is the main object for daily work: choose a Codex or Kun instance, inspect its model and capabilities, select a workspace, then run tasks and inspect artifacts and traces. The build center turns a build preset into an image; an image can support multiple independent instances. Application registration remains a separate integration step and is not required to manage an instance.
+A **workspace** organizes conversations and files. Each conversation selects a Codex environment; multiple conversations in the same workspace may use different Codex configurations. An **instance** stores the model, tools and runtime settings behind an environment. Kun maintenance is configured separately in **Environment setup**. The build center turns a build preset into an image; an image can support multiple independent instances. Application registration remains a separate integration step and is not required to manage an instance.
 
 Version 0.54.0 removes the Kun forks, evaluation task sets, K4 Skill workbench, and offline experiment launchers from everyday navigation. Their APIs and stored data remain, as does inspection of existing fork previews. K4's parameterized tool flows are distinct from ordinary `SKILL.md` management.
 
@@ -46,7 +46,9 @@ The instance-centered WebUI does **not** yet synchronize instance configuration 
 
 ## Current source version
 
-**RunDesk 0.60.0 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.61.0 source · external Kun 0.17.0 · worker protocol 16**
+
+Version 0.61.0 includes the recent application preset binding fixes and workspace → conversation navigation. Daily conversations and application tasks now use Codex. Kun handles installation repair, Docker recipe preparation/repair and read-only trace questions. New Kun build tasks record a bounded plan before each candidate, accept success only from matching host-run offline and smoke checks, and retain repair evidence. Skill extraction and MCP optimization are future stages. See [internal maintenance](docs/MAINTENANCE.md).
 
 Version 0.60.0 names Agents automatically from Docker images and lets an authorized application bind each video project to its own workspace and container using an existing Agent. RunDesk injects the project ID into the container and snapshots the Agent's current configuration. The application's user interface can keep workspace IDs hidden. See [application project environments](docs/APPLICATION-PROJECT-ENVIRONMENTS.md).
 
@@ -113,7 +115,7 @@ For Kun, build the independent Kun project, then pass its executable:
 
 This package builds RunDesk only. The lightweight SDK in `third_party/kun-sdk` allows the host to build without Kun engine sources. The `your-org` module paths are unpublished placeholders resolved locally by `go.mod`. Missing or incompatible Kun is reported explicitly.
 
-Kun uses a tool-capable Chat Completions service; Codex uses its native provider and authentication configuration. Instances may use different backends, while existing sessions retain their original backend. See [setup and deployment](docs/SETUP.md) for Windows, Docker, and optional Codex installation.
+Kun uses a tool-capable Chat Completions service; Codex uses its native provider and authentication configuration. Daily execution uses Codex environments; Kun configurations serve maintenance and retained research APIs. Existing records retain their identity, while ordinary Kun conversations can no longer receive new daily turns. See [setup and deployment](docs/SETUP.md) for Windows, Docker, and optional Codex installation.
 
 ## Choose your path
 

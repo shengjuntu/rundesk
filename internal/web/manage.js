@@ -1,5 +1,6 @@
 // Session management, full-history diagnostics and configuration controls.
 function renderSessions() {
+  if(window.RunDeskConversations){RunDeskConversations.renderTree();return;}
   const query = $("#session-search").value.trim().toLowerCase();
   const archived = $("#session-scope").value === "archived";
   const sessions = state.sessions.filter(
@@ -52,8 +53,9 @@ function renderStatus() {
   const s = state.session;
   const diagnosticOnly=s?.runtimeKind==="kun"&&(!!s.traceOrigin||!!s.kunFork);
   const forkFinished=!!s?.kunFork&&!active(s.status);
+  const maintenanceOnly=s?.runtimeKind==="kun"&&!s.traceOrigin;
   $("#attach").disabled=diagnosticOnly;$("#skill-picker").disabled=diagnosticOnly;
-  $("#session-title").textContent = s?.title || rdText("新对话");
+  $("#session-title").textContent = s?.title || rdText("新会话");
   $("#run-status").textContent = s?.archived
     ? rdText("已归档")
     : s?.retry && active(s.status) ? rdText("Codex 正在重试") : statusLabel[s?.status] || s?.status || rdText("就绪");
@@ -61,14 +63,14 @@ function renderStatus() {
   const transitioning = ["starting", "stopping"].includes(s?.status);
   const steering = active(s?.status) && !transitioning;
   $("#send").disabled =
-    forkFinished || state.loadingSession || state.sending || transitioning || (steering && !s?.turnId) || !!s?.archived;
+    maintenanceOnly || forkFinished || state.loadingSession || state.sending || transitioning || (steering && !s?.turnId) || !!s?.archived;
   $("#send").title = steering ? rdText("补充指令到当前任务") : rdText("发送");
   $("#send").setAttribute("aria-label", $("#send").title);
   $("#send").classList.toggle("steering", steering);
   $("#send").textContent = steering ? rdText("补充") : "↑";
   $("#stop").disabled = s?.status === "stopping";
-  $("#prompt").disabled = forkFinished || state.loadingSession || !!s?.archived;
-  $("#prompt").placeholder = forkFinished ? "分叉已结束；请从来源创建新预览。" : s?.archived
+  $("#prompt").disabled = maintenanceOnly || forkFinished || state.loadingSession || !!s?.archived;
+  $("#prompt").placeholder = maintenanceOnly ? rdText("Kun 维护与历史记录；日常任务请新建 Codex 会话。") : forkFinished ? "分叉已结束；请从来源创建新预览。" : s?.archived
     ? rdText("从会话菜单恢复后，可继续对话。")
     : steering
       ? rdText("补充要求或调整当前任务的方向…")
@@ -83,6 +85,7 @@ function renderStatus() {
   renderAnalysisBanner();
   window.RunDeskRecovery?.render();
  window.RunDeskTasks?.banner();
+ window.RunDeskConversations?.renderEngine();
 }
 function renderAnalysisBanner() {
   const host=$("#analysis-banner"),fork=state.session?.kunFork,origin=state.session?.traceOrigin;
@@ -1065,7 +1068,7 @@ async function switchInstance() {
   else if(currentApplication())await showApplication(currentApplication().appId,currentApplicationBinding()?.presetId||"");
   else await showLegacyApplication(instance().id);
 }
-$("#instance").onchange = () => safe(()=>RunDeskInstances.conversation($("#instance").value));
+$("#instance").onchange = () => safe(()=>window.RunDeskConversations?RunDeskConversations.changeEngine($("#instance").value):RunDeskInstances.conversation($("#instance").value));
 $("#manage-instances").onclick = () => safe(() => openSettings("overview"));
 
 async function renderInstances(target) {
@@ -1074,7 +1077,7 @@ async function renderInstances(target) {
   const select = el(
     "select",
     { id: "settings-instance" },
-    ...state.instances.map((i) => el("option", { value: i.id }, i.name)),
+    ...state.instances.filter(i=>i.agentRuntime?.kind!=="kun"||i.id===current.id).map((i) => el("option", { value: i.id }, i.name)),
   );
   select.value = current.id;
   select.onchange = () =>

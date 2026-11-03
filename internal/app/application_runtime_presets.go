@@ -147,15 +147,15 @@ func (m *Manager) PutApplicationRuntimePreset(appID, presetID string, in Applica
 	}
 	canonical, e := canonicalPresetPath(w.Path)
 	if e != nil {
-		return empty, failure(409, "runtime_preset_workspace_invalid", "预设工作目录不可规范化")
+		return empty, failure(409, "runtime_preset_workspace_invalid", "预设工作目录不存在或不可访问，请检查 RunDesk 数据目录及磁盘挂载后重试")
 	}
 	for _, other := range m.Workspaces() {
 		if other.ID == w.ID {
 			continue
 		}
-		path, err := canonicalPresetPath(other.Path)
+		path, err := reservedWorkspacePath(other.Path)
 		if err != nil {
-			return empty, err
+			return empty, failure(409, "runtime_preset_workspace_invalid", "无法检查工作区「"+other.Name+"」的目录，请检查目录权限或符号链接后重试")
 		}
 		if presetPathsOverlap(canonical, path) {
 			return empty, failure(409, "runtime_preset_workspace_overlap", "预设工作目录与已有工作区相同或存在父子关系，请使用独立目录")
@@ -371,6 +371,39 @@ func canonicalPresetPath(value string) (string, error) {
 	}
 	return filepath.EvalSymlinks(p)
 }
+
+// A removed or unmounted historical workspace still reserves its path, but
+// must not block unrelated presets. Resolve the nearest existing ancestor and
+// retain the missing suffix for overlap checks. Only comparison paths use this
+// helper: the new preset and every execution still require a real directory.
+// Lstat keeps dangling links, link loops and permission errors fail-closed.
+func reservedWorkspacePath(value string) (string, error) {
+	p, err := filepath.Abs(value)
+	if err != nil {
+		return "", err
+	}
+	var suffix []string
+	for {
+		_, err = os.Lstat(p)
+		if err == nil {
+			break
+		}
+		if !os.IsNotExist(err) || filepath.Dir(p) == p {
+			return "", err
+		}
+		suffix = append(suffix, filepath.Base(p))
+		p = filepath.Dir(p)
+	}
+	p, err = filepath.EvalSymlinks(p)
+	if err != nil {
+		return "", err
+	}
+	for n := len(suffix) - 1; n >= 0; n-- {
+		p = filepath.Join(p, suffix[n])
+	}
+	return p, nil
+}
+
 func presetPathsOverlap(a, b string) bool {
 	relative, e := filepath.Rel(a, b)
 	if e == nil && (relative == "." || relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator))) {
@@ -389,11 +422,22 @@ func (m *Manager) checkPresetWorkspacePath(path string) error {
 		if err != nil {
 			return err
 		}
-		other, err := canonicalPresetPath(w.Path)
+		other, err := reservedWorkspacePath(w.Path)
 		if err != nil {
-			return err
+			return failure(409, "runtime_preset_workspace_invalid", "无法检查预设「"+p.Name+"」的目录，请检查目录权限或符号链接后重试")
 		}
 		if presetPathsOverlap(path, other) {
+			return failure(409, "runtime_preset_workspace_overlap", "工作目录与专用预设相同或存在父子关系")
+		}
+		// Preserve the original reservation even if an ancestor link changes.
+		var frozen map[string]string
+		if err = m.Store.Get("application-runtime-preset-path", applicationPresetKey(p.AppID, p.ID), &frozen); err != nil {
+			return err
+		}
+		if frozen["path"] == "" {
+			return failure(409, "runtime_preset_workspace_invalid", "预设工作目录记录不完整，请检查数据目录")
+		}
+		if presetPathsOverlap(path, frozen["path"]) {
 			return failure(409, "runtime_preset_workspace_overlap", "工作目录与专用预设相同或存在父子关系")
 		}
 	}

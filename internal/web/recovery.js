@@ -91,7 +91,7 @@
   function render(){
     const host=document.querySelector('#recovery-banner');if(!host)return;
     const s=state.session, retry=s?.retry&&active(s.status), stopped=s&&!s.archived&&['failed','interrupted'].includes(s.status), origin=s?.recovery;
-    const pendingHere=pending?.sessionId===s?.id;
+    const pendingHere=!!pending&&!!s&&pending.sessionId===s.id;
     const sig=JSON.stringify([s?.id,s?.status,s?.runId,retry,origin,s?.archived,pendingHere]);update();if(host._sig===sig)return;host._sig=sig;
     host.classList.toggle('hidden',!retry&&!stopped&&!origin&&!pendingHere);host.replaceChildren();
     if(pendingHere){host.append(el("div",{},el("strong",{},rdText("继续请求的响应尚未确认"))),button(rdText("核对提交结果"),open,"quiet"));}

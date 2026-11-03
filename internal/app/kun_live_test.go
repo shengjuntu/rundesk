@@ -74,7 +74,7 @@ func TestLiveHostConfirmationExecutionAndCredentialDrift(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = os.WriteFile(filepath.Join(ws.Path, "input.txt"), []byte("past observation"), 0600)
-	source, err := m.CreateSession(ws.ID, "source", "")
+	source, err := createInternalSessionFixture(m, ws.ID, "source", "")
 	if err != nil {
 		t.Fatal(err)
 	}

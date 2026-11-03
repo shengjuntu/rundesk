@@ -59,7 +59,7 @@ func TestKunDiagnosticSourceRemainsPausedAndFrozen(t *testing.T) {
 	if _, err = m.SetAgentRuntime(i.ID, i.Revision, cfg); err != nil {
 		t.Fatal(err)
 	}
-	source, err := m.CreateSession(m.Workspaces()[0].ID, "paused business task", "")
+	source, err := createInternalSessionFixture(m, m.Workspaces()[0].ID, "paused business task", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +133,7 @@ func TestKunDiagnosticSourceRemainsPausedAndFrozen(t *testing.T) {
 	if _, err = reader.Call("trace_read_event", tracequery.Args{EventID: through + 1}); err == nil {
 		t.Fatal("later event copied")
 	}
-	other, _ := m.CreateSession(source.WorkspaceID, "not selected", "")
+	other, _ := createInternalSessionFixture(m, source.WorkspaceID, "not selected", "")
 	if foreign, e := tracequery.Open(snapshot, other.ID, through); e == nil {
 		foreign.Close()
 		t.Fatal("other session copied")

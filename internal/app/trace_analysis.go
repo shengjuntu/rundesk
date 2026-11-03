@@ -19,14 +19,25 @@ type TraceSelection struct {
 }
 type TraceOrigin struct {
 	TraceSelection
-	Through    int64  `json:"through"`
-	CapturedAt string `json:"capturedAt"`
-	Title      string `json:"title"`
+	SourceInstanceID  string `json:"sourceInstanceId,omitempty"`
+	SourceWorkspaceID string `json:"sourceWorkspaceId,omitempty"`
+	Through           int64  `json:"through"`
+	CapturedAt        string `json:"capturedAt"`
+	Title             string `json:"title"`
 }
 
-// A linked analysis is a separate session on the same configured backend. The original task is never submitted,
-// steered, stopped, or reclassified by this operation.
+// Retained research callers may analyze on the source backend. Public trace
+// questions use CreateMaintenanceTraceAnalysis and a dedicated Kun context.
+// Neither path submits, steers, stops or reclassifies the original task.
 func (m *Manager) CreateTraceAnalysis(selection TraceSelection) (Session, error) {
+	return m.createTraceAnalysis(selection, false)
+}
+
+func (m *Manager) CreateMaintenanceTraceAnalysis(selection TraceSelection) (Session, error) {
+	return m.createTraceAnalysis(selection, !m.Demo)
+}
+
+func (m *Manager) createTraceAnalysis(selection TraceSelection, maintenance bool) (Session, error) {
 	if selection.SessionID == "" || selection.RunID == "" || len(selection.EventIDs) > 32 {
 		return Session{}, failure(400, "invalid_trace_analysis", "请选择来源会话和轮次；最多选中 32 条事件")
 	}
@@ -38,7 +49,7 @@ func (m *Manager) CreateTraceAnalysis(selection TraceSelection) (Session, error)
 	if e != nil {
 		return Session{}, e
 	}
-	if runtimeKind(instance.AgentRuntime.Kind) != runtimeKind(source.RuntimeKind) {
+	if !maintenance && runtimeKind(instance.AgentRuntime.Kind) != runtimeKind(source.RuntimeKind) {
 		return Session{}, failure(409, "diagnostic_backend_changed", "来源会话与当前实例后端不一致，请先恢复配置")
 	}
 	page, e := m.Store.DebugEvents(source.ID, 0, selection.Through, 1)
@@ -77,6 +88,18 @@ func (m *Manager) CreateTraceAnalysis(selection TraceSelection) (Session, error)
 	title := []rune(source.Title)
 	if len(title) > 40 {
 		title = title[:40]
+	}
+	if maintenance && runtimeKind(source.RuntimeKind) == "codex" {
+		var configured setupKunConfig
+		if err := m.Store.Get("system", "setup-kun", &configured); err != nil {
+			return Session{}, failure(409, "maintenance_kun_not_configured", "轨迹问答由 Kun 维护助手负责，请先在环境设置中配置 Kun；原始轨迹仍可直接查看")
+		}
+		i, err := m.Instance(configured.InstanceID)
+		if err != nil || runtimeKind(i.AgentRuntime.Kind) != "kun" || i.Execution.normalized().Mode != "local" {
+			return Session{}, failure(409, "maintenance_kun_not_configured", "Kun 维护配置已变化，请重新检查环境设置")
+		}
+		origin.SourceInstanceID, origin.SourceWorkspaceID = source.InstanceID, source.WorkspaceID
+		return m.createSession(configured.WorkspaceID, "轨迹问答 · "+string(title), i.AgentRuntime.Model, i.ID, SessionSource{Kind: "human"}, origin)
 	}
 	return m.createSession(source.WorkspaceID, "过程分析 · "+string(title), source.Model, source.InstanceID, SessionSource{Kind: "human"}, origin)
 }

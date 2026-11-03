@@ -28,7 +28,7 @@ func TestKunBashHostPermissionBoundary(t *testing.T) {
 		t.Fatal(err)
 	}
 	w := m.Workspaces()[0]
-	s, err := m.CreateSession(w.ID, "bash permission", "")
+	s, err := createInternalSessionFixture(m, w.ID, "bash permission", "")
 	if err != nil {
 		t.Fatal(err)
 	}

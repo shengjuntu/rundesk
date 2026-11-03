@@ -17,6 +17,16 @@ for file in files:
 version = re.search(r'const Version = "([^"]+)"', (root / 'internal/app/api_v1.go').read_text()).group(1)
 spec = json.loads((root / 'internal/app/openapi.json').read_text())
 assert spec['info']['version'] == version
+for name in ['README.md', 'README.zh-CN.md', 'docs/README.md', 'docs/STATUS.md', 'docs/WEBUI.md']:
+    text = (root / name).read_text()
+    assert re.search(r'RunDesk '+re.escape(version)+r'\b', text), f'{name}: current version missing'
+assert re.search(r'^## '+re.escape(version)+r'[:：]', (root/'docs/UPGRADING.md').read_text(), re.M), 'current upgrade notes missing'
+maintenance = spec['components']['schemas']
+assert maintenance['BuildAssistantRun']['properties']['maintenance']['$ref'].endswith('/BuildMaintenanceView')
+assert 'protocolVersion' in maintenance['BuildAssistantRun']['properties']
+assert 'sourceInstanceId' in maintenance['TraceOrigin']['properties']
+assert 'sourceWorkspaceId' in maintenance['TraceOrigin']['properties']
+assert 'purpose' in maintenance['Workspace']['properties']
 for route, method in [
     ('/backends', 'get'), ('/setup/environment', 'get'),
     ('/setup/discovery', 'get'), ('/setup/discovery', 'post'),

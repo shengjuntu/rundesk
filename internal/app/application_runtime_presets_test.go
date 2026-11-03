@@ -298,6 +298,107 @@ func TestRuntimePresetRegistrationRejectsWorkspaceAliasesAndNesting(t *testing.T
 	}
 }
 
+func TestRuntimePresetCreationWithMissingHistoricalWorkspace(t *testing.T) {
+	for _, reserved := range []bool{false, true} {
+		t.Run(map[bool]string{false: "ordinary-workspace", true: "reserved-preset"}[reserved], func(t *testing.T) {
+			m, _, a, oldPreset := runtimePresetRegistryFixture(t)
+			old, err := m.Workspace(oldPreset.WorkspaceID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reserved {
+				old, err = m.CreateWorkspace("Historical directory", filepath.Join(t.TempDir(), "rundest", "project"))
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			removed := old.Path
+			if !reserved {
+				removed = filepath.Dir(removed)
+			}
+			if err = os.RemoveAll(removed); err != nil {
+				t.Fatal(err)
+			}
+			// Match the UI sequence, including workspace creation after the stale
+			// path is missing. Both registrations must coexist in this application.
+			for _, id := range []string{"hyperframes", "openmontage"} {
+				i, w := freshRuntimePresetPair(t, m, id)
+				in := ApplicationRuntimePresetInput{Name: id, InstanceID: i.ID, WorkspaceID: w.ID}
+				body, err := json.Marshal(in)
+				if err != nil {
+					t.Fatal(err)
+				}
+				r := appRequest(NewHandler(m, userTestAdmin, true), "PUT", "/api/v1/applications/"+a.AppID+"/runtime-presets/"+id, string(body), userTestAdmin, "")
+				if r.Code != http.StatusOK {
+					t.Fatalf("missing historical directory blocked preset %s: %d %s", id, r.Code, r.Body.String())
+				}
+				if _, err = m.PutApplicationRuntimePreset(a.AppID, id, in); err != nil {
+					t.Fatal("retry did not preserve binding", err)
+				}
+			}
+			presets, err := m.ApplicationRuntimePresets(a.AppID)
+			if err != nil || len(presets) != 3 {
+				t.Fatal("additional presets replaced an existing binding", presets, err)
+			}
+			var current Application
+			if err = m.Store.Get("application", a.AppID, &current); err != nil || !reflect.DeepEqual(a, current) {
+				t.Fatal("adding presets changed the default environment", current, err)
+			}
+			if _, err = os.Stat(removed); !os.IsNotExist(err) {
+				t.Fatal("registration recreated an unrelated historical directory", err)
+			}
+			if reserved {
+				if err = m.checkApplicationPresetResources(oldPreset); err == nil {
+					t.Fatal("missing preset directory was accepted for execution")
+				}
+				for _, path := range []string{old.Path, filepath.Join(old.Path, "child"), filepath.Dir(old.Path)} {
+					appCode(t, m.checkPresetWorkspacePath(path), "runtime_preset_workspace_overlap")
+				}
+			}
+		})
+	}
+}
+
+func TestRuntimePresetRequiresExistingCandidateDirectory(t *testing.T) {
+	m, _, a, _ := runtimePresetRegistryFixture(t)
+	i, w := freshRuntimePresetPair(t, m, "Missing candidate")
+	if err := os.Remove(w.Path); err != nil {
+		t.Fatal(err)
+	}
+	_, err := m.PutApplicationRuntimePreset(a.AppID, "missing", ApplicationRuntimePresetInput{Name: "Missing", InstanceID: i.ID, WorkspaceID: w.ID})
+	appCode(t, err, "runtime_preset_workspace_invalid")
+}
+
+func TestReservedWorkspacePathResolvesExistingAncestors(t *testing.T) {
+	real := t.TempDir()
+	alias := filepath.Join(t.TempDir(), "alias")
+	if err := os.Symlink(real, alias); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	want, err := canonicalPresetPath(real)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := reservedWorkspacePath(filepath.Join(alias, "missing", "project"))
+	if err != nil || got != filepath.Join(want, "missing", "project") {
+		t.Fatal("missing suffix lost resolved ancestor", got, err)
+	}
+	broken := filepath.Join(t.TempDir(), "broken")
+	if err = os.Symlink(filepath.Join(real, "missing"), broken); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = reservedWorkspacePath(filepath.Join(broken, "project")); err == nil {
+		t.Fatal("dangling symlink was treated as a plain missing directory")
+	}
+	loop := filepath.Join(t.TempDir(), "loop")
+	if err = os.Symlink(loop, loop); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = reservedWorkspacePath(loop); err == nil {
+		t.Fatal("symlink loop was ignored")
+	}
+}
+
 func TestRuntimePresetReservationRejectsLaterWorkspaceAliasesAndForeignSessions(t *testing.T) {
 	m, _, a, p := runtimePresetRegistryFixture(t)
 	w, err := m.Workspace(p.WorkspaceID)

@@ -219,7 +219,7 @@ func TestKunBenchmarkWaitsForSharedCapacityAndStop(t *testing.T) {
 	}
 	b := v.Benchmark
 	// A real occupied slot prevents admission even though this batch has consent.
-	busy, e := m.CreateSession(c.WorkspaceID, "other run", "")
+	busy, e := createInternalSessionFixture(m, c.WorkspaceID, "other run", "")
 	if e != nil {
 		t.Fatal(e)
 	}

@@ -32,7 +32,7 @@ func TestKunCheckpointAfterWorkerKillAndHostRestart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	session, err := m.CreateSession(m.Workspaces()[0].ID, "restart", "", i.ID)
+	session, err := createInternalSessionFixture(m, m.Workspaces()[0].ID, "restart", "", i.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,11 +150,18 @@ func TestKunCheckpointApplicationScopes(t *testing.T) {
 	}
 	handler := NewHandler(m, "admin-secret-01234567890123456789", true)
 	response := appRequest(handler, "POST", "/api/v1/sessions", string(p.JSON(map[string]string{"workspaceId": w.ID})), key, "checkpoint-create-001")
-	if response.Code != 200 {
-		t.Fatal(response.Code, response.Body.String())
+	if response.Code != 409 || !strings.Contains(response.Body.String(), "kun_maintenance_only") {
+		t.Fatal("application admitted a daily Kun session", response.Code, response.Body.String())
 	}
-	var session Session
-	json.Unmarshal(response.Body.Bytes(), &session)
+	// Keep a historical record to verify its existing read/scope boundaries.
+	session, err := createInternalSessionFixture(m, w.ID, "legacy application", "", i.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	session.Source = SessionSource{Kind: "application", AppID: application.AppID}
+	if err = m.update(session.ID, func(s *Session) { s.Source = session.Source }); err != nil {
+		t.Fatal(err)
+	}
 	path := "/api/v1/sessions/" + session.ID + "/kun/"
 	response = appRequest(handler, "GET", path+"checkpoint", "", readKey, "")
 	if response.Code != 200 {

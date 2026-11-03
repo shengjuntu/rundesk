@@ -16,6 +16,8 @@ type TaskControl interface {
 // TaskSubmission describes new work, optionally continuing an existing native
 // session. Every submission still receives a distinct platform Task.
 type TaskSubmission struct {
+	// Only trusted host maintenance entry points can bypass daily admission.
+	maintenance   bool
 	Spec          TaskSpec
 	SessionID     string
 	ExpectedRunID string

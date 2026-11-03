@@ -186,9 +186,12 @@ func TestBuildAssistantRealKunRepairPackImportBuildAndEvidence(t *testing.T) {
 				revision, _ := result["revision"].(float64)
 				recipeRevision = int(revision)
 			}
+			tool = "build_plan_record"
+			args = map[string]any{"requestId":"222222222222222222222222", "goal":"Repair packaging", "hypothesis":"Broken Dockerfile dependency", "preserve":[]string{"Original smoke contract"}, "checks":[]string{"Build, offline and smoke pass"}}
+		case 8:
 			tool = "build_start"
 			args = map[string]any{"recipeId": recipeID, "recipeRevision": recipeRevision, "requestId": "222222222222222222222222"}
-		case 8:
+		case 9:
 			result := find("id", "scope", "status")
 			if result == nil {
 				problem = fmt.Sprintf("queued build result missing: %v", latest)
@@ -197,7 +200,7 @@ func TestBuildAssistantRealKunRepairPackImportBuildAndEvidence(t *testing.T) {
 			}
 			tool = "build_wait"
 			args = map[string]any{"buildId": buildID, "waitSeconds": 5}
-		case 9:
+		case 10:
 			result := find("id", "scope", "status")
 			if result != nil && buildActive(fmt.Sprint(result["status"])) {
 				tool = "build_wait"
@@ -210,10 +213,10 @@ func TestBuildAssistantRealKunRepairPackImportBuildAndEvidence(t *testing.T) {
 			}
 			tool = "build_image_check"
 			args["buildId"] = buildID
-		case 10:
+		case 11:
 			tool = "build_image_test"
 			args = map[string]any{"buildId": buildID, "kind": "offline", "requestId": "333333333333333333333333"}
-		case 11:
+		case 12:
 			result := find("id", "scope", "testKind")
 			if result == nil {
 				problem = fmt.Sprintf("offline test result missing: %v", latest)
@@ -222,7 +225,7 @@ func TestBuildAssistantRealKunRepairPackImportBuildAndEvidence(t *testing.T) {
 			}
 			tool = "build_wait"
 			args = map[string]any{"buildId": offlineID, "waitSeconds": 5}
-		case 12:
+		case 13:
 			result := find("id", "scope", "status")
 			if result != nil && buildActive(fmt.Sprint(result["status"])) {
 				tool = "build_wait"
@@ -235,7 +238,7 @@ func TestBuildAssistantRealKunRepairPackImportBuildAndEvidence(t *testing.T) {
 			}
 			tool = "build_image_test"
 			args = map[string]any{"buildId": buildID, "kind": "smoke", "requestId": "444444444444444444444444"}
-		case 13:
+		case 14:
 			result := find("id", "scope", "testKind")
 			if result == nil {
 				problem = fmt.Sprintf("smoke test result missing: %v", latest)
@@ -244,7 +247,7 @@ func TestBuildAssistantRealKunRepairPackImportBuildAndEvidence(t *testing.T) {
 			}
 			tool = "build_wait"
 			args = map[string]any{"buildId": smokeID, "waitSeconds": 5}
-		case 14:
+		case 15:
 			result := find("id", "scope", "status")
 			if result != nil && buildActive(fmt.Sprint(result["status"])) {
 				tool = "build_wait"
@@ -363,7 +366,7 @@ func TestBuildAssistantRealKunRepairPackImportBuildAndEvidence(t *testing.T) {
 	if finalRecipe == "" || calls.Load() < 16 || calls.Load() >= 30 {
 		t.Fatal("unexpected recipe/model count", finalRecipe, calls.Load())
 	}
-	for _, name := range []string{"build_get", "build_log", "build_experiences_list", "build_sources_list", "write_file", "build_context_pack", "build_recipe_import", "build_start", "build_wait", "build_image_check", "build_image_test"} {
+	for _, name := range []string{"build_get", "build_log", "build_experiences_list", "build_sources_list", "build_plan_record", "write_file", "build_context_pack", "build_recipe_import", "build_start", "build_wait", "build_image_check", "build_image_test"} {
 		if !toolSet[name] {
 			t.Fatal("expected real tool invocation absent", name)
 		}
