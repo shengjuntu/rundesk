@@ -64,6 +64,7 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	m := s.Manager
 	s.setupEnvironmentRoutes(mux)
 	s.setupDiscoveryRoutes(mux)
+	s.codexProviderRoutes(mux)
 	s.setupAgentRoutes(mux)
 	s.setupCompleteRoutes(mux)
 	s.setupExperienceRoutes(mux)

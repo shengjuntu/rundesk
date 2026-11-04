@@ -64,16 +64,16 @@ type BuildRecipe struct {
 }
 
 type RecipeBuildInput struct {
-	CodexRuntime *BuildRuntimeOptions `json:"codexRuntime,omitempty"`
-	RecipeSHA      string              `json:"recipeSha,omitempty"`
-	BuildSources   *BuildSourceOptions `json:"buildSources,omitempty"`
-	RecipeRevision int                 `json:"recipeRevision"`
-	CodexVersion   string              `json:"codexVersion,omitempty"`
-	Reference      string              `json:"reference,omitempty"`
-	RequestID      string              `json:"requestId"`
-	NoCache        bool                `json:"noCache,omitempty"`
-	OwnerRunID     string              `json:"-"`
-	RepairOf       string              `json:"-"`
+	CodexRuntime   *BuildRuntimeOptions `json:"codexRuntime,omitempty"`
+	RecipeSHA      string               `json:"recipeSha,omitempty"`
+	BuildSources   *BuildSourceOptions  `json:"buildSources,omitempty"`
+	RecipeRevision int                  `json:"recipeRevision"`
+	CodexVersion   string               `json:"codexVersion,omitempty"`
+	Reference      string               `json:"reference,omitempty"`
+	RequestID      string               `json:"requestId"`
+	NoCache        bool                 `json:"noCache,omitempty"`
+	OwnerRunID     string               `json:"-"`
+	RepairOf       string               `json:"-"`
 }
 
 type RebuildCenterBuildInput struct {
@@ -639,15 +639,19 @@ func (m *Manager) StartRecipeBuild(id string, in RecipeBuildInput) (ImageBuild, 
 		}
 	} else {
 		runtimeSnapshot, err = m.resolveBuildRuntime(in.CodexRuntime, data, r.Dockerfile, in.CodexVersion, sources, r.Kind == "builtin")
-		if err != nil { return v, err }
+		if err != nil {
+			return v, err
+		}
 	}
 	data, err = freezeBuildSources(data, sources)
 	if err != nil {
 		return v, err
 	}
 	data, err = freezeBuildRuntime(data, runtimeSnapshot)
-	if err != nil { return v, err }
-	snapshot := &ImageBuild{CodexRuntime: runtimeSnapshot, RecipeID: r.ID, RecipeRevision: r.Revision, RecipeSHA: r.RecipeSHA, RecipeSmoke: &r.Smoke, OwnerRunID: in.OwnerRunID, RequestID: in.RequestID, RequestSHA: digest, Reference: in.Reference, BuildSources: sources}
+	if err != nil {
+		return v, err
+	}
+	snapshot := &ImageBuild{RecipeName: r.Name, RecipeVersion: r.Version, CodexRuntime: runtimeSnapshot, RecipeID: r.ID, RecipeRevision: r.Revision, RecipeSHA: r.RecipeSHA, RecipeSmoke: &r.Smoke, OwnerRunID: in.OwnerRunID, RequestID: in.RequestID, RequestSHA: digest, Reference: in.Reference, BuildSources: sources}
 	snapshot.RebuildOf = in.RepairOf
 	name := r.Name
 	if suffix := " · " + r.Version; len(name)+len(suffix) <= 120 {

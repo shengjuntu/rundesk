@@ -15,7 +15,8 @@ const setup={settings:{completed:false,revision:0,workspaceId:"work"},codex:"cod
 state.instances=[copy(setup.instance)];state.workspaces=[{id:"work",name:"工作区",path:"/work"}];$("#workspace").append(new w.Option("工作区","work"));$("#instance").append(new w.Option("Codex","default"));
 const sources={schemaVersion:1,revision:"catalog-1",defaultGroup:"china",types:[{id:"npm",name:"npm",fields:[{id:"registry",label:"npm registry",argument:"RD_NPM_REGISTRY"}]}],groups:[{id:"international",name:"国际源",sources:[{id:"npm-us",type:"npm",name:"npm official",values:{registry:"https://registry.npmjs.org/"}}]},{id:"china",name:"中国镜像",sources:[{id:"npm-cn",type:"npm",name:"npm mirror",values:{registry:"https://registry.npmmirror.com/"}}]}]};
 const recipes=["news2douyin","people-search"].map(id=>({id:"builtin-"+id,name:id,profileId:id,kind:"builtin",revision:1,recipeSha:"sha-"+id,version:"1.1.2",description:"可复用工具环境"}));
-let modelTools=false,dockerOK=false,failInstallResponse=true,failAutoResponse=true,failRuntimeResponse=true;
+let modelTools=false,dockerOK=false,failInstallResponse=true,failAutoResponse=true,failRuntimeResponse=true,discoveryGate=null,modelTestGate=null;
+let discoveryServices=[{endpoint:"http://127.0.0.1:8000/v1",source:"loopback",status:"listed",authRequired:false,inferenceTested:false,models:[{id:"Qwen3-Coder"}]}],discoveryContainers=[];
 const publicImages={schemaVersion:1,revision:"public-1",items:[]};
 const runtimeProfiles={platform:"linux/amd64",supported:true,items:recipes.map(value=>({id:value.profileId,name:value.name}))};
 const calls=[],db={kun:{configured:false,available:false,ready:false,revision:0,kunPath:"/tools/kun"},installs:[{id:"history-old",status:"failed",input:{version:"0.157.1"},result:{ok:false,error:"historical failure"}}],repairs:[],builds:[],experiences:[],autoRows:[]};
@@ -41,7 +42,7 @@ w.api=async(route,options={})=>{
     if(route.startsWith("/build-center/builds/")&&route.includes("/log?"))return {text:"error: upstream build failed\n",next:29,status:"failed"};
     if(route.startsWith("/build-center/assistant-runs/"))return copy(db.repairs.find(value=>route.endsWith(value.id)));
   }
-  if(route==="/setup/discovery")return {scannedAt:"2026-10-27T00:00:00Z",platform:{os:"linux",arch:"amd64",cpuCount:16,memoryBytes:68719476736},gpus:[{vendor:"NVIDIA",name:"A100",memoryMiB:40960,driver:"550"}],tools:[{id:"kun",path:"/tools/kun",status:"ready",version:"kun 0.17.0"},{id:"codex",path:"codex",status:"unavailable"},{id:"docker",path:"/usr/bin/docker",status:"ready",version:"Docker 28"}],services:[{endpoint:"http://127.0.0.1:8000/v1",source:"loopback",status:"listed",authRequired:false,inferenceTested:false,models:[{id:"Qwen3-Coder"}]}],warnings:[]};
+  if(route==="/setup/discovery"){if(discoveryGate){const gate=discoveryGate;discoveryGate=null;await gate;}return {scannedAt:"2026-10-27T00:00:00Z",platform:{os:"linux",arch:"amd64",cpuCount:16,memoryBytes:68719476736},gpus:[{vendor:"NVIDIA",name:"A100",memoryMiB:40960,driver:"550"}],tools:[{id:"kun",path:"/tools/kun",status:"ready",version:"kun 0.17.0"},{id:"codex",path:"codex",status:"unavailable"},{id:"docker",path:"/usr/bin/docker",status:"ready",version:"Docker 28"}],services:copy(discoveryServices),containers:copy(discoveryContainers),warnings:[]};}
   if(route==="/setup/check")return {ok:dockerOK,error:dockerOK?"":"Docker daemon unavailable"};
   if(method==="POST"&&route==="/setup/runtime-images"){
     assert.match(body.requestId,/^[a-f0-9]{24}$/);assert(["pull","local"].includes(body.source));assert(!body.codexRuntime,"runtime installation settings must not leak into image acquisition");
@@ -49,7 +50,7 @@ w.api=async(route,options={})=>{
     if(!job){const failed=body.reference.endsWith(":broken");job={...copy(body),id:"runtime-"+(db.builds.filter(value=>value.scope==="setup").length+1),name:body.profileId+" · "+body.source,scope:"setup",status:failed?"failed":"succeeded",offlineReady:!failed,...(failed?{error:"registry connection failed"}:{imageId:"sha256:"+(db.builds.filter(value=>value.scope==="setup").length+1).toString(16).repeat(64)})};db.builds.unshift(job);}
     if(failRuntimeResponse){failRuntimeResponse=false;throw fail("pull response lost");}return copy(job);
   }
-  if(method==="POST"&&route==="/setup/model-test")return {endpoint:body.endpoint,model:body.model,inferenceOK:true,toolsOK:modelTools,status:modelTools?"ready":"inference_only",error:modelTools?"":"No tool call returned"};
+  if(method==="POST"&&route==="/setup/model-test"){if(modelTestGate){const gate=modelTestGate;modelTestGate=null;await gate;}return {endpoint:body.endpoint,model:body.model,inferenceOK:true,toolsOK:modelTools,status:modelTools?"ready":"inference_only",error:modelTools?"":"No tool call returned"};}
   if(method==="POST"&&route==="/setup/kun"){
     assert(!body.agentRuntime&&!body.instanceId,"setup must not overwrite the default instance");
     db.kun={...db.kun,...body,configured:true,available:true,ready:modelTools,instanceId:"setup-kun",workspaceId:"kun-work",revision:db.kun.revision+1};return copy(db.kun);
@@ -107,9 +108,35 @@ const nav=step=>click('[data-setup-step="'+step+'"]');
   assert(calls.some(row=>row.route==="/setup/discovery"));assert(!calls.some(row=>row.route==="/setup/model-test"),"discovery must not infer automatically");
   assert.equal(calls.filter(row=>row.route==="/setup/codex-installs"&&row.method==="POST").length,0);
   assert.equal($$("[data-preset-id]:checked").length,0,"presets must be opt in");
+  const originalServices=copy(discoveryServices);
+  const failedAddress="http://192.168.0.234:18000/v1",badAddress="https://models.example/custom/v1",authAddress="http://127.0.0.1:19000/v1";
+  discoveryServices.push({endpoint:failedAddress,source:"docker",containerIds:["docker-vllm"],status:"unreachable",error:"context deadline exceeded",models:[]},{endpoint:badAddress,source:"explicit",status:"incompatible",error:"model service returned invalid JSON",models:[]},{endpoint:authAddress,source:"docker",containerIds:["docker-auth"],status:"auth_required",authRequired:true,models:[]});
+  discoveryContainers=[{id:"docker-vllm",name:"vllm-qwen",image:"vllm/vllm-openai:fixture",networkMode:"bridge",status:"published",endpoints:[failedAddress]},{id:"docker-auth",name:"vllm-auth",image:"vllm/private:fixture",networkMode:"bridge",status:"published",endpoints:[authAddress]},{id:"docker-unexposed",name:"unpublished-vllm",image:"vllm/unpublished:fixture",networkMode:"bridge",status:"unexposed",endpoints:[],warning:"No host TCP port published"}];
+  await click("#onboarding-rescan");await until(()=>!!$('[data-discovery-container="docker-unexposed"]'));
+  const dockerFailure=$('[data-service-endpoint="'+failedAddress+'"]').closest("article");
+  assert.equal(dockerFailure.dataset.serviceState,"timeout");assert(dockerFailure.textContent.includes("vllm-qwen"));assert(dockerFailure.textContent.includes("vllm/vllm-openai:fixture"));assert(dockerFailure.textContent.includes("context deadline exceeded"));
+  assert($('[data-service-endpoint="'+badAddress+'"]').closest("article").textContent.includes("模型列表协议不匹配"),"failed explicit probes must remain visible");
+  assert($('[data-discovery-container="docker-unexposed"]').textContent.includes("未发布端口"));assert(!$('[data-service-endpoint="docker-unexposed"]'),"unpublished containers are not fake service endpoints");
+  assert($("#setup-onboarding").textContent.includes("日常 Codex 的模型服务单独配置"));assert(!calls.some(row=>row.route==="/setup/model-test"),"discovery and retries must not start inference");
+  const edit=(selector,value)=>{$(selector).value=value;$(selector).dispatchEvent(new w.Event("input"));};
+  edit("#onboarding-endpoint",failedAddress);edit("#onboarding-model","manual-Qwen");edit("#onboarding-key-env","LOCAL_LLM_KEY");
+  let releaseDiscovery;discoveryGate=new Promise(resolve=>{releaseDiscovery=resolve;});
+  await click('[data-service-retry="'+failedAddress+'"]');
+  edit("#onboarding-endpoint","http://models.example:20000/custom/v1");edit("#onboarding-model","typed-while-scanning");
+  releaseDiscovery();await until(()=>!!$("#onboarding-rescan")&&!$("#onboarding-rescan").disabled&&$("#onboarding-rescan").textContent==="重新扫描");
+  assert.equal($("#onboarding-endpoint").value,"http://models.example:20000/custom/v1");assert.equal($("#onboarding-model").value,"typed-while-scanning");assert.equal($("#onboarding-key-env").value,"LOCAL_LLM_KEY","rescan lost typed credential reference");
+  const retried=calls.filter(row=>row.route==="/setup/discovery"&&row.method==="POST").at(-1);assert.deepEqual(retried.body,{endpoints:[failedAddress],apiKeyEnv:"LOCAL_LLM_KEY"});
+  await click('[data-service-endpoint="'+authAddress+'"]');assert.equal($("#onboarding-endpoint").value,authAddress);assert.equal($("#onboarding-model").value,"","a different service must not inherit an unrelated model ID");
+  edit("#onboarding-key-env","");
+  discoveryServices=originalServices;discoveryContainers=[];await click("#onboarding-rescan");await until(()=>!$('[data-discovery-container]'));
   await click('[data-service-endpoint]');
   assert.equal($('[aria-current="step"]').dataset.setupStep,"llm","selecting a discovered service must remain in the first step");
   assert.equal($("#onboarding-endpoint").value,"http://127.0.0.1:8000/v1");assert.equal($("#onboarding-model").value,"Qwen3-Coder");
+  const savedBeforeTest=calls.filter(row=>row.route==="/setup/kun"&&row.method==="POST").length;
+  let releaseModelTest;modelTestGate=new Promise(resolve=>{releaseModelTest=resolve;});await click("#onboarding-enable-kun");
+  edit("#onboarding-model","edited-during-model-test");releaseModelTest();await until(()=>$("#onboarding-error").textContent.includes("测试期间发生变化"));
+  assert.equal(calls.filter(row=>row.route==="/setup/kun"&&row.method==="POST").length,savedBeforeTest,"stale model test saved an edited configuration");assert.equal($("#onboarding-model").value,"edited-during-model-test");
+  edit("#onboarding-model","Qwen3-Coder");
   await click("#onboarding-enable-kun");await until(()=>$("#onboarding-error").textContent.includes("No tool call"));
   assert(!db.kun.ready,"inference alone must not enable repairs");
   modelTools=true;await click("#onboarding-enable-kun");await until(()=>db.kun.ready);assert.equal(w.RunDeskOnboarding.preferredInstance,"setup-kun");
@@ -195,5 +222,5 @@ const nav=step=>click('[data-setup-step="'+step+'"]');
   w.history.replaceState(null,"","#setup/docker");const linked=w.RunDeskOnboarding.open({setup});
   await until(()=>!!$("#onboarding-complete"));assert.equal($('[aria-current="step"]').dataset.setupStep,"docker");
   await click("#onboarding-dismiss");assert.equal(await linked,false);assert.equal(w.location.hash,"#instances");
-  console.log(JSON.stringify({version:"0.59.0",passed:true,checks:["three-page setup with optional Docker and manual reopening","basic completion after Codex restores the original route","Docker can be opened directly","all existing installation, download, repair, source and image flows"]}));
+  console.log(JSON.stringify({version:fs.readFileSync(path.resolve(root,"../app/api_v1.go"),"utf8").match(/const Version = "([^"]+)"/)[1],passed:true,checks:["three-page setup with optional Docker and manual reopening","basic completion after Codex restores the original route","Docker can be opened directly","all existing installation, download, repair, source and image flows","Docker provenance and unpublished-container inventory","failed explicit/Docker candidates remain visible with retry reason","rescan preserves edits made while the request is pending","Kun maintenance discovery is distinct from Codex provider configuration","stale inference test cannot enable an edited connection"]}));
 })().catch(error=>{console.error(error);process.exitCode=1;});

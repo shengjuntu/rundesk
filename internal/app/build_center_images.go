@@ -30,6 +30,8 @@ type BuildCenterImageSource struct {
 	ProfileID      string `json:"profileId,omitempty"`
 	RecipeID       string `json:"recipeId,omitempty"`
 	RecipeRevision int    `json:"recipeRevision,omitempty"`
+	RecipeName     string `json:"recipeName,omitempty"`
+	RecipeVersion  string `json:"recipeVersion,omitempty"`
 }
 type BuildCenterImageRegistration struct {
 	InstanceID string `json:"instanceId"`
@@ -62,10 +64,12 @@ type BuildCenterImageDeleteResult struct {
 	RegistrationCount int    `json:"registrationCount"`
 }
 type BuildCenterImageLaunchInput struct {
-	Name        string `json:"name"`
-	InstanceID  string `json:"instanceId,omitempty"`
-	WorkspaceID string `json:"workspaceId,omitempty"`
-	RequestID   string `json:"requestId"`
+	ProviderMode     string `json:"providerMode,omitempty"`
+	ProviderRevision int    `json:"providerRevision,omitempty"`
+	Name             string `json:"name"`
+	InstanceID       string `json:"instanceId,omitempty"`
+	WorkspaceID      string `json:"workspaceId,omitempty"`
+	RequestID        string `json:"requestId"`
 }
 type BuildCenterImageLaunchResult struct {
 	Instance    Instance    `json:"instance"`
@@ -121,7 +125,7 @@ func (m *Manager) preserveBuildCenterImageSource(v ImageBuild) error {
 	if v.Scope == "image-test" || !validBuildCenterImageID(v.ImageID) {
 		return nil
 	}
-	archived := buildCenterArchivedImageSource{ImageID: v.ImageID, Source: BuildCenterImageSource{Kind: "archived-build", ID: v.ID, Name: "已归档构建", Status: v.Status, ProfileID: v.ProfileID, RecipeID: v.RecipeID, RecipeRevision: v.RecipeRevision}}
+	archived := buildCenterArchivedImageSource{ImageID: v.ImageID, Source: BuildCenterImageSource{Kind: "archived-build", ID: v.ID, Name: "已归档构建", Status: v.Status, ProfileID: v.ProfileID, RecipeID: v.RecipeID, RecipeRevision: v.RecipeRevision, RecipeName: v.RecipeName, RecipeVersion: v.RecipeVersion}}
 	if imageReference.MatchString(v.Reference) {
 		archived.Reference = diagnosticText(v.Reference)
 	}
@@ -179,7 +183,7 @@ func (m *Manager) buildCenterImageRows() ([]BuildCenterImage, error) {
 		}
 		v := row(b.ImageID)
 		ref(v, b.Reference)
-		v.Sources = append(v.Sources, BuildCenterImageSource{Kind: "build", ID: b.ID, Name: b.Name, Status: b.Status, ProfileID: b.ProfileID, RecipeID: b.RecipeID, RecipeRevision: b.RecipeRevision})
+		v.Sources = append(v.Sources, BuildCenterImageSource{Kind: "build", ID: b.ID, Name: b.Name, Status: b.Status, ProfileID: b.ProfileID, RecipeID: b.RecipeID, RecipeRevision: b.RecipeRevision, RecipeName: b.RecipeName, RecipeVersion: b.RecipeVersion})
 		if v.Availability == "unverified" && v.Error == "" && b.Status == "failed" {
 			v.Error = diagnosticText(b.Error)
 		}
@@ -616,6 +620,17 @@ func (m *Manager) LaunchBuildCenterImage(key string, input BuildCenterImageLaunc
 		}
 		err = m.finishImageOperation(input.RequestID, result, err)
 	}()
+	if input.ProviderMode != "" && input.ProviderMode != "existing" && input.ProviderMode != "inherit-default" {
+		return result, failure(400, "invalid_provider_mode", "请选择继承默认模型服务或沿用镜像配置")
+	}
+	if input.ProviderMode == "inherit-default" {
+		if input.InstanceID != "" || input.WorkspaceID != "" {
+			return result, failure(409, "provider_existing_target", "继承默认服务仅用于新建 Agent；已有环境请在模型设置中明确修改")
+		}
+		if err = m.ValidateDefaultCodexProvider(input.ProviderRevision); err != nil {
+			return result, err
+		}
+	}
 	name := strings.TrimSpace(input.Name)
 	if len(name) > 160 || input.InstanceID == DefaultInstance {
 		return result, failure(400, "invalid_image_launch", "Agent 名称过长，或试图复用默认助手")
@@ -705,6 +720,11 @@ func (m *Manager) LaunchBuildCenterImage(key string, input BuildCenterImageLaunc
 	}
 	if result.Environment.ImageID != "" && result.Environment.ImageID != v.ImageID || result.Environment.Spec.ImageID != v.ImageID {
 		return result, failure(409, "image_launch_mismatch", "已有环境使用其他镜像；不会重建或覆盖其 HOME")
+	}
+	if input.ProviderMode == "inherit-default" {
+		if err = m.ApplyDefaultCodexProvider(result.Instance.ID, result.Workspace.ID, input.ProviderRevision); err != nil {
+			return result, err
+		}
 	}
 	result.Environment, err = m.EnvironmentAction(result.Environment.ID, "start", result.Environment.Revision)
 	return result, err

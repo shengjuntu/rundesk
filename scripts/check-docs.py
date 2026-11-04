@@ -27,8 +27,15 @@ assert 'protocolVersion' in maintenance['BuildAssistantRun']['properties']
 assert 'sourceInstanceId' in maintenance['TraceOrigin']['properties']
 assert 'sourceWorkspaceId' in maintenance['TraceOrigin']['properties']
 assert 'purpose' in maintenance['Workspace']['properties']
+assert 'docker' in maintenance['SetupDiscoveryService']['properties']['source']['enum']
+assert 'containers' in maintenance['SetupDiscovery']['properties']
+assert 'recipeName' in maintenance['BuildCenterImage']['properties']['sources']['items']['properties']
+assert 'providerMode' in spec['paths']['/build-center/images/{key}/launch']['post']['requestBody']['content']['application/json']['schema']['properties']
 for route, method in [
     ('/backends', 'get'), ('/setup/environment', 'get'),
+    ('/setup/codex-provider', 'get'), ('/setup/codex-provider', 'put'),
+    ('/instances/{iid}/codex-provider', 'get'), ('/instances/{iid}/codex-provider', 'put'),
+    ('/instances/{iid}/codex-provider/test', 'post'),
     ('/setup/discovery', 'get'), ('/setup/discovery', 'post'),
     ('/setup/model-test', 'post'), ('/setup/kun', 'get'), ('/setup/kun', 'post'),
     ('/setup/codex-install', 'post'), ('/setup/codex-installs', 'get'),
@@ -55,6 +62,8 @@ for route in ['/setup/codex-install', '/setup/model-test', '/setup/kun',
               '/build-center/publications/{id}/check-public']:
     operation = spec['paths'][route]['post']
     assert any(p['name'] == 'Idempotency-Key' and p['required'] for p in operation['parameters']), route
+for route in ['/setup/codex-provider', '/instances/{iid}/codex-provider']:
+    assert any(p['name'] == 'Idempotency-Key' and p['required'] for p in spec['paths'][route]['put']['parameters']), route
 task_mcp = spec['paths']['/setup/agent-mcp']['post']
 assert task_mcp['x-setup-task-capability-only'] is True
 assert task_mcp['security'] == [{'SetupTaskCapability': []}]

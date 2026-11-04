@@ -1,6 +1,8 @@
 # 当前能力与后续工作
 
-**RunDesk 0.61.0 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。这里区分源码已实现、后端能力边界和目标环境验收；三个使命的产品定位见[中文 README](../README.zh-CN.md)。
+**RunDesk 0.62.0 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。这里区分源码已实现、后端能力边界和目标环境验收；三个使命的产品定位见[中文 README](../README.zh-CN.md)。
+
+0.62.0 增加配方、镜像和 Agent 相连的构建工作台，保留已有镜像直接创建 Agent 的路径；镜像展示优先使用冻结配方名称和版本。模型发现补充 Docker 发布端口及容器来源，失败候选保留可见原因。Codex 默认模型服务及具体环境配置与 Kun 初始化配置分别管理。详见[构建中心](BUILD-CENTER.md)、[Codex 模型服务](CODEX-PROVIDERS.md)与[升级说明](UPGRADING.md)。
 
 0.61.0 包含近期应用多预设绑定修复，并将日常会话与应用统一到 Codex，Kun 用于内部维护及只读轨迹问答。会话按工作区组织；构建维护新增计划、候选、同源独立检查和经验留存，最多三次尝试。已补齐公开 API 的维护状态与来源字段。Skill/MCP 自动优化仍待实现，真实模型及 Docker 联调仍需目标环境验收。详见[内部维护](MAINTENANCE.md)与[升级说明](UPGRADING.md)。
 

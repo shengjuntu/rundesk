@@ -23,7 +23,8 @@ import (
 )
 
 // Discovery is read-only and bounded. Only loopback addresses are probed
-// automatically; any non-local address must be supplied explicitly by an admin.
+// automatically, plus published bindings read from the local Docker Engine.
+// Other non-local addresses must be supplied explicitly by an admin.
 // Listing models is not evidence that inference or function calling works.
 type SetupDiscoveryPlatform struct {
 	OS          string `json:"os"`
@@ -51,6 +52,7 @@ type SetupDiscoveryModel struct {
 type SetupDiscoveryService struct {
 	Endpoint        string                `json:"endpoint"`
 	Source          string                `json:"source"`
+	ContainerIDs    []string              `json:"containerIds,omitempty"`
 	Status          string                `json:"status"`
 	Models          []SetupDiscoveryModel `json:"models"`
 	Error           string                `json:"error,omitempty"`
@@ -58,12 +60,13 @@ type SetupDiscoveryService struct {
 	InferenceTested bool                  `json:"inferenceTested"`
 }
 type SetupDiscovery struct {
-	ScannedAt string                  `json:"scannedAt"`
-	Platform  SetupDiscoveryPlatform  `json:"platform"`
-	GPUs      []SetupDiscoveryGPU     `json:"gpus"`
-	Tools     []SetupDiscoveryTool    `json:"tools"`
-	Services  []SetupDiscoveryService `json:"services"`
-	Warnings  []string                `json:"warnings"`
+	ScannedAt  string                    `json:"scannedAt"`
+	Platform   SetupDiscoveryPlatform    `json:"platform"`
+	GPUs       []SetupDiscoveryGPU       `json:"gpus"`
+	Tools      []SetupDiscoveryTool      `json:"tools"`
+	Services   []SetupDiscoveryService   `json:"services"`
+	Warnings   []string                  `json:"warnings"`
+	Containers []SetupDiscoveryContainer `json:"containers,omitempty"`
 }
 type SetupDiscoveryInput struct {
 	Endpoints []string `json:"endpoints,omitempty"`
@@ -424,11 +427,10 @@ func (m *Manager) discoverSetup(parent context.Context, in SetupDiscoveryInput) 
 		return result, failure(400, "discovery_credential", e.Error())
 	}
 	explicit := map[string]bool{}
-	endpoints := setupLocalEndpoints()
+	// Validate every user-supplied endpoint before any Docker access. Explicit
+	// requests have priority over the bounded set of automatic candidates.
+	endpoints := []string{}
 	seen := map[string]bool{}
-	for _, v := range endpoints {
-		seen[v] = true
-	}
 	for _, raw := range in.Endpoints {
 		endpoint, e := setupModelEndpoint(raw)
 		if e != nil {
@@ -439,6 +441,29 @@ func (m *Manager) discoverSetup(parent context.Context, in SetupDiscoveryInput) 
 			endpoints = append(endpoints, endpoint)
 			seen[endpoint] = true
 		}
+	}
+	inside := setupInsideContainer()
+	dockerBindings, containers, warnings := setupDockerDiscovery(ctx, m.docker, inside, setupDockerGateway(ctx, inside))
+	result.Containers, result.Warnings = containers, append(result.Warnings, warnings...)
+	dockerEndpoints := make([]string, 0, len(dockerBindings))
+	for endpoint := range dockerBindings {
+		dockerEndpoints = append(dockerEndpoints, endpoint)
+	}
+	sort.Strings(dockerEndpoints)
+	for _, endpoint := range dockerEndpoints {
+		if !seen[endpoint] {
+			endpoints = append(endpoints, endpoint)
+			seen[endpoint] = true
+		}
+	}
+	for _, endpoint := range setupLocalEndpoints() {
+		if !seen[endpoint] {
+			endpoints = append(endpoints, endpoint)
+			seen[endpoint] = true
+		}
+	}
+	if inside {
+		result.Warnings = append(result.Warnings, "RunDesk 位于容器中：本机监听扫描仅覆盖当前网络命名空间，是否与 Docker 宿主共享网络尚未确认")
 	}
 	var mu sync.Mutex
 	var wg sync.WaitGroup
@@ -498,7 +523,7 @@ func (m *Manager) discoverSetup(parent context.Context, in SetupDiscoveryInput) 
 			mu.Unlock()
 		}()
 	}
-	client := setupProbeClient(1500 * time.Millisecond)
+	client := setupDockerProbeClient(1500*time.Millisecond, dockerBindings)
 	defer client.CloseIdleConnections()
 	semaphore := make(chan struct{}, 10)
 	services := make([]SetupDiscoveryService, len(endpoints))
@@ -511,15 +536,27 @@ func (m *Manager) discoverSetup(parent context.Context, in SetupDiscoveryInput) 
 			case semaphore <- struct{}{}:
 				defer func() { <-semaphore }()
 			case <-ctx.Done():
+				source := "loopback"
+				if len(dockerBindings[endpoint]) > 0 {
+					source = "docker"
+				}
+				if explicit[endpoint] {
+					source = "explicit"
+				}
+				services[n] = SetupDiscoveryService{Endpoint: endpoint, Source: source, ContainerIDs: dockerBindings[endpoint], Status: "unreachable", Models: []SetupDiscoveryModel{}, Error: "扫描达到时间上限，尚未检查此候选；请重新扫描或手工测试"}
 				return
 			}
 			source := "loopback"
+			if len(dockerBindings[endpoint]) > 0 {
+				source = "docker"
+			}
 			key := ""
 			if explicit[endpoint] {
 				source = "explicit"
 				key = credential
 			}
 			services[n] = setupDiscoverService(ctx, client, endpoint, source, key)
+			services[n].ContainerIDs = dockerBindings[endpoint]
 		}()
 	}
 	wg.Wait()
@@ -527,7 +564,7 @@ func (m *Manager) discoverSetup(parent context.Context, in SetupDiscoveryInput) 
 		if service.Endpoint == "" {
 			continue
 		}
-		if service.Status == "listed" || service.Status == "empty" || service.AuthRequired || explicit[service.Endpoint] {
+		if setupRetainDiscoveryService(service, explicit[service.Endpoint]) {
 			result.Services = append(result.Services, service)
 		}
 	}

@@ -369,9 +369,20 @@ func (m *Manager) createContainerLocked(v *Environment, w Workspace) error {
 		}
 		args = append(args, "--mount", arg)
 	}
+	envFile, cleanupEnv, err := m.codexProviderEnvFile(*v)
+	if err != nil {
+		return err
+	}
+	defer cleanupEnv()
+	if envFile != "" {
+		args = append(args, "--env-file", envFile)
+	}
 	args = append(args, "--entrypoint", "/opt/rundesk/bin/rundesk", v.ImageID, "__container_idle")
 	out, e = m.dockerRun(30*time.Second, args...)
 	if e != nil {
+		return e
+	}
+	if e = m.recordCodexProviderDeployment(*v); e != nil {
 		return e
 	}
 	v.ContainerID = strings.TrimSpace(string(out))
@@ -404,6 +415,9 @@ func (m *Manager) startEnvironmentLocked(v *Environment, w Workspace) error {
 	}
 	if _, e = m.dockerRun(30*time.Second, "exec", v.ContainerName, "/opt/rundesk/bin/rundesk", "__container_seed", v.CodexHome); e != nil {
 		return &apiError{Status: 503, Code: "docker_seed_failed", Message: "容器配置初始化失败，请检查目录权限和镜像技能目录", Cause: e}
+	}
+	if e = m.applySeededCodexProvider(*v); e != nil {
+		return e
 	}
 	if _, e = m.dockerRun(15*time.Second, "exec", v.ContainerName, "/opt/rundesk/bin/rundesk", "__container_probe"); e != nil {
 		return &apiError{Status: 503, Code: "docker_runtime_invalid", Message: "容器缺少 Codex，或内核/安全策略不支持进程监管", Cause: e}

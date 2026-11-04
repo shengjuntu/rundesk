@@ -197,7 +197,7 @@ function updateWorkspaceLabel() {
   $("#workspace-name").textContent = w?.name || rdText("默认项目");
   updateProductNavigation();
   localStorage.setItem("rundesk-instance", instance()?.id || "default");
-  if (!state.session) $("#model").value = instance()?.agentRuntime?.kind==="kun"?instance().agentRuntime.model:(instance()?.defaultModel || "");
+  if (!state.session) {$("#model").value = instance()?.agentRuntime?.kind==="kun"?instance().agentRuntime.model:(instance()?.defaultModel || "");$("#model").dataset.explicitModel="false";}
   localStorage.setItem("rundesk-workspace", w?.id || "");
   if(w&&instance())window.RunDeskInstances?.remember(instance().id,w.id);
   if(state.view==="conversation"&&state.session?.workspaceId===w?.id)window.RunDeskConversations?.remember(w.id,instance()?.id,state.session.id);
@@ -224,6 +224,7 @@ function wireSuggestions() {
   );
 }
 function resetConversation() {
+  $("#model").dataset.explicitModel="false";
   window.RunDeskTraceUI?.close(false);
   state.loadingSession=false;
   stashProductDraft(); state.draftContext=null; $("#prompt").value=""; state.taskAppID="";
@@ -254,10 +255,12 @@ function resetConversation() {
   renderAttachments();
   renderDebug();
 }
+$("#model").addEventListener("input",()=>{$("#model").dataset.explicitModel="true";});
 async function newSession() {
   if(!instance()||!ws())throw Error(rdText("请先选择实例和工作区"));
   const creationSelection=state.selection;
-  const model = $("#model").value.trim();
+  const field=$("#model"),chosenModel=field.value.trim(),automaticModel=instance()?.agentRuntime?.kind==="kun"?instance().agentRuntime.model:(instance()?.defaultModel||"");
+  const model = field.dataset.explicitModel==="true"||chosenModel!==automaticModel?chosenModel:"";
   const s = await api("/sessions", {
     method: "POST",
     body: { workspaceId: ws().id, instanceId: instance().id, model, source:window.RunDeskConversations?RunDeskConversations.source(instance().id,ws().id):RunDeskInstances.source(instance().id) },

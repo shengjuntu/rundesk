@@ -1,0 +1,87 @@
+{
+  "version": "0.62.0",
+  "date": "2026-11-04",
+  "status": "passed",
+  "scope": [
+    "Docker-aware local model discovery and visible failed candidates",
+    "Recipe to image to Agent build workbench",
+    "Default and environment Codex provider configuration with explicit runtime probe"
+  ],
+  "checks": [
+    {
+      "name": "go test -p 1 ./...",
+      "result": "passed",
+      "log": "release-062-go.log"
+    },
+    {
+      "name": "go vet ./...",
+      "result": "passed"
+    },
+    {
+      "name": "Provider/discovery/provenance integration tests",
+      "result": "passed"
+    },
+    {
+      "name": "Seven JSDOM UI suites",
+      "result": "passed",
+      "details": "release-062-web.json"
+    },
+    {
+      "name": "Linux and Windows amd64 builds",
+      "result": "passed",
+      "notes": "Linux --version RunDesk 0.62.0; Windows binary compiled, not executed."
+    },
+    {
+      "name": "Actual-server Chromium desktop/mobile discovery and workbench/provider fixtures",
+      "result": "passed",
+      "notes": "Scoped API fixtures; no live model, container or external worker."
+    },
+    {
+      "name": "Existing runtime-presets and workspace-conversations browser regressions",
+      "result": "passed"
+    },
+    {
+      "name": "JavaScript syntax, docs and generated API reproducibility",
+      "result": "passed"
+    }
+  ],
+  "validation_notes": [
+    "A missing explicit embedded-asset entry was caught and corrected before final builds.",
+    "One legacy reconnect test timed out in a parallel suite; isolated count=3 and the final complete serial suite passed. No timeout was weakened."
+  ],
+  "limits": [
+    "No deployment to the user server, live vLLM or Docker daemon acceptance run.",
+    "Local Codex providers require Responses API and compatible function calling; Chat Completions discovery alone is insufficient.",
+    "Unpublished Docker ports and unconfirmed container/host networking are reported, not claimed reachable.",
+    "Conversation round folding, duration overview and sidebar redesign remain planned for 0.63.0."
+  ],
+  "qa_summary": {
+    "passed": true,
+    "scope": "Go tests, vet, cross-build and actual isolated Go service/browser tests with scoped API fixtures. No real model, Docker daemon or external Kun worker acceptance run.",
+    "checks": {
+      "go_test_serial": "passed",
+      "go_vet": "passed",
+      "linux_build": "passed; RunDesk 0.62.0",
+      "windows_cross_build": "passed; not executed on Windows",
+      "discovery_browser": "passed",
+      "workbench_provider_browser": "passed",
+      "existing_runtime_presets_browser": "passed",
+      "existing_workspace_conversations_browser": "passed"
+    },
+    "notes": [
+      "First full run found missing embedded provider asset; corrected and checked in actual browser.",
+      "Second parallel run had one legacy TestReconnectAfterIdleProcessExit timing failure; isolated count=3 passed, then complete serial go test -p 1 ./... passed without changing timeout.",
+      "Browser QA reproduced terminal build/image-catalog race; bounded polling fix verified.",
+      "Discovery mobile badge and provider input readability fixes visually verified."
+    ],
+    "source_tests": [
+      "internal/web/tests/setup-discovery-browser.cjs",
+      "internal/web/tests/build-workbench-browser.cjs"
+    ],
+    "logs": [
+      "release062-go-serial.log",
+      "release062-vet-final.log",
+      "release062-idle-reconnect.log"
+    ]
+  }
+}

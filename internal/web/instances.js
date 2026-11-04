@@ -98,7 +98,7 @@ window.RunDeskInstances = (() => {
         if (!rows.length) grid.append(el("div", {class:"instance-empty"}, el("h2", {}, rdText("没有匹配的 Agent")), el("p", {}, rdText("调整筛选条件，或先准备 Docker 镜像。"))));
       };
       query.oninput = paint; filter.onchange = paint; filter.hidden = true;
-      page.replaceChildren(heading(rdText("Agents"), rdText("日常会话与应用统一使用 Codex。Agent 保存不同的模型、Skills、MCP 与运行环境配置。"), el("div", {class:"actions"}, button(rdText("刷新"), open, "quiet"), button(rdText("准备 Docker 镜像"), () => RunDeskBuildCenter.open("recipes"), "quiet"), button(rdText("从镜像添加 Agent"), () => RunDeskBuildCenter.open("images"), "primary"))), el("div", {class:"instance-toolbar"}, query, filter, el("span", {class:"muted"}, rdFormat("${0} 个 Agent",state.instances.filter(i=>i.agentRuntime?.kind!=="kun").length))), grid);
+      page.replaceChildren(heading(rdText("Agents"), rdText("日常会话与应用统一使用 Codex。Agent 保存不同的模型、Skills、MCP 与运行环境配置。"), el("div", {class:"actions"}, button(rdText("刷新"), open, "quiet"), button(rdText("准备 Docker 镜像"), () => RunDeskBuildCenter.open("workbench"), "quiet"), button(rdText("从镜像添加 Agent"), () => RunDeskBuildCenter.open("workbench"), "primary"))), el("div", {class:"instance-toolbar"}, query, filter, el("span", {class:"muted"}, rdFormat("${0} 个 Agent",state.instances.filter(i=>i.agentRuntime?.kind!=="kun").length))), grid);
       paint(); updateProductNavigation();
     } catch (error) { if (current(g, selection, "instances")) failure(page,error,open); }
   }

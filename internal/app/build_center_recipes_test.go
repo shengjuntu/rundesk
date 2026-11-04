@@ -134,7 +134,7 @@ func TestBuildCenterRecipeBuildAndFrozenRebuild(t *testing.T) {
 	}
 	request := RecipeBuildInput{RecipeRevision: 1, RequestID: store.ID(), OwnerRunID: "run-1"}
 	b, err := m.StartRecipeBuild(r.ID, request)
-	if err != nil || b.Scope != "recipe" || b.InstanceID != DefaultInstance || b.Status != "queued" || b.RecipeID != r.ID || b.RecipeSHA != r.RecipeSHA || b.OwnerRunID != "run-1" {
+	if err != nil || b.Scope != "recipe" || b.InstanceID != DefaultInstance || b.Status != "queued" || b.RecipeID != r.ID || b.RecipeName != r.Name || b.RecipeVersion != r.Version || b.RecipeSHA != r.RecipeSHA || b.OwnerRunID != "run-1" {
 		t.Fatal(b, err)
 	}
 	again, err := m.StartRecipeBuild(r.ID, request)
@@ -161,7 +161,7 @@ func TestBuildCenterRecipeBuildAndFrozenRebuild(t *testing.T) {
 	// Rebuild comes from the original build snapshot, even after recipe archival.
 	rebuildRequest := RebuildCenterBuildInput{RequestID: store.ID(), NoCache: true}
 	rebuilt, err := m.RebuildCenterBuild(b.ID, rebuildRequest)
-	if err != nil || rebuilt.ID == b.ID || rebuilt.ContextSHA256 != b.ContextSHA256 || rebuilt.RecipeSHA != b.RecipeSHA || rebuilt.RebuildOf != b.ID || !rebuilt.NoCache || rebuilt.OwnerRunID != "" {
+	if err != nil || rebuilt.ID == b.ID || rebuilt.ContextSHA256 != b.ContextSHA256 || rebuilt.RecipeSHA != b.RecipeSHA || rebuilt.RecipeName != b.RecipeName || rebuilt.RecipeVersion != b.RecipeVersion || rebuilt.RebuildOf != b.ID || !rebuilt.NoCache || rebuilt.OwnerRunID != "" {
 		t.Fatal(rebuilt, err)
 	}
 	replayed, err := m.RebuildCenterBuild(b.ID, rebuildRequest)

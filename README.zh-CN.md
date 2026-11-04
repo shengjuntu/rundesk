@@ -46,7 +46,9 @@ RunDesk 通过 Kun 集成提供模块状态检查和执行循环策略选择。�
 
 ## 当前源码版本
 
-**RunDesk 0.61.0 · 外部 Kun 0.17.0 · worker 协议 16**
+**RunDesk 0.62.0 · 外部 Kun 0.17.0 · worker 协议 16**
+
+0.62.0 将构建中心整理成“配方 → 镜像 → Agent”工作台，可复用已有镜像，镜像卡片首先显示配方名称，同一镜像可创建多个 Agent。初始化发现补充本机 Docker 已发布的模型服务，并展示失败候选的原因。Codex 模型服务与 Kun 模型发现分别配置，可作用于明确的 Agent／工作区环境。详见[构建中心](docs/BUILD-CENTER.md)与[Codex 模型服务](docs/CODEX-PROVIDERS.md)。
 
 0.61.0 收入近期应用多预设绑定修复和“工作区 → 会话”整理，并将日常会话与应用任务统一到 Codex。Kun 负责安装修复、Docker 配方准备与修复，以及只读轨迹问答。新的 Kun 构建任务每轮先记录有限目标的计划，由服务端对同一候选执行 offline 与 smoke 检查，验证通过后保留修复经验。Skill 提取和 MCP 优化属于后续阶段。详见[内部维护](docs/MAINTENANCE.md)。
 

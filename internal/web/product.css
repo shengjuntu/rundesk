@@ -115,3 +115,9 @@
 .engine-picker-body .help{color:#536480;font-size:13px;line-height:1.8}
 .engine-picker-body select{width:100%;border-color:#94abe7;color:#2a426d;font-size:14px}
 @media(max-width:600px){.conversation-title-group{gap:7px}.session-engine{font-size:11px;max-width:200px}.workspace-heading{padding:10px 6px}}
+
+/* Provider addresses and model IDs need the full settings width. */
+.codex-provider-settings label,.codex-launch-provider label{display:grid;gap:7px;margin:14px 0;font-size:13px}
+.codex-provider-settings input,.codex-launch-provider select{width:100%;min-width:0;box-sizing:border-box}
+.codex-provider-settings .error,.codex-launch-provider .error{color:var(--danger,#c44545)}
+.codex-launch-provider{margin:18px 0;min-width:0}.codex-launch-provider p{overflow-wrap:anywhere}

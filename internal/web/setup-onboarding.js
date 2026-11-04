@@ -9,7 +9,7 @@ window.RunDeskOnboarding = (() => {
     ["docker", "准备 Docker 环境（可选）", "Prepare Docker environments (optional)", "下载镜像或本机构建，也可稍后再做", "Download, build locally, or do this later"]
   ];
   let current, preferredInstance = "";
-  const statusLabels = () => ({ready:tr("已就绪","Ready"),listed:tr("发现模型，待测试","Models found; untested"),succeeded:tr("已完成","Completed"),failed:tr("需要处理","Needs attention"),running:tr("进行中","Running"),queued:tr("排队中","Queued"),interrupted:tr("已中断","Interrupted"),unavailable:tr("未发现","Not found"),error:tr("检测失败","Check failed"),candidate:tr("候选经验","Candidate"),verified:tr("已验证经验","Verified"),auth_required:tr("需要认证","Authentication required"),empty:tr("未返回模型","No models returned"),incompatible:tr("协议不匹配","Protocol mismatch"),unreachable:tr("未连接","Unreachable"),canceled:tr("已取消","Canceled"),canceling:tr("正在取消","Canceling"),completed:tr("已完成","Completed"),idle:tr("待配置","Not configured"),waiting:tr("等待处理","Waiting"),watching:tr("已开启失败自动修复","Automatic repair enabled"),revalidating:tr("正在复查模型能力","Rechecking model capabilities"),submitted:tr("已交给 Kun","Sent to Kun"),blocked:tr("自动交接需要处理","Handoff needs attention"),disabled:tr("已关闭自动修复","Automatic repair disabled"),inference_only:tr("推理通过，工具未通过","Inference passed; tools failed")});
+  const statusLabels = () => ({ready:tr("已就绪","Ready"),listed:tr("发现模型，待测试","Models found; untested"),succeeded:tr("已完成","Completed"),failed:tr("需要处理","Needs attention"),running:tr("进行中","Running"),queued:tr("排队中","Queued"),interrupted:tr("已中断","Interrupted"),unavailable:tr("未发现","Not found"),error:tr("检测失败","Check failed"),candidate:tr("候选经验","Candidate"),verified:tr("已验证经验","Verified"),auth_required:tr("需要认证","Authentication required"),empty:tr("未返回模型","No models returned"),incompatible:tr("模型列表协议不匹配","Model-list protocol mismatch"),unreachable:tr("连接失败","Connection failed"),timeout:tr("探测超时","Probe timed out"),published:tr("已发布端口","Ports published"),host:tr("共享宿主网络","Host network"),unexposed:tr("未发布端口","No published port"),unsupported:tr("暂不支持此网络","Unsupported network"),inspect_failed:tr("容器检查失败","Container inspection failed"),canceled:tr("已取消","Canceled"),canceling:tr("正在取消","Canceling"),completed:tr("已完成","Completed"),idle:tr("待配置","Not configured"),waiting:tr("等待处理","Waiting"),watching:tr("已开启失败自动修复","Automatic repair enabled"),revalidating:tr("正在复查模型能力","Rechecking model capabilities"),submitted:tr("已交给 Kun","Sent to Kun"),blocked:tr("自动交接需要处理","Handoff needs attention"),disabled:tr("已关闭自动修复","Automatic repair disabled"),inference_only:tr("推理通过，工具未通过","Inference passed; tools failed")});
   const badge = (value, text) => el("span", {class:"ob-status","data-state":value}, text || statusLabels()[value] || value || "—");
   const note = (zh, en) => el("p", {class:"ob-help"}, tr(zh, en));
   function card(title, ...children) { return el("section", {class:"ob-card"}, title ? el("div", {class:"ob-card-head"}, el("h2", {}, title)) : null, ...children); }
@@ -64,10 +64,10 @@ window.RunDeskOnboarding = (() => {
     c.main.append(footer);
   }
   function environment(c) {
-    header(c,"寻找和配置 LLM","Find and configure LLM","自动发现 GPU、vLLM、llama.cpp 和本机模型服务，也可以连接已有的远程服务。验证模型后，Kun 就能协助后续安装和构建。","Discover GPUs, vLLM, llama.cpp and local model services, or connect an existing remote service. Once the model is tested, Kun can help with installation and builds.");
+    header(c,"寻找和配置 LLM","Find and configure LLM","自动发现 GPU、本机及 Docker 发布的模型服务，也可以手动连接已有服务。这里配置 Kun 维护助手；日常 Codex 的模型服务单独配置。","Discover GPUs and local or Docker-published model services, or enter an existing service. Configure the Kun maintenance assistant here; everyday Codex providers are configured separately.");
     const data = c.discovery;
     if (!data) {
-      c.main.append(card(tr("正在扫描本机环境","Scanning the local environment"), el("p", {role:"status",class:"ob-help"}, c.scanning ? tr("正在检查 GPU、可执行文件和本机监听的模型服务…","Checking GPUs, executables and local model services…") : tr("扫描尚未完成，可以重新检查。","The scan has not completed. You can retry.")), action(c,tr("重新扫描","Scan again"),()=>scan(c)))); return;
+      c.main.append(card(tr("正在扫描本机环境","Scanning the local environment"), el("p", {role:"status",class:"ob-help"}, c.scanning ? tr("正在检查 GPU、运行环境、本机端口和 Docker 发布的模型服务…","Checking GPUs, executables, local ports and Docker-published model services…") : tr("扫描尚未完成，可以重新检查。","The scan has not completed. You can retry.")), action(c,tr("重新扫描","Scan again"),()=>scan(c)))); return;
     }
     const p=data.platform || {}, gpuNames=(data.gpus||[]).map(value=>value.name).filter(Boolean);
     c.main.append(el("div", {class:"ob-metrics"},
@@ -83,28 +83,66 @@ window.RunDeskOnboarding = (() => {
     services.querySelector(".ob-card-head").append(action(c,c.scanning?tr("扫描中…","Scanning…"):tr("重新扫描","Scan again"),()=>scan(c),"quiet",{id:"onboarding-rescan"}));
     c.main.append(services);
   }
-  function serviceList(c) {
-    const services=(c.discovery?.services||[]).filter(value=>!["unreachable","incompatible"].includes(value.status));
-    const list=el("div",{},...services.map(value=>{
-      const node=action(c,"",()=>{chooseService(c,value);render(c);const input=c.page.querySelector("#onboarding-endpoint");input?.focus();input?.scrollIntoView?.({block:"nearest"});},"ob-service"+(c.endpoint===value.endpoint?" selected":""),{"data-service-endpoint":value.endpoint,"aria-pressed":String(c.endpoint===value.endpoint)});
-      node.append(el("span",{class:"ob-service-icon","aria-hidden":"true"},"◇"),el("span",{class:"ob-service-info"},el("strong",{},value.endpoint),el("small",{},(value.models||[]).map(model=>model.id).join(" · ")||value.error||tr("打开后配置认证与模型","Configure authentication and model"))),badge(value.authRequired?"auth_required":value.status));return node;
-    }));
-    if(!services.length)list.append(el("div",{class:"ob-muted-card"},tr("还没有发现可列出模型的服务。可以启动 vLLM、llama.cpp，或填写已有服务地址。","No service with a model list was found. Start vLLM or llama.cpp, or enter an existing service address.")));
-    return card(tr("发现的模型服务","Discovered model services"),list,note("发现模型列表后，还要验证推理与工具调用，才能启用 Kun 修复能力。","After discovering a model list, test inference and tool calls before enabling Kun repairs."));
+  function normalizedEndpoint(value) {
+    try {
+      const url=new URL(value.trim());let path=url.pathname.replace(/\/+$/,"");
+      for(const suffix of ["/chat/completions","/models"])if(path.endsWith(suffix))path=path.slice(0,-suffix.length);
+      url.pathname=path||"/v1";return url.toString().replace(/\/+$/,"");
+    } catch { return value.trim().replace(/\/+$/,""); }
   }
-  function chooseService(c,service) { c.endpoint=service.endpoint;c.model=service.models?.[0]?.id||c.model;saveDraft(c); }
+  const modelConfigKey = c => JSON.stringify([normalizedEndpoint(c.endpoint),c.model,c.keyEnv]);
+  function savedModelMatches(c) { return !!c.kun&&normalizedEndpoint(c.kun.endpoint||"")===normalizedEndpoint(c.endpoint)&&c.kun.model===c.model&&(c.kun.apiKeyEnv||"")===c.keyEnv; }
+  function modelEvidence(c) {
+    if(c.modelTest&&c.modelTestKey===modelConfigKey(c))return c.modelTest;
+    return savedModelMatches(c)?c.kun?.modelTest:null;
+  }
+  function serviceList(c) {
+    const services=c.discovery?.services||[],containers=c.discovery?.containers||[];
+    const list=el("div",{id:"onboarding-discovered-services"},...services.map(value=>{
+      const origins=(value.containerIds||[]).map(id=>containers.find(row=>row.id===id)).filter(Boolean);
+      const source=value.source==="docker"||origins.length?"Docker" : value.source==="explicit"?tr("手动地址","Manual address"):tr("本机端口","Local port");
+      const failed=["unreachable","incompatible","timeout"].includes(value.status),displayStatus=value.status==="unreachable"&&/timeout|deadline|timed out/i.test(value.error||"")?"timeout":value.status;
+      const selected=normalizedEndpoint(c.endpoint)===normalizedEndpoint(value.endpoint);
+      const node=action(c,"",()=>{chooseService(c,value);render(c);const input=c.page.querySelector("#onboarding-endpoint");input?.focus();input?.scrollIntoView?.({block:"nearest"});},"ob-service"+(selected?" selected":""),{"data-service-endpoint":value.endpoint,"aria-pressed":String(selected)});
+      const info=el("span",{class:"ob-service-info"},el("strong",{},value.endpoint),el("small",{},source+(origins.length?" · "+origins.map(row=>row.name||row.id).join("、"):"")));
+      if(origins.length)info.append(el("small",{},origins.map(row=>[row.image,row.networkMode].filter(Boolean).join(" · ")).join("；")));
+      if(value.models?.length)info.append(el("small",{},value.models.map(model=>model.id).join(" · ")));
+      else if(value.authRequired)info.append(el("small",{},tr("选择后填写密钥环境变量名，再探测模型列表。","Select this address, enter a credential environment variable, then retry model discovery.")));
+      node.append(el("span",{class:"ob-service-icon","aria-hidden":"true"},"◇"),info,badge(value.authRequired?"auth_required":displayStatus));
+      const row=el("article",{"data-service-state":displayStatus,"data-service-source":value.source||""},node);
+      if(value.error)row.append(el("p",{class:failed?"ob-error":"ob-help",role:"status"},value.error));
+      if(failed||value.authRequired)row.append(el("div",{class:"ob-actions"},action(c,tr("重新探测此地址","Retry this address"),()=>scan(c,value.endpoint),"quiet",{"data-service-retry":value.endpoint})));
+      return row;
+    }));
+    if(!services.length)list.append(el("div",{class:"ob-muted-card"},tr("还没有发现可列出模型的服务。可检查下方 Docker 容器状态，或手动填写服务地址。","No service with a model list was found. Check Docker container status below, or enter a service address.")));
+    const inventory=containers.length?el("details",{class:"ob-inventory",open:containers.some(row=>["unexposed","unsupported","inspect_failed"].includes(row.status))},el("summary",{},tr("Docker 容器与端口","Docker containers and ports")),...containers.map(row=>el("article",{class:"ob-muted-card","data-discovery-container":row.id},el("div",{class:"ob-inline"},el("strong",{},row.name||row.id),badge(row.status)),el("p",{class:"ob-help"},[row.image,row.networkMode].filter(Boolean).join(" · ")),row.endpoints?.length?el("p",{class:"ob-help"},row.endpoints.join(" · ")):note(row.status==="unexposed"?"容器没有发布宿主端口，尚不能从此处连接；可以手动填写 RunDesk 可访问的服务地址。":"此容器尚无可探测的发布地址，模型可用性需由实际接口确认。",row.status==="unexposed"?"No host port is published. Enter a service address reachable by RunDesk, or publish the intended port.":"No published endpoint was available to probe; model readiness requires an actual API response."),row.warning?el("p",{class:"ob-help",role:"status"},row.warning):null))):null;
+    const warnings=c.discovery?.warnings?.length?el("details",{class:"ob-inventory",open:true},el("summary",{},tr("扫描说明","Scan notes")),...c.discovery.warnings.map(value=>el("p",{class:"ob-help",role:"status"},value))):null;
+    return card(tr("发现的模型服务","Discovered model services"),list,inventory,warnings,note("这里只读取模型列表，不会自动调用模型。列表可用后仍需验证推理与工具调用，才能启用 Kun 维护。","Discovery only reads model lists and does not invoke a model. Inference and tool-call checks are still required before enabling Kun maintenance."));
+  }
+  function chooseService(c,service) {
+    const same=normalizedEndpoint(c.endpoint)===normalizedEndpoint(service.endpoint);
+    c.endpoint=service.endpoint;
+    if(service.models?.length&&!service.models.some(row=>row.id===c.model))c.model=service.models[0].id;
+    else if(!same&&!service.models?.length)c.model="";
+    saveDraft(c);
+  }
   async function scan(c,endpoint) {
-    if(c.scanning)return;c.scanning=true;
+    if(c.scanning)return;
+    const before=modelConfigKey(c);c.scanning=true;
     if(c.step===0)render(c);
     try {
-      c.discovery=await api("/setup/discovery",endpoint?{method:"POST",body:{endpoints:[endpoint],...(c.keyEnv?{apiKeyEnv:c.keyEnv}:{})}}:{});
+      const found=await api("/setup/discovery",endpoint?{method:"POST",body:{endpoints:[endpoint],...(c.keyEnv?{apiKeyEnv:c.keyEnv}:{})}}:{});
       if(!c.closed){
-        const local=(c.discovery.services||[]).find(value=>value.status==="listed"&&value.models?.length);
-        if(!c.endpoint&&local)chooseService(c,local);
-        if(endpoint){const normalized=endpoint.replace(/\/+$/,"").replace(/\/v1$/,"")+"/v1",requested=(c.discovery.services||[]).find(value=>value.endpoint===normalized&&value.models?.length);if(requested)chooseService(c,requested);}
-        const installed=(c.discovery.tools||[]).find(value=>value.id==="codex"&&value.status==="ready");
+        c.discovery=found;
+        const local=(found.services||[]).find(value=>value.status==="listed"&&value.models?.length);
+        if(!c.endpoint&&local&&modelConfigKey(c)===before)chooseService(c,local);
+        if(endpoint&&modelConfigKey(c)===before&&normalizedEndpoint(c.endpoint)===normalizedEndpoint(endpoint)&&!c.model){
+          const requested=(found.services||[]).find(value=>normalizedEndpoint(value.endpoint)===normalizedEndpoint(endpoint)&&value.models?.length);
+          if(requested){c.model=requested.models[0].id;saveDraft(c);}
+        }
+        const installed=(found.tools||[]).find(value=>value.id==="codex"&&value.status==="ready");
         if(!c.codexPath&&installed)c.codexPath=installed.path;
-        const worker=(c.discovery.tools||[]).find(value=>value.id==="kun"&&value.status==="ready");
+        const worker=(found.tools||[]).find(value=>value.id==="kun"&&value.status==="ready");
         if(!c.kunPath&&worker)c.kunPath=worker.path;
         updateSteps(c);
         const path=c.page.querySelector("#onboarding-codex-path");if(path&&!path.value)path.value=c.codexPath;
@@ -113,22 +151,25 @@ window.RunDeskOnboarding = (() => {
     } finally {c.scanning=false;if(!c.closed&&c.step===0)render(c);}
   }
   function kun(c) {
-    if(c.kun?.ready)c.main.append(el("div",{class:"ob-notice",role:"status"},tr("Kun 已通过 worker 协议、模型推理与工具调用检查，可以执行修复任务。","Kun passed the worker protocol, inference and tool-call checks and can run repair tasks.")));
+    if(c.kun?.ready&&savedModelMatches(c))c.main.append(el("div",{class:"ob-notice",role:"status"},tr("Kun 维护助手已通过 worker 协议、模型推理与工具调用检查。","The Kun maintenance assistant passed worker protocol, inference and tool-call checks.")));
     const endpoint=el("input",{id:"onboarding-endpoint",value:c.endpoint,placeholder:"http://127.0.0.1:8000/v1",autocomplete:"url"});
     const model=el("input",{id:"onboarding-model",value:c.model,placeholder:tr("服务返回的模型 ID","Model ID returned by the service"),list:"onboarding-models"});
     const key=el("input",{id:"onboarding-key-env",value:c.keyEnv,placeholder:"OPENAI_API_KEY",autocomplete:"off"});
     const kunPath=el("input",{id:"onboarding-kun-path",value:c.kunPath,placeholder:tr("RunDesk 同目录的 kun，或填写绝对路径","Adjacent kun executable, or an absolute path")});
-    const bind=(node,key)=>node.oninput=()=>{c[key]=node.value.trim();saveDraft(c);};bind(endpoint,"endpoint");bind(model,"model");bind(key,"keyEnv");bind(kunPath,"kunPath");
+    const bind=(node,key)=>node.oninput=()=>{c[key]=node.value.trim();if(key!=="kunPath"){results.replaceChildren(note("连接草稿已修改，请重新测试后启用。","The connection draft changed. Test it again before enabling maintenance."));}saveDraft(c);};bind(endpoint,"endpoint");bind(model,"model");bind(key,"keyEnv");bind(kunPath,"kunPath");
     const results=el("div",{id:"onboarding-model-result",role:"status"});
     const test=action(c,tr("测试并启用 Kun","Test and enable Kun"),async()=>{
       results.replaceChildren(note("正在实际测试模型推理和工具调用…","Testing actual inference and tool calls…"));
-      c.modelTest=await api("/setup/model-test",{method:"POST",body:{endpoint:c.endpoint,model:c.model,...(c.keyEnv?{apiKeyEnv:c.keyEnv}:{})}});
-      await saveKun(c);render(c);
+      const key=modelConfigKey(c),body={endpoint:c.endpoint,model:c.model,...(c.keyEnv?{apiKeyEnv:c.keyEnv}:{})};
+      const tested=await api("/setup/model-test",{method:"POST",body});
+      if(c.closed)return;
+      if(modelConfigKey(c)!==key){render(c);c.error.textContent=tr("模型配置在测试期间发生变化；请重新测试当前地址与模型。","The model configuration changed during testing. Test the current address and model again.");return;}
+      c.modelTest=tested;c.modelTestKey=key;await saveKun(c);render(c);
       if(!c.modelTest.inferenceOK||!c.modelTest.toolsOK)c.error.textContent=c.modelTest.error||tr("模型需要同时通过推理与工具调用测试。","The model must pass both inference and tool-call tests.");
     },"primary",{id:"onboarding-enable-kun"});
-    const config=card(tr("模型连接","Model connection"),el("div",{class:"ob-grid"},el("label",{class:"ob-wide"},tr("Chat Completions API 地址","Chat Completions API base URL"),endpoint),el("label",{},tr("模型","Model"),model),el("label",{},tr("密钥环境变量名（可留空）","Credential environment variable (optional)"),key)),el("datalist",{id:"onboarding-models"},...(c.discovery?.services||[]).flatMap(value=>(value.models||[]).map(item=>el("option",{value:item.id})))),note("地址与环境变量属于服务器。无需认证可留空；需要密钥时，填写已在 RunDesk 服务进程中设置的变量名。","Addresses and environment variables belong to the server. Leave the credential field empty for unauthenticated services; otherwise enter a variable already set for the RunDesk process."),el("details",{},el("summary",{},tr("Kun 可执行文件","Kun executable")),el("label",{},tr("服务器上的 Kun 路径","Kun path on the server"),kunPath),note("将与你当前 RunDesk 兼容的独立 Kun 程序放在 RunDesk 同目录，或在这里指定路径。缺少程序时仍可保存模型配置。","Place a compatible standalone Kun executable next to RunDesk, or specify its path here. The model configuration can be saved before the executable is available.")),el("div",{class:"ob-actions"},test,action(c,tr("探测此服务的模型列表","Discover models at this address"),()=>scan(c,c.endpoint)),action(c,tr("保存配置草稿","Save configuration draft"),async()=>{await saveKun(c);render(c);})),results);
-    if(c.modelTest||c.kun?.modelTest){const v=c.modelTest||c.kun.modelTest;results.append(el("p",{class:"ob-inline"},badge(v.inferenceOK?"ready":"failed",tr("模型推理","Inference")),badge(v.toolsOK?"ready":"failed",tr("工具调用","Tool calls"))),v.error?el("p",{class:"ob-error"},v.error):null);}
-    const stateCard=card(tr("Kun 状态","Kun status"),el("div",{class:"ob-inline"},badge(c.kun?.ready?"ready":c.kun?.available?"idle":"unavailable",c.kun?.ready?tr("可以执行修复","Ready for repairs"):c.kun?.available?tr("模型尚未通过完整测试","Model checks incomplete"):tr("Kun worker 尚不可用","Kun worker unavailable"))),note("此配置使用独立的初始化 Kun 实例，后续也可以继续用于普通任务。","This uses a separate initialization Kun instance that can also run regular tasks."));
+    const config=card(tr("Kun 维护模型连接","Kun maintenance model connection"),el("div",{class:"ob-grid"},el("label",{class:"ob-wide"},tr("Chat Completions API 地址","Chat Completions API base URL"),endpoint),el("label",{},tr("模型","Model"),model),el("label",{},tr("密钥环境变量名（可留空）","Credential environment variable (optional)"),key)),el("datalist",{id:"onboarding-models"},...(c.discovery?.services||[]).flatMap(value=>(value.models||[]).map(item=>el("option",{value:item.id})))),note("地址与环境变量属于服务器。无需认证可留空；需要密钥时，填写已在 RunDesk 服务进程中设置的变量名。","Addresses and environment variables belong to the server. Leave the credential field empty for unauthenticated services; otherwise enter a variable already set for the RunDesk process."),el("details",{},el("summary",{},tr("Kun 可执行文件","Kun executable")),el("label",{},tr("服务器上的 Kun 路径","Kun path on the server"),kunPath),note("将与你当前 RunDesk 兼容的独立 Kun 程序放在 RunDesk 同目录，或在这里指定路径。缺少程序时仍可保存模型配置。","Place a compatible standalone Kun executable next to RunDesk, or specify its path here. The model configuration can be saved before the executable is available.")),el("div",{class:"ob-actions"},test,action(c,tr("探测此服务的模型列表","Discover models at this address"),()=>scan(c,c.endpoint)),action(c,tr("保存配置草稿","Save configuration draft"),async()=>{await saveKun(c);render(c);})),results);
+    const checked=modelEvidence(c);if(checked){const v=checked;results.append(el("p",{class:"ob-inline"},badge(v.inferenceOK?"ready":"failed",tr("模型推理","Inference")),badge(v.toolsOK?"ready":"failed",tr("工具调用","Tool calls"))),v.error?el("p",{class:"ob-error"},v.error):null);}
+    const stateCard=card(tr("已保存的 Kun 维护状态","Saved Kun maintenance status"),el("div",{class:"ob-inline"},badge(c.kun?.ready?"ready":c.kun?.available?"idle":"unavailable",c.kun?.ready?tr("可以执行修复","Ready for repairs"):c.kun?.available?tr("模型尚未通过完整测试","Model checks incomplete"):tr("Kun worker 尚不可用","Kun worker unavailable"))),note("此配置仅供 Kun 初始化、安装修复和内部维护使用。日常会话与应用使用 Codex，模型服务在 Codex 设置中配置。","This configuration serves Kun initialization, installation repair and internal maintenance. Everyday conversations and applications use Codex, whose provider is configured separately."));
     if(c.kun?.error)stateCard.append(el("p",{class:"ob-error"},c.kun.error));
     if(c.kun?.worker)stateCard.append(note("已连接 worker：","Connected worker: "),el("code",{},[c.kun.worker.engineVersion,"protocol "+c.kun.worker.protocolVersion].filter(Boolean).join(" · ")));
     c.main.append(config,stateCard);

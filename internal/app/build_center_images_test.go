@@ -127,7 +127,7 @@ func TestBuildCenterImagesCatalogDeduplicatesWithoutHostScan(t *testing.T) {
 	if _, err = m.RegisterImage(j.ID, "other:v2"); err != nil {
 		t.Fatal(err)
 	}
-	b := ImageBuild{ID: store.ID(), InstanceID: DefaultInstance, Scope: "recipe", RecipeID: "custom-example", RecipeRevision: 3, Name: "Reusable capability", Status: "succeeded", ImageID: registered.ImageID, Reference: "tools:stable", Created: store.Now()}
+	b := ImageBuild{ID: store.ID(), InstanceID: DefaultInstance, Scope: "recipe", RecipeID: "custom-example", RecipeRevision: 3, RecipeName: "Frozen recipe", RecipeVersion: "2.3.4", Name: "Reusable capability", Status: "succeeded", ImageID: registered.ImageID, Reference: "tools:stable", Created: store.Now()}
 	if err = m.Store.Put("image-build", b.ID, b); err != nil {
 		t.Fatal(err)
 	}
@@ -144,6 +144,15 @@ func TestBuildCenterImagesCatalogDeduplicatesWithoutHostScan(t *testing.T) {
 	}
 	if rows[0].Key != BuildCenterImageKey(registered.ImageID) || rows[0].ImageID != registered.ImageID {
 		t.Fatal("catalog identity changed")
+	}
+	found := false
+	for _, source := range rows[0].Sources {
+		if source.ID == b.ID {
+			found = source.RecipeName == "Frozen recipe" && source.RecipeVersion == "2.3.4"
+		}
+	}
+	if !found {
+		t.Fatal("frozen recipe identity missing")
 	}
 	if len(buildCenterFixtureCalls(f)) != before {
 		t.Fatal("catalog unexpectedly queried Docker")

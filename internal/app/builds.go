@@ -31,7 +31,7 @@ const buildContextLimit = 128 << 20
 const buildLogLimit = 4 << 20
 
 type ImageBuild struct {
-	CodexRuntime *BuildRuntimeSnapshot `json:"codexRuntime,omitempty"`
+	CodexRuntime    *BuildRuntimeSnapshot `json:"codexRuntime,omitempty"`
 	PlatformOS      string                `json:"platformOS,omitempty"`
 	PlatformArch    string                `json:"platformArch,omitempty"`
 	SourceBuildID   string                `json:"sourceBuildId,omitempty"`
@@ -62,6 +62,8 @@ type ImageBuild struct {
 	ImageVersionID  string                `json:"imageVersionId,omitempty"`
 	Error           string                `json:"error,omitempty"`
 	LogTruncated    bool                  `json:"logTruncated"`
+	RecipeName      string                `json:"recipeName,omitempty"`
+	RecipeVersion   string                `json:"recipeVersion,omitempty"`
 	RecipeID        string                `json:"recipeId,omitempty"`
 	RecipeRevision  int                   `json:"recipeRevision,omitempty"`
 	RecipeSHA       string                `json:"recipeSha,omitempty"`
@@ -338,6 +340,7 @@ func (m *Manager) createBuildWithRecipe(iid, name, dockerfile string, timeout in
 			v.PublicImage = recipe.PublicImage
 		}
 		v.RecipeID, v.RecipeRevision, v.RecipeSHA = recipe.RecipeID, recipe.RecipeRevision, recipe.RecipeSHA
+		v.RecipeName, v.RecipeVersion = recipe.RecipeName, recipe.RecipeVersion
 		v.RecipeSmoke, v.OwnerRunID, v.RequestID, v.RequestSHA, v.RebuildOf = recipe.RecipeSmoke, recipe.OwnerRunID, recipe.RequestID, recipe.RequestSHA, recipe.RebuildOf
 		if setup == nil && (recipe.RecipeID != "" || recipe.Scope == "recipe") {
 			v.Scope, v.Source, v.Status = "recipe", "build", "queued"
@@ -615,8 +618,12 @@ func (m *Manager) executeBuild(ctx context.Context, v ImageBuild) (imageID strin
 		return id, bounded.truncated, err
 	}
 	runtimeArgs, runtimeErr := m.prepareBuildRuntime(ctx, v, filepath.Join(dir, "context"), out)
-	if runtimeErr != nil { return "", false, runtimeErr }
-	if err := m.prepareBuildDownloads(ctx, v, filepath.Join(dir, "context"), out); err != nil { return "", false, err }
+	if runtimeErr != nil {
+		return "", false, runtimeErr
+	}
+	if err := m.prepareBuildDownloads(ctx, v, filepath.Join(dir, "context"), out); err != nil {
+		return "", false, err
+	}
 	iidfile := filepath.Join(dir, "image-id")
 	_ = os.Remove(iidfile)
 	args := []string{"build", "--builder", "default", "--load", "--progress=plain", "--platform", "linux/" + runtime.GOARCH, "--iidfile", iidfile, "--tag", v.Reference, "--file", filepath.Join(dir, "context", filepath.FromSlash(v.Dockerfile))}

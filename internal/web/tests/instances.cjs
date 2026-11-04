@@ -74,8 +74,8 @@ function deferred() { let resolve; const promise = new Promise(done => {resolve=
   sync();
   await w.RunDeskInstances.open();
   assert.equal(state.view,'instances'); assert.equal(w.location.hash,'#instances');
-  button($('#instances-page'),'从镜像添加 Agent').click();assert.deepEqual(w.buildCenterOpen,['images']);
-  button($('#instances-page'),'准备 Docker 镜像').click();assert.deepEqual(w.buildCenterOpen,['recipes']);
+  button($('#instances-page'),'从镜像添加 Agent').click();assert.deepEqual(w.buildCenterOpen,['workbench']);
+  button($('#instances-page'),'准备 Docker 镜像').click();assert.deepEqual(w.buildCenterOpen,['workbench']);
   for (const id of ['default','video','other']) assert($('#instances-page').textContent.includes(id),'missing instance '+id);
   assert(!$('#instances-page [data-instance-id="kun"]'),'maintenance Agent leaked into daily list');
   assert.equal(requests.filter(row => row.method !== 'GET').length,0,'opening instances changed runtime');

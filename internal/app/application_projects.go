@@ -165,6 +165,9 @@ func (m *Manager) PutApplicationProjectEnvironment(appID, projectID, presetID st
 	if _, e = m.EnsureApplicationEnvironment(i.ID, w.ID); e != nil {
 		return ApplicationProjectEnvironment{}, e
 	}
+	if e = m.inheritProjectCodexProvider(i.ID, a.WorkspaceID, w.ID); e != nil {
+		return ApplicationProjectEnvironment{}, e
+	}
 	b := ApplicationProjectEnvironment{AppID: appID, ProjectID: projectID, PresetID: presetID, Name: name, InstanceID: i.ID, WorkspaceID: w.ID, Path: w.Path, Created: store.Now()}
 	if e := m.Store.Put("application-project-environment", projectEnvironmentKey(appID, projectID, presetID), b); e != nil {
 		return ApplicationProjectEnvironment{}, e

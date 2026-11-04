@@ -425,7 +425,10 @@ func (m *Manager) prepareSession(wid, title, model, iid string, source SessionSo
 		if i.AgentRuntime.Kind == "kun" {
 			model = i.AgentRuntime.Model
 		} else {
-			model = i.DefaultModel
+			model = m.codexProviderModel(i.ID, wid)
+			if model == "" {
+				model = i.DefaultModel
+			}
 		}
 	}
 	s := Session{RuntimeKind: runtimeKind(i.AgentRuntime.Kind), ExecutionMode: i.Execution.normalized().Mode, Source: source, TraceOrigin: origin, ID: store.ID(), InstanceID: i.ID, WorkspaceID: wid, Title: title, Model: model, Status: "idle", Created: store.Now(), Updated: store.Now()}

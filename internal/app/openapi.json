@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Control API (RDCA)",
-    "version": "0.61.0",
+    "version": "0.62.0",
     "description": "RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter；附加 UHP /v1 入口共用任务核心，具体范围与限制见 docs/UHP.md，不声明完整规范兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。0.61.0 起日常会话与应用任务仅接受 Codex，Kun 用于维护、轨迹问答及保留的研究 API；普通 Kun 提交返回 kun_maintenance_only。当前应用接入、错误、幂等及示例见 docs/API-V1.md。"
   },
   "servers": [
@@ -3053,6 +3053,16 @@
                     "type": "string",
                     "pattern": "^[a-f0-9]{24}$",
                     "description": "同一逻辑操作重试保持不变；更改参数需新值。"
+                  },
+                  "providerMode": {
+                    "type": "string",
+                    "enum": [
+                      "inherit-default",
+                      "existing"
+                    ]
+                  },
+                  "providerRevision": {
+                    "type": "integer"
                   }
                 },
                 "required": [
@@ -4389,6 +4399,300 @@
         },
         "x-administrator-only": true,
         "description": "仅管理员。上传只创建 draft；显式 start 入队，全局串行。重复 start 返回同一任务，不重复执行。重启后未完成任务标为 interrupted，不自动重跑。完成后清理上下文，保留元数据与最多 4 MiB 日志。构建结果不自动选择或部署。"
+      }
+    },
+    "/setup/codex-provider": {
+      "get": {
+        "operationId": "get_setup_codex_provider",
+        "summary": "初始化：读取或按revision保存默认Codex Responses服务",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodexProviderConfig"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取或按revision保存默认Codex Responses服务。新建Agent显式选择继承；不覆盖已有环境。仅保存密钥环境变量名称，不返回密钥。"
+      },
+      "put": {
+        "operationId": "put_setup_codex_provider",
+        "summary": "初始化：读取或按revision保存默认Codex Responses服务",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            },
+            "description": "同一逻辑操作重试复用原键和原请求；不确定结果先核对原回执。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodexProviderConfig"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取或按revision保存默认Codex Responses服务。新建Agent显式选择继承；不覆盖已有环境。仅保存密钥环境变量名称，不返回密钥。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodexProviderInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/instances/{iid}/codex-provider": {
+      "get": {
+        "operationId": "get_instances_iid_codex_provider",
+        "summary": "初始化：读取或更新准确Agent/工作区的Codex提供方",
+        "parameters": [
+          {
+            "name": "iid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "workspaceId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodexProviderEnvironment"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取或更新准确Agent/工作区的Codex提供方。作用于持久配置，保留其他配置项；不写入镜像。"
+      },
+      "put": {
+        "operationId": "put_instances_iid_codex_provider",
+        "summary": "初始化：读取或更新准确Agent/工作区的Codex提供方",
+        "parameters": [
+          {
+            "name": "iid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            },
+            "description": "同一逻辑操作重试复用原键和原请求；不确定结果先核对原回执。"
+          },
+          {
+            "name": "workspaceId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodexProviderEnvironment"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "读取或更新准确Agent/工作区的Codex提供方。作用于持久配置，保留其他配置项；不写入镜像。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodexProviderInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/instances/{iid}/codex-provider/test": {
+      "post": {
+        "operationId": "post_instances_iid_codex_provider_test",
+        "summary": "初始化：在准确host/container网络位置主动检查已应用的Responses推理与无副作用工具调用",
+        "parameters": [
+          {
+            "name": "iid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+            },
+            "description": "同一逻辑操作重试复用原键和原请求；不确定结果先核对原回执。"
+          },
+          {
+            "name": "workspaceId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；须检查结果字段，HTTP成功不代表环境就绪。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodexProviderTest"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、参数、配置或执行错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "在准确host/container网络位置主动检查已应用的Responses推理与无副作用工具调用。不会隐式启动容器；发现模型和保存配置均不代表通过。"
       }
     },
     "/sessions/{sid}/debug/capabilities": {
@@ -18958,7 +19262,7 @@
           }
         },
         "x-administrator-only": true,
-        "description": "只读扫描运行RunDesk的服务器环境。检查平台、GPU与常用工具，并对本机loopback常见端口和Linux监听端口做有界模型目录探测；不扫描局域网或安装软件。POST可指定最多16个HTTP(S)服务；凭据只附加到显式服务。发现模型不表示模型推理或工具调用通过。"
+        "description": "只读扫描运行RunDesk的服务器环境。检查平台、GPU与常用工具，并对本机loopback常见端口、Linux监听端口及本机Docker发布端口做有界模型目录探测；保留容器来源和失败候选，不执行容器命令、不读取容器环境变量，不扫描局域网或安装软件。POST可指定最多16个HTTP(S)服务；凭据只附加到显式服务。发现模型不表示模型推理或工具调用通过。"
       },
       "post": {
         "operationId": "post_setup_discovery",
@@ -18996,7 +19300,7 @@
           }
         },
         "x-administrator-only": true,
-        "description": "只读扫描运行RunDesk的服务器环境。检查平台、GPU与常用工具，并对本机loopback常见端口和Linux监听端口做有界模型目录探测；不扫描局域网或安装软件。POST可指定最多16个HTTP(S)服务；凭据只附加到显式服务。发现模型不表示模型推理或工具调用通过。",
+        "description": "只读扫描运行RunDesk的服务器环境。检查平台、GPU与常用工具，并对本机loopback常见端口、Linux监听端口及本机Docker发布端口做有界模型目录探测；保留容器来源和失败候选，不执行容器命令、不读取容器环境变量，不扫描局域网或安装软件。POST可指定最多16个HTTP(S)服务；凭据只附加到显式服务。发现模型不表示模型推理或工具调用通过。",
         "requestBody": {
           "required": true,
           "content": {
@@ -30239,6 +30543,12 @@
           "recipeId": {
             "type": "string"
           },
+          "recipeName": {
+            "type": "string"
+          },
+          "recipeVersion": {
+            "type": "string"
+          },
           "recipeSha": {
             "type": "string"
           },
@@ -32015,6 +32325,7 @@
             "type": "string",
             "enum": [
               "loopback",
+              "docker",
               "explicit"
             ]
           },
@@ -32042,6 +32353,12 @@
           },
           "inferenceTested": {
             "const": false
+          },
+          "containerIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -32051,6 +32368,51 @@
           "models",
           "authRequired",
           "inferenceTested"
+        ],
+        "additionalProperties": false
+      },
+      "SetupDiscoveryContainer": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          },
+          "networkMode": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "published",
+              "host",
+              "unexposed",
+              "unsupported",
+              "inspect_failed"
+            ]
+          },
+          "warning": {
+            "type": "string"
+          },
+          "endpoints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "image",
+          "networkMode",
+          "status",
+          "endpoints"
         ],
         "additionalProperties": false
       },
@@ -32080,6 +32442,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SetupDiscoveryService"
+            }
+          },
+          "containers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SetupDiscoveryContainer"
             }
           },
           "warnings": {
@@ -32190,6 +32558,173 @@
           "status",
           "checkedAt",
           "latencyMs"
+        ],
+        "additionalProperties": false
+      },
+      "CodexProviderInput": {
+        "type": "object",
+        "properties": {
+          "baseUrl": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "model": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "apiKeyEnv": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "revision": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "baseUrl",
+          "model",
+          "revision"
+        ],
+        "additionalProperties": false
+      },
+      "CodexProviderConfig": {
+        "type": "object",
+        "properties": {
+          "configured": {
+            "type": "boolean"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "baseUrl": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "apiKeyEnv": {
+            "type": "string"
+          },
+          "wireAPI": {
+            "const": "responses"
+          }
+        },
+        "required": [
+          "configured",
+          "revision",
+          "baseUrl",
+          "model",
+          "apiKeyEnv",
+          "wireAPI"
+        ],
+        "additionalProperties": false
+      },
+      "CodexProviderEnvironment": {
+        "type": "object",
+        "properties": {
+          "configured": {
+            "type": "boolean"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "baseUrl": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "apiKeyEnv": {
+            "type": "string"
+          },
+          "wireAPI": {
+            "const": "responses"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "environmentId": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "instance",
+              "environment"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "unmanaged",
+              "pending",
+              "configured",
+              "recreate_required"
+            ]
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "configured",
+          "revision",
+          "baseUrl",
+          "model",
+          "apiKeyEnv",
+          "wireAPI",
+          "instanceId",
+          "workspaceId",
+          "scope",
+          "state",
+          "warnings"
+        ],
+        "additionalProperties": false
+      },
+      "CodexProviderTest": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "inference_only",
+              "failed"
+            ]
+          },
+          "inferenceOK": {
+            "type": "boolean"
+          },
+          "toolsOK": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "docker-container",
+              "host"
+            ]
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "status",
+          "inferenceOK",
+          "toolsOK",
+          "scope",
+          "checkedAt"
         ],
         "additionalProperties": false
       },
@@ -33691,6 +34226,12 @@
                 },
                 "recipeRevision": {
                   "type": "integer"
+                },
+                "recipeName": {
+                  "type": "string"
+                },
+                "recipeVersion": {
+                  "type": "string"
                 }
               },
               "required": [

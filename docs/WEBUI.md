@@ -1,6 +1,6 @@
 # WebUI：工作区、会话与 Agent / Workspaces, conversations and Agents
 
-本文描述 RunDesk 0.61.0 的界面与当前后端边界。升级不改变存储布局，也不迁移或删除原有实例、工作区和历史数据。界面将长期保存的“实例”称为 **Agent**；它不等同于 Docker 容器。应用的“应用设置”页展示可用 Agent 环境、默认绑定、凭据授权数量和项目工作区；见[运行预设](APPLICATION-RUNTIME-PRESETS.md)与[项目环境](APPLICATION-PROJECT-ENVIRONMENTS.md)。
+本文描述 RunDesk 0.62.0 的界面与当前后端边界。升级不改变存储布局，也不迁移或删除原有实例、工作区和历史数据。界面将长期保存的“实例”称为 **Agent**；它不等同于 Docker 容器。应用的“应用设置”页展示可用 Agent 环境、默认绑定、凭据授权数量和项目工作区；见[运行预设](APPLICATION-RUNTIME-PRESETS.md)与[项目环境](APPLICATION-PROJECT-ENVIRONMENTS.md)。
 
 RunDesk 的会话按工作区组织：进入工作区后新建会话，由会话选择 Codex 运行环境。同一工作区可以包含多个使用不同 Codex 配置的会话。Kun 不出现在日常 Agent 列表与新建任务选项中，内部维护从“环境设置”和构建中心进入。Agent 管理负责模型、Skills、MCP 和插件配置；应用接入和构建中心分别负责外部调用与运行环境准备，不要求用户先注册应用才能管理实例。
 
@@ -26,7 +26,15 @@ RunDesk 的会话按工作区组织：进入工作区后新建会话，由会话
 
 默认实例保留本机使用方式。通过构建中心创建的 Docker 实例可以直接进入实例页面管理；重建容器不等于重新创建实例。Kun 当前仍仅支持本机 worker，不能通过界面布局变化获得 Docker 托管能力。
 
-Agent 页面明确当前工作区；Docker 构建与镜像管理统一从左侧“构建中心”进入。会话页按“工作区 → 会话”两层组织，同一工作区同时展示不同引擎的会话。会话标题旁显示 Codex/Kun 及具体环境标签；新会话可点击标签更换引擎，已创建的会话保持原绑定。Skills、MCP 和插件在同一个高度稳定的设置对话框中。切换工作区后，应核对配置所属的运行环境；任务与轨迹保留原来的 Agent 和工作区归属。应用页分为“任务记录”和“应用设置”：设置页同时展示全部已绑定预设及启用数量，应用可绑定多个预设，每个任务选择一个。页面只有一个“添加预设”入口，各预设在自己的卡片中配置能力；默认环境、容器技术信息、应用项目和凭据收在展开项中。添加弹窗自动创建工作目录，技术字段默认收起，保存按钮固定在底部。详情见[运行预设](APPLICATION-RUNTIME-PRESETS.md)。
+Agent 页面明确当前工作区；Docker 构建与镜像管理统一从左侧“构建中心”进入。会话页按“工作区 → 会话”两层组织，同一工作区同时展示不同 Codex 配置的会话。会话标题旁显示具体 Codex 环境标签；新会话可点击标签更换环境，已创建的会话保持原绑定。Skills、MCP 和插件在同一个高度稳定的设置对话框中。切换工作区后，应核对配置所属的运行环境；任务与轨迹保留原来的 Agent 和工作区归属。应用页分为“任务记录”和“应用设置”：设置页同时展示全部已绑定预设及启用数量，应用可绑定多个预设，每个任务选择一个。页面只有一个“添加预设”入口，各预设在自己的卡片中配置能力；默认环境、容器技术信息、应用项目和凭据收在展开项中。添加弹窗自动创建工作目录，技术字段默认收起，保存按钮固定在底部。详情见[运行预设](APPLICATION-RUNTIME-PRESETS.md)。
+
+## 构建工作台
+
+构建中心默认沿“选择配方 → 准备镜像 → 创建 Agent”显示当前上下文。选择配方后可查看对应构建、已有镜像与已使用它的 Agent；已有镜像可以直接复用，不要求每次重新构建。配方有多个版本和构建结果，一个镜像也可服务多个 Agent。缺少可靠来源的镜像明确显示来源未知。
+
+镜像卡片将配方名称与版本放在上方，固定 Image ID 和标签放在下方；历史记录优先采用冻结名称与版本，不用后来改名的配方替换历史身份。原配方、构建与测试、镜像及发布记录的深链接仍可进入高级视图，复用原后台队列、测试和请求重试记录。
+
+创建 Agent 的模型设置选择已有配置或本次显式继承的默认 Codex 服务。模型提供方配置不写进镜像；具体作用范围、凭据与检查边界见[Codex 模型服务](CODEX-PROVIDERS.md)。
 
 ## 工作区与会话
 
@@ -62,6 +70,8 @@ Agent 页面明确当前工作区；Docker 构建与镜像管理统一从左侧�
 历史专题文档中的顶部按钮或创建入口说明不再代表当前导航。研究 API 与数据语义仍见[分叉](KUN-FORKS.md)、[任务集](KUN-TASK-SETS.md)、[K4](KUN-K4.md)和[离线实验](KUN-EXPERIMENTS.md)。
 
 ## English summary
+
+Build Center opens as a recipe → image → Agent workbench, reuses existing images and displays linked Agents. Friendly frozen recipe names lead image cards; identifiers remain available below. Docker-aware model discovery retains candidate failures. Codex provider settings target an explicit environment and remain distinct from the Kun maintenance model.
 
 New installations begin with three full-screen pages: find and configure LLM, configure and install Codex, and optionally prepare Docker environments. Basic setup can finish after Codex; Environment setup reopens the guide later. The Docker page defaults to a published prebuilt image and retains local build or existing-image options. The bundled public catalog stays empty until actual release references are provided. Conversations are organized in two levels: workspace, then conversation. Each conversation displays its Codex environment tag. New conversations inherit the workspace’s last available Codex environment; the tag can change it before session creation. Kun is reserved for maintenance, trace questions and retained research APIs. Maintenance directories and Kun records are excluded from the everyday conversation tree; historical records remain accessible by their existing links. Existing sessions keep their execution identity. Ordinary workspaces can host multiple Docker environments with separate homes, while application-owned workspaces retain their owner. Skills, MCP and plugins share a settings dialog. Build presets produce images; images can support multiple Agents. Application registration remains an integration concern.
 
