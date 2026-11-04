@@ -29,7 +29,7 @@ function updateProductNavigation(){
 function setProductPage(view){
  state.view=view;document.body.dataset.view=view;if(!["instances","instance"].includes(view))state.instanceResolving=false;
  for(const [selector,shown] of [["#tasks-page",view==="tasks"],[".main-row",view==="conversation"],["#instances-page",["instances","instance"].includes(view)],["#applications-page",["applications","application","users"].includes(view)],["#build-center-page",view==="build-center"]])$(selector)?.classList.toggle("hidden",!shown);
- updateProductNavigation();closeConversationSidebar();
+ updateProductNavigation();closeConversationSidebar();window.RunDeskLayout?.setView(view);
 }
 async function refreshApplicationCatalog(){const selection=state.selection;const [a,i,s]=await Promise.all([api("/applications"),api("/instances"),api("/sessions")]);if(selection!==state.selection)return;const id=instance()?.id||"default";state.applications=a;state.instances=i;state.sessions=s;renderInstanceOptions(id);}
 async function enterAssistant(){if(window.RunDeskConversations)return RunDeskConversations.open();resetConversation();renderInstanceOptions("default");const wid=localStorage.getItem("rundesk-assistant-workspace");if(state.workspaces.some(w=>w.id===wid))$("#workspace").value=wid;setProductPage("conversation");updateWorkspaceLabel();history.replaceState(null,"","#assistant");const sid=localStorage.getItem("rundesk-session"),last=state.sessions.find(s=>s.id===sid&&s.instanceId==="default"&&s.source?.kind!=="application");if(state.drafts.has(draftKey())){restoreProductDraft();renderStatus();}else if(last)await selectSession(last.id);else await selectFirst();renderSessions();}

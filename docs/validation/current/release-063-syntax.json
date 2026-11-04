@@ -1,0 +1,712 @@
+{
+  "passed": true,
+  "fileCount": 117,
+  "cases": [
+    {
+      "command": "node --check internal/web/app.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/application-keys.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/applications.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/build-center.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/builds.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/codex-provider.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/collaboration.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/configuration.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/conversation-rounds.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/conversation.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/debug-trace.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/diagnostic-review.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/diagnostics.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/environments.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/experiments.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/i18n.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/images.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/instances.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/kun-benchmarks.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/kun-case-runs.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/kun-compare.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/kun-debug.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/kun-evaluation.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/kun-forks.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/kun-hypothesis.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/kun-inspect.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/kun-panels.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/kun-skills.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/kun-task-sets.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/kun.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/layout.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/library.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/manage.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/mcp-policy.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/mcp-tests.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/member.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/plugins.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/processes.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/recovery.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/reliability.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/schedules.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/setup-images.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/setup-onboarding.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/setup.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/skill-bundles.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/tasks.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/tests/build-center.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/tests/build-workbench-browser.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/tests/codex-provider.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/tests/conversation-rounds-browser.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/tests/conversation-rounds.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/tests/instance-tasks.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/tests/instances.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/tests/layout.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/tests/runtime-presets-browser.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/tests/runtime-presets.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/tests/setup-discovery-browser.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/tests/setup-onboarding.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/tests/trace-timing-browser.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/tests/trace-timing.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/tests/workspace-conversations-browser.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/tests/workspace-conversations.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/trace-model.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/trace-process.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/trace-reader.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/trace.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/usage.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/users.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check internal/web/workspace-conversations.js",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/builds-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/capture-settings-ui-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/collaboration-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/conversation-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/credential-admission-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/credentials-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/debug-trace-ui-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/diagnostics-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/docker-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/images-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-benchmarks-ui-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-coding-http-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-compare-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-compare-ui-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-diagnostic-ui-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-evaluation-http-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-evaluation-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-experiment-ui-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-fixtures-http-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-harness-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-hybrid-ui-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-hybrid-ui-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-hypothesis-http-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-hypothesis-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-inspect-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-k4-http-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-k4-ui-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-live-ui-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-mcp-ui-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-panels-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-runtime-harness-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-task-sets-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/kun-ui-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/library-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/mcp-approval-card-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/mcp-approval-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/mcp-permissions-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/mcp-ui-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/process-ui-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/registration-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/setup-images-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/setup-runtime-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/setup-ui-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/test-instance-ui-browser.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/trace-reader-ui-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/unified-debug-ui-test.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/usage-ui-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    },
+    {
+      "command": "node --check scripts/users-smoke.cjs",
+      "exitCode": 0,
+      "error": null,
+      "stderr": ""
+    }
+  ],
+  "finalMetadataEditRecheck": {
+    "command": "node --check internal/web/tests/trace-timing-browser.cjs",
+    "exitCode": 0
+  }
+}

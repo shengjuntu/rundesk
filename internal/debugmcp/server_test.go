@@ -185,14 +185,52 @@ func TestClientOriginCredentialAndResponseBoundaries(t *testing.T) {
 }
 
 func TestProjectionArgumentsAreTypedAndScoped(t *testing.T) {
-	for _, test := range []struct{ kind, args string }{{"steps", `{"runId":"r","query":"literal' OR 1=1 --","through":0,"limit":50}`}, {"step", `{"stepId":"step-1","runId":"r"}`}, {"statistics", `{"type":"mcpToolCall","status":"failed"}`}} {
+	for _, test := range []struct{ kind, args string }{{"steps", `{"runId":"r","query":"literal' OR 1=1 --","through":0,"limit":50,"sort":"duration_desc"}`}, {"issues", `{"sort":"duration_asc"}`}, {"steps", `{"sort":"recorded"}`}, {"step", `{"stepId":"step-1","runId":"r"}`}, {"statistics", `{"type":"mcpToolCall","status":"failed"}`}} {
 		if _, e := arguments(test.kind, json.RawMessage(test.args)); e != nil {
 			t.Fatal(test, e)
 		}
 	}
-	for _, test := range []struct{ kind, args string }{{"steps", `{"runId":null}`}, {"steps", `{"query":1}`}, {"steps", `{"limit":51}`}, {"steps", `{"sessionId":"other"}`}, {"step", `{}`}, {"statistics", `{"offset":0}`}} {
+	for _, test := range []struct{ kind, args string }{{"steps", `{"runId":null}`}, {"steps", `{"query":1}`}, {"steps", `{"limit":51}`}, {"steps", `{"sessionId":"other"}`}, {"step", `{}`}, {"statistics", `{"offset":0}`}, {"statistics", `{"sort":"duration_desc"}`}, {"steps", `{"sort":1}`}, {"steps", `{"sort":null}`}, {"steps", `{"sort":"invalid"}`}} {
 		if _, e := arguments(test.kind, json.RawMessage(test.args)); e == nil {
 			t.Fatal("invalid projection args", test)
 		}
 	}
+}
+
+func TestDurationSortSchemaAndForwarding(t *testing.T) {
+	for _, entry := range Tools() {
+		tool := entry.(map[string]any)
+		props := tool["inputSchema"].(map[string]any)["properties"].(map[string]any)
+		schema, exists := props["sort"]
+		want := tool["name"] == "debug_steps" || tool["name"] == "debug_issues"
+		if exists != want {
+			t.Fatal("sort exposed on inapplicable tool", tool["name"])
+		}
+		if want {
+			v := schema.(map[string]any)
+			if v["type"] != "string" || fmt.Sprint(v["enum"]) != "[recorded duration_desc duration_asc]" {
+				t.Fatal("sort schema does not match parser", v)
+			}
+		}
+	}
+	var hits atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		if r.Method != "GET" || r.URL.Query().Get("kind") != "steps" || r.URL.Query().Get("sort") != "duration_desc" || r.URL.Query().Get("through") != "99" || r.URL.Query().Get("runId") != "r" || r.URL.Query().Get("offset") != "20" {
+			t.Error("typed frozen sort selectors were lost", r.URL)
+		}
+		fmt.Fprint(w, `{"sessionId":"fixed-session","data":{"steps":[],"total":0}}`)
+	}))
+	defer server.Close()
+	client, err := New(server.URL, "fixed-session", "secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := transcript(t, client, initLine, readyLine,
+		`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"debug_steps","arguments":{"sort":"duration_desc","through":99,"runId":"r","offset":20}}}`,
+		`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"debug_steps","arguments":{"sort":1}}}`)
+	if hits.Load() != 1 || !bytes.Contains(rows[1]["result"], []byte(`"isError":false`)) {
+		t.Fatal("valid typed sort did not reach read-only HTTP client", rows)
+	}
+	errorCode(t, rows[2], -32602)
 }

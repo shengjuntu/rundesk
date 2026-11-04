@@ -63,7 +63,7 @@ GET /api/v1/sessions/{sid}/debug/query?kind=diff&fromSequence=40&sequence=42
 
 ```text
 GET /api/v1/sessions/{sid}/debug/query?kind=runs&limit=50
-GET /api/v1/sessions/{sid}/debug/query?kind=steps&through=500&runId=RUN_ID&type=mcpToolCall
+GET /api/v1/sessions/{sid}/debug/query?kind=steps&through=500&runId=RUN_ID&type=mcpToolCall&sort=duration_desc
 GET /api/v1/sessions/{sid}/debug/query?kind=step&through=500&stepId=step-123&runId=RUN_ID
 GET /api/v1/sessions/{sid}/debug/query?kind=issues&through=500&runId=RUN_ID
 GET /api/v1/sessions/{sid}/debug/query?kind=statistics&through=500&runId=RUN_ID
@@ -73,8 +73,11 @@ GET /api/v1/sessions/{sid}/debug/query?kind=statistics&through=500&runId=RUN_ID
 
 - 返回 `source=host_projection` 与顶层 `through`；它不是 worker sequence。首次可省略 through，后续查询与读取证据应原样保留，包括 0。不自动推进到最新记录。
 - runs/steps/issues 用 offset/limit 分页，默认且最多 50。steps/issues/statistics 可按 runId/type/status 精确筛选，query 为脱敏预览的字面子串搜索，不接受 SQL/正则。单个字符串限制 256 字符，query 1000 字符；step 需 stepId，传 runId 时须匹配。
-- 每个 step 的 ID 为 `step-首次宿主事件ID`。包含 eventIds、预览、状态、开始/结束来源、缺失项与异常信号。Kun 另列 workerSequences，两类编号不能互换。列表按首次来源事件顺序，不能当成完成先后排序。
+- 0.63.0 的 `steps/issues` 可加 `sort=recorded|duration_desc|duration_asc`；默认 recorded。耗时排序覆盖全部筛选结果后再做 offset/limit 分页，缺完整区间的步骤排在已知耗时后；同值保持原来源顺序。`statistics` 本身不接受 sort。
+- `kind=statistics` 的 `data.timing` 返回按来源声明的运行区间 `runs`、按类型步骤工作量 `byType` 和最多十项 `slowestSteps`。完整同钟区间才有 `durationMs`，`clock`、`startMethod` 和 `endMethod` 说明依据：宿主 `run/input` 起点包含提交后等待；原生 `turn/started` 或 Kun worker 起点不包含宿主启动前等待。运行中的 `observedElapsedMs` 仅取同一时钟内已保留事件跨度，不随当前系统时间增长。`knownWorkDurationMs` 不包含 HTTP／WebSocket 观测，嵌套或并行步骤仍可能重叠。字段合同见[OpenAPI](API-V1.md)与[耗时说明](TRACE.md#耗时分析)。
+- 每个 step 的 ID 为 `step-首次宿主事件ID`。包含 eventIds、预览、状态、开始/结束来源、缺失项与异常信号。Kun 另列 workerSequences，两类编号不能互换。默认列表按首次来源事件顺序，不能当成完成先后排序；显式耗时排序也不表示完成顺序。
 - `association=observed/reconstructed/inferred/missing` 分别表示记录明确给出 runId、使用已知关联标识、按当前输入顺序推定、缺少身份。缺少 runId 的未知 turn 建立合成 observed-turn ID，不接到另一个已知 turn；无 item ID 不合并，多条开始记录无法唯一配对时保留歧义。
+- 0.63.0 在同一固定快照内预读明确的 `run/turn` 映射，可将晚到的原生 turn 证据归到其宿主 run；映射冲突时不强行合并。该映射不是耗时边界，超出 through 的映射不能影响旧快照。
 - Codex item 按 run/turn/type/item 关联；Kun 模型按 run/step/purpose、工具按 run/step/call、MCP 按 run/server/exchange 关联。晚到的已知 turn 结束事件仍归原轮次。审批同样保留自身边界；旧 `approval/expired` 没有明确受影响 ID 时，只显示过期记录，不伪造某一调用的结束。
 - `durationMs` 仅在唯一配对、双端时间有效且不逆序时提供。缺记录为未知，真实零毫秒保留；Kun 的原始 durationMs 另列 reportedDurationMs。原生事件用宿主接收时间、Kun 用保留的 worker 事件时间。统计中的各步骤时长可能重叠，合计不是运行耗时、费用或完成度。
 - issues 包括失败、告警、等待审批、缺少开始/结束、缺标识、配对歧义、未知状态或时间错误；它们是可复核信号，不是自动根因判断。运行中的步骤缺少结束记录不直接判为失败；终态仍无结束记录时标为未知。工具完成不证明业务目标达成。

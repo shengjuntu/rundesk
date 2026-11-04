@@ -206,6 +206,13 @@ func (b codexBackend) Run(run RuntimeRun) {
 		fail(errors.New("Codex turn/start 未返回有效 turn.id；提交结果无法确认，未自动重发，请核对原生线程"))
 		return
 	}
+	// Bind the frozen host run to the validated native reply. This may arrive
+	// after native notifications; readers pre-index the alias instead of guessing
+	// ownership from whichever round happens to be current when a message arrives.
+	if e = b.state.Event(s.ID, "internal", "run/turn", map[string]string{"runId": s.RunID, "turnId": result.Turn.ID, "threadId": s.ThreadID}); e != nil {
+		fail(e)
+		return
+	}
 	_ = b.state.Update(s.ID, func(v *Session) {
 		if v.TurnID == "" {
 			v.TurnID = result.Turn.ID

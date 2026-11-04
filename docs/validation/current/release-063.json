@@ -1,0 +1,76 @@
+{
+  "version": "0.63.0",
+  "date": "2026-11-04",
+  "status": "passed",
+  "scope": [
+    "Whole conversation-round disclosures with retained manual preferences and card identity",
+    "Trace timing overview, evidence clocks, slowest steps and global duration sorting",
+    "Compact navigation, contextual workspace history and accessible mobile drawer"
+  ],
+  "checks": [
+    {
+      "name": "go test -p 1 ./...",
+      "result": "passed",
+      "log": "release-063-go.log"
+    },
+    {
+      "name": "Final Debug MCP and OpenAPI contract packages",
+      "result": "passed",
+      "logs": [
+        "release-063-debugmcp.log",
+        "release-063-openapi.log"
+      ]
+    },
+    {
+      "name": "go vet -p 1 ./...",
+      "result": "passed",
+      "log": "release-063-vet.log"
+    },
+    {
+      "name": "11 JSDOM suites including existing trace reader",
+      "result": "passed",
+      "details": "release-063-web.json"
+    },
+    {
+      "name": "117 JavaScript syntax checks",
+      "result": "passed",
+      "details": "release-063-syntax.json"
+    },
+    {
+      "name": "Six isolated-service Chromium workflows, desktop/tablet/mobile",
+      "result": "passed",
+      "details": "release-063-qa.json"
+    },
+    {
+      "name": "Final Linux and Windows amd64 builds",
+      "result": "passed",
+      "notes": "Windows cross-compiled; not run on Windows."
+    },
+    {
+      "name": "Documentation links, versions, API schema field audit and reproducible generation",
+      "result": "passed",
+      "notes": "106 documents, 248 paths, 298 operations. All four timing structures match Go fields and required/omitempty semantics."
+    },
+    {
+      "name": "Final Linux binary --version",
+      "result": "passed",
+      "output": "RunDesk 0.63.0"
+    }
+  ],
+  "validation_notes": [
+    "Added an internal run/turn alias after validated native turn/start responses; real demo JSONL two-round test passed.",
+    "Exact native aliases are scoped to the fixed session snapshot and require a bijection; conflicts and unknown records remain unassigned.",
+    "Completed/succeeded rounds default closed; active, awaiting and failure rounds default open. Manual disclosure preferences persist. Focus inside a round keeps it open transiently.",
+    "Timing uses explicitly recorded same-clock boundaries. Host admission, native execution and Kun worker intervals are labeled separately. Parallel step durations are accumulated work, not wall duration.",
+    "HTTP, member HTTP, trace MCP and Debug MCP duration sorting apply before pagination and keep unknown durations last.",
+    "Final MCP adapter and timing schema gaps were corrected and rechecked with targeted packages and fresh builds; no timeout was weakened.",
+    "Browser screenshots were reviewed internally and are not included as new deliverables."
+  ],
+  "limits": [
+    "No deployment to the user server or live model, Docker daemon, vLLM, GPU or production Kun acceptance run.",
+    "Browser event/trace/model-discovery/image catalogs use explicitly scoped fixtures with real isolated Go services.",
+    "Existing unified-debug-ui-test.cjs has a Kun advanced fixture timeout reproduced on unchanged 0.62 and 0.63; it is not counted as passing. See QA report.",
+    "Missing timing boundaries remain unknown. Older records may lack exact native turn aliases and retain a disclosed conservative reconstruction."
+  ],
+  "qa_details": "release-063-qa.json"
+}

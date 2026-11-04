@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "scope": "Actual isolated Go demo service; recipe/build/image/launch/provider fixtures only. No Docker, model or worker executed.",
+  "checks": [
+    "single recipe to build to image to Agent workbench",
+    "friendly frozen recipe name/version above technical identity",
+    "desktop and mobile no horizontal overflow",
+    "launch default provider revision frozen across failed retry",
+    "created Agent shown linked to image",
+    "existing Agent settings entry saves exact provider binding and shows container-origin test failure"
+  ],
+  "errors": []
+}

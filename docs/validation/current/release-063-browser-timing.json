@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "scope": "Actual isolated Go demo service and shipped browser assets; read-only trace API fixtures, no model/Docker/worker execution.",
+  "checks": [
+    "wall duration distinct from parallel work sum",
+    "global-duration sort request resets first page and retains fixed run/cursor",
+    "unknown durations remain unknown at end of sorted pages",
+    "type filter preserves whole-run timing and resets paging",
+    "slowest step opens scoped evidence and host clock provenance remains visible",
+    "open run cannot inherit completed wall time",
+    "mobile timing layout and reachable header",
+    "inspection has no execution side effects"
+  ]
+}

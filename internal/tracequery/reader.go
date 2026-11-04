@@ -25,6 +25,7 @@ type Reader struct {
 	loaded    bool
 }
 type Run struct {
+	timing       runTimingEvidence
 	ID           string  `json:"id"`
 	Question     string  `json:"question"`
 	Status       string  `json:"status"`
@@ -60,6 +61,7 @@ type Step struct {
 	ReportedDurationMS *int64         `json:"reportedDurationMs,omitempty"`
 }
 type Args struct {
+	Sort         string         `json:"sort,omitempty"`
 	Source       string         `json:"source,omitempty"`
 	RecordKind   string         `json:"recordKind,omitempty"`
 	After        int64          `json:"after,omitempty"`
@@ -143,12 +145,15 @@ func (r *Reader) load(ctx context.Context) error {
 	if count > 20000 || total > 64<<20 || largest > 8<<20 {
 		return ErrProjectionLimit
 	}
+	index := newProjection()
+	if err := r.preindexTurnAliases(ctx, index); err != nil {
+		return err
+	}
 	rows, err := r.db.QueryContext(ctx, `SELECT id,time,method,data`+where+` ORDER BY id`, r.SessionID, r.Through)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
-	index := newProjection()
 	for rows.Next() {
 		if err = ctx.Err(); err != nil {
 			return err
@@ -186,6 +191,9 @@ func (r *Reader) Call(name string, a Args) (any, error) {
 	return r.CallContext(context.Background(), name, a)
 }
 func (r *Reader) CallContext(ctx context.Context, name string, a Args) (any, error) {
+	if err := validateStepSort(name, a.Sort); err != nil {
+		return nil, err
+	}
 	if a.Offset < 0 || a.Limit < 0 || a.Limit > 20000 || utf8.RuneCountInString(a.Query) > 1000 {
 		return nil, errors.New("invalid query limits")
 	}
@@ -307,8 +315,9 @@ func (r *Reader) CallContext(ctx context.Context, name string, a Args) (any, err
 				unknown++
 			}
 		}
-		return map[string]any{"steps": len(found), "byStatus": statuses, "byType": types, "attentionSteps": issues, "completeDurationSteps": complete, "withoutCompleteDuration": unknown, "sumRecordedDurationsMs": sum, "sessionId": r.SessionID, "snapshotThrough": r.Through, "projectionVersion": 2, "durationNote": "Host receive or Kun worker event times, as labeled on each step. Sum of step durations is not wall-clock runtime; parallel steps may overlap. Missing boundaries are not zero-duration steps.", "outcomeNote": "Tool completion is not proof that the user's goal was achieved."}, nil
+		return map[string]any{"steps": len(found), "byStatus": statuses, "byType": types, "attentionSteps": issues, "completeDurationSteps": complete, "withoutCompleteDuration": unknown, "sumRecordedDurationsMs": sum, "sessionId": r.SessionID, "snapshotThrough": r.Through, "projectionVersion": 2, "durationNote": "Host receive or Kun worker event times, as labeled on each step. Sum of step durations is not wall-clock runtime; parallel steps may overlap. Missing boundaries are not zero-duration steps.", "outcomeNote": "Tool completion is not proof that the user's goal was achieved.", "timing": r.timingSummary(found, a.RunID)}, nil
 	}
+	sortSteps(found, a.Sort)
 	offset := a.Offset
 	if offset > len(found) {
 		offset = len(found)

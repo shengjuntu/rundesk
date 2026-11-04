@@ -49,6 +49,8 @@ func Tools() []any {
 		for _, field := range d.Fields(kind) {
 			schema := map[string]any{"type": "integer", "minimum": 0}
 			switch field {
+			case "sort":
+				schema = map[string]any{"type": "string", "enum": []string{"recorded", "duration_desc", "duration_asc"}, "description": "Sort all matching runtime steps before pagination; unknown durations remain last."}
 			case "messageIndex":
 				schema["maximum"] = 4095
 				schema["description"] = "Only for WebSocket payload sections; message index, defaults to0"
@@ -114,7 +116,7 @@ func arguments(kind string, raw json.RawMessage) (url.Values, error) {
 		if !allowed[name] {
 			return nil, fmt.Errorf("unknown or inapplicable tool argument")
 		}
-		if name == "runId" || name == "type" || name == "status" || name == "query" || name == "stepId" || name == "section" || name == "source" || name == "recordKind" {
+		if name == "sort" || name == "runId" || name == "type" || name == "status" || name == "query" || name == "stepId" || name == "section" || name == "source" || name == "recordKind" {
 			var text string
 			if len(value) == 0 || value[0] != '"' || json.Unmarshal(value, &text) != nil {
 				return nil, fmt.Errorf("invalid text argument")

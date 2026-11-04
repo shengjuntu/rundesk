@@ -1,0 +1,59 @@
+/* Actual isolated Go service and shipped assets. Event/SSE state is a scoped
+ * renderer fixture; no model, worker or container is started. */
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),{spawn}=require('node:child_process');
+const {chromium,request}=require('playwright');
+(async()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'rundesk-rounds-browser-')),out=process.env.RUNDESK_BROWSER_OUTPUT;if(out)fs.mkdirSync(out,{recursive:true});
+ const server=spawn(process.env.RUNDESK_BINARY||path.resolve(__dirname,'../../../bin/rundesk'),['--demo','--listen','127.0.0.1:0','--data',dir],{env:{...process.env,RUNDESK_TOKEN:'',CODEX_BASE_TOKEN:''},stdio:['ignore','ignore','pipe']});let browser;
+ try{
+  const base=await new Promise((resolve,reject)=>{let log='';const timer=setTimeout(()=>reject(Error(log||'startup timeout')),20000);server.stderr.on('data',d=>{log+=d;const m=log.match(/RunDesk (http:\/\/127\.0\.0\.1:\d+)/);if(m){clearTimeout(timer);resolve(m[1])}});server.once('error',reject)});
+  const client=await request.newContext({baseURL:base}),api=async(route,method='GET',data)=>{const r=await client.fetch('/api/v1'+route,{method,data,headers:{'Idempotency-Key':require('node:crypto').randomUUID()}});assert(r.ok(),await r.text());return r.json()};
+  const work=await api('/workspaces','POST',{name:'轮次阅读'}),session=await api('/sessions','POST',{workspaceId:work.id,title:'制作视频'});
+  browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1440,height:960},locale:'zh-CN',bypassCSP:true}),errors=[],requests=[];
+  page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>requests.push({url:r.url(),method:r.method()}));
+  await page.addInitScript(()=>{localStorage.setItem('rundesk-language','zh');sessionStorage.setItem('rundesk-setup-dismissed','1');window.EventSource=class{close(){}};});
+  const event=(id,method,data,direction='in')=>({id,time:'2026-11-04T00:00:'+String(id).padStart(2,'0')+'Z',session:session.id,direction,method,data});
+  let events=[
+   event(1,'run/input',{runId:'run-first',input:{text:'先制作第一段视频\n要求保留这一轮的完整结果。'}},'local'),
+   event(2,'run/turn',{runId:'run-first',turnId:'turn-first',threadId:'thread-video'},'internal'),
+   event(3,'item/started',{params:{turnId:'turn-first',item:{id:'tool-first',type:'commandExecution',command:'inspect first material',status:'inProgress'}}}),
+   event(4,'item/completed',{params:{turnId:'turn-first',item:{id:'tool-first',type:'commandExecution',command:'inspect first material',status:'completed',aggregatedOutput:'第一轮工具结果'}}}),
+   event(5,'item/completed',{params:{turnId:'turn-first',item:{id:'answer-first',type:'agentMessage',text:'第一轮最终回答',status:'completed'}}}),
+   event(6,'run/state',{runId:'run-first',status:'completed'},'local'),
+   event(7,'run/input',{runId:'run-second',input:{text:'再调整第二段视频'}},'local'),
+   event(8,'run/turn',{runId:'run-second',turnId:'turn-second',threadId:'thread-video'},'internal'),
+   event(9,'item/started',{params:{turnId:'turn-second',item:{id:'answer-second',type:'agentMessage',text:'正在调整第二段',status:'inProgress'}}}),
+   event(10,'item/completed',{params:{turnId:'late-turn',item:{id:'late-tool',type:'commandExecution',command:'late alias tool',status:'completed',aggregatedOutput:'等待准确轮次归属'}}}),
+  ];
+  let current={...session,status:'running',runId:'run-second',turnId:'turn-second',threadId:'thread-video'};
+  await page.route('**/api/v1/sessions/'+session.id,route=>route.request().method()==='GET'?route.fulfill({json:current}):route.continue());
+  const render=async()=>page.evaluate(({events,current})=>{state.stream?.close();state.events=events;state.cursor=events.at(-1)?.id||0;state.session={...state.session,...current};renderMessages();renderStatus();},{events,current});
+  await page.goto(base+'/#session/'+session.id);await page.waitForFunction(id=>state.session?.id===id,session.id);await render();
+  const first=page.locator('.conversation-round[data-run-id="run-first"]'),second=page.locator('.conversation-round[data-run-id="run-second"]');
+  await first.waitFor();assert.equal(await first.evaluate(n=>n.open),false,'completed round did not collapse');assert((await first.locator('.conversation-round-title').innerText()).includes('先制作第一段视频'));assert(await first.getByText('第一轮最终回答',{exact:true}).isHidden());assert.equal(await second.evaluate(n=>n.open),true,'active round hidden');
+  assert((await page.locator('.conversation-unassigned').textContent()).includes('等待准确轮次归属'),'unknown turn was assigned by position');
+  await first.locator(':scope > summary').focus();await page.keyboard.press('Enter');assert.equal(await first.evaluate(n=>n.open),true);await first.getByText('第一轮最终回答',{exact:true}).waitFor({state:'visible'});
+  const retained=first.locator('[data-message-key]').first();await retained.evaluate(n=>n.dataset.qaRetained='yes');
+  events.push(event(11,'run/input',{runId:'run-third',input:{text:'核对后补录的任务'}},'internal'),event(12,'run/turn',{runId:'run-third',turnId:'late-turn',threadId:'thread-video'},'internal'));await render();const third=page.locator('.conversation-round[data-run-id="run-third"]');assert((await third.textContent()).includes('等待准确轮次归属'),'late authoritative alias not applied');assert.equal(await first.locator('[data-qa-retained=yes]').count(),1,'stream update replaced retained cards');assert.equal(await first.evaluate(n=>n.open),true,'manual round expansion lost');
+  if(out)await page.screenshot({path:path.join(out,'conversation-rounds-reading-desktop.png')});
+  // Conflicting explicit aliases must not turn uncertain history into evidence.
+  events.push(event(13,'run/turn',{runId:'run-conflict',turnId:'late-turn',threadId:'thread-video'},'internal'));await render();assert((await page.locator('.conversation-unassigned').textContent()).includes('等待准确轮次归属'));assert(!(await third.textContent()).includes('等待准确轮次归属'));assert(!(await second.textContent()).includes('等待准确轮次归属'));
+  events.push(event(14,'item/completed',{params:{turnId:'turn-second',item:{id:'answer-second',type:'agentMessage',text:'第二轮最终回答',status:'completed'}}}),event(15,'run/state',{runId:'run-second',status:'completed'},'internal'),event(16,'run/state',{runId:'run-third',status:'failed',error:'补录任务未完成，需要检查'},'internal'));current={...current,status:'completed'};await render();assert.equal(await second.evaluate(n=>n.open),false,'newly completed round remained expanded');assert.equal(await first.evaluate(n=>n.open),true,'other round completion reset a manual disclosure');assert.equal(await third.evaluate(n=>n.open),true,'failed round was automatically hidden');assert((await third.locator('.conversation-round-status').innerText()).includes('失败'));
+  await page.reload();await page.waitForFunction(id=>state.session?.id===id,session.id);await render();await first.waitFor();assert.equal(await first.evaluate(n=>n.open),true,'manual preference lost after reload');assert.equal(await second.evaluate(n=>n.open),false);
+  // A compact primary rail and contextual history panel preserve reading width.
+  const rail=page.locator('.global-rail'),sidebar=page.locator('#history-sidebar');assert((await rail.boundingBox()).width<=80);assert(await sidebar.isVisible());assert((await sidebar.boundingBox()).width>=220&&(await sidebar.boundingBox()).width<=360);assert((await page.locator('main').boundingBox()).width>=1000,'conversation reading width remains crowded');
+  await page.locator('#history-resize').focus();for(let i=0;i<8;i++)await page.keyboard.press('ArrowRight');assert.equal(await page.locator('#history-resize').getAttribute('aria-valuenow'),'360');for(let i=0;i<12;i++)await page.keyboard.press('ArrowLeft');assert.equal(await page.locator('#history-resize').getAttribute('aria-valuenow'),'220');
+  await page.locator('#history-collapse').click();assert(await sidebar.isHidden());await page.reload();await page.waitForFunction(id=>state.session?.id===id,session.id);assert(await sidebar.isHidden(),'desktop collapse preference lost after reload');assert.equal(await page.locator('#history-resize').getAttribute('aria-valuenow'),'220');await page.locator('#nav-build-center').click();await page.locator('#build-workbench').waitFor();assert(await sidebar.isHidden());assert(await sidebar.evaluate(n=>n.inert),'nonconversation history remains interactive');
+  await page.locator('#nav-assistant').click();await page.waitForFunction(()=>state.view==='conversation');assert(await sidebar.isHidden(),'desktop collapsed preference not restored');await page.locator('#sidebar-toggle').click();await sidebar.waitFor({state:'visible'});
+  await page.locator('#nav-instances').click();await page.locator('.instance-card').first().waitFor();assert(await sidebar.isHidden());await page.locator('#nav-assistant').click();await sidebar.waitFor({state:'visible'});
+  if(out)await page.screenshot({path:path.join(out,'conversation-rounds-desktop.png')});
+  await page.setViewportSize({width:390,height:844});assert((await rail.boundingBox()).width<=68);assert(await sidebar.isHidden());await page.locator('#sidebar-toggle').click();await sidebar.waitFor({state:'visible'});assert(await page.locator('main').evaluate(n=>n.inert),'main stays interactive behind drawer');assert(await rail.evaluate(n=>n.inert),'rail stays interactive behind drawer');
+  await page.locator('#sidebar-close').focus();await page.keyboard.press('Shift+Tab');assert(await sidebar.evaluate(n=>n.contains(document.activeElement)),'focus escaped mobile drawer');await page.keyboard.press('Escape');assert(await sidebar.isHidden());assert.equal(await page.evaluate(()=>document.activeElement?.id),'sidebar-toggle');assert.equal(await page.locator('main').evaluate(n=>n.inert),false);
+  await page.locator('#sidebar-toggle').click();await sidebar.waitFor({state:'visible'});await page.locator('#sidebar-backdrop').click({position:{x:2,y:2}});assert(await sidebar.isHidden());assert.equal(await page.evaluate(()=>document.activeElement?.id),'sidebar-toggle');
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'mobile conversation overflow');if(out)await page.screenshot({path:path.join(out,'conversation-rounds-mobile.png')});
+  await page.evaluate(()=>localStorage.removeItem('rundesk-history-collapsed'));await page.setViewportSize({width:800,height:960});await page.reload();await page.waitForFunction(id=>state.session?.id===id,session.id);assert(await sidebar.isHidden(),'tablet did not default to the compact view');assert.equal(Math.round((await rail.boundingBox()).width),72);
+  assert(!requests.some(r=>r.method!=='GET'&&/turns|actions|model-test|\/tasks/.test(r.url)),'reading/navigation executed work');assert.deepEqual(errors,[]);
+  const result={passed:true,scope:'Actual isolated Go demo service and shipped assets; controlled event renderer fixtures, no model, worker or Docker execution.',checks:['completed round title-only disclosure and active/failed visibility','manual keyboard expansion survives updates and reload','late exact run aliases and conflicting alias isolation','retained message-card identity','compact navigation and contextual history','desktop collapse/width preferences restored across views and reload','keyboard resize min/max bounds','mobile inert focus trap and Escape/backdrop recovery','tablet compact default','no implicit execution']};if(out)fs.writeFileSync(path.join(out,'conversation-rounds-browser.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result));await client.dispose();
+ }finally{if(browser)await browser.close();if(server.pid&&server.exitCode===null)await new Promise(r=>{server.once('exit',r);server.kill('SIGTERM')});fs.rmSync(dir,{recursive:true,force:true})}
+})().catch(e=>{console.error(e);process.exitCode=1});

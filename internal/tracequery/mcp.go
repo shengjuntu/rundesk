@@ -57,6 +57,7 @@ func Tools() []any {
 				props[key] = map[string]any{"type": "string"}
 			}
 			if v[0] == "trace_find_steps" || v[0] == "trace_find_issues" {
+				props["sort"] = map[string]any{"type": "string", "enum": []string{"recorded", "duration_desc", "duration_asc"}, "description": "Order all matching runtime steps before pagination. Unknown durations remain last; transport spans are separate."}
 				props["offset"] = map[string]any{"type": "integer", "minimum": 0}
 				props["limit"] = map[string]any{"type": "integer", "minimum": 1, "maximum": 50}
 			}

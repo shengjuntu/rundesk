@@ -17,6 +17,7 @@ var Kinds = []string{"overview", "run", "events", "event", "context", "tools", "
 
 type Query struct {
 	Kind         string `json:"kind"`
+	Sort         string `json:"sort,omitempty"`
 	Source       string `json:"source,omitempty"`
 	RecordKind   string `json:"recordKind,omitempty"`
 	Section      string `json:"section,omitempty"`
@@ -58,7 +59,7 @@ func Fields(kind string) []string {
 	case "runs":
 		return []string{"through", "offset", "limit"}
 	case "steps", "issues":
-		return []string{"through", "runId", "type", "status", "query", "offset", "limit"}
+		return []string{"through", "runId", "type", "status", "query", "sort", "offset", "limit"}
 	case "step":
 		return []string{"through", "runId", "stepId"}
 	case "statistics":
@@ -82,7 +83,7 @@ func (q Query) Validate() error {
 	for _, field := range Fields(q.Kind) {
 		allowed[field] = true
 	}
-	present := map[string]bool{"source": q.Source != "", "recordKind": q.RecordKind != "", "sequence": q.Sequence != 0, "fromSequence": q.FromSequence != 0, "after": q.After != 0, "through": q.Through != nil, "eventId": q.EventID != 0, "offset": q.Offset != 0, "limit": q.Limit != 0, "runId": q.RunID != "", "type": q.Type != "", "status": q.Status != "", "query": q.Search != "", "stepId": q.StepID != "", "section": q.Section != "", "messageIndex": q.MessageIndex != nil}
+	present := map[string]bool{"sort": q.Sort != "", "source": q.Source != "", "recordKind": q.RecordKind != "", "sequence": q.Sequence != 0, "fromSequence": q.FromSequence != 0, "after": q.After != 0, "through": q.Through != nil, "eventId": q.EventID != 0, "offset": q.Offset != 0, "limit": q.Limit != 0, "runId": q.RunID != "", "type": q.Type != "", "status": q.Status != "", "query": q.Search != "", "stepId": q.StepID != "", "section": q.Section != "", "messageIndex": q.MessageIndex != nil}
 	for field, yes := range present {
 		if yes && !allowed[field] {
 			return fmt.Errorf("inapplicable debug selector")
@@ -96,6 +97,9 @@ func (q Query) Validate() error {
 		if utf8.RuneCountInString(value) > limit {
 			return fmt.Errorf("debug text selector too long")
 		}
+	}
+	if q.Sort != "" && q.Sort != "recorded" && q.Sort != "duration_desc" && q.Sort != "duration_asc" {
+		return fmt.Errorf("unsupported step sort")
 	}
 	switch q.Kind {
 	case "transcript":
@@ -183,6 +187,9 @@ func Parse(values url.Values) (Query, error) {
 			continue
 		}
 		switch name {
+		case "sort":
+			q.Sort = items[0]
+			continue
 		case "source":
 			q.Source = items[0]
 			continue

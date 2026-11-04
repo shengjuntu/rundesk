@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "scope": "Actual isolated Go demo service with only discovery response fixture; no model, container or worker executed",
+  "checks": [
+    "Docker model provenance",
+    "failed and timeout candidates retained",
+    "unpublished container without fake endpoint",
+    "mobile no horizontal overflow",
+    "late discovery response preserves edited endpoint and model",
+    "discovery never invokes inference"
+  ],
+  "errors": []
+}

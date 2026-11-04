@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Control API (RDCA)",
-    "version": "0.62.0",
+    "version": "0.63.0",
     "description": "RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter；附加 UHP /v1 入口共用任务核心，具体范围与限制见 docs/UHP.md，不声明完整规范兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。0.61.0 起日常会话与应用任务仅接受 Codex，Kun 用于维护、轨迹问答及保留的研究 API；普通 Kun 提交返回 kun_maintenance_only。当前应用接入、错误、幂等及示例见 docs/API-V1.md。"
   },
   "servers": [
@@ -4910,6 +4910,20 @@
             "description": "events 默认 50、最大 200；event 默认 4000、最大 16000 字符；runs/steps/issues 默认 50、最大 50；llm_requests 默认 25、最大 50；llm_request 正文默认 4000、最大 16000 字节，*_chunks 和 *_messages 默认/最大 50，*_payload 默认 4000、最大 16000 字节。其他 kind 不接受。 observations/activity 默认 50、最大 200。 transcript 同样适用。 transcript 默认 20、最大 50。"
           },
           {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "recorded",
+                "duration_desc",
+                "duration_asc"
+              ]
+            },
+            "description": "仅 steps/issues；默认 recorded。耗时排序先覆盖全部筛选结果，再分页；没有完整耗时的步骤排在已知耗时之后，顺序稳定。statistics 的 timing 包含整轮区间、按类型工作量与最多十个最慢步骤；并行步骤合计不是整轮经过时间。"
+          },
+          {
             "name": "runId",
             "in": "query",
             "required": false,
@@ -5094,7 +5108,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "只读；应用凭据需 read 与会话归属，成员需项目授权。Codex 支持 overview/run（宿主概况，无 revision/sequence）、events/event（宿主保留事件）、runs/steps/step/issues/statistics（生命周期记录重建）及 llm_requests/llm_request（已保留的 HTTP 观测）；内部快照/上下文等仍返回 409 debug_unsupported。Kun 内部查询需在线 worker；不启动/恢复进程，不调用模型或工具，不写入对话。source 区分 host_session、host_journal、host_projection、http_observation、kun_worker。重建步骤不等于完整模型内部状态。先查询 capabilities；supported 与 available 区分支持情况与当前可用性。响应最大 4 MiB，超限返回 413。 llm_requests/llm_request 的 source=http_observation。列表只返回已保留观测的摘要；缺记录不代表没有上游请求。请求详情以 metadata、request/response 和 websocket 方向分块读取；正文 offset/limit 为字节，跨块精确恢复须拼接 bodyBase64 解码后的字节，不可拼接可能替换无效 UTF-8 的 text。标记 complete、truncated、incomplete 与 captureLoss，不能将有限采集判为完整。元数据上限 512 KiB，查询期限 8 秒。WebSocket 只读解码最多读取 32 MiB 原始帧，聚合载荷最多 16 MiB、4096 消息和 16384 帧；部分/压缩/非法帧明确标记。 runs/steps/step/issues/statistics 的 through 是宿主固定范围，source=host_projection，最多 20000 生命周期记录/64 MiB、单记录 8 MiB、查询索引期限 8 秒；超限 413，不返回不完整统计。 step.data 为 DebugStep；列表按首次来源事件顺序，issues 为确定性信号而非根因诊断。 events.data 为 DebugEventPage，仅元数据，不加载正文；event.data 为 DebugEventChunk，单事件超过 8 MiB 返回 413。历史查询从 through/sequence 固定，但不同请求不承诺组成跨数据源原子快照。未知和不适用字段即使为 0 也拒绝。 observations/activity 是 schemaVersion=1 的统一只读观测投影，source=unified_observation；前者按 after/limit 读取元数据事件，后者按 offset/limit 读取运行时步骤及传输活动。原始证据引用既有 event 或 llm_request，不复制正文。所有筛选和身份补充限于固定 through；Kun sequence/revision 独立保留，WebSocket 连接不能据建立时标签强归整个轮次。 transcript 为统一观测模型的会话阅读投影，source=unified_observation，返回 TranscriptPage；仅接受 through/runId/offset/limit，默认 20、最大 50 条。原始正文仍留在事件日志。单条最多 12000 个 Unicode 字符/32 个内容块，每页原始内容读取预算 16 MiB；超出时 contentTruncated/contentUnavailable 明示，使用 activity.evidence 读取来源。开放中的 Codex 消息可包含按原生 turnId/itemId 唯一对应的保留增量，并标记 contentPartial；不表示调用完成。HTTP 正文不进入会话内容，传输活动独立展示。",
+        "description": "只读；应用凭据需 read 与会话归属，成员需项目授权。Codex 支持 overview/run（宿主概况，无 revision/sequence）、events/event（宿主保留事件）、runs/steps/step/issues/statistics（生命周期记录重建）及 llm_requests/llm_request（已保留的 HTTP 观测）；内部快照/上下文等仍返回 409 debug_unsupported。Kun 内部查询需在线 worker；不启动/恢复进程，不调用模型或工具，不写入对话。source 区分 host_session、host_journal、host_projection、http_observation、kun_worker。重建步骤不等于完整模型内部状态。先查询 capabilities；supported 与 available 区分支持情况与当前可用性。响应最大 4 MiB，超限返回 413。 llm_requests/llm_request 的 source=http_observation。列表只返回已保留观测的摘要；缺记录不代表没有上游请求。请求详情以 metadata、request/response 和 websocket 方向分块读取；正文 offset/limit 为字节，跨块精确恢复须拼接 bodyBase64 解码后的字节，不可拼接可能替换无效 UTF-8 的 text。标记 complete、truncated、incomplete 与 captureLoss，不能将有限采集判为完整。元数据上限 512 KiB，查询期限 8 秒。WebSocket 只读解码最多读取 32 MiB 原始帧，聚合载荷最多 16 MiB、4096 消息和 16384 帧；部分/压缩/非法帧明确标记。 runs/steps/step/issues/statistics 的 through 是宿主固定范围，source=host_projection，最多 20000 生命周期记录/64 MiB、单记录 8 MiB、查询索引期限 8 秒；超限 413，不返回不完整统计。 step.data 为 DebugStep；列表按首次来源事件顺序，issues 为确定性信号而非根因诊断。 events.data 为 DebugEventPage，仅元数据，不加载正文；event.data 为 DebugEventChunk，单事件超过 8 MiB 返回 413。历史查询从 through/sequence 固定，但不同请求不承诺组成跨数据源原子快照。未知和不适用字段即使为 0 也拒绝。 observations/activity 是 schemaVersion=1 的统一只读观测投影，source=unified_observation；前者按 after/limit 读取元数据事件，后者按 offset/limit 读取运行时步骤及传输活动。原始证据引用既有 event 或 llm_request，不复制正文。所有筛选和身份补充限于固定 through；Kun sequence/revision 独立保留，WebSocket 连接不能据建立时标签强归整个轮次。 transcript 为统一观测模型的会话阅读投影，source=unified_observation，返回 TranscriptPage；仅接受 through/runId/offset/limit，默认 20、最大 50 条。原始正文仍留在事件日志。单条最多 12000 个 Unicode 字符/32 个内容块，每页原始内容读取预算 16 MiB；超出时 contentTruncated/contentUnavailable 明示，使用 activity.evidence 读取来源。开放中的 Codex 消息可包含按原生 turnId/itemId 唯一对应的保留增量，并标记 contentPartial；不表示调用完成。HTTP 正文不进入会话内容，传输活动独立展示。 statistics 的 timing 为 DebugTimingSummary：durationMs 仅完整有效的同钟区间，clock 与 startMethod/endMethod 声明依据；只有宿主 run/input 到终态的区间代表包含提交后等待的本轮总耗时，原生 turn/started 与 Kun worker 区间不包含宿主启动前等待。observedElapsedMs 仅进行中轮次在同一时钟的已保留事件跨度，不使用当前系统时间。缺失和无效边界不是零耗时；knownWorkDurationMs 不包含通信观测且不等于墙钟时间。",
         "x-application-scopes": [
           "read"
         ]
@@ -21503,6 +21517,20 @@
             "description": "events 默认 50、最大 200；event 默认 4000、最大 16000 字符；runs/steps/issues 默认 50、最大 50；llm_requests 默认 25、最大 50；llm_request 正文默认 4000、最大 16000 字节，*_chunks 和 *_messages 默认/最大 50，*_payload 默认 4000、最大 16000 字节。其他 kind 不接受。 observations/activity 默认 50、最大 200。 transcript 同样适用。 transcript 默认 20、最大 50。"
           },
           {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "recorded",
+                "duration_desc",
+                "duration_asc"
+              ]
+            },
+            "description": "仅 steps/issues；默认 recorded。耗时排序先覆盖全部筛选结果，再分页；没有完整耗时的步骤排在已知耗时之后，顺序稳定。statistics 的 timing 包含整轮区间、按类型工作量与最多十个最慢步骤；并行步骤合计不是整轮经过时间。"
+          },
+          {
             "name": "runId",
             "in": "query",
             "required": false,
@@ -21687,7 +21715,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "个人访问码或成员 Cookie。grantId 必须属于当前用户；仅允许授权应用项目。viewer 仅 GET；runner 可提交、上传、审批。任务和文件在同项目共享。变更为本机执行后禁止成员写入。 observations/activity 是 schemaVersion=1 的统一只读观测投影，source=unified_observation；前者按 after/limit 读取元数据事件，后者按 offset/limit 读取运行时步骤及传输活动。原始证据引用既有 event 或 llm_request，不复制正文。所有筛选和身份补充限于固定 through；Kun sequence/revision 独立保留，WebSocket 连接不能据建立时标签强归整个轮次。 transcript 为统一观测模型的会话阅读投影，source=unified_observation，返回 TranscriptPage；仅接受 through/runId/offset/limit，默认 20、最大 50 条。原始正文仍留在事件日志。单条最多 12000 个 Unicode 字符/32 个内容块，每页原始内容读取预算 16 MiB；超出时 contentTruncated/contentUnavailable 明示，使用 activity.evidence 读取来源。开放中的 Codex 消息可包含按原生 turnId/itemId 唯一对应的保留增量，并标记 contentPartial；不表示调用完成。HTTP 正文不进入会话内容，传输活动独立展示。",
+        "description": "个人访问码或成员 Cookie。grantId 必须属于当前用户；仅允许授权应用项目。viewer 仅 GET；runner 可提交、上传、审批。任务和文件在同项目共享。变更为本机执行后禁止成员写入。 observations/activity 是 schemaVersion=1 的统一只读观测投影，source=unified_observation；前者按 after/limit 读取元数据事件，后者按 offset/limit 读取运行时步骤及传输活动。原始证据引用既有 event 或 llm_request，不复制正文。所有筛选和身份补充限于固定 through；Kun sequence/revision 独立保留，WebSocket 连接不能据建立时标签强归整个轮次。 transcript 为统一观测模型的会话阅读投影，source=unified_observation，返回 TranscriptPage；仅接受 through/runId/offset/limit，默认 20、最大 50 条。原始正文仍留在事件日志。单条最多 12000 个 Unicode 字符/32 个内容块，每页原始内容读取预算 16 MiB；超出时 contentTruncated/contentUnavailable 明示，使用 activity.evidence 读取来源。开放中的 Codex 消息可包含按原生 turnId/itemId 唯一对应的保留增量，并标记 contentPartial；不表示调用完成。HTTP 正文不进入会话内容，传输活动独立展示。 statistics 的 timing 为 DebugTimingSummary：durationMs 仅完整有效的同钟区间，clock 与 startMethod/endMethod 声明依据；只有宿主 run/input 到终态的区间代表包含提交后等待的本轮总耗时，原生 turn/started 与 Kun worker 区间不包含宿主启动前等待。observedElapsedMs 仅进行中轮次在同一时钟的已保留事件跨度，不使用当前系统时间。缺失和无效边界不是零耗时；knownWorkDurationMs 不包含通信观测且不等于墙钟时间。",
         "x-personal-user-only": true
       }
     },
@@ -30369,6 +30397,254 @@
         ],
         "additionalProperties": false
       },
+      "DebugRunTiming": {
+        "type": "object",
+        "properties": {
+          "runId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "durationMs": {
+            "type": "integer"
+          },
+          "observedElapsedMs": {
+            "type": "integer"
+          },
+          "clock": {
+            "type": "string",
+            "enum": [
+              "host_journal",
+              "kun_worker"
+            ]
+          },
+          "startMethod": {
+            "type": "string",
+            "description": "保留的开始方法；run/input 为宿主提交起点，turn/started 为原生执行起点，kun/run.started 为 worker 起点"
+          },
+          "endMethod": {
+            "type": "string",
+            "description": "同一时钟内保留的终态方法；与 startMethod 一起说明区间依据"
+          },
+          "startObserved": {
+            "type": "boolean"
+          },
+          "endObserved": {
+            "type": "boolean"
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "runId",
+          "status",
+          "clock",
+          "startObserved",
+          "endObserved",
+          "complete",
+          "issues"
+        ],
+        "additionalProperties": false
+      },
+      "DebugTypeTiming": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "stepCount": {
+            "type": "integer"
+          },
+          "completeDurationSteps": {
+            "type": "integer"
+          },
+          "withoutCompleteDuration": {
+            "type": "integer"
+          },
+          "workDurationMs": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "type",
+          "stepCount",
+          "completeDurationSteps",
+          "withoutCompleteDuration",
+          "workDurationMs"
+        ],
+        "additionalProperties": false
+      },
+      "DebugSlowStep": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "durationMs": {
+            "type": "integer"
+          },
+          "clock": {
+            "type": "string"
+          },
+          "association": {
+            "type": "string",
+            "enum": [
+              "observed",
+              "reconstructed",
+              "inferred",
+              "missing"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "runId",
+          "title",
+          "type",
+          "status",
+          "durationMs",
+          "clock",
+          "association"
+        ],
+        "additionalProperties": false
+      },
+      "DebugTimingSummary": {
+        "type": "object",
+        "properties": {
+          "runs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DebugRunTiming"
+            }
+          },
+          "byType": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DebugTypeTiming"
+            }
+          },
+          "slowestSteps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DebugSlowStep"
+            }
+          },
+          "knownWorkDurationMs": {
+            "type": "integer"
+          },
+          "completeDurationSteps": {
+            "type": "integer"
+          },
+          "withoutCompleteDuration": {
+            "type": "integer"
+          },
+          "pointSteps": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "runs",
+          "byType",
+          "slowestSteps",
+          "knownWorkDurationMs",
+          "completeDurationSteps",
+          "withoutCompleteDuration",
+          "pointSteps"
+        ],
+        "additionalProperties": false
+      },
+      "DebugStatistics": {
+        "type": "object",
+        "properties": {
+          "steps": {
+            "type": "integer"
+          },
+          "byStatus": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "byType": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "attentionSteps": {
+            "type": "integer"
+          },
+          "completeDurationSteps": {
+            "type": "integer"
+          },
+          "withoutCompleteDuration": {
+            "type": "integer"
+          },
+          "sumRecordedDurationsMs": {
+            "type": "integer"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "snapshotThrough": {
+            "type": "integer"
+          },
+          "projectionVersion": {
+            "type": "integer"
+          },
+          "durationNote": {
+            "type": "string"
+          },
+          "outcomeNote": {
+            "type": "string"
+          },
+          "timing": {
+            "$ref": "#/components/schemas/DebugTimingSummary"
+          }
+        },
+        "required": [
+          "steps",
+          "byStatus",
+          "byType",
+          "attentionSteps",
+          "completeDurationSteps",
+          "withoutCompleteDuration",
+          "sumRecordedDurationsMs",
+          "sessionId",
+          "snapshotThrough",
+          "projectionVersion",
+          "durationNote",
+          "outcomeNote",
+          "timing"
+        ],
+        "additionalProperties": false
+      },
       "DebugResult": {
         "type": "object",
         "properties": {
@@ -30434,7 +30710,7 @@
             "type": "integer"
           },
           "data": {
-            "description": "observations 时为 UnifiedObservationPage；activity 时为 UnifiedActivityPage；transcript 时为 TranscriptPage；其余 kind 沿既有查询结构。"
+            "description": "observations 时为 UnifiedObservationPage；activity 时为 UnifiedActivityPage；transcript 时为 TranscriptPage；statistics 时为 DebugStatistics；其余 kind 沿既有查询结构。"
           }
         },
         "required": [
@@ -30444,7 +30720,28 @@
           "kind",
           "data"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "statistics"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/DebugStatistics"
+                }
+              }
+            }
+          }
+        ]
       },
       "ImageBuild": {
         "type": "object",

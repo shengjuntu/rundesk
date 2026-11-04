@@ -6,27 +6,27 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 )
 
 var ErrProjectionLimit = errors.New("trace projection exceeds 20000 lifecycle records, 64 MiB total or 8 MiB per event; choose an earlier through cursor or a smaller source session")
 
 // Deltas are retained in the journal but never mistaken for complete calls.
-const lifecycleSQL = `method IN ('run/input','run/steer','turn/started','turn/completed','run/state','item/started','item/completed','approval/pending','approval/resolved','approval/expired','error','warning','configWarning','thread/compacted','kun/run.started','kun/run.paused','kun/run.finished','kun/model.started','kun/model.completed','kun/fast.completed','kun/fast.fallback','kun/tool.started','kun/tool.completed','kun/mcp.request','kun/mcp.response','kun/mcp.failed','kun/mcp.ready','kun/approval.requested','kun/control.applied','kun/control.queued','kun/context.built','kun/capability.ready')`
+const lifecycleSQL = `method IN ('run/turn','run/input','run/steer','turn/started','turn/completed','run/state','item/started','item/completed','approval/pending','approval/resolved','approval/expired','error','warning','configWarning','thread/compacted','kun/run.started','kun/run.paused','kun/run.finished','kun/model.started','kun/model.completed','kun/fast.completed','kun/fast.fallback','kun/tool.started','kun/tool.completed','kun/mcp.request','kun/mcp.response','kun/mcp.failed','kun/mcp.ready','kun/approval.requested','kun/control.applied','kun/control.queued','kun/context.built','kun/capability.ready')`
 
 type projection struct {
-	runs         []Run
-	steps        []Step
-	runIndex     map[string]int
-	turns        map[string]string
-	runTurns     map[string]string
-	open         map[string][]int
-	approvalRuns map[string]map[string]bool
-	current      string
+	runs           []Run
+	steps          []Step
+	runIndex       map[string]int
+	turns          map[string]string
+	runTurns       map[string]string
+	open           map[string][]int
+	approvalRuns   map[string]map[string]bool
+	current        string
+	aliasConflicts map[string]bool
 }
 
 func newProjection() *projection {
-	return &projection{runs: []Run{}, steps: []Step{}, runIndex: map[string]int{}, turns: map[string]string{}, runTurns: map[string]string{}, open: map[string][]int{}, approvalRuns: map[string]map[string]bool{}}
+	return &projection{runs: []Run{}, steps: []Step{}, runIndex: map[string]int{}, turns: map[string]string{}, runTurns: map[string]string{}, open: map[string][]int{}, approvalRuns: map[string]map[string]bool{}, aliasConflicts: map[string]bool{}}
 }
 func shortText(s string, n int) string {
 	r := []rune(s)
@@ -96,6 +96,9 @@ func (p *projection) resolve(id int64, method string, d, params map[string]any) 
 		return fmt.Sprint("observed-event-", id), "missing", tid
 	}
 	if tid != "" {
+		if p.aliasConflicts[tid] {
+			return "observed-turn-" + tid, "missing", tid
+		}
 		if rid = p.turns[tid]; rid != "" {
 			return rid, "reconstructed", tid
 		}
@@ -180,6 +183,9 @@ func preview(v any, budget *int, depth int, truncated *bool) any {
 }
 
 func (p *projection) ingest(id int64, at, method string, d map[string]any) {
+	if method == "run/turn" {
+		return
+	}
 	params := obj(d["params"])
 	rid, association, tid := p.resolve(id, method, d, params)
 	if method == "run/input" {
@@ -190,10 +196,11 @@ func (p *projection) ingest(id int64, at, method string, d map[string]any) {
 		p.current = rid
 	}
 	r := p.run(rid, at, association)
-	if tid != "" && p.turns[tid] == "" {
+	if tid != "" && p.turns[tid] == "" && !p.aliasConflicts[tid] {
 		p.turns[tid] = rid
 		p.runTurns[rid] = tid
 	}
+	r.timing.observe(id, at, method, d, params)
 	r.EventIDs = append(r.EventIDs, id)
 	if len(r.EventIDs) > 16 {
 		r.EventIDs = append(r.EventIDs[:1], r.EventIDs[len(r.EventIDs)-15:]...)
@@ -520,11 +527,8 @@ func (p *projection) finish() {
 				}
 			}
 			if s.StartObserved && s.EndObserved {
-				a, x := time.Parse(time.RFC3339Nano, s.Start)
-				b, y := time.Parse(time.RFC3339Nano, s.End)
-				if x == nil && y == nil && !b.Before(a) {
-					n := b.Sub(a).Milliseconds()
-					s.DurationMS = &n
+				if ms, valid := intervalMillis(s.Start, s.End); valid {
+					s.DurationMS = ms
 				} else {
 					s.Issues = appendUnique(s.Issues, "invalid_clock")
 				}

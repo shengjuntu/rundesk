@@ -1,0 +1,21 @@
+ok  	github.com/shengjuntu/rundesk/cmd/rundesk	0.013s
+ok  	github.com/shengjuntu/rundesk/examples/docker	0.007s
+ok  	github.com/shengjuntu/rundesk/examples/profiletemplates	0.010s
+ok  	github.com/shengjuntu/rundesk/internal/app	244.397s
+ok  	github.com/shengjuntu/rundesk/internal/containerruntime	0.570s
+ok  	github.com/shengjuntu/rundesk/internal/debugapi	(cached)
+ok  	github.com/shengjuntu/rundesk/internal/debugmcp	0.210s
+ok  	github.com/shengjuntu/rundesk/internal/experiment	0.006s
+ok  	github.com/shengjuntu/rundesk/internal/mcp	0.144s
+ok  	github.com/shengjuntu/rundesk/internal/mcptest	0.059s
+?   	github.com/shengjuntu/rundesk/internal/observation	[no test files]
+ok  	github.com/shengjuntu/rundesk/internal/observeproxy	2.457s
+?   	github.com/shengjuntu/rundesk/internal/redaction	[no test files]
+ok  	github.com/shengjuntu/rundesk/internal/resource	0.029s
+ok  	github.com/shengjuntu/rundesk/internal/rpc	0.592s
+ok  	github.com/shengjuntu/rundesk/internal/servicelock	0.015s
+ok  	github.com/shengjuntu/rundesk/internal/store	2.904s
+ok  	github.com/shengjuntu/rundesk/internal/tracequery	20.782s
+ok  	github.com/shengjuntu/rundesk/internal/web	0.006s
+?   	github.com/shengjuntu/rundesk/plugins/rundesk-build-tools	[no test files]
+?   	github.com/shengjuntu/rundesk/plugins/rundesk-setup-tools	[no test files]

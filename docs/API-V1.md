@@ -157,6 +157,10 @@ TaskSpec.input 的稳定入口是 `{text,files?,skills?}`；files 使用服务�
 
 常见任务状态有 queued、dispatching、starting、running、waiting、stopping 及终态 completed、failed、interrupted、canceled、unconfirmed；未知状态不应自动判成功。等待审批仍占并发额度。重启保留排队任务；已开始或结果不明的工作不自动重跑。完整队列约束见 [QUEUE](QUEUE.md)。
 
+## 0.63.0 轨迹耗时查询
+
+原有 debug/query 的 `steps/issues` 增加可选 `sort=recorded|duration_desc|duration_asc`，在完整筛选结果上排序后分页；默认保留原记录顺序。`kind=statistics` 响应的 `data.timing`列出按来源声明的有效运行区间、已知步骤工作量和最多十个最慢步骤。`clock`、`startMethod/endMethod` 区分宿主提交后的总区间、原生开始后的区间和 Kun worker 区间；后两者不包含宿主启动前等待。进行中事件跨度、完整经过时间与步骤耗时合计分别声明，缺失时间不当作零，模型通信观测不混入执行步骤合计。查询继续受 `runId`、固定 `through`、身份归属与既有权限约束。详见[只读调试服务](DEBUG-SERVICE.md)。
+
 ## 事件与回复
 
 `GET /sessions/{sid}/events?after=0&limit=1000` 返回事件数组，按宿主 id 升序；将最大 id 保存为下次 after。每页最多 1000 条。
@@ -166,6 +170,8 @@ TaskSpec.input 的稳定入口是 `{text,files?,skills?}`；files 使用服务�
 ```json
 {"id":123,"sessionId":"...","time":"...","direction":"internal","method":"run/state","data":{}}
 ```
+
+0.63.0 可保留 `run/turn` 宿主事件，记录原生 turn 与宿主 run 的明确对应。它只是归属证据，不是开始或结束边界；旧记录没有该映射时不补造。
 
 信封稳定，method/data 保留运行时差异；不要将 Codex 原生字段假定为 Kun 字段，也不要将 Kun sequence 用作宿主 id。流式 delta 是过程证据，最终回复应采用明确的完成消息/最终阶段记录。`GET /sessions/{sid}/messages/{eid}` 读取可识别的助手消息，`GET /sessions/{sid}/export?format=markdown` 导出对话。
 

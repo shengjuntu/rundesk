@@ -131,6 +131,9 @@ func ParseArgs(name string, raw json.RawMessage) (Args, error) {
 	if err := dec.Decode(new(any)); err != io.EOF {
 		return Args{}, errors.New("one argument object required")
 	}
+	if err := validateStepSort(name, a.Sort); err != nil {
+		return Args{}, err
+	}
 	if name == "trace_list_observations" || name == "trace_list_activity" {
 		if _, explicit := fields["limit"]; explicit && a.Limit == 0 {
 			return Args{}, errors.New("limit must be positive when supplied")

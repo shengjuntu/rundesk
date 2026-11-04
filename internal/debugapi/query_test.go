@@ -49,3 +49,19 @@ func TestTranscriptSelectors(t *testing.T) {
 		}
 	}
 }
+
+func TestStepDurationSortSelectors(t *testing.T) {
+	for _, query := range []string{"kind=steps&through=99&runId=r&sort=duration_desc&offset=50&limit=10", "kind=issues&sort=duration_asc", "kind=steps&sort=recorded"} {
+		values, _ := url.ParseQuery(query)
+		got, err := Parse(values)
+		if err != nil || got.Sort != values.Get("sort") {
+			t.Fatal(query, got, err)
+		}
+	}
+	for _, query := range []string{"kind=statistics&sort=duration_desc", "kind=activity&sort=recorded", "kind=steps&sort=other", "kind=steps&sort=duration_desc&sort=recorded", "kind=step&stepId=step-1&sort=duration_asc"} {
+		values, _ := url.ParseQuery(query)
+		if _, err := Parse(values); err == nil {
+			t.Fatal("accepted invalid sort selector", query)
+		}
+	}
+}

@@ -201,6 +201,7 @@ function toggleReplySpeech(node) {
 }
 window.addEventListener("pagehide",stopReplySpeech);
 function closeConversationSidebar(){
+  if(window.RunDeskLayout){RunDeskLayout.close(false);return;}
   document.body.classList.remove("sidebar-open");document.querySelector("#sidebar-toggle")?.setAttribute("aria-expanded","false");
   const main=document.querySelector("main");if(main)main.inert=false;
 }
@@ -208,9 +209,5 @@ window.addEventListener("DOMContentLoaded",()=>{
   document.querySelector("#manage-instances").replaceChildren(conversationIcon("settings"));
   document.querySelector("#manage-instances").setAttribute("aria-label",rdText("管理实例"));
   const toggle=document.querySelector("#sidebar-toggle");toggle?.append(conversationIcon("menu"));
-  toggle?.addEventListener("click",()=>{if(innerWidth>600){document.body.classList.toggle("history-collapsed");return;}const opened=document.body.classList.toggle("sidebar-open");toggle.setAttribute("aria-expanded",String(opened));document.querySelector("main").inert=opened;if(opened)document.querySelector("#sidebar-close").focus();});
-  document.querySelector("#sidebar-close")?.addEventListener("click",()=>{closeConversationSidebar();toggle.focus();});
-  document.querySelector("#sidebar-backdrop")?.addEventListener("click",closeConversationSidebar);
-  matchMedia("(max-width:600px)").addEventListener("change",closeConversationSidebar);
-  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!document.querySelector("dialog[open]")&&document.body.classList.contains("sidebar-open")){closeConversationSidebar();toggle.focus();}});
+
 });

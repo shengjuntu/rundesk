@@ -1,6 +1,6 @@
 # WebUI：工作区、会话与 Agent / Workspaces, conversations and Agents
 
-本文描述 RunDesk 0.62.0 的界面与当前后端边界。升级不改变存储布局，也不迁移或删除原有实例、工作区和历史数据。界面将长期保存的“实例”称为 **Agent**；它不等同于 Docker 容器。应用的“应用设置”页展示可用 Agent 环境、默认绑定、凭据授权数量和项目工作区；见[运行预设](APPLICATION-RUNTIME-PRESETS.md)与[项目环境](APPLICATION-PROJECT-ENVIRONMENTS.md)。
+本文描述 RunDesk 0.63.0 的界面与当前后端边界。升级不改变存储布局，也不迁移或删除原有实例、工作区和历史数据。界面将长期保存的“实例”称为 **Agent**；它不等同于 Docker 容器。应用的“应用设置”页展示可用 Agent 环境、默认绑定、凭据授权数量和项目工作区；见[运行预设](APPLICATION-RUNTIME-PRESETS.md)与[项目环境](APPLICATION-PROJECT-ENVIRONMENTS.md)。
 
 RunDesk 的会话按工作区组织：进入工作区后新建会话，由会话选择 Codex 运行环境。同一工作区可以包含多个使用不同 Codex 配置的会话。Kun 不出现在日常 Agent 列表与新建任务选项中，内部维护从“环境设置”和构建中心进入。Agent 管理负责模型、Skills、MCP 和插件配置；应用接入和构建中心分别负责外部调用与运行环境准备，不要求用户先注册应用才能管理实例。
 
@@ -28,6 +28,10 @@ RunDesk 的会话按工作区组织：进入工作区后新建会话，由会话
 
 Agent 页面明确当前工作区；Docker 构建与镜像管理统一从左侧“构建中心”进入。会话页按“工作区 → 会话”两层组织，同一工作区同时展示不同 Codex 配置的会话。会话标题旁显示具体 Codex 环境标签；新会话可点击标签更换环境，已创建的会话保持原绑定。Skills、MCP 和插件在同一个高度稳定的设置对话框中。切换工作区后，应核对配置所属的运行环境；任务与轨迹保留原来的 Agent 和工作区归属。应用页分为“任务记录”和“应用设置”：设置页同时展示全部已绑定预设及启用数量，应用可绑定多个预设，每个任务选择一个。页面只有一个“添加预设”入口，各预设在自己的卡片中配置能力；默认环境、容器技术信息、应用项目和凭据收在展开项中。添加弹窗自动创建工作目录，技术字段默认收起，保存按钮固定在底部。详情见[运行预设](APPLICATION-RUNTIME-PRESETS.md)。
 
+## 导航与阅读空间
+
+主导航使用紧凑栏，Agent、对话、任务和构建中心仍按既有入口进入。桌面／平板主栏为 72px，手机为 62px，保留小字标签与提示。工作区／会话作为可收起、可调整宽度的第二栏，仅在会话页参与布局；管理页面使用释放出的内容空间。收起选择保存在当前浏览器，回到会话时恢复。没有保存偏好时，900px 以下默认收起工作区栏；600px 及以下使用抽屉。抽屉可用 Escape 或背景关闭，并将键盘焦点限制在其中，关闭后回到触发按钮。
+
 ## 构建工作台
 
 构建中心默认沿“选择配方 → 准备镜像 → 创建 Agent”显示当前上下文。选择配方后可查看对应构建、已有镜像与已使用它的 Agent；已有镜像可以直接复用，不要求每次重新构建。配方有多个版本和构建结果，一个镜像也可服务多个 Agent。缺少可靠来源的镜像明确显示来源未知。
@@ -42,9 +46,17 @@ Agent 页面明确当前工作区；Docker 构建与镜像管理统一从左侧�
 
 会话环境标签只包含 Codex 配置；切换新会话的环境不改变工作区。未发送文字保存在草稿中，附件和技能保留在所属环境的草稿中，避免把配置或文件授权带到其他实例。已创建会话的引擎标签只读，需要其他引擎时在同一工作区新建会话。
 
+对话按可靠的轮次身份组织，completed/succeeded 轮次默认收为用户问题标题和状态，点击展开这一轮的问题、回答和工具步骤。标题取用户输入的第一个非空行，最多 120 个 Unicode 码点；完整输入仍在正文中。手动展开或收起的选择按会话／轮次保存在当前浏览器，后续事件和重新加载继续使用该选择。进行中、等待处理、失败、中断及状态未知的轮次默认展开；即使用户手动收起，摘要仍显示其状态。如果轮次完成时键盘焦点正在正文内，会暂时保持展开，避免隐藏正在阅读的内容。
+
+明确的宿主／原生对应优先；缺少直接运行标识时，只允许由输入及原生开始记录保守重建，并显示关联提示。没有可靠身份或身份冲突的记录单独保留，不据时间邻近关系强行合并。仍受当前最多 200 条显示项的界面边界约束，范围不完整时明确提示并保留轨迹入口。阅读偏好不触发任务、工具或模型调用。
+
 普通工作区支持不同 Docker 实例的会话，各实例/工作区组合保持独立容器、HOME 和认证；工作区文件共享。应用默认环境、预设及应用项目的专用工作区仍按归属限制候选引擎，项目会话保留 appId/projectId/presetId。旧会话、旧深链接及 Agent 管理入口继续可用。
 
 回归测试见 `internal/web/tests/workspace-conversations.cjs`（jsdom）与 `internal/web/tests/workspace-conversations-browser.cjs`（Playwright，`RUNDESK_BINARY` 指向当前编译产物）。浏览器测试使用独立临时服务，仅创建空闲会话和运行环境记录，不调用真实模型或启动 Docker。
+
+## 轨迹耗时
+
+从会话原有“轨迹”入口进入步骤和耗时分析，可查看最多十个最慢运行步骤，并在完整筛选范围中按耗时排序后分页。只有宿主提交到终态的有效区间标为“本轮总耗时”；原生开始后的区间与 Kun worker 区间分别标识，不能冒充包含启动前等待的完整耗时。界面显示 `clock`、`startMethod/endMethod` 依据；缺失记录显示未知。已知步骤的耗时合计只是工作量视图，可能包含重叠或嵌套，不能代替整轮经过时间。模型运行步骤和模型通信观测分别保留，避免两份记录被当成两次执行。所有筛选、统计和分页共享所选轮次及固定 `through`，读取最新记录才推进范围。详见[轨迹](TRACE.md)。
 
 ## 当前配置边界
 
@@ -70,6 +82,8 @@ Agent 页面明确当前工作区；Docker 构建与镜像管理统一从左侧�
 历史专题文档中的顶部按钮或创建入口说明不再代表当前导航。研究 API 与数据语义仍见[分叉](KUN-FORKS.md)、[任务集](KUN-TASK-SETS.md)、[K4](KUN-K4.md)和[离线实验](KUN-EXPERIMENTS.md)。
 
 ## English summary
+
+Conversations can be read as expandable rounds. Trace timing distinguishes valid run wall intervals, known step work and missing durations. A compact primary rail reserves the workspace panel for conversations, while management pages use the released space; mobile navigation remains a dismissible drawer.
 
 Build Center opens as a recipe → image → Agent workbench, reuses existing images and displays linked Agents. Friendly frozen recipe names lead image cards; identifiers remain available below. Docker-aware model discovery retains candidate failures. Codex provider settings target an explicit environment and remain distinct from the Kun maintenance model.
 

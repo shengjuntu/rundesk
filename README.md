@@ -46,7 +46,9 @@ The instance-centered WebUI does **not** yet synchronize instance configuration 
 
 ## Current source version
 
-**RunDesk 0.62.0 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.63.0 source · external Kun 0.17.0 · worker protocol 16**
+
+Version 0.63.0 groups conversations into expandable rounds and adds trace timing analysis, with wall duration kept separate from overlapping step work. A compact navigation rail leaves the workspace panel for conversations and gives management pages more room. Existing records and the 0.62 build/provider workflows remain available. See [WebUI](docs/WEBUI.md) and [trace analysis](docs/TRACE.md).
 
 Version 0.62.0 makes Build Center a recipe → image → Agent workbench. Existing images can be reused, recipe names lead image cards, and the same image can support multiple Agents. Setup also discovers published local Docker model services and shows failed candidates with their causes. Codex provider settings are separate from Kun model discovery and can be applied to an exact Agent/workspace environment. See [Build Center](docs/BUILD-CENTER.md) and [Codex model providers](docs/CODEX-PROVIDERS.md).
 

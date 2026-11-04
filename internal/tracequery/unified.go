@@ -260,7 +260,7 @@ type unifiedIndex struct {
 }
 
 func (m unifiedMeta) projectionData() map[string]any {
-	d := map[string]any{"runId": m.s("run"), "id": m.s("rpc"), "sequence": json.Number(fmt.Sprint(m.n("sequence"))), "status": m.s("status"), "decision": m.s("decision")}
+	d := map[string]any{"turnId": m.s("hostTurn"), "runId": m.s("run"), "id": m.s("rpc"), "sequence": json.Number(fmt.Sprint(m.n("sequence"))), "status": m.s("status"), "decision": m.s("decision")}
 	d["params"] = map[string]any{"turnId": m.s("turn"), "turn": map[string]any{"id": m.s("turnObject"), "status": m.s("turnStatus")}, "item": map[string]any{"id": m.s("item"), "type": m.s("itemType"), "status": m.s("itemStatus")}}
 	d["data"] = map[string]any{"step": json.Number(fmt.Sprint(m.n("step"))), "purpose": m.s("purpose"), "call": map[string]any{"id": m.s("call")}, "callId": m.s("callRef"), "server": m.s("server"), "exchangeId": json.Number(m.s("exchange")), "status": m.s("workerStatus"), "command": map[string]any{"callId": m.s("commandCall"), "operation": m.s("operation")}}
 	return d
@@ -275,12 +275,15 @@ func (r *Reader) unifiedIndex(ctx context.Context) (*unifiedIndex, error) {
 	if count > 20000 {
 		return nil, ErrProjectionLimit
 	}
+	p := newProjection()
+	if err := r.preindexTurnAliases(ctx, p); err != nil {
+		return nil, err
+	}
 	rows, err := r.db.QueryContext(ctx, unifiedSelect(where), r.SessionID, r.Through)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	p := newProjection()
 	for rows.Next() {
 		m, err := scanUnified(rows)
 		if err != nil {

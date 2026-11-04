@@ -417,26 +417,31 @@ function renderMessages() {
   const box = $("#messages");
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 130;
   const items = [],
-    map = new Map();
-  let runKey = "history";
+    map = new Map(), origins = new WeakMap();
+  const projection = window.RunDeskConversationRounds?.project(state.events,state.session);
+  let renderingEvent;
+  const pushItem = item => {origins.set(item,renderingEvent.id);items.push(item);};
   for (const ev of state.events) {
-    const p = ev.data.params || {};
+    renderingEvent=ev;
+    const p = ev.data?.params || {};
+    if(["run/input","run/steer"].includes(ev.method)&&(!ev.data?.input||typeof ev.data.input!=="object"||ev.direction==="in")){
+      pushItem({_key:"incomplete-input:"+ev.id,type:"error",text:document.documentElement.lang==='en'?'Input record is incomplete; inspect its source in the trace.':'输入记录不完整，可在轨迹中检查来源。',eventId:ev.id});continue;
+    }
     if (ev.method === "run/input") {
-      runKey = ev.data.runId || ev.id;
-      items.push({
+      pushItem({
         _key: `input:${ev.id}`,
         type: "user",
         text: ev.data.input.text,
         files: ev.data.input.files,
       });
     } else if (["kun/model.completed","kun/fast.completed"].includes(ev.method) && ev.data.data?.purpose !== "plan" && ev.data.data?.message?.content) {
-      items.push({_key:"kun:"+ev.id,type:"agentMessage",text:ev.data.data.message.content,_eventId:ev.id});
+      pushItem({_key:"kun:"+ev.id,type:"agentMessage",text:ev.data.data.message.content,_eventId:ev.id});
     } else if (ev.method === "kun/tool.completed" && ev.data.data?.call?.function?.name === "trace_propose" && ev.data.data?.status === "succeeded" && !ev.data.data?.isError && RunDeskDebug.validSuggestion(ev.data.data?.result,state.session.traceOrigin)) {
-      items.push({_key:"diagnosis:"+ev.id,type:"diagnosticSuggestion",proposal:ev.data.data.result,eventId:ev.id,diagnosticSessionId:state.session.id});
+      pushItem({_key:"diagnosis:"+ev.id,type:"diagnosticSuggestion",proposal:ev.data.data.result,eventId:ev.id,diagnosticSessionId:state.session.id});
     } else if (ev.method === "kun/control.queued" && ev.data.data?.command?.operation === "steer") {
-      items.push({_key:"kun-steer:"+ev.id,type:"user",text:ev.data.data.command.text,steering:true});
+      pushItem({_key:"kun-steer:"+ev.id,type:"user",text:ev.data.data.command.text,steering:true});
     } else if (ev.method === "run/steer") {
-      items.push({
+      pushItem({
         _key: `steer:${ev.data.requestId || ev.id}`,
         type: "user",
         text: ev.data.input.text,
@@ -449,48 +454,48 @@ function renderMessages() {
     ) {
       const item = p.item;
       if (!item || item.type === "userMessage") continue;
-      const key = `${p.turnId || runKey}:${item.id}`;
+      const key = `${p.turnId || (projection?.origins.get(ev.id)?.runId ? "run:"+projection.origins.get(ev.id).runId : "event:"+ev.id)}:${item.id}`;
       let row = map.get(key);
       if (!row) {
         row = { ...item, _key: key };
         map.set(key, row);
-        items.push(row);
+        pushItem(row);
       } else Object.assign(row, item);
       if (ev.method === "item/completed") row._eventId = ev.id;
     } else if (
       ev.direction === "in" &&
       ev.method === "item/agentMessage/delta"
     ) {
-      const key = `${p.turnId || runKey}:${p.itemId}`;
+      const key = `${p.turnId || (projection?.origins.get(ev.id)?.runId ? "run:"+projection.origins.get(ev.id).runId : "event:"+ev.id)}:${p.itemId}`;
       let row = map.get(key);
       if (!row) {
         row = { _key: key, id: p.itemId, type: "agentMessage", text: "" };
         map.set(key, row);
-        items.push(row);
+        pushItem(row);
       }
       row.text = (row.text || "") + (p.delta || "");
     } else if (
       ev.direction === "in" &&
       ev.method === "item/commandExecution/outputDelta"
     ) {
-      const key = `${p.turnId || runKey}:${p.itemId}`;
+      const key = `${p.turnId || (projection?.origins.get(ev.id)?.runId ? "run:"+projection.origins.get(ev.id).runId : "event:"+ev.id)}:${p.itemId}`;
       let row = map.get(key);
       if (!row) {
         row = { _key: key, id: p.itemId, type: "commandExecution" };
         map.set(key, row);
-        items.push(row);
+        pushItem(row);
       }
       row.aggregatedOutput = (row.aggregatedOutput || "") + (p.delta || "");
     } else if (
       ev.direction === "in" &&
       ev.method === "item/reasoning/summaryTextDelta"
     ) {
-      const key = `${p.turnId || runKey}:${p.itemId}`;
+      const key = `${p.turnId || (projection?.origins.get(ev.id)?.runId ? "run:"+projection.origins.get(ev.id).runId : "event:"+ev.id)}:${p.itemId}`;
       let row = map.get(key);
       if (!row) {
         row = { _key: key, id: p.itemId, type: "reasoning", summary: [] };
         map.set(key, row);
-        items.push(row);
+        pushItem(row);
       }
       const index =
         Number.isInteger(p.summaryIndex) &&
@@ -507,7 +512,7 @@ function renderMessages() {
           (p.delta || ""),
       };
     } else if ((ev.method === "run/state" || ev.method === "library/error") && ev.data.error) {
-      items.push({
+      pushItem({
         _key: `error:${ev.id}`,
         type: "error",
         text: ev.data.error,
@@ -518,9 +523,9 @@ function renderMessages() {
   // Keep mounted cards: native disclosure state, focus and output scroll belong
   // to the reader, not the incoming event stream.
   const existing = new Map(
-    [...box.children].map((node) => [node.dataset.messageKey, node]),
+    [...box.querySelectorAll("[data-message-key]")].map((node) => [node.dataset.messageKey, node]),
   );
-  const nodes = [];
+  const nodes = [],roundEntries=[];
   for (const item of items.slice(-200)) {
     const { _key, ...payload } = item;
     const key = JSON.stringify([state.session.id, _key, item.type]);
@@ -607,13 +612,15 @@ function renderMessages() {
         );
       node._signature = signature;
     }
-    nodes.push(node);
+    nodes.push(node);roundEntries.push({node,eventId:origins.get(item)});
   }
   if (!nodes.length) {
     if (!box.querySelector(".welcome")) {
       box.replaceChildren(welcome.cloneNode(true));
       wireSuggestions();
     }
+  } else if(window.RunDeskConversationRounds) {
+    RunDeskConversationRounds.reconcile(box,roundEntries,projection,state.session,items.length>200);
   } else {
     const keep = new Set(nodes);
     for (const child of [...box.children]) if (!keep.has(child)) child.remove();
@@ -624,7 +631,7 @@ function renderMessages() {
   }
   if (speechReply.node && !speechReply.node.isConnected) stopReplySpeech();
   // Reading an open disclosure must not be pulled back to the streaming tail.
-  if (atBottom && !box.querySelector("details[open]"))
+  if (atBottom && !box.querySelector("details[open]:not(.conversation-round), details.conversation-round[data-manual-open='true'][open]"))
     box.scrollTop = box.scrollHeight;
 }
 const LONG_TEXT_THRESHOLD = 8000;

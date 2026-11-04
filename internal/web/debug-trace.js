@@ -4,6 +4,9 @@ window.RunDeskDebug=(()=>{
  const associations={observed:'记录明确指定',reconstructed:'由关联标识重建',inferred:'按记录顺序推定',missing:'缺少运行标识'};
  const signals={missing_start:'缺少开始记录',missing_end:'缺少结束记录',missing_identity:'缺少调用标识',ambiguous_pair:'多条记录无法唯一配对',run_unassigned:'未能确定所属运行',invalid_clock:'时间记录不完整或逆序',status_unknown:'状态未知'};
  const txt=v=>JSON.stringify(v,null,2);
+ const duration=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0?(v<1000?v+' ms':(v/1000).toFixed(3).replace(/\.?0+$/,'')+' s'):'未知';
+ const timingType=value=>({commandExecution:'命令执行',mcpToolCall:'MCP 工具',dynamicToolCall:'动态工具',webSearch:'网页搜索',fileChange:'文件修改',agentMessage:'助手消息',reasoning:'推理',approval:'审批',modelCall:'模型调用',toolCall:'工具调用',toolReplay:'工具回放',mcpExchange:'MCP 交互'}[value]||value);
+
  let active=null;
  function open(session=state.session,selection={}){
   if(!session?.id){toast('请先选择会话');return;}
@@ -11,7 +14,7 @@ window.RunDeskDebug=(()=>{
   active?.close();
   const sid=session.id,base='/sessions/'+encodeURIComponent(sid)+'/debug/';
   let through=null,epoch=0,listTicket=0,detailTicket=0,eventTicket=0,httpTicket=0,httpDetailTicket=0,evidenceTicket=0,offset=0,next=0,hasMore=false,runOffset=0,runNext=0,runMore=false,closed=false;
-  let selectedRun=selection.runId||'',query='',kind='steps',type='',creating=false,capturing=false,panel=selection.panel||'trace',kunView=null,kunMountPending=null,kunSwitchTicket=0,httpOffset=0,httpNext=0,httpMore=false,caps=null;
+  let selectedRun=selection.runId||'',query='',kind='steps',type='',sort='recorded',creating=false,capturing=false,panel=selection.panel||'trace',kunView=null,kunMountPending=null,kunSwitchTicket=0,httpOffset=0,httpNext=0,httpMore=false,caps=null;
   const d=el('dialog',{class:'debug-inspector debug-workbench',id:'debug-inspector','aria-label':rdText('运行轨迹')}),info=el('p',{class:'help',role:'status'}),error=el('p',{class:'error',role:'alert'}),stats=el('p',{class:'debug-summary'}),list=el('div',{class:'debug-step-list'}),detail=el('section',{class:'debug-step-detail'}),analysisStats=el('p',{class:'debug-summary'});
   d.dataset.sessionId=sid;
   const tabs=el('nav',{class:'debug-workbench-tabs','aria-label':'调试视图'}),tracePanel=el('section',{'data-debug-panel':'trace'}),stepsPanel=el('section',{'data-debug-panel':'steps',class:'hidden'}),httpPanel=el('section',{'data-debug-panel':'http',class:'hidden'}),analysisPanel=el('section',{'data-debug-panel':'analysis',class:'hidden'}),kunPanel=el('section',{'data-debug-panel':'kun',class:'hidden'});
@@ -23,10 +26,13 @@ window.RunDeskDebug=(()=>{
   const runs=el('select',{'aria-label':'调试轮次'}),types=el('select',{'aria-label':'步骤类型'},...['','commandExecution','mcpToolCall','dynamicToolCall','webSearch','fileChange','agentMessage','reasoning','approval','modelCall','toolCall','toolReplay','mcpExchange'].map(v=>el('option',{value:v},v||'所有类型')));
   const search=el('input',{type:'search',maxLength:1000,placeholder:'搜索已脱敏预览','aria-label':'搜索已脱敏预览'}),issues=el('input',{type:'checkbox'}),capabilities=el('details',{},el('summary',{},'记录来源与后端能力'));
   const pageLabel=el('span',{}),runPage=el('span',{});
+  const timing=el('section',{class:'debug-timing-summary','aria-label':'步骤耗时汇总','aria-live':'polite'});
+  const order=el('select',{'aria-label':'步骤排序'},el('option',{value:'recorded'},'记录顺序'),el('option',{value:'duration_desc'},'耗时从长到短'),el('option',{value:'duration_asc'},'耗时从短到长'));
+
   const read=q=>api(base+'query?'+new URLSearchParams(q));
   const alive=e=>!closed&&epoch===e;
   const scope=()=>({through,...(selectedRun?{runId:selectedRun}:{})});
-  const args=()=>({...scope(),...(query?{query}:{}),...(type?{type}:{})});
+  const args=()=>({...scope(),...(query?{query}:{}),...(type?{type}:{}),...(sort!=='recorded'?{sort}: {})});
   const reader=RunDeskTraceReader.mount({host:tracePanel,read,scope,session,
    onSelectRun:async runId=>{selectedRun=runId;if(runId&&![...runs.options].some(v=>v.value===runId))runs.append(el('option',{value:runId},runId));runs.value=runId;await apply();},
    onTransport:async eventId=>{const e=epoch;await switchPanel('http');if(alive(e)){const r=await read({kind:'llm_request',...scope(),eventId,section:'metadata'});if(alive(e))await loadHTTPDetail({...r.data,eventId});}},
@@ -46,23 +52,55 @@ window.RunDeskDebug=(()=>{
    }catch(err){if(alive(e))error.textContent=err.message;}
    finally{if(alive(e)&&requested===runOffset){runsPrev.disabled=runOffset===0;runsNext.disabled=!runMore;}}
   }
+  function renderTiming(value){
+   const timingData=value?.timing;
+   timing.replaceChildren(el('h3',{},'步骤耗时概览'));
+   if(!timingData){timing.append(el('p',{class:'help'},'当前记录未提供耗时汇总；可在下方查看已知步骤时长。'));return;}
+   const frozen={epoch,through,runId:selectedRun},run=(timingData.runs||[]).find(row=>row.runId===selectedRun);
+   let wall='未知',wallLabel='本轮总耗时',wallNote='请选择一个轮次查看完整总耗时；不同轮次不合并为一个总时长。';
+   if(selectedRun){
+    const valid=run?.complete===true&&typeof run.durationMs==='number'&&Number.isFinite(run.durationMs)&&run.durationMs>=0;
+    wall=valid?duration(run.durationMs):'未知';
+    if(run?.clock==='kun_worker')wallLabel='Kun 执行区间';
+    else if(run?.startMethod==='turn/started')wallLabel='原生执行区间';
+    wallNote=valid?'该轮从开始到结束的实际经过时间。':!run?'此轮缺少完整起止记录；不能推算总耗时。':!run.startObserved?'此轮缺少开始记录；总耗时未知。':!run.endObserved?'此轮缺少结束记录或仍在进行；总耗时未知。':'此轮时间记录不完整或异常；总耗时未知。';
+    if(valid&&run?.clock==='kun_worker')wallNote='Kun 工作进程记录的完整执行区间，不含宿主侧等待。';
+    else if(valid&&run?.startMethod==='turn/started')wallNote='Codex 原生开始到结束的已记录区间，不包含开始前等待。';
+    else if(valid&&run?.startMethod==='run/input')wallNote='RunDesk 接受本轮输入后，到记录结束的经过时间。';
+    if(!valid&&typeof run?.observedElapsedMs==='number'&&Number.isFinite(run.observedElapsedMs)&&run.observedElapsedMs>=0)wallNote+=' 截至固定快照已记录 '+duration(run.observedElapsedMs)+'，不是完整总耗时。';
+   }
+   const complete=Number.isSafeInteger(timingData.completeDurationSteps)?timingData.completeDurationSteps:0,missing=Number.isSafeInteger(timingData.withoutCompleteDuration)?timingData.withoutCompleteDuration:0;
+   const metric=(label,value,key,note)=>el('div',{class:'debug-timing-metric'},el('span',{},label),el('strong',{[key]:''},value),el('small',{},note));
+   timing.append(el('div',{class:'debug-timing-metrics'},metric(wallLabel,wall,'data-timing-wall',wallNote),metric('已记录步骤累计时长',complete?duration(timingData.knownWorkDurationMs):'未知','data-timing-work',complete+' 个步骤具有完整耗时；'+missing+' 个缺少完整耗时。')),
+    el('p',{class:'debug-timing-note'},'并行或嵌套步骤可能重叠，累计时长不等于本轮总耗时。这里只统计运行步骤，不叠加 HTTP 通信观测。'),
+    el('p',{class:'help'},'汇总覆盖所选轮次的固定历史范围；下方列表筛选不改变这里的统计。'+(timingData.pointSteps?' '+timingData.pointSteps+' 条瞬时记录不参与持续时间合计。':'')));
+   if(selectedRun&&run)timing.append(el('p',{class:'help debug-timing-clock'},'时间来源：'+({host_journal:'RunDesk 事件日志',kun_worker:'Kun 工作进程时钟'}[run.clock]||run.clock||'未标注')+' · '+[run.startMethod||'未记录开始来源',run.endMethod||'未记录结束来源'].join(' → ')));
+   const types=timingData.byType||[];
+   if(types.length){const body=el('tbody');for(const row of types)body.append(el('tr',{},el('th',{scope:'row'},timingType(row.type)),el('td',{},row.completeDurationSteps?duration(row.workDurationMs):row.withoutCompleteDuration?'未知':'—（瞬时记录）'),el('td',{},String(row.completeDurationSteps??0)+' / '+String(row.withoutCompleteDuration??0))));
+    timing.append(el('details',{class:'debug-timing-types'},el('summary',{},'按类型查看累计时长'),el('table',{},el('caption',{},'运行步骤；完整与缺失分别计数'),el('thead',{},el('tr',{},el('th',{scope:'col'},'类型'),el('th',{scope:'col'},'累计时长'),el('th',{scope:'col'},'完整 / 缺失'))),body)));}
+   const slowest=(timingData.slowestSteps||[]).slice(0,10),slowList=el('div',{class:'debug-slowest-list'});
+   for(const step of slowest){const inspect=button('',()=>{if(!alive(frozen.epoch)||through!==frozen.through||selectedRun!==frozen.runId)return;return loadDetail(step.id);});inspect.className='debug-slowest-step';inspect.dataset.stepId=step.id;inspect.append(el('span',{},step.title||timingType(step.type)),el('strong',{},duration(step.durationMs)),el('small',{},timingType(step.type)+(step.runId?' · '+step.runId:'')));slowList.append(inspect);}
+   timing.append(el('h4',{},'最慢步骤（最多 10 项）'),slowest.length?slowList:el('p',{class:'help'},'当前范围没有具有完整耗时的步骤。'));
+  }
   async function loadSteps(){
    if(through===null)return;const e=epoch,ticket=++listTicket;clearDetail();error.textContent='';prev.disabled=more.disabled=true;
-   const selection={...args()};list.setAttribute('aria-busy','true');
+   const selection={...args()};list.setAttribute('aria-busy','true');timing.replaceChildren(el('p',{role:'status'},'读取步骤耗时…'));
    try{
-    const [r,summary]=await Promise.all([read({kind,...selection,offset,limit:20}),read({kind:'statistics',...selection})]);
+    const {sort:_sort,...statisticsSelection}=selection,summaryRequest=read({kind:'statistics',...statisticsSelection});
+    const [r,summary,whole]=await Promise.all([read({kind,...selection,offset,limit:20}),summaryRequest,query||type?read({kind:'statistics',...scope()}):summaryRequest]);
     if(!alive(e)||ticket!==listTicket)return;
     next=r.data.nextOffset;hasMore=r.data.hasMore;
-    stats.textContent=`筛选范围：${summary.data.steps} 个步骤 · ${summary.data.attentionSteps} 个需关注 · ${summary.data.withoutCompleteDuration} 个缺少完整耗时。步骤完成不代表任务目标已达成。`;
+    stats.textContent=`筛选范围：${summary.data.steps} 个步骤 · ${summary.data.attentionSteps} 个需关注 · ${summary.data.withoutCompleteDuration} 个缺少完整耗时。步骤完成不代表任务目标已达成。`+(issues.checked?' 当前列表仅显示需关注项；统计仍覆盖相同类型与搜索条件的全部步骤。':'');
+    renderTiming(whole.data);
     analysisStats.textContent=stats.textContent;pageLabel.textContent=`${r.data.total?offset+1:0}–${next} / ${r.data.total}`;
     list.replaceChildren(...r.data.steps.map(step=>{
      const b=button('',()=>loadDetail(step.id));b.className='debug-step';b.setAttribute('data-step-id',step.id);
-     b.append(el('span',{class:'debug-step-kind'},step.type+' · '+step.runId),el('strong',{},step.title||step.type),el('span',{},labels[step.status]||step.status),el('small',{},step.durationMs==null?'完整耗时未知':`${step.durationMs} ms`));
+     b.append(el('span',{class:'debug-step-kind'},step.type+' · '+step.runId),el('strong',{},step.title||step.type),el('span',{},labels[step.status]||step.status),el('small',{},step.durationMs==null?'完整耗时未知':duration(step.durationMs)));
      if(step.issues?.length)b.append(el('small',{class:'debug-signal'},step.issues.map(v=>signals[v]||labels[v]||v).join(' · ')));
      return b;
     }));
     if(!r.data.steps.length)list.append(el('p',{class:'help'},'当前范围没有匹配步骤；预览搜索不代表全文检索。'));
-   }catch(err){if(alive(e)&&ticket===listTicket){error.textContent=err.message;list.replaceChildren();stats.textContent='';analysisStats.textContent='';pageLabel.textContent='';hasMore=false;}}
+   }catch(err){if(alive(e)&&ticket===listTicket){error.textContent=err.message;list.replaceChildren();timing.replaceChildren(el('p',{class:'error'},'耗时读取失败：'+err.message));stats.textContent='';analysisStats.textContent='';pageLabel.textContent='';hasMore=false;}}
    finally{if(alive(e)&&ticket===listTicket){list.setAttribute('aria-busy','false');prev.disabled=offset===0;more.disabled=!hasMore;}}
   }
   async function loadDetail(stepId){
@@ -263,7 +301,7 @@ window.RunDeskDebug=(()=>{
    }
   }
   async function refresh(keepOrigin=false){
-   const e=++epoch;through=null;offset=0;runOffset=0;httpOffset=0;listTicket++;httpTicket++;httpDetailTicket++;reader.setScope(scope());clearDetail();error.textContent='';info.textContent='固定当前历史范围…';list.replaceChildren();stats.textContent='';latest.disabled=true;syncDiagnosis();
+   const e=++epoch;through=null;offset=0;runOffset=0;httpOffset=0;listTicket++;httpTicket++;httpDetailTicket++;reader.setScope(scope());clearDetail();timing.replaceChildren(el('p',{role:'status'},'读取步骤耗时…'));error.textContent='';info.textContent='固定当前历史范围…';list.replaceChildren();stats.textContent='';latest.disabled=true;syncDiagnosis();
    try{
     const values=await Promise.all([api(base+'capabilities'),read({kind:'events',limit:1,...(keepOrigin&&selection.through!=null?{through:selection.through}:{})}),readCaptureSettings()]);if(!alive(e))return;
     caps=values[0];through=values[1].data.through;d.dataset.through=through;
@@ -276,13 +314,13 @@ window.RunDeskDebug=(()=>{
    }catch(err){if(alive(e))error.textContent=err.message;}
    finally{if(alive(e)){latest.disabled=false;syncDiagnosis();}}
   }
-  async function apply(){httpTicket++;httpDetailTicket++;selectedRun=runs.value;query=search.value.trim();type=types.value;kind=issues.checked?'issues':'steps';offset=0;httpOffset=0;d.dataset.runId=selectedRun;syncDiagnosis();if(kunView)await kunView.setScope(scope());await reader.setScope(scope());if(panel==='steps'||panel==='analysis')await loadSteps();if(panel==='http')await loadHTTP();}
+  async function apply(){httpTicket++;httpDetailTicket++;selectedRun=runs.value;query=search.value.trim();type=types.value;sort=order.value;kind=issues.checked?'issues':'steps';offset=0;httpOffset=0;d.dataset.runId=selectedRun;syncDiagnosis();if(kunView)await kunView.setScope(scope());await reader.setScope(scope());if(panel==='steps'||panel==='analysis')await loadSteps();if(panel==='http')await loadHTTP();}
   const latest=button(rdText('读取最新记录'),()=>refresh(false)),filter=button('查询',apply);
-  runs.onchange=apply;types.onchange=apply;issues.onchange=apply;search.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();apply();}};
-  for(const [key,label]of Object.entries({trace:'会话轨迹',steps:'步骤检查',http:'LLM 请求 / 响应',analysis:'摘要与问答',...(session.runtimeKind==='kun'?{kun:'Kun 高级调试'}:{})})){const b=button(rdText(label),()=>switchPanel(key));b.dataset.panel=key;tabs.append(b);}
-  stepsPanel.append(el('div',{class:'debug-filters'},el('label',{},'类型',types),el('label',{},'预览搜索',search),el('label',{class:'debug-check'},issues,'仅需关注'),filter),stats,el('div',{class:'debug-columns'},el('section',{},list,el('div',{class:'debug-pages'},prev,pageLabel,more)),detail));
+  runs.onchange=apply;types.onchange=apply;issues.onchange=apply;order.onchange=apply;search.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();apply();}};
+  for(const [key,label]of Object.entries({trace:'会话轨迹',steps:'步骤与耗时',http:'LLM 请求 / 响应',analysis:'摘要与问答',...(session.runtimeKind==='kun'?{kun:'Kun 高级调试'}:{})})){const b=button(rdText(label),()=>switchPanel(key));b.dataset.panel=key;tabs.append(b);}
+  stepsPanel.append(timing,el('div',{class:'debug-filters'},el('label',{},'类型',types),el('label',{},'排序',order),el('label',{},'预览搜索',search),el('label',{class:'debug-check'},issues,'仅需关注'),filter),stats,el('div',{class:'debug-columns'},el('section',{},list,el('div',{class:'debug-pages'},prev,pageLabel,more)),detail));
   httpPanel.append(captureSettings,captureState,el('p',{class:'help'},'直通观测保留原协议。Request 与 Response 来自旁路副本，凭据头会脱敏，正文保留实际字节；未采集、截断或丢失会明确标记。'),httpStatus,el('div',{class:'debug-columns'},el('section',{},httpList,el('div',{class:'debug-pages'},httpPrev,httpPage,httpMoreButton)),httpDetail));
-  analysisPanel.append(el('h3',{},'当前范围摘要'),analysisStats,el('p',{class:'help'},'以上为结构化记录统计，沿用轨迹中的步骤筛选。模型分析会通过只读查询工具按需读取选定轮次的固定历史，并引用来源事件。'),el('section',{class:'debug-diagnosis'},el('h3',{},'询问这段轨迹'),el('p',{class:'help'},'请先选择一个轮次。创建独立诊断会话后使用原会话配置的模型；用量记入诊断会话。诊断结论和建议需要审核。'),diagnosisQuestion,diagnosisStart,diagnosisFeedback));
+  analysisPanel.append(el('h3',{},'当前范围摘要'),analysisStats,el('p',{class:'help'},'以上为结构化记录统计，沿用轨迹中的步骤筛选。模型分析会通过只读查询工具按需读取选定轮次的固定历史，并引用来源事件。'),el('section',{class:'debug-diagnosis'},el('h3',{},'询问这段轨迹'),el('p',{class:'help'},'请先选择一个轮次。创建独立诊断会话后使用系统维护配置；用量记入诊断会话。诊断结论和建议需要审核。'),diagnosisQuestion,diagnosisStart,diagnosisFeedback));
   d.append(el('div',{class:'dialog-head'},el('h2',{},rdText('运行轨迹')),el('div',{class:'debug-heading-actions'},latest,button(rdText('返回对话'),()=>d.close(),'quiet'))),info,error,
    el('div',{class:'debug-scope'},el('label',{},'轮次',runs)),el('div',{class:'debug-pages debug-run-pages'},runsPrev,runPage,runsNext),tabs,tracePanel,stepsPanel,httpPanel,analysisPanel,kunPanel,capabilities);
   d.onclose=()=>{closed=true;epoch++;captureTicket++;reader.destroy();kunView?.destroy();if(active?.dialog===d)active=null;d.remove();if(location.hash==='#trace')history.replaceState(null,'',location.pathname+location.search+'#session/'+encodeURIComponent(sid));if(typeof scheduleRender==='function')scheduleRender();};

@@ -92,7 +92,7 @@ func (s DebugService) Query(ctx context.Context, sid string, q d.Query) (d.Resul
 		} else if d.Unified(q.Kind) {
 			value, e = reader.Unified(ctx, q.Kind, tracequery.UnifiedArgs{RunID: q.RunID, Source: q.Source, Kind: q.RecordKind, After: q.After, Offset: q.Offset, Limit: q.Limit})
 		} else {
-			value, e = reader.CallContext(ctx, methods[q.Kind], tracequery.Args{RunID: q.RunID, EventID: q.EventID, Section: q.Section, MessageIndex: q.MessageIndex, Type: q.Type, Status: q.Status, Query: q.Search, StepID: q.StepID, Offset: q.Offset, Limit: q.Limit})
+			value, e = reader.CallContext(ctx, methods[q.Kind], tracequery.Args{Sort: q.Sort, RunID: q.RunID, EventID: q.EventID, Section: q.Section, MessageIndex: q.MessageIndex, Type: q.Type, Status: q.Status, Query: q.Search, StepID: q.StepID, Offset: q.Offset, Limit: q.Limit})
 		}
 		if e != nil {
 			if errors.Is(e, tracequery.ErrProjectionLimit) {

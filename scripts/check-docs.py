@@ -27,6 +27,11 @@ assert 'protocolVersion' in maintenance['BuildAssistantRun']['properties']
 assert 'sourceInstanceId' in maintenance['TraceOrigin']['properties']
 assert 'sourceWorkspaceId' in maintenance['TraceOrigin']['properties']
 assert 'purpose' in maintenance['Workspace']['properties']
+assert maintenance['DebugStatistics']['properties']['timing']['$ref'].endswith('/DebugTimingSummary')
+assert {'startMethod','endMethod'} <= set(maintenance['DebugRunTiming']['properties'])
+for path in ['/sessions/{sid}/debug/query','/member/{grantId}/sessions/{sid}/debug/query']:
+    sorts=[p for p in spec['paths'][path]['get']['parameters'] if p['name']=='sort']
+    assert len(sorts)==1 and sorts[0]['schema']['enum']==['recorded','duration_desc','duration_asc'], path
 assert 'docker' in maintenance['SetupDiscoveryService']['properties']['source']['enum']
 assert 'containers' in maintenance['SetupDiscovery']['properties']
 assert 'recipeName' in maintenance['BuildCenterImage']['properties']['sources']['items']['properties']
