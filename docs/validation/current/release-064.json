@@ -1,0 +1,82 @@
+{
+  "version": "0.64.0",
+  "date": "2026-11-06",
+  "status": "passed",
+  "scope": [
+    "Distinct Docker setup download and local-build choices with a quieter existing-image option",
+    "Per-source preparation, failure, Kun repair, candidate and validation progress",
+    "Durable exact-source repair recovery and safe asynchronous setup state"
+  ],
+  "checks": [
+    {
+      "name": "go test -p 1 ./...",
+      "result": "passed",
+      "log": "release-064-go.log",
+      "details": "release-064-go-result.json"
+    },
+    {
+      "name": "go vet -p 1 ./...",
+      "result": "passed",
+      "log": "release-064-vet.log"
+    },
+    {
+      "name": "Final embedded web assets",
+      "result": "passed",
+      "log": "release-064-web-embed.log"
+    },
+    {
+      "name": "Linux and Windows amd64 builds from final source",
+      "result": "passed",
+      "details": "release-064-builds.json",
+      "notes": "Linux --version: RunDesk 0.64.0. Windows cross-compiled, not run on Windows."
+    },
+    {
+      "name": "12 frontend JSDOM suites and 119 JavaScript syntax checks",
+      "result": "passed",
+      "details": [
+        "release-064-web.json",
+        "release-064-syntax.json"
+      ],
+      "notes": "After final narrow initialization changes, the two affected suites and four changed JavaScript files were checked again; see release-064-ui.json."
+    },
+    {
+      "name": "Final Docker setup Chromium workflow at desktop/tablet/mobile widths",
+      "result": "passed",
+      "details": "release-064-browser.json",
+      "log": "release-064-browser.log"
+    },
+    {
+      "name": "Final desktop/mobile source and repair card visual inspection",
+      "result": "passed",
+      "notes": "Internal review only; no new screenshots included."
+    },
+    {
+      "name": "Documentation links, versions and reproducible OpenAPI generation",
+      "result": "passed",
+      "notes": "106 documents, 248 paths, 299 operations; strict source-scoped list schema matches Go."
+    }
+  ],
+  "behavior_verified": [
+    "Download and build choices display only their own fields, preserve per-method drafts, and use native radio keyboard behavior.",
+    "A failed preparation and its exact Kun run, conversation/trace link, candidate and offline/smoke results share one source card.",
+    "A submitted auto handoff is not proof of an active or successful repair. Terminal unverified repairs remain attention states and permit an explicit manual retry.",
+    "Kun-repaired images count as prepared only with a verified maintenance candidate and matching successful offline/smoke evidence; task completion alone is insufficient.",
+    "Source mismatches are not merged; missing-source repairs and unmatched image checks remain visible without counting as prepared.",
+    "Ambiguous manual responses reuse request identity. A late response after close/reopen preserves new inputs, joins the accepted repair and prevents duplicate submission.",
+    "Open logs, reading offsets, disclosure choices and focus survive polling.",
+    "Failed downloads offer source/retry actions and never implicitly submit local builds or Kun build-repair authorization.",
+    "The administrator repair-list lookup is strict, source scoped, capped at 20, deterministically time ordered and read-only."
+  ],
+  "validation_notes": [
+    "An interrupted initial Go invocation is retained separately and not counted as a pass. The complete serial rerun passed.",
+    "Browser review caught optional log nodes rendered as literal null; guarded appends and final DOM/browser assertions verified the fix.",
+    "Final Go source was stable for the complete suite and vet. Subsequent initialization-only refinements were checked with targeted suites, final embedded-asset tests, fresh platform builds and the final browser workflow."
+  ],
+  "limits": [
+    "No deployment to the user server or real Docker image build, model, vLLM, GPU or production Kun acceptance run.",
+    "The browser uses the actual isolated Go demo service with explicitly controlled preparation/repair API fixtures; it checks UI behavior rather than autonomous repair quality.",
+    "The public image catalog still requires real publisher-provided image references; this release does not publish Docker images.",
+    "Only the Docker setup browser workflow was rerun here; previous releases retain their original broader browser evidence."
+  ],
+  "ui_details": "release-064-ui.json"
+}

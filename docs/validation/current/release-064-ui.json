@@ -1,0 +1,139 @@
+{
+  "version": "0.64.0",
+  "scope": "Shipped initialization JavaScript with JSDOM API fixtures. No real model, Docker or worker execution.",
+  "unitPassed": true,
+  "browser": {
+    "passed": true,
+    "scope": "Actual isolated Go demo service and shipped assets, scoped preparation/repair API fixtures; no Docker, model or worker execution.",
+    "checks": [
+      "distinct method cards with keyboard-native radio navigation",
+      "selected form and per-method drafts",
+      "same-card auto/manual repair and candidate associations",
+      "no cross-source or image-test misassociation",
+      "ambiguous manual response retains request identity and disables duplicate repair",
+      "logs and disclosure persist through polling",
+      "repair history restores after wizard reopening",
+      "maintenance verification required for readiness",
+      "download retry never implicitly builds or registers repair",
+      "desktop tablet mobile geometry and repair entry visibility",
+      "progress inspection is read-only"
+    ],
+    "errors": []
+  },
+  "unitChecks": [
+    {
+      "command": "node internal/web/tests/setup-onboarding.cjs",
+      "exitCode": 0,
+      "result": {
+        "version": "0.64.0",
+        "passed": true,
+        "checks": [
+          "three-page setup with optional Docker and manual reopening",
+          "basic completion after Codex restores the original route",
+          "Docker can be opened directly",
+          "all existing installation, download, repair, source and image flows",
+          "Docker provenance and unpublished-container inventory",
+          "failed explicit/Docker candidates remain visible with retry reason",
+          "rescan preserves edits made while the request is pending",
+          "Kun maintenance discovery is distinct from Codex provider configuration",
+          "stale inference test cannot enable an edited connection"
+        ]
+      },
+      "log": "release-064-onboarding.log"
+    },
+    {
+      "command": "node internal/web/tests/setup-docker-flow.cjs",
+      "exitCode": 0,
+      "result": {
+        "passed": true,
+        "checks": [
+          "distinct native method choices and selected form",
+          "per-source automatic/manual repairs and candidate isolation",
+          "manual response loss preserves request identity and prevents duplicates",
+          "repair associations survive reopen",
+          "completed task alone is not verified image readiness",
+          "verified candidate retains failed source history",
+          "logs/disclosures survive polling",
+          "mode-specific drafts persist",
+          "failed download never implicitly builds or authorizes repair",
+          "progress lookup does not execute tasks"
+        ],
+        "scope": "shipped UI in JSDOM with scoped service fixtures; no real model, worker or Docker"
+      },
+      "log": "release-064-docker-flow.log"
+    }
+  ],
+  "focusedAssertions": [
+    "Automatic submitted handoff cannot conceal a loaded failed/blocked repair at source-card level",
+    "Incomplete verified maintenance projection cannot claim checks passed",
+    "Unmatched image-test metadata retains a visible/readable log entry",
+    "Orphan auto repair is retained in same progress area when source build is absent",
+    "Empty retained build list with repair history is not shown as no preparation tasks",
+    "Original source error and candidate associations remain separate",
+    "Manual ambiguous response retains request ID and accepted repair disables duplicate submission",
+    "Manual and automatic repair associations restore after wizard reopening",
+    "Logs, disclosure and log scroll position persist through background polling",
+    "Method-specific drafts survive mode switching; failed download retries never execute builds or repair",
+    "Accepted manual repair arriving after close/reopen preserves new input and stored draft, appears in current source card and disables duplicate submission with one POST",
+    "Known terminal blocked repair permits an explicit new manual attempt despite persistent submitted auto row; active/verified repairs continue to disable duplicate submissions",
+    "Optional absent logs never render literal null placeholders in source or candidate cards"
+  ],
+  "finishedAt": "2026-11-06T09:20:08.390028+00:00",
+  "finalTargetedSyntax": [
+    {
+      "command": "node --check internal/web/setup-onboarding.js",
+      "exitCode": 0
+    },
+    {
+      "command": "node --check internal/web/tests/setup-onboarding.cjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node --check internal/web/tests/setup-docker-flow.cjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node --check internal/web/tests/setup-docker-flow-browser.cjs",
+      "exitCode": 0
+    }
+  ],
+  "finalSourceSHA256": {
+    "internal/web/setup-onboarding.js": "8f436cdae1783d3ecff86c02b5620576b4b9f5beec466581a548396f8cdee72a",
+    "internal/web/tests/setup-onboarding.cjs": "7c5c83719bde68447cd03ff5722e38096575914cb5fc0d47ab7ce1f44da64085",
+    "internal/web/tests/setup-docker-flow.cjs": "bbe42788e37f7bb219afe38c2cd77b84c7de5724197a288a60598c356a8b7ce9",
+    "internal/web/tests/setup-docker-flow-browser.cjs": "fae24ed16cffd55673ae12cf4fdf4b91d0b547353f5c39856cafc1a78f92ce08"
+  },
+  "runtime": {
+    "node": "v24.22.1",
+    "browserDependency": "@sparticuz/chromium@153.0.0",
+    "portableExecutable": "/tmp/chromium"
+  },
+  "passed": true,
+  "browserLog": "release-064-browser.log",
+  "fullFrontendRegression": {
+    "result": "passed",
+    "suites": 12,
+    "details": "release-064-web.json",
+    "syntaxFiles": 119,
+    "syntaxDetails": "release-064-syntax.json",
+    "notes": "Full12 suites and119 syntax checks passed before final narrow receipt/eligibility/nullable-log adjustments; affected two suites and four changed JavaScript files rechecked after all final changes. Final actual-browser Docker workflow passed against the rebuilt final binary."
+  },
+  "browserCommand": "NODE_PATH=/workspace/scratch/725a395bb84b/qa/node_modules FONTCONFIG_FILE=/workspace/scratch/725a395bb84b/qa/fonts.conf RUNDESK_BINARY=/workspace/scratch/725a395bb84b/qa064/rundesk-browser RUNDESK_BROWSER_OUTPUT=/workspace/scratch/725a395bb84b/qa064/docker-flow node /workspace/scratch/725a395bb84b/qa064/run-portable-browser.cjs",
+  "validationNotes": [
+    "Restored a private pinned @sparticuz/chromium@153.0.0 after the cached Playwright executable was missing and system Chromium failed at its Unix process-singleton socket; final portable headless browser run passed.",
+    "Corrected test-only exact matching of fixture errors because actual api() prepends HTTP status; no production change was required.",
+    "Final browser rerun captured source+Kun+candidate element screenshots for internal desktop/mobile review; no screenshots are deliverables.",
+    "Final visual review exposed optional-log null text and terminal submitted eligibility issues; both were fixed, covered in JSDOM, and final browser/element captures rechecked."
+  ],
+  "limits": [
+    "Controlled metadata/events/repair API fixtures served alongside the actual final compiled isolated Go demo service; no live Docker daemon, model or Kun worker execution.",
+    "Browser screenshots are internal only and should not be copied into release archives."
+  ],
+  "browserResultFile": "release-064-browser.json",
+  "binarySHA256": "0f679d135a86b6e759bd51e2a609e2918a9802aa76a62551289f72b543cc7b81",
+  "visualReview": {
+    "passed": true,
+    "methods": "Distinct download/build cards, compact Docker check and existing-image option readable at desktop/tablet/mobile.",
+    "correspondence": "Source failure, Kun record/trace, candidate and offline/smoke proof visible together; final desktop/mobile card captures contain no null artifacts."
+  }
+}

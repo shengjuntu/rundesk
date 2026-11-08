@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Control API (RDCA)",
-    "version": "0.63.0",
+    "version": "0.64.0",
     "description": "RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter；附加 UHP /v1 入口共用任务核心，具体范围与限制见 docs/UHP.md，不声明完整规范兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。0.61.0 起日常会话与应用任务仅接受 Codex，Kun 用于维护、轨迹问答及保留的研究 API；普通 Kun 提交返回 kun_maintenance_only。当前应用接入、错误、幂等及示例见 docs/API-V1.md。"
   },
   "servers": [
@@ -1877,6 +1877,56 @@
       }
     },
     "/build-center/assistant-runs": {
+      "get": {
+        "operationId": "get_build_center_assistant_runs",
+        "summary": "管理员：按精确原构建读取对应的持久修复任务",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "sourceBuildId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$",
+              "minLength": 24,
+              "maxLength": 24
+            },
+            "description": "存在的完整原构建编号；必须恰好提供一次，不接受其他查询参数。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildAssistantRunList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化权限、归属、状态或执行错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-administrator-only": true,
+        "description": "管理员只读查询，按精确 sourceBuildId 返回安全的 BuildAssistantRun 投影及当前任务、维护状态，不返回内部能力或工作区路径，不启动、重提或撤销修复。items 最多20条，按 created 降序、相同时 id 降序；空结果为[]。hasMore 只表示还有被省略的较早修复，不提供offset/limit或分页游标。缺失、重复、多余或非法查询返回400 invalid_assistant_query；空白或格式错误的来源返回400 invalid_assistant_source，格式正确但不存在的来源返回404 build_not_found。普通应用凭据与成员拒绝。任务完成不能替代 maintenance.verifiedBuildId 及同源offline/smoke验证。"
+      },
       "post": {
         "operationId": "post_build_center_assistant_runs",
         "summary": "管理员：界面使用配置的本机 Kun 维护助手；Codex 构建 API 保留兼容。新 Kun 任务采用计划协议 v1，最多三次候选，成功由同源 offline/smoke 证据决定。bootstrap Skill 并注入限时构建 MCP，不安装原生插件",
@@ -35761,6 +35811,26 @@
           "updated",
           "publicAccessVerified",
           "logTruncated"
+        ],
+        "additionalProperties": false
+      },
+      "BuildAssistantRunList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuildAssistantRun"
+            },
+            "maxItems": 20
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "hasMore"
         ],
         "additionalProperties": false
       },

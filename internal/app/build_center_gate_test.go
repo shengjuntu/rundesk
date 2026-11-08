@@ -34,7 +34,7 @@ func TestBuildCenterAndNativePluginsRemainAdministratorResources(t *testing.T) {
 				{"POST", "/build-center/images/aaaaaaaaaaaaaaaaaaaaaaaa/launch"},
 				{"POST", "/build-center/images/aaaaaaaaaaaaaaaaaaaaaaaa/tests"},
 				{"GET", "/build-center/tests/aaaaaaaaaaaaaaaaaaaaaaaa"},
-				{"POST", "/build-center/assistant-runs"}, {"GET", "/build-center/assistant-runs/aaaaaaaaaaaaaaaaaaaaaaaa"},
+				{"POST", "/build-center/assistant-runs"}, {"GET", "/build-center/assistant-runs?sourceBuildId=aaaaaaaaaaaaaaaaaaaaaaaa"}, {"GET", "/build-center/assistant-runs/aaaaaaaaaaaaaaaaaaaaaaaa"},
 				{"GET", "/instances/" + shared.InstanceID + "/plugins"}, {"POST", "/plugins/inspect"},
 			} {
 				r := appRequest(h, p.method, prefix+p.path, `{}`, token, "")
@@ -56,10 +56,10 @@ func TestBuildMCPIsTheOnlyTaskCapabilityAuthenticationBoundary(t *testing.T) {
 	for _, prefix := range []string{"/api", "/api/v1"} {
 		for _, p := range []struct{ method, path string }{
 			{"POST", "/build-center/mcp"}, {"GET", "/build-center/mcp"},
-			{"POST", "/build-center/mcp/extra"}, {"POST", "/build-center/assistant-runs"},
+			{"POST", "/build-center/mcp/extra"}, {"POST", "/build-center/assistant-runs"}, {"GET", "/build-center/assistant-runs?sourceBuildId=aaaaaaaaaaaaaaaaaaaaaaaa"},
 			{"GET", "/build-center/images"}, {"GET", "/build-center/recipes"},
 			{"GET", "/build-center/sources"}, {"PUT", "/build-center/sources"},
-				{"GET", "/build-center/sources/defaults"}, {"GET", "/build-center/runtime-options?codexVersion=0.157.1"},
+			{"GET", "/build-center/sources/defaults"}, {"GET", "/build-center/runtime-options?codexVersion=0.157.1"},
 			{"GET", "/build-center/recipes/builtin-news2douyin/sources"},
 			{"GET", "/build-center/recipes/builtin-news2douyin/dockerfile"},
 			{"GET", "/build-center/recipes/builtin-news2douyin/context.zip?codexVersion=0.157.1"},

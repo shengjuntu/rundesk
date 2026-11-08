@@ -242,6 +242,8 @@ TaskSpec.input 的稳定入口是 `{text,files?,skills?}`；files 使用服务�
 
 0.52.0 增加 `/build-center/recipes`、`/build-center/builds`、`/build-center/images`、`/build-center/tests`、`/build-center/assistant-runs` 等管理员管理资源，沿用现有构建队列和环境管理；新任务可自由选择资源，不增加工作流模型。multipart 动态配方导入及各资源操作通过 body/form 的 24 位十六进制 requestId 持久去重。详细路径、冻结输入、删除保护及测试范围见[构建中心](BUILD-CENTER.md)。
 
+0.64.0 增加管理员只读 `GET /build-center/assistant-runs?sourceBuildId=<原构建编号>`，要求恰好一个精确、存在的 24 位小写十六进制 `sourceBuildId`，读取该构建对应的持久修复任务。结果为 `{items: BuildAssistantRun[], hasMore: boolean}`，最多 20 条，按创建时间倒序、相同时间按编号倒序；读取当前任务及维护状态，不返回内部短期能力，也不启动、重提或撤销修复。`hasMore` 表示还有较早记录，本查询不接受分页或其他筛选参数。缺失、重复或多余查询返回 400 `invalid_assistant_query`；空白或非法来源返回 400 `invalid_assistant_source`；合法但不存在的来源返回 404 `build_not_found`。初始化据此恢复原任务中的修复关联。是否验证成功应读取维护记录与同源 offline/smoke 证据，不能只看任务 completed。
+
 `/instances/{iid}/plugins` 与 `/plugins/inspect` 提供原生配置/有效组件来源及 ZIP 只读检查。插件生命周期能力按实际稳定 API 开放，当前不调用 plugin/list/read/install/uninstall，不把配置或独立 Skill bootstrap 计为安装。见[原生插件支持](NATIVE-PLUGINS.md)。
 
 构建助手 MCP 是独立的短期任务能力入口，不能使用应用凭据或管理员令牌冒充，不授予通用构建中心访问。其鉴权在精确 MCP 端点内部执行，Host/Origin 守卫继续保留。其余管理路径由原管理员边界保护；应用凭据与成员仍默认拒绝。

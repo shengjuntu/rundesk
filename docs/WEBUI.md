@@ -1,6 +1,6 @@
 # WebUI：工作区、会话与 Agent / Workspaces, conversations and Agents
 
-本文描述 RunDesk 0.63.0 的界面与当前后端边界。升级不改变存储布局，也不迁移或删除原有实例、工作区和历史数据。界面将长期保存的“实例”称为 **Agent**；它不等同于 Docker 容器。应用的“应用设置”页展示可用 Agent 环境、默认绑定、凭据授权数量和项目工作区；见[运行预设](APPLICATION-RUNTIME-PRESETS.md)与[项目环境](APPLICATION-PROJECT-ENVIRONMENTS.md)。
+本文描述 RunDesk 0.64.0 的界面与当前后端边界。升级不改变存储布局，也不迁移或删除原有实例、工作区和历史数据。界面将长期保存的“实例”称为 **Agent**；它不等同于 Docker 容器。应用的“应用设置”页展示可用 Agent 环境、默认绑定、凭据授权数量和项目工作区；见[运行预设](APPLICATION-RUNTIME-PRESETS.md)与[项目环境](APPLICATION-PROJECT-ENVIRONMENTS.md)。
 
 RunDesk 的会话按工作区组织：进入工作区后新建会话，由会话选择 Codex 运行环境。同一工作区可以包含多个使用不同 Codex 配置的会话。Kun 不出现在日常 Agent 列表与新建任务选项中，内部维护从“环境设置”和构建中心进入。Agent 管理负责模型、Skills、MCP 和插件配置；应用接入和构建中心分别负责外部调用与运行环境准备，不要求用户先注册应用才能管理实例。
 
@@ -10,7 +10,11 @@ RunDesk 的会话按工作区组织：进入工作区后新建会话，由会话
 
 环境扫描展示运行 RunDesk 的服务器信息及本机模型服务，不代表浏览器所在电脑。选择模型后主动测试推理和自动函数调用，再保存专用 Kun 维护助手。Codex 安装和 Docker 构建按明确选择提交后台任务，刷新后可继续查看状态和日志。失败可以重试，或交给已就绪的 Kun 生成独立修复任务，轨迹使用既有任务/会话界面。
 
-第三步默认下载预构建镜像，另有本机构建与已有本地镜像检查。公开目录为空时明确显示未发布，可填写真实地址或选择其他准备方式；不会将示例地址当成可下载镜像。公开目录支持版本、平台与来源选择，保存目录使用 revision 防止覆盖他人的修改。第三步同时列出已准备或跳过的组件以及版本化经验，保存设置后进入工作台。候选和已验证分别展示；扫描到工具、下载成功、Agent 说已解决，都不能替代相应的执行验证。初始化不改已有实例后端或应用镜像绑定。具体配置、期限和安装边界见[部署说明](SETUP.md)。
+第三步把“下载现成镜像”和“从配方本机构建”做成说明用途的选择卡片，默认下载；本机已有镜像检查作为另一种选择。只显示当前方式的表单，切换时保留已填写的草稿。Docker 检查使用紧凑状态行，暂时不用时仍可直接完成初始化。公开目录为空时明确显示未发布，可填写真实地址或选择其他准备方式；不会将示例地址当成可下载镜像。公开目录支持版本、平台与来源选择，保存目录使用 revision 防止覆盖他人的修改。
+
+“准备进度”中，每个任务显示实际采用的方式。下载失败直接调整来源或重试，不自动改成本机构建，也不提交 Kun 构建修复。本机构建失败后，原卡片内显示自动交接状态或手动修复操作，并连接对应 Kun 对话、修复候选、日志与检查结果；Docker 页不再要求到另一个“Kun 修复任务”区域寻找关联。重新打开向导会按原构建编号读取持久修复记录。初次失败仍保留，修复任务结束也不直接变成“镜像就绪”：只有明确绑定的候选通过 offline/smoke 并形成已验证构建记录，才展示验证成功。未知或暂时读取不到的状态保留待确认提示。缺失原始构建时保留关联卡片，但不计入准备成功；独立镜像检查和未确认完整验证的 Kun 候选也不单独计入。
+
+第三步继续列出已准备或跳过的组件及版本化经验，保存设置后进入工作台。扫描到工具、下载成功、Agent 说已解决，都不能替代相应的执行验证。初始化不改已有实例后端或应用镜像绑定。具体配置、期限和安装边界见[部署说明](SETUP.md)。
 
 本机构建显示两个独立选择：下载网络与 Codex 来源。中国／国际分组预填下载地址，仍可逐项编辑；Codex 可自动复用匹配的受管 Linux 安装、明确要求原生包、指定已有兼容基础镜像或使用 npm。候选来源检查显示实际服务器记录，执行前仍会核对摘要和运行能力。源编辑器可把新版默认列表中的缺失项加入草稿，保留现有自定义值并通过 revision 保存。
 
@@ -86,6 +90,8 @@ Agent 页面明确当前工作区；Docker 构建与镜像管理统一从左侧�
 Conversations can be read as expandable rounds. Trace timing distinguishes valid run wall intervals, known step work and missing durations. A compact primary rail reserves the workspace panel for conversations, while management pages use the released space; mobile navigation remains a dismissible drawer.
 
 Build Center opens as a recipe → image → Agent workbench, reuses existing images and displays linked Agents. Friendly frozen recipe names lead image cards; identifiers remain available below. Docker-aware model discovery retains candidate failures. Codex provider settings target an explicit environment and remain distinct from the Kun maintenance model.
+
+Docker setup separates downloading a ready image from building a recipe and checking an existing local image. Each preparation card keeps the original failure, exact Kun repair, candidate builds, logs and verification results together, including after reopening setup. A completed repair task is not a verified image; the maintenance record must identify a candidate with the required offline/smoke evidence. Download failures never silently switch to local builds.
 
 New installations begin with three full-screen pages: find and configure LLM, configure and install Codex, and optionally prepare Docker environments. Basic setup can finish after Codex; Environment setup reopens the guide later. The Docker page defaults to a published prebuilt image and retains local build or existing-image options. The bundled public catalog stays empty until actual release references are provided. Conversations are organized in two levels: workspace, then conversation. Each conversation displays its Codex environment tag. New conversations inherit the workspace’s last available Codex environment; the tag can change it before session creation. Kun is reserved for maintenance, trace questions and retained research APIs. Maintenance directories and Kun records are excluded from the everyday conversation tree; historical records remain accessible by their existing links. Existing sessions keep their execution identity. Ordinary workspaces can host multiple Docker environments with separate homes, while application-owned workspaces retain their owner. Skills, MCP and plugins share a settings dialog. Build presets produce images; images can support multiple Agents. Application registration remains an integration concern.
 

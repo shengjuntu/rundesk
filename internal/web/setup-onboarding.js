@@ -1,7 +1,7 @@
 "use strict";
 window.RunDeskOnboarding = (() => {
   const tr = (zh, en) => document.documentElement.lang === "en" ? en : zh;
-  const enc = encodeURIComponent, activeJob = value => ["queued", "running", "canceling", "starting", "waiting"].includes(value);
+  const enc = encodeURIComponent, activeJob = value => ["queued", "running", "canceling", "starting", "waiting", "dispatching", "stopping"].includes(value);
   const names = {kun:"Kun",codex:"Codex",docker:"Docker",node:"Node.js",npm:"npm",vllm:"vLLM","llama-server":"llama.cpp"};
   const steps = [
     ["llm", "寻找和配置 LLM", "Find and configure LLM", "发现模型，启用 Kun", "Discover models and enable Kun"],
@@ -41,7 +41,7 @@ window.RunDeskOnboarding = (() => {
     render(c); c.page.scrollTop = 0;
   }
   function updateSteps(c) {
-    const ready = [readyKun(c),!!c.codexPath,c.builds.some(value => value.status === "succeeded")];
+    const ready = [readyKun(c),!!c.codexPath,preparationCounts(c).ready>0];
     for (const [index, node] of [...c.nav.children].entries()) {
       node.setAttribute("aria-current", index === c.step ? "step" : "false");
       node.dataset.state = ready[index] ? "ready" : "idle";
@@ -268,6 +268,7 @@ window.RunDeskOnboarding = (() => {
       const value=await api("/setup/auto-repairs",{method:"POST",body:{kind:intent.kind,sourceId:intent.sourceId,enabled:true,requestId:receipt(c,key)}});
       intent.state="registered";intent.recordId=value.id;
       c.autoRows=[value,...c.autoRows.filter(row=>row.id!==value.id)];delete c.receipts[key];saveDraft(c);schedule(c);renderInstallJobs(c);renderBuilds(c);renderRepairs(c);
+      if(intent.kind==="image-build"){await hydrateBuildRepairs(c,false);renderBuilds(c);}
     }catch(error){
       intent.state=error.status>=400&&error.status<500?"blocked":intent.attempts<3?"unconfirmed":"blocked";
       intent.error=error.message;saveDraft(c);schedule(c);
@@ -338,15 +339,23 @@ window.RunDeskOnboarding = (() => {
     if(!c.repairs.length&&!c.autoRows.length)target.append(note("失败时可以委托 Kun。修复过程保留任务、修改和验证记录。","Delegate to Kun when a step fails. The task, changes and validation results remain available."));
   }
   function docker(c) {
-    header(c,"准备 Docker 环境","Prepare Docker environments","下载已发布的预设镜像，或按需要在本机构建。获取后会检查镜像身份与工具；只准备你选中的环境。","Download published preset images, or build locally when needed. Acquired images are checked for identity and tools; prepare only the environments you choose.");
+    header(c,"准备 Docker 环境","Prepare Docker environments","选择一种方式准备镜像。下载使用现成环境；本机构建会执行配方，失败后可由 Kun 修复。此步可以稍后再做。","Choose how to prepare an image. Download a ready-made environment, or build a recipe locally with optional Kun repair. You can do this step later.");
     const dockerState=c.dockerCheck;
-    const status=card("Docker Engine",el("div",{class:"ob-inline"},badge(dockerState?.ok?"ready":dockerState?"unavailable":"idle",dockerState?.ok?tr("Docker 检查通过","Docker check passed"):dockerState?tr("Docker 尚不可用","Docker is unavailable"):tr("尚未检查","Not checked")),action(c,tr("检查 Docker","Check Docker"),async()=>{c.dockerCheck=await api("/setup/check",{method:"POST",body:{kind:"docker"}});render(c);},"quiet",{id:"onboarding-check-docker"})),note("Docker 不可用时可以跳过此步，稍后从构建中心继续。","If Docker is unavailable, skip this step and continue later from the build center."));
+    const status=el("section",{class:"ob-docker-check","aria-label":tr("Docker 状态","Docker status")},el("div",{class:"ob-inline"},el("strong",{},"Docker Engine"),badge(dockerState?.ok?"ready":dockerState?"unavailable":"idle",dockerState?.ok?tr("可用","Available"):dockerState?tr("尚不可用","Unavailable"):tr("尚未检查","Not checked"))),action(c,tr("重新检查","Check again"),async()=>{c.dockerCheck=await api("/setup/check",{method:"POST",body:{kind:"docker"}});render(c);},"quiet",{id:"onboarding-check-docker"}));
     if(dockerState&&!dockerState.ok)status.append(el("p",{class:"ob-error"},dockerState.error||""));c.main.append(status);
-    const mode=el("select",{id:"onboarding-docker-mode"},el("option",{value:"pull"},tr("下载预构建镜像（推荐）","Download prebuilt image (recommended)")),el("option",{value:"build"},tr("本机构建","Build locally")),el("option",{value:"local"},tr("使用本机已有镜像","Use an existing local image")));mode.value=c.dockerMode;
-    mode.onchange=()=>{captureSources(c);c.dockerMode=mode.value;saveDraft(c);render(c);};
-    c.main.append(card(tr("准备方式","Preparation method"),el("label",{},tr("镜像来源","Image source"),mode)));
+    const mode=el("fieldset",{id:"onboarding-docker-mode",class:"ob-methods"},el("legend",{},tr("怎样准备镜像？","How would you like to prepare the image?")));
+    for(const [value,zh,en,descriptionZh,descriptionEn] of [
+      ["pull","下载现成镜像","Download a ready image","已有发布镜像，直接下载并检查，无需执行构建配方。","Download and check a published image without running a build recipe."],
+      ["build","从配方本机构建","Build a recipe locally","在这台服务器安装依赖、生成镜像；失败时可交给 Kun 修复。","Install dependencies and create an image on this server, with optional Kun repair on failure."],
+      ["local","使用本机已有镜像","Use an existing local image","只检查，不下载或重新构建。","Check an existing image without downloading or rebuilding."]
+    ]){
+      const input=el("input",{type:"radio",name:"onboarding-docker-mode",value,checked:c.dockerMode===value});
+      input.onchange=()=>{if(!input.checked)return;captureSources(c);c.dockerMode=value;saveDraft(c);render(c);c.page.querySelector('input[name="onboarding-docker-mode"]:checked')?.focus({preventScroll:true});};
+      mode.append(el("label",{class:"ob-method"+(value==="local"?" ob-method-local":""),"data-docker-method":value},input,el("span",{},el("strong",{},tr(zh,en)),el("small",{},tr(descriptionZh,descriptionEn)))));
+    }
+    c.main.append(mode);
     if(c.dockerMode==="build")buildDocker(c);else acquireDocker(c);
-    c.main.append(card(tr("准备进度","Preparation progress"),el("div",{id:"onboarding-build-history"})));renderBuilds(c);repairRegion(c);
+    const progress=card(tr("准备进度","Preparation progress"),note("每个任务的进度、失败原因和 Kun 修复记录都在同一处。","Progress, failures and linked Kun repairs stay together for each task."),el("div",{id:"onboarding-build-history"}));progress.id="onboarding-preparation-progress";c.main.append(progress);renderBuilds(c);
   }
   function buildDocker(c) {
     const dockerState=c.dockerCheck;
@@ -391,10 +400,11 @@ window.RunDeskOnboarding = (() => {
         const key="build:"+r.id+":"+JSON.stringify(input),id=receipt(c,key),intent=autoIntent(c,"image-build",id);
         const value=await api("/build-center/recipes/"+enc(r.id)+"/build",{method:"POST",body:{...input,requestId:id}});
         completedKeys.push(key);saveDraft(c);
-        c.builds=[value,...c.builds.filter(row=>row.id!==value.id)];renderBuilds(c);schedule(c);
+        c.builds=[value,...c.builds.filter(row=>row.id!==value.id)];renderBuilds(c);revealPreparation(c,value.id);schedule(c);
         if(intent){intent.sourceId=value.id;saveDraft(c);try{await registerAuto(c,intent);}catch(error){registrationErrors.push(error.message);}renderRepairs(c);}
       }
       for(const key of completedKeys)delete c.receipts[key];saveDraft(c);
+      await hydrateBuildRepairs(c);renderBuilds(c);
       if(registrationErrors.length)throw Error(registrationErrors.join("\n"));
     },"primary",{id:"onboarding-build-selected"});start.disabled=!dockerState?.ok||!c.catalog;
     c.main.append(card(tr("可用预设","Available presets"),options,el("div",{class:"ob-grid",style:"margin-top:20px"},el("label",{},tr("镜像内 Codex 精确版本","Exact Codex release in images"),version),el("label",{},tr("网络配置","Network configuration"),group)),runtimePanel,note("切换下载源分组会重新填入所选预设的地址。单独修改的地址会随草稿保留。","Changing the source group refills the selected presets. Individual address edits are retained in your draft."),sources,autoControl(c,"onboarding-build-auto-repair"),el("div",{class:"ob-actions"},start,action(c,tr("编辑源列表","Edit source catalog"),()=>editSources(c,loadDocker))),note("构建在后台运行，关闭初始化页面不会停止任务。每个构建会保存本次配方和下载源快照。","Builds run in the background and continue when setup closes. Each build keeps its recipe and source configuration snapshot.")));renderSources();
@@ -453,7 +463,7 @@ window.RunDeskOnboarding = (() => {
       const input={profileId:draft.profileId,codexVersion:draft.version,source:c.dockerMode,reference:draft.reference.trim(),...(pulling&&selected&&source?{publicImageId:selected.id,publicSourceId:source.id,catalogRevision:c.publicCatalog.revision}:{})};
       const key="runtime-image:"+JSON.stringify(input),id=receipt(c,key);
       const job=await api("/setup/runtime-images",{method:"POST",body:{...input,requestId:id}});
-      delete c.receipts[key];saveDraft(c);c.builds=[job,...c.builds.filter(value=>value.id!==job.id)];renderBuilds(c);schedule(c);
+      delete c.receipts[key];saveDraft(c);c.builds=[job,...c.builds.filter(value=>value.id!==job.id)];renderBuilds(c);revealPreparation(c,job.id);schedule(c);
     },"primary",{id:"onboarding-prepare-image"});submit.disabled=!c.dockerCheck?.ok||c.runtimeProfiles?.supported===false;
     const panel=card(pulling?tr("下载预构建镜像","Download a prebuilt image"):tr("复用本机镜像","Reuse a local image"),fields);
     if(pulling&&!entries.length)panel.append(el("p",{class:"ob-notice",id:"onboarding-public-catalog-status"},c.publicCatalogError?tr("公开镜像列表读取失败：","Could not load the public image catalog: ")+c.publicCatalogError:tr("当前列表还没有与此预设和平台匹配的公开镜像。填写发布方提供的真实地址，或切换到本机构建。","No public image in the current catalog matches this preset and platform. Enter a real publisher-provided reference, or switch to a local build.")));
@@ -470,48 +480,261 @@ window.RunDeskOnboarding = (() => {
     if(check.status==="fulfilled")c.dockerCheck=check.value;
     if(published.status==="fulfilled"){c.publicCatalog=published.value;c.publicCatalogError="";}else c.publicCatalogError=published.reason?.message||String(published.reason);
     if(profiles.status==="fulfilled")c.runtimeProfiles=profiles.value;
+    await hydrateBuildRepairs(c);
     const capabilities=await Promise.allSettled(c.recipes.map(async value=>[value.id,await api("/build-center/recipes/"+enc(value.id)+"/sources")]));
     for(const result of capabilities)if(result.status==="fulfilled")c.capabilities[result.value[0]]=result.value[1];
     if(!c.closed){if(c.step===2)render(c);schedule(c);}
   }
+  const acquiredBuild = value => value.scope !== "image-test" && (value.source === "pull" || value.source === "local");
+  const repairTime = value => Date.parse(value.created)||0;
+  const repairFraction = value => (/\.(\d+)(?:Z|[+-]\d\d:\d\d)$/.exec(value.created||"")?.[1]||"").padEnd(9,"0");
+  const repairRuns = (c,id) => c.repairs.filter(value=>value.sourceBuildId===id).sort((a,b)=>repairTime(b)-repairTime(a)||repairFraction(b).localeCompare(repairFraction(a))||b.id.localeCompare(a.id));
+  function repairInProgress(run) {
+    if(activeJob(run.status))return true;
+    if(["failed","interrupted","canceled","cancelled","stopped"].includes(run.status))return false;
+    return ["building","verifying","replanning"].includes(run.maintenance?.phase);
+  }
+  function pendingBuildRepair(c,sourceId) {
+    if(Object.values(c.autoAuthorizations).some(value=>value.kind==="image-build"&&value.sourceId===sourceId&&value.state!=="registered"))return true;
+    const automatic=sourceAuto(c,"image-build",sourceId);
+    if(!automatic)return false;
+    if(automatic.status!=="submitted")return true;
+    const linked=c.repairs.find(value=>value.id===automatic.repairId&&value.sourceBuildId===sourceId);
+    // "submitted" records a completed handoff, not the current worker state.
+    // An ended, unverified run can be retried explicitly without authorizing
+    // another background launch from the original automatic handoff.
+    return !linked||repairInProgress(linked)||!["completed","succeeded","failed","interrupted","canceled","cancelled","stopped"].includes(linked.status);
+  }
+  function verifiedRepair(c,run) {
+    const maintenance=run.maintenance;
+    if(maintenance?.phase!=="verified"||!maintenance.verifiedBuildId)return null;
+    const attempt=(maintenance.attempts||[]).find(value=>value.buildId===maintenance.verifiedBuildId&&value.status==="succeeded"&&value.offline&&value.smoke&&value.imageId);
+    if(!attempt)return null;
+    const build=c.builds.find(value=>value.id===attempt.buildId);
+    if(build&&(build.scope==="image-test"||build.status!=="succeeded"||build.ownerRunId&&build.ownerRunId!==run.id||build.rebuildOf&&build.rebuildOf!==run.sourceBuildId||build.imageId&&build.imageId!==attempt.imageId))return null;
+    return build||{id:attempt.buildId,imageId:attempt.imageId,status:"succeeded",ownerRunId:run.id,rebuildOf:run.sourceBuildId};
+  }
+  function preparationProjection(c) {
+    const jobs=new Map(c.builds.map(value=>[value.id,value])),claims=new Map();
+    for(const id of new Set([...c.repairs.map(value=>value.sourceBuildId),...c.autoRows.filter(value=>value.kind==="image-build").map(value=>value.sourceId)].filter(Boolean)))if(!jobs.has(id))jobs.set(id,{id,name:tr("原始构建记录不可用","Original build record unavailable"),status:"unknown",scope:"repair-source",_missingSource:true});
+    for(const run of c.repairs.filter(value=>value.sourceBuildId&&jobs.has(value.sourceBuildId)))for(const attempt of run.maintenance?.attempts||[]){
+      const build=jobs.get(attempt.buildId);
+      if(!build||build.scope==="image-test"||build.id===run.sourceBuildId||build.ownerRunId&&build.ownerRunId!==run.id||build.rebuildOf&&build.rebuildOf!==run.sourceBuildId)continue;
+      if(!claims.has(build.id))claims.set(build.id,new Set());claims.get(build.id).add(run.sourceBuildId);
+    }
+    const parent=new Map([...claims].filter(([,ids])=>ids.size===1).map(([id,ids])=>[id,[...ids][0]]));
+    // Tests only attach through their explicit source candidate; their sourceBuildId
+    // is not a repair parent. Unknown records remain visible as separate records.
+    for(const value of c.builds.filter(value=>value.scope==="image-test")){
+      const run=c.repairs.find(run=>jobs.has(run.sourceBuildId)&&(!value.ownerRunId||value.ownerRunId===run.id)&&(run.maintenance?.attempts||[]).some(attempt=>attempt.buildId===value.sourceBuildId&&(attempt.verificationIds||[]).includes(value.id)));
+      if(run)parent.set(value.id,run.sourceBuildId);
+    }
+    const roots=[...jobs.values()].filter(value=>!parent.has(value.id));
+    const newest=value=>Math.max(Date.parse(value.created||value.updated)||0,...c.repairs.filter(run=>run.sourceBuildId===value.id).map(run=>Date.parse(run.created)||0),...c.builds.filter(child=>parent.get(child.id)===value.id).map(child=>Date.parse(child.created||child.updated)||0));
+    roots.sort((a,b)=>newest(b)-newest(a));
+    return {roots,parent};
+  }
+  function preparationState(c,value) {
+    if(value.scope==="image-test")return value.status;
+    if(value._missingSource)return repairRuns(c,value.id).some(repairInProgress)?"repairing":"unknown";
+    if(repairRuns(c,value.id).some(run=>verifiedRepair(c,run)))return "ready";
+    if(value.status==="succeeded"&&!value.ownerRunId)return "ready";
+    if(repairRuns(c,value.id).some(repairInProgress))return "repairing";
+    const automatic=sourceAuto(c,"image-build",value.id);
+    const linked=automatic?.repairId&&c.repairs.find(run=>run.id===automatic.repairId&&run.sourceBuildId===value.id);
+    if(["failed","interrupted","canceled"].includes(value.status)&&automatic&&!linked&&["watching","revalidating","submitted"].includes(automatic.status))return "repairing";
+    return value.status;
+  }
+  function preparationCounts(c) {
+    const roots=preparationProjection(c).roots.filter(value=>value.scope!=="image-test"&&!value._missingSource);
+    return {ready:roots.filter(value=>preparationState(c,value)==="ready").length,running:roots.filter(value=>activeJob(preparationState(c,value))||preparationState(c,value)==="repairing").length};
+  }
+  function refreshPreparationSummary(c) {
+    const counts=preparationCounts(c),target=c.page.querySelector("#onboarding-docker-summary");
+    if(target)target.textContent=counts.ready+tr(" 个准备成功"," ready")+(counts.running?" · "+counts.running+tr(" 个进行中"," running"):"");
+  }
+  function revealPreparation(c,id) {
+    const node=[...c.page.querySelectorAll("[data-build-id]")].find(value=>value.dataset.buildId===id)||c.page.querySelector("#onboarding-preparation-progress");
+    node?.scrollIntoView?.({block:"nearest",behavior:"smooth"});
+  }
+  function mergeBuildRepair(c,value,sourceId) {
+    if(!value?.id||!value.sourceBuildId||sourceId&&value.sourceBuildId!==sourceId)return false;
+    c.repairs=[value,...c.repairs.filter(row=>row.id!==value.id)];return true;
+  }
+  function acceptBuildRepair(key,request,run,sourceId) {
+    // A reply can arrive after setup was closed and reopened. Settle only its
+    // own receipt, and publish the accepted task into the live controller.
+    // Never write the closed controller's older input snapshot over a new draft.
+    const live=current&&!current.closed?current:null;
+    if(live){
+      if(live.receipts[key]===request){delete live.receipts[key];saveDraft(live);}
+      mergeBuildRepair(live,run,sourceId);renderBuilds(live);updateSteps(live);schedule(live);
+      return;
+    }
+    const saved=draft();
+    if(saved&&typeof saved==="object"&&saved.receipts?.[key]===request){
+      delete saved.receipts[key];
+      try{sessionStorage.setItem("rundesk-onboarding-draft",JSON.stringify(saved));}catch{}
+    }
+  }
+  async function hydrateBuildRepairs(c,discover=true) {
+    if(c.repairHydrating)return c.repairHydrating;
+    c.buildRepairLists||={};c.buildRepairErrors||={};
+    c.repairHydrating=(async()=>{
+      const ids=new Map(c.repairs.filter(value=>value.sourceBuildId).map(value=>[value.id,value.sourceBuildId]));
+      for(const row of c.autoRows.filter(value=>value.kind==="image-build"&&value.repairId))ids.set(row.repairId,row.sourceId);
+      const roots=discover?preparationProjection(c).roots.filter(value=>value.scope!=="image-test"&&!value._missingSource&&!acquiredBuild(value)&&["failed","interrupted","canceled"].includes(value.status)).slice(0,12):[];
+      const requests=[...ids].map(async([id,sourceId])=>{
+        try{
+          const value=await api("/build-center/assistant-runs/"+enc(id));if(c.closed)return;
+          if(value.id!==id||!mergeBuildRepair(c,value,sourceId))throw Error(tr("修复记录的身份或来源不一致，未合并到此任务。","The repair identity or source does not match; this record was not merged into the task."));
+          delete c.buildRepairErrors[id];
+        }catch(error){if(!c.closed)c.buildRepairErrors[id]=error.message;}
+      });
+      for(const source of roots){
+        if(c.buildRepairLists[source.id]?.loaded)continue;
+        c.buildRepairLists[source.id]={loading:true};
+        requests.push((async()=>{
+          try{
+            const result=await api("/build-center/assistant-runs?sourceBuildId="+enc(source.id));if(c.closed)return;
+            if(!Array.isArray(result.items))throw Error(tr("修复列表格式无效。","The repair list response is invalid."));
+            let mismatch=false;for(const value of result.items)if(!mergeBuildRepair(c,value,source.id))mismatch=true;
+            c.buildRepairLists[source.id]={loaded:true,hasMore:!!result.hasMore,...(mismatch?{error:tr("部分修复记录的来源不一致，未合并。","Some repair records have a different source and were not merged.")}: {})};
+          }catch(error){if(!c.closed)c.buildRepairLists[source.id]={error:error.message};}
+        })());
+      }
+      await Promise.allSettled(requests);
+    })();
+    try{await c.repairHydrating;}finally{c.repairHydrating=null;}
+  }
+  function repairPhase(c,run) {
+    if(run.maintenance?.phase==="verified"&&!verifiedRepair(c,run))return tr("修复结果尚未确认通过检查","Repair checks are not confirmed");
+    if(!repairInProgress(run)&&run.maintenance?.phase!=="verified")return tr("修复仍需处理","Repair needs attention");
+    const labels={planning:tr("Kun 正在诊断","Kun is diagnosing"),building:tr("正在重新构建","Rebuilding"),verifying:tr("正在检查修复结果","Checking the repair"),replanning:tr("Kun 正在调整方案","Kun is revising the plan"),verified:tr("修复与检查已通过","Repair and checks passed"),blocked:tr("修复仍需处理","Repair needs attention")};
+    return labels[run.maintenance?.phase]||statusLabels()[run.status]||run.status||tr("正在读取修复状态","Reading repair status");
+  }
+  function repairLink(sessionId,focusKey) {
+    return el("a",{href:"/?session="+enc(sessionId),target:"_blank",rel:"noopener",class:"ob-repair-link","data-ob-focus":focusKey},tr("查看 Kun 修复过程与轨迹 ↗","View Kun repair and trace ↗"));
+  }
+  function buildLogControl(c,id,label=tr("查看日志","View log")) {
+    return action(c,label,async()=>{await readBuildLog(c,id);renderBuilds(c);schedule(c);},"quiet",{"data-ob-focus":"log-button:"+id});
+  }
+  function buildLog(c,id,label) {
+    if(!c.logs[id])return null;
+    return el("details",{open:true,"data-ob-detail":"log:"+id,class:"ob-task-log"},el("summary",{},label),el("pre",{"data-build-log":id},c.logs[id].text||tr("尚无日志。","No logs yet.")));
+  }
+  function appendRepairRun(c,target,run) {
+    const verified=verifiedRepair(c,run),maintenance=run.maintenance;
+    const row=el("section",{class:"ob-linked-repair","data-repair-id":run.id},el("div",{class:"ob-job-top"},el("strong",{},repairPhase(c,run)),badge(verified?"ready":repairInProgress(run)?"repairing":"failed",verified?tr("已验证","Verified"):tr("Kun 修复","Kun repair"))));
+    if(c.buildRepairErrors?.[run.id])row.append(el("p",{class:"ob-error",role:"status"},tr("修复状态读取失败，显示上次记录：","Could not refresh the repair; showing its last record: ")+c.buildRepairErrors[run.id]));
+    if(run.error)row.append(el("p",{class:"ob-error"},run.error));
+    if(run.sessionId)row.append(repairLink(run.sessionId,"repair-link:"+run.id));
+    if(maintenance?.stopReason)row.append(el("p",{class:"ob-error"},maintenance.stopReason));
+    const attempts=maintenance?.attempts||[],earlier=attempts.length>1?el("details",{"data-ob-detail":"earlier-attempts:"+run.id},el("summary",{},tr("之前的改进（","Earlier attempts (")+(attempts.length-1)+tr("）",")"))):null;
+    for(const [index,attempt] of attempts.entries()){
+      const job=c.builds.find(value=>value.id===attempt.buildId),matches=!job||(!job.ownerRunId||job.ownerRunId===run.id)&&(!job.rebuildOf||job.rebuildOf===run.sourceBuildId);
+      const child=el("article",{class:"ob-build-attempt","data-build-attempt":attempt.buildId||"","data-attempt-state":verified?.id===attempt.buildId?"ready":attempt.status||"unknown"},el("div",{class:"ob-job-top"},el("strong",{},tr("第 ","Attempt ")+(index+1)+tr(" 次改进","")),badge(verified?.id===attempt.buildId?"ready":attempt.verificationFailed?"failed":attempt.status,verified?.id===attempt.buildId?tr("构建与检查通过","Build and checks passed"):attempt.status==="succeeded"?tr("镜像已构建，等待检查通过","Image built; checks pending"):statusLabels()[attempt.status]||attempt.status)));
+      if(!matches)child.append(el("p",{class:"ob-error"},tr("候选记录关联冲突，未将其作为此任务的结果。","The candidate association conflicts; it is not treated as this task's result.")));
+      if(attempt.plan?.goal)child.append(el("p",{class:"ob-help"},attempt.plan.goal));
+      if(attempt.error)child.append(el("p",{class:"ob-error"},attempt.error));
+      child.append(el("div",{class:"ob-attempt-checks"},badge(attempt.offline?"ready":"idle","Offline · "+(attempt.offline?tr("通过","passed"):tr("未通过检查","not verified"))),badge(attempt.smoke?"ready":"idle","Smoke · "+(attempt.smoke?tr("通过","passed"):tr("未通过检查","not verified")))));
+      if(attempt.buildId){child.append(el("p",{class:"ob-task-id"},attempt.buildId),buildLogControl(c,attempt.buildId,tr("重新构建日志","Rebuild log")));const log=buildLog(c,attempt.buildId,tr("重新构建日志","Rebuild log"));if(log)child.append(log);if(!job)child.append(note("此处显示修复任务保留的候选快照；构建记录未出现在当前列表中。","This candidate comes from the repair snapshot; its build record is not in the current list."));}
+      const details=el("details",{"data-ob-detail":"plan:"+run.id+":"+index},el("summary",{},tr("改进方案与检查记录","Plan and check records")),el("p",{class:"ob-help"},attempt.plan?.hypothesis||""),el("p",{class:"ob-help"},tr("保留：","Preserve: ")+(attempt.plan?.preserve||[]).join("；")),el("p",{class:"ob-help"},tr("验收：","Checks: ")+(attempt.plan?.checks||[]).join("；")));
+      for(const id of attempt.verificationIds||[]){details.append(el("div",{class:"ob-inline"},el("code",{},id),buildLogControl(c,id,tr("检查日志","Check log"))));const log=buildLog(c,id,tr("检查日志","Check log"));if(log)details.append(log);}
+      child.append(details);if(index===attempts.length-1)row.append(child);else earlier.append(child);
+    }
+    if(earlier)row.append(earlier);
+    if(maintenance?.experienceId)row.append(note("本次修复经验已保存，后续可按适用条件参考。","This repair experience was saved for future tasks with matching conditions."));
+    target.append(row);
+  }
+  function appendBuildRepair(c,target,value) {
+    const runs=repairRuns(c,value.id),autos=c.autoRows.filter(row=>row.kind==="image-build"&&row.sourceId===value.id),list=c.buildRepairLists?.[value.id];
+    const region=el("section",{class:"ob-build-repair","data-build-repair-region":value.id});
+    for(const automatic of autos){
+      const row=el("div",{class:"ob-handoff","data-auto-repair":automatic.id},el("div",{class:"ob-inline"},el("strong",{},tr("失败自动交接","Automatic failure handoff")),badge(automatic.status)));
+      if(automatic.error)row.append(el("p",{class:"ob-error"},automatic.error));
+      if(automatic.sessionId&&!runs.some(run=>run.id===automatic.repairId&&run.sessionId))row.append(repairLink(automatic.sessionId,"auto-link:"+automatic.id));
+      if(automatic.repairId&&!runs.some(run=>run.id===automatic.repairId))row.append(el("p",{class:"ob-help",role:"status"},c.buildRepairErrors?.[automatic.repairId]||tr("已交接，正在读取对应修复任务。","Handed off; reading the linked repair task.")));
+      if(automatic.enabled&&["watching","blocked","failed"].includes(automatic.status))row.append(action(c,tr("关闭本次自动交接","Disable this automatic handoff"),async()=>{
+        const updated=await api("/setup/auto-repairs",{method:"POST",body:{kind:automatic.kind,sourceId:automatic.sourceId,enabled:false,requestId:receipt(c,"auto-disable:"+automatic.id)}});
+        c.autoRows=c.autoRows.map(item=>item.id===automatic.id?updated:item);renderBuilds(c);schedule(c);
+      },"quiet",{"data-auto-disable":value.id,"data-ob-focus":"auto-disable:"+automatic.id}));
+      region.append(row);
+    }
+    for(const intent of Object.values(c.autoAuthorizations).filter(row=>row.kind==="image-build"&&row.sourceId===value.id&&row.state!=="registered")){
+      const row=el("div",{class:"ob-notice","data-auto-registration":value.id},intent.error||tr("正在确认失败自动交接。","Confirming automatic failure handoff."));
+      if(["blocked","unconfirmed","source_unconfirmed"].includes(intent.state))row.append(el("div",{class:"ob-actions"},action(c,tr("重试注册自动修复","Retry automatic repair registration"),async()=>{intent.state="pending";intent.attempts=0;await registerAuto(c,intent);await hydrateBuildRepairs(c,false);renderBuilds(c);},"quiet",{"data-auto-registration-retry":value.id,"data-ob-focus":"auto-register:"+value.id})));
+      region.append(row);
+    }
+    if(list?.error)region.append(el("p",{class:"ob-error",role:"status"},tr("对应修复记录读取失败：","Could not read linked repairs: ")+list.error),action(c,tr("重新读取修复记录","Reload linked repairs"),async()=>{delete c.buildRepairLists[value.id];await hydrateBuildRepairs(c);renderBuilds(c);},"quiet",{"data-repair-reload":value.id,"data-ob-focus":"repair-reload:"+value.id}));
+    if(list?.hasMore)region.append(note("这里只显示最近 20 次对应修复；当前已读取的修复继续保留。","Only the latest 20 linked repairs are listed; already loaded repairs are retained."));
+    if(!list?.loaded&&!list?.error&&["failed","interrupted","canceled"].includes(value.status))region.append(el("p",{class:"ob-help",role:"status"},tr("正在读取对应修复记录…","Reading linked repairs…")));
+    if(runs.length)appendRepairRun(c,region,runs[0]);
+    if(runs.length>1){const previous=el("details",{"data-ob-detail":"repair-history:"+value.id},el("summary",{},tr("之前的修复记录（","Earlier repairs (")+(runs.length-1)+tr("）",")")));for(const run of runs.slice(1))appendRepairRun(c,previous,run);region.append(previous);}
+    if(c.buildRepairActionErrors?.[value.id])region.append(el("p",{class:"ob-error",role:"alert"},c.buildRepairActionErrors[value.id]));
+    if(region.children.length)target.append(region);
+  }
+  function finishImageAction(c,value) {
+    return action(c,tr("完成初始化并查看镜像","Finish setup and view image"),async()=>{
+      const catalog=await api("/build-center/images"),image=catalog.items?.find(row=>row.imageId===value.imageId);
+      if(!image)throw Error(tr("镜像尚未出现在构建中心，请稍后刷新。","The image is not in the build center yet. Refresh shortly."));
+      await completeSetup(c,image.key);
+    },"primary",{"data-runtime-open-image":value.id,"data-ob-focus":"open-image:"+value.id});
+  }
+  function preparationCard(c,value) {
+    const state=preparationState(c,value),acquired=acquiredBuild(value),runs=repairRuns(c,value.id),verified=value._missingSource?null:runs.map(run=>verifiedRepair(c,run)).find(Boolean);
+    const method=value._missingSource?tr("修复关联记录","Linked repair record"):value.scope==="image-test"?tr("独立镜像检查","Separate image check"):value.source==="pull"?tr("下载镜像","Image download"):value.source==="local"?tr("本机镜像检查","Local image check"):tr("本机构建","Local build");
+    const status=state==="repairing"?tr("Kun 正在修复","Kun is repairing"):state==="ready"?tr("环境已准备","Environment prepared"):state==="unknown"?tr("记录不完整","Incomplete record"):statusLabels()[state]||state;
+    const result=el("article",{class:"ob-preparation",tabindex:-1,"data-build-id":value.id,"data-preparation-state":state},el("div",{class:"ob-job-top"},el("div",{class:"ob-task-heading"},el("span",{class:"ob-method-label"},method),el("strong",{},value.recipeName||value.name||value.profileId||value.id)),badge(state,status)));
+    if(value._missingSource)result.append(note("当前没有原始构建记录，以下保留对应的修复状态与候选证据；不计入准备成功。","The original build record is unavailable. Linked repair status and candidate evidence are retained below; this does not count as a prepared environment."));
+    if(value.ownerRunId&&!runs.length&&!verified)result.append(note("这是 Kun 生成的候选记录，尚未确认对应的完整修复验证。","This is a Kun candidate record; a complete linked repair verification is not yet confirmed."));
+    if(value.scope==="image-test")result.append(note("没有找到此检查对应的准备任务，暂作为独立记录显示；它不计入准备成功。","The preparation task for this check is not available. It is shown separately and does not count as a prepared environment."));
+    if(value.error)result.append(el("p",{class:"ob-error"},(state==="repairing"||verified?tr("最初准备失败：","Initial preparation failed: "):"")+value.error));
+    if(acquired)result.append(el("p",{class:"ob-help"},value.reference||""));
+    if(!acquired&&["failed","interrupted","canceled"].includes(value.status))result.append(el("div",{class:"ob-preparation-path","aria-label":tr("准备与修复流程","Preparation and repair flow")},el("span",{"data-step-state":"failed"},tr("① 原始构建失败","① Initial build failed")),el("span",{"data-step-state":state==="repairing"?"running":runs.length?"ready":"idle"},tr("② Kun 诊断修复","② Kun repair")),el("span",{"data-step-state":verified?"ready":"idle"},verified?tr("③ 重新构建与检查通过","③ Rebuild and checks passed"):tr("③ 重新构建与检查","③ Rebuild and checks"))));
+    const ops=el("div",{class:"ob-actions ob-task-actions"},value._missingSource?null:buildLogControl(c,value.id));
+    if(activeJob(value.status))ops.append(action(c,tr("取消准备","Cancel preparation"),async()=>{const updated=await RunDeskBuildCenter.mutate("/builds/"+enc(value.id)+"/cancel",{});c.builds=c.builds.map(row=>row.id===value.id?updated:row);renderBuilds(c);schedule(c);},"quiet",{"data-image-cancel":value.id,"data-ob-focus":"cancel:"+value.id}));
+    if(["failed","interrupted","canceled"].includes(value.status)){
+      if(acquired){
+        ops.append(action(c,value.source==="pull"?tr("更换地址或重试","Change source or retry"):tr("重新选择本机镜像","Choose a local image again"),()=>{captureSources(c);c.dockerMode=value.source;c.runtimeDrafts[value.source]={profileId:value.profileId,version:value.codexVersion,reference:value.reference,entryId:"",sourceId:""};saveDraft(c);setStep(c,2);c.page.querySelector("#onboarding-runtime-reference")?.focus();},"primary",{"data-runtime-retry":value.id,"data-ob-focus":"runtime-retry:"+value.id}));
+        result.append(note("检查日志后可更换镜像地址或调整仓库登录权限；下载失败不会自动改成本机构建。","Review the log and change the reference or registry access. A failed download never switches to a local build automatically."));
+      }else if(value.scope!=="image-test"){
+        const repair=action(c,tr("交给 Kun 修复","Ask Kun to repair"),async()=>{
+          if(c.buildRepairPending?.[value.id])return;(c.buildRepairPending||={})[value.id]=true;(c.buildRepairActionErrors||={})[value.id]="";renderBuilds(c);
+          const receiptKey="build-repair:"+value.id,request=receipt(c,receiptKey);
+          try{
+            const run=await RunDeskBuildCenter.mutate("/assistant-runs",{sourceBuildId:value.id,instanceId:c.kun.instanceId,workspaceId:c.kun.workspaceId,requestId:request,prompt:tr("诊断并修复这次失败构建。保持工具能力与验证要求，生成独立新配方，实际重建并完成offline/smoke验证，记录适用范围明确的修复经验。","Diagnose and repair this failed build. Preserve the required capabilities and tests. Produce a separate revised recipe, rebuild it, run offline/smoke checks, and record the repair with its applicability conditions.")});
+            if(!run?.id||run.sourceBuildId!==value.id)throw Error(tr("修复任务来源不一致，请重新读取记录。","The repair task has a different source. Reload the records."));
+            acceptBuildRepair(receiptKey,request,run,value.id);
+          }catch(error){if(!c.closed)c.buildRepairActionErrors[value.id]=error.message;}
+          finally{if(!c.closed){c.buildRepairPending[value.id]=false;renderBuilds(c);revealPreparation(c,value.id);schedule(c);}}
+        },"primary",{"data-build-repair":value.id,"data-ob-focus":"repair:"+value.id});
+        repair.disabled=!readyKun(c)||pendingBuildRepair(c,value.id)||!!c.buildRepairPending?.[value.id]||!c.buildRepairLists?.[value.id]?.loaded||!!c.buildRepairLists?.[value.id]?.error||runs.some(run=>repairInProgress(run)||verifiedRepair(c,run));ops.append(repair);
+        ops.append(action(c,tr("原配置重试","Retry original configuration"),async()=>{const job=await RunDeskBuildCenter.mutate("/builds/"+enc(value.id)+"/rebuild",{});c.builds=[job,...c.builds.filter(row=>row.id!==job.id)];await hydrateBuildRepairs(c);renderBuilds(c);revealPreparation(c,job.id);schedule(c);},"quiet",{"data-build-retry":value.id,"data-ob-focus":"rebuild:"+value.id}));
+        if(!readyKun(c))result.append(note("先在第一步启用 Kun，即可在这里委托修复。","Enable Kun in step 1 to delegate a repair here."));
+      }
+    }
+    result.append(ops);const originalLog=buildLog(c,value.id,tr("原始准备日志","Original preparation log"));if(originalLog)result.append(originalLog);
+    if(!acquired&&value.scope!=="image-test")appendBuildRepair(c,result,value);
+    const prepared=verified||(state==="ready"?value:null);
+    if(prepared){result.append(note("镜像已准备；应用认证和实际业务验证仍需完成。","The image is prepared; application authentication and business validation remain to be completed."));if(prepared.imageId)result.append(el("div",{class:"ob-actions"},finishImageAction(c,prepared)));}
+    if(value.codexRuntime)result.append(el("details",{"data-ob-detail":"runtime:"+value.id},el("summary",{},tr("本次构建配置","Frozen build configuration")),RunDeskBuildCenter.frozenRuntimeView(value.codexRuntime)));
+    return result;
+  }
   function renderBuilds(c) {
     const target=c.page.querySelector("#onboarding-build-history");if(!target)return;
-    target.replaceChildren(...c.builds.slice(0,12).map(value=>{
-      const result=el("article",{class:"ob-job","data-build-id":value.id},el("div",{class:"ob-job-top"},el("strong",{},value.name||value.profileId||value.id),badge(value.status)),value.error?el("p",{class:"ob-error"},value.error):null);
-      const ops=el("div",{class:"ob-actions"},action(c,tr("查看日志","View log"),async()=>{
-        await readBuildLog(c,value.id);renderBuilds(c);schedule(c);
-      }));
-      if(value.codexRuntime)result.append(RunDeskBuildCenter.frozenRuntimeView(value.codexRuntime));
-      const acquired=value.source==="pull"||value.source==="local";
-      if(acquired)result.append(el("p",{class:"ob-help"},(value.source==="pull"?tr("仓库拉取","Registry download"):tr("本机镜像检查","Local image check"))+" · "+(value.reference||"")));
-      if(activeJob(value.status))ops.append(action(c,tr("取消准备","Cancel preparation"),async()=>{const updated=await RunDeskBuildCenter.mutate("/builds/"+enc(value.id)+"/cancel",{});c.builds=c.builds.map(row=>row.id===value.id?updated:row);renderBuilds(c);schedule(c);},"quiet",{"data-image-cancel":value.id}));
-      if(["failed","interrupted","canceled"].includes(value.status)){
-        if(acquired){
-          ops.append(action(c,value.source==="pull"?tr("更换地址或重试","Change source or retry"):tr("重新选择本机镜像","Choose a local image again"),()=>{
-            captureSources(c);c.dockerMode=value.source;c.runtimeDrafts[value.source]={profileId:value.profileId,version:value.codexVersion,reference:value.reference,entryId:"",sourceId:""};saveDraft(c);setStep(c,2);c.page.querySelector("#onboarding-runtime-reference")?.focus();
-          },"quiet",{"data-runtime-retry":value.id}));
-          result.append(note("可以查看日志后调整镜像地址或登录权限。此任务不会自动触发本机构建。","Review the log, then adjust the image reference or registry access. This task never triggers a local build automatically."));
-        }else{
-          ops.append(action(c,tr("原配置重试","Retry original configuration"),async()=>{const v=await RunDeskBuildCenter.mutate("/builds/"+enc(value.id)+"/rebuild",{});c.builds=[v,...c.builds.filter(row=>row.id!==v.id)];renderBuilds(c);schedule(c);}));
-          const repair=action(c,tr("交给 Kun 修复","Ask Kun to repair"),async()=>{
-            const v=await RunDeskBuildCenter.mutate("/assistant-runs",{sourceBuildId:value.id,instanceId:c.kun.instanceId,workspaceId:c.kun.workspaceId,prompt:tr("诊断并修复这次失败构建。保持工具能力与验证要求，生成独立新配方，实际重建并完成offline/smoke验证，记录适用范围明确的修复经验。","Diagnose and repair this failed build. Preserve the required capabilities and tests. Produce a separate revised recipe, rebuild it, run offline/smoke checks, and record the repair with its applicability conditions.")});
-            c.repairs=[{...v,sourceBuildId:value.id},...c.repairs.filter(row=>row.id!==v.id)];renderRepairs(c);schedule(c);
-          },"quiet",{"data-build-repair":value.id});repair.disabled=!readyKun(c)||pendingAuto(c,"image-build",value.id);ops.append(repair);
-        }
-      }
-      if(value.status==="succeeded"){
-        result.append(note("镜像已准备；应用认证和实际业务验证仍需完成。","The image is prepared; application authentication and business validation remain to be completed."));
-        if(value.imageId)ops.append(action(c,tr("完成初始化并查看镜像","Finish setup and view image"),async()=>{
-          const catalog=await api("/build-center/images"),image=catalog.items?.find(row=>row.imageId===value.imageId);
-          if(!image)throw Error(tr("镜像尚未出现在构建中心，请稍后刷新。","The image is not in the build center yet. Refresh shortly."));
-          await completeSetup(c,image.key);
-        },"quiet",{"data-runtime-open-image":value.id}));
-      }
-      result.append(ops);
-      if(c.logs[value.id])result.append(el("pre",{"data-build-log":value.id},c.logs[value.id].text||tr("尚无日志。","No logs yet.")));
-      return result;
-    }));
-    if(!c.builds.length)target.append(note("尚未提交镜像准备任务。选择预设下载或构建，也可以稍后继续。","No image preparation tasks yet. Download or build a preset now, or continue later."));
+    refreshPreparationSummary(c);
+    const signature=JSON.stringify([c.builds,c.repairs,c.autoRows,c.autoAuthorizations,c.buildRepairLists,c.buildRepairErrors,c.buildRepairPending,c.buildRepairActionErrors,Object.entries(c.logs).map(([id,value])=>[id,value.next,value.text])]);
+    if(target._signature===signature)return;target._signature=signature;
+    const opened=new Map([...target.querySelectorAll("details[data-ob-detail]")].map(value=>[value.dataset.obDetail,value.open]));
+    const scrolls=new Map([...target.querySelectorAll("[data-build-log]")].map(value=>[value.dataset.buildLog,{top:value.scrollTop,left:value.scrollLeft,tail:value.clientHeight>0&&value.scrollHeight-value.clientHeight-value.scrollTop<=4}]));
+    const active=document.activeElement,inside=target.contains(active),focusKey=inside?active.closest("[data-ob-focus]")?.dataset.obFocus:null,detailKey=inside&&active.tagName==="SUMMARY"?active.parentElement.dataset.obDetail:null,focusSource=inside?active.closest("[data-build-id]")?.dataset.buildId:null;
+    const {roots}=preparationProjection(c);target.replaceChildren(...roots.slice(0,12).map(value=>preparationCard(c,value)));
+    if(!roots.length)target.append(note("尚未提交任务。选择一种方式准备镜像，也可以直接完成初始化。","No preparation tasks yet. Choose a method, or finish setup now."));
+    if(roots.length>12)target.append(note("这里只显示最近 12 个准备任务，已关联的改进与检查合并在原任务内。","Only the latest 12 preparation tasks are shown; linked repairs and checks are grouped with their source task."));
+    for(const detail of target.querySelectorAll("details[data-ob-detail]"))if(opened.has(detail.dataset.obDetail))detail.open=opened.get(detail.dataset.obDetail);
+    for(const node of target.querySelectorAll("[data-build-log]")){const previous=scrolls.get(node.dataset.buildLog);if(previous){node.scrollTop=previous.tail?node.scrollHeight:previous.top;node.scrollLeft=previous.left;}}
+    if(inside){let restored=focusKey?[...target.querySelectorAll("[data-ob-focus]")].find(value=>value.dataset.obFocus===focusKey):detailKey?[...target.querySelectorAll("details[data-ob-detail]")].find(value=>value.dataset.obDetail===detailKey)?.firstElementChild:null;if(!restored||restored.disabled)restored=[...target.querySelectorAll("[data-build-id]")].find(value=>value.dataset.buildId===focusSource);restored?.focus?.({preventScroll:true});}
   }
   async function readBuildLog(c,id) {
     const previous=c.logs[id]||{next:0,text:""};
@@ -520,12 +743,13 @@ window.RunDeskOnboarding = (() => {
     c.logs[id]={next:value.next,text:text.length>131072?tr("[显示日志末尾]\n","[Showing the end of the log]\n")+text.slice(-131072):text};
   }
   function finish(c) {
-    const succeeded=c.builds.filter(value=>value.status==="succeeded").length,running=c.builds.filter(value=>activeJob(value.status)).length;
+    const {ready:succeeded,running}=preparationCounts(c);
     const summary=el("details",{class:"ob-setup-summary"},el("summary",{},tr("查看三步初始化结果","Review the three setup steps")),
       summaryRow(tr("本机环境","Environment"),c.discovery?tr("已扫描","Scanned"):tr("尚未扫描","Not scanned")),
       summaryRow("Kun",readyKun(c)?badge("ready",tr("可执行修复任务","Ready for repair tasks")):badge("idle",tr("尚未就绪，可稍后配置","Not ready; configure later"))),
       summaryRow("Codex",c.codexPath?c.codexPath:tr("已跳过","Skipped")),
       summaryRow(tr("Docker 镜像","Docker images"),succeeded+tr(" 个准备成功"," ready")+(running?" · "+running+tr(" 个进行中"," running"):"")));
+    summary.lastElementChild.lastElementChild.id="onboarding-docker-summary";
     c.main.append(summary);
     const work=el("select",{id:"onboarding-workspace"},...state.workspaces.map(value=>el("option",{value:value.id},value.name)));work.value=c.workspaceId||state.workspaces[0]?.id||"";work.onchange=()=>{c.workspaceId=work.value;};
     c.completeButton=action(c,tr("完成并进入 RunDesk","Finish and enter RunDesk"),()=>completeSetup(c),"primary",{id:"onboarding-complete"});
@@ -591,12 +815,12 @@ window.RunDeskOnboarding = (() => {
       if(results[1].status==="fulfilled")c.builds=results[1].value.items||[];
       if(results[2].status==="fulfilled"){
         const setupRows=results[2].value.items||[];
-        const builds=await Promise.allSettled(c.repairs.filter(value=>value.sourceBuildId).map(async value=>({...await api("/build-center/assistant-runs/"+enc(value.id)),sourceBuildId:value.sourceBuildId})));
-        c.repairs=[...setupRows,...builds.filter(value=>value.status==="fulfilled").map(value=>value.value)];
+        c.repairs=[...setupRows,...c.repairs.filter(value=>value.sourceBuildId)];
       }
       if(results[3].status==="fulfilled")c.experiences=results[3].value.items||[];
       if(results[4].status==="fulfilled")c.autoRows=results[4].value.items||[];
       await reconcileAuto(c);
+      await hydrateBuildRepairs(c);
       adoptInstall(c);
       await Promise.allSettled(Object.keys(c.logs).map(id=>readBuildLog(c,id)));
       renderInstallJobs(c);renderBuilds(c);renderRepairs(c);renderExperiences(c);updateSteps(c);
@@ -610,11 +834,12 @@ window.RunDeskOnboarding = (() => {
       if(!c.endpoint)c.endpoint=c.kun.endpoint||"";if(!c.model)c.model=c.kun.model||"";if(!c.keyEnv)c.keyEnv=c.kun.apiKeyEnv||"";if(!c.kunPath)c.kunPath=c.kun.kunPath||"";
     }
     if(results[1].status==="fulfilled")c.installJobs=results[1].value.items||[];
-    if(results[2].status==="fulfilled")c.repairs=results[2].value.items||[];
+    if(results[2].status==="fulfilled")c.repairs=[...(results[2].value.items||[]),...c.repairs.filter(value=>value.sourceBuildId)];
     if(results[3].status==="fulfilled")c.experiences=results[3].value.items||[];
     if(results[4].status==="fulfilled"){c.catalog=results[4].value;if(!c.group)c.group=c.catalog.defaultGroup||"international";}
     if(results[5].status==="fulfilled")c.autoRows=results[5].value.items||[];
     await reconcileAuto(c);
+    await hydrateBuildRepairs(c,false);
     adoptInstall(c);
     saveDraft(c);render(c);schedule(c);
     await Promise.allSettled([scan(c),loadDocker(c)]);

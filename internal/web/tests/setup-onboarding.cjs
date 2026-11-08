@@ -40,7 +40,8 @@ w.api=async(route,options={})=>{
     if(route==="/build-center/builds")return {items:copy(db.builds)};
     if(/\/build-center\/recipes\/[^/]+\/sources/.test(route))return {types:[{type:"npm",detected:true,supported:true,arguments:["RD_NPM_REGISTRY"]}]};
     if(route.startsWith("/build-center/builds/")&&route.includes("/log?"))return {text:"error: upstream build failed\n",next:29,status:"failed"};
-    if(route.startsWith("/build-center/assistant-runs/"))return copy(db.repairs.find(value=>route.endsWith(value.id)));
+    if(route.startsWith("/build-center/assistant-runs?"))return {items:copy(db.repairs.filter(value=>value.sourceBuildId===new URL("http://localhost"+route).searchParams.get("sourceBuildId"))),hasMore:false};
+    if(route.startsWith("/build-center/assistant-runs/"))return copy(db.repairs.find(value=>route.endsWith(value.id))||{id:route.split("/").at(-1),status:"queued"});
   }
   if(route==="/setup/discovery"){if(discoveryGate){const gate=discoveryGate;discoveryGate=null;await gate;}return {scannedAt:"2026-10-27T00:00:00Z",platform:{os:"linux",arch:"amd64",cpuCount:16,memoryBytes:68719476736},gpus:[{vendor:"NVIDIA",name:"A100",memoryMiB:40960,driver:"550"}],tools:[{id:"kun",path:"/tools/kun",status:"ready",version:"kun 0.17.0"},{id:"codex",path:"codex",status:"unavailable"},{id:"docker",path:"/usr/bin/docker",status:"ready",version:"Docker 28"}],services:copy(discoveryServices),containers:copy(discoveryContainers),warnings:[]};}
   if(route==="/setup/check")return {ok:dockerOK,error:dockerOK?"":"Docker daemon unavailable"};
@@ -87,6 +88,8 @@ for(const file of ["build-center.js","setup-onboarding.js","setup.js"])vm.runInC
 const until=async fn=>{for(let n=0;n<300;n++){if(fn())return;await new Promise(resolve=>setImmediate(resolve));}assert(fn(),"UI did not settle");};
 const click=async selector=>{$(selector).click();await new Promise(resolve=>setImmediate(resolve));};
 const nav=step=>click('[data-setup-step="'+step+'"]');
+const dockerMode=()=>$('[name="onboarding-docker-mode"]:checked').value;
+const chooseDockerMode=mode=>{const node=$('[name="onboarding-docker-mode"][value="'+mode+'"]');node.checked=true;node.dispatchEvent(new w.Event("change"));};
 (async()=>{
   // Exercise the real shipped api() rather than the UI fixture. Every new
   // initialization POST needs the server's persistent idempotency header.
@@ -151,7 +154,7 @@ const nav=step=>click('[data-setup-step="'+step+'"]');
   assert($("#onboarding-complete"),"Docker must offer completion without a separate fourth stage");
   assert(!$("[data-ob-next]"),"no fourth step may follow Docker");
   await until(()=>!!$("#onboarding-runtime-profile"));
-  assert.equal($("#onboarding-docker-mode").value,"pull","prebuilt download must be the default");assert(!$("#onboarding-codex-runtime-mode"),"download mode must not show build runtime controls");
+  assert.equal(dockerMode(),"pull","prebuilt download must be the default");assert(!$("#onboarding-codex-runtime-mode"),"download mode must not show build runtime controls");
   assert($("#onboarding-public-catalog-status").textContent.includes("还没有"));
   assert.equal($("#onboarding-runtime-reference").value,"","an empty catalog must not invent a usable published reference");
   assert($("#onboarding-prepare-image").disabled,"Docker unavailable must disable image downloads");
@@ -166,7 +169,7 @@ const nav=step=>click('[data-setup-step="'+step+'"]');
   assert.equal(db.autoRows.length,autoBefore,"pulls must not receive automatic build repair authorization");
   assert(!$('[data-build-repair="runtime-1"]'),"failed pulls must not offer build repair");
   const buildCallsBefore=calls.filter(value=>value.method==="POST"&&value.route.endsWith("/build")).length;
-  await click('[data-runtime-retry="runtime-1"]');assert.equal($("#onboarding-docker-mode").value,"pull");assert.equal($("#onboarding-runtime-reference").value,"registry.example/team/news:broken");
+  await click('[data-runtime-retry="runtime-1"]');assert.equal(dockerMode(),"pull");assert.equal($("#onboarding-runtime-reference").value,"registry.example/team/news:broken");
   assert.equal(calls.filter(value=>value.method==="POST"&&value.route.endsWith("/build")).length,buildCallsBefore,"retrying a download must never silently switch to building");
   const digest="sha256:"+"b".repeat(64),mirrorDigest=digest;
   publicImages.items=[{id:"news-release",profileId:"news2douyin",profileVersion:"1.1.2",codexVersion:"0.157.1",platform:"linux/amd64",sources:[{id:"ghcr",name:"GHCR",reference:"ghcr.io/team/news@"+digest},{id:"mirror",name:"Mirror",reference:"registry.example/team/news@"+mirrorDigest}]},{id:"wrong-platform",profileId:"news2douyin",profileVersion:"1.1.2",codexVersion:"0.157.1",platform:"linux/arm64",sources:[{id:"wrong",name:"Wrong",reference:"ghcr.io/team/news@"+digest}]},{id:"old-preset",profileId:"news2douyin",profileVersion:"1.0.0",codexVersion:"0.157.1",platform:"linux/amd64",sources:[{id:"old",name:"Old",reference:"ghcr.io/team/news@"+digest}]}];
@@ -179,11 +182,11 @@ const nav=step=>click('[data-setup-step="'+step+'"]');
   const selected=calls.filter(value=>value.route==="/setup/runtime-images"&&value.method==="POST").at(-1).body;
   assert.equal(selected.publicImageId,"news-release");assert.equal(selected.publicSourceId,"mirror");assert.equal(selected.catalogRevision,"public-1");assert(selected.reference.endsWith(mirrorDigest));assert.equal(db.autoRows.length,autoBefore);
   assert($('[data-runtime-open-image="runtime-2"]'),"successful downloads should lead to image inspection and instance creation");
-  $("#onboarding-docker-mode").value="local";$("#onboarding-docker-mode").dispatchEvent(new w.Event("change"));
+  chooseDockerMode("local");
   assert(!$("#onboarding-public-image"));$("#onboarding-runtime-reference").value="local-news:ready";$("#onboarding-runtime-reference").dispatchEvent(new w.Event("input"));
   await click("#onboarding-prepare-image");await until(()=>!!$('[data-build-id="runtime-3"]'));
   assert.equal(calls.filter(value=>value.route==="/setup/runtime-images"&&value.method==="POST").at(-1).body.source,"local");
-  $("#onboarding-docker-mode").value="build";$("#onboarding-docker-mode").dispatchEvent(new w.Event("change"));
+  chooseDockerMode("build");
   await until(()=>$$("[data-preset-id]").length===2);assert(!$("#onboarding-build-selected").disabled);
   assert.equal($("#onboarding-codex-runtime-mode").value,"auto");await click("#onboarding-codex-runtime-check");await until(()=>$("#onboarding-codex-runtime-status").textContent.includes("发现匹配"));
   $("#onboarding-codex-runtime-mode").value="base";$("#onboarding-codex-runtime-mode").dispatchEvent(new w.Event("change"));$("#onboarding-codex-runtime-reference").value="rundesk-codex:0.157.1";$("#onboarding-codex-runtime-reference").dispatchEvent(new w.Event("input"));

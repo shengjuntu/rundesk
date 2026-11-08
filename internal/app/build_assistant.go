@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -49,6 +50,10 @@ type BuildAssistantRun struct {
 	SkillBootstrap        bool                  `json:"skillBootstrap"`
 	NativePluginInstalled bool                  `json:"nativePluginInstalled"`
 	Error                 string                `json:"error,omitempty"`
+}
+type BuildAssistantRunList struct {
+	Items   []BuildAssistantRun `json:"items"`
+	HasMore bool                `json:"hasMore"`
 }
 type buildAssistantRecord struct {
 	BuildAssistantRun
@@ -323,7 +328,69 @@ func (m *Manager) CreateBuildAssistantRun(input BuildAssistantInput, endpoint st
 	admitted = true
 	return run, nil
 }
+
+// BuildAssistantRuns recovers source-owned repairs without admitting work or
+// exposing the stored capability, workspace path or runtime fingerprints.
+func (m *Manager) BuildAssistantRuns(sourceBuildID string) (BuildAssistantRunList, error) {
+	result := BuildAssistantRunList{Items: []BuildAssistantRun{}}
+	if !buildCenterID.MatchString(sourceBuildID) {
+		return result, failure(400, "invalid_assistant_source", "请提供一个完整的来源构建编号")
+	}
+	if _, err := m.BuildCenterBuild(sourceBuildID); err != nil {
+		return result, err
+	}
+	rows, err := m.Store.List("build-assistant")
+	if err != nil {
+		return result, err
+	}
+	type datedRun struct {
+		run     BuildAssistantRun
+		created time.Time
+		valid   bool
+	}
+	matches := []datedRun{}
+	for _, raw := range rows {
+		var record buildAssistantRecord
+		if err := json.Unmarshal(raw, &record); err != nil {
+			return result, err
+		}
+		if record.SourceBuildID == sourceBuildID {
+			created, err := time.Parse(time.RFC3339Nano, record.Created)
+			matches = append(matches, datedRun{run: record.BuildAssistantRun, created: created, valid: err == nil})
+		}
+	}
+	sort.Slice(matches, func(i, j int) bool {
+		a, b := matches[i], matches[j]
+		if a.valid != b.valid {
+			return a.valid // Malformed historical dates cannot outrank valid ones.
+		}
+		if a.valid && !a.created.Equal(b.created) {
+			return a.created.After(b.created)
+		}
+		if !a.valid && a.run.Created != b.run.Created {
+			return a.run.Created > b.run.Created
+		}
+		return a.run.ID > b.run.ID
+	})
+	if len(matches) > 20 {
+		result.HasMore = true
+		matches = matches[:20]
+	}
+	for _, record := range matches {
+		value, err := m.buildAssistantRun(record.run.ID, false)
+		if err != nil {
+			return result, err
+		}
+		result.Items = append(result.Items, value)
+	}
+	return result, nil
+}
+
 func (m *Manager) BuildAssistantRun(id string) (BuildAssistantRun, error) {
+	return m.buildAssistantRun(id, true)
+}
+
+func (m *Manager) buildAssistantRun(id string, revokeInvalidCapability bool) (BuildAssistantRun, error) {
 	var record buildAssistantRecord
 	if err := m.Store.Get("build-assistant", id, &record); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -349,7 +416,7 @@ func (m *Manager) BuildAssistantRun(id string) (BuildAssistantRun, error) {
 	}
 	var cap buildAssistantCapability
 	if err := m.Store.Get("build-assistant-capability", record.CapabilityHash, &cap); err == nil {
-		if cap.RevokedAt == "" && m.checkBuildAssistantCapability(cap) != nil {
+		if revokeInvalidCapability && cap.RevokedAt == "" && m.checkBuildAssistantCapability(cap) != nil {
 			_ = m.revokeBuildAssistantCapability(record.CapabilityHash)
 			_ = m.Store.Get("build-assistant-capability", record.CapabilityHash, &cap)
 		}
@@ -532,6 +599,15 @@ func (m *Manager) configureBuildAssistant(session Session, w Workspace, params m
 	return nil
 }
 func (s *Server) buildAssistantRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("GET /api/build-center/assistant-runs", func(w http.ResponseWriter, r *http.Request) {
+		query, err := url.ParseQuery(r.URL.RawQuery)
+		if err != nil || len(query) != 1 || len(query["sourceBuildId"]) != 1 {
+			respond(w, nil, failure(400, "invalid_assistant_query", "请仅提供一个 sourceBuildId 查询参数"))
+			return
+		}
+		result, err := s.Manager.BuildAssistantRuns(query.Get("sourceBuildId"))
+		respond(w, result, err)
+	})
 	mux.HandleFunc("POST /api/build-center/assistant-runs", func(w http.ResponseWriter, r *http.Request) {
 		var input BuildAssistantInput
 		if !decode(w, r, &input) {

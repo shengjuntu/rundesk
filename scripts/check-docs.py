@@ -36,6 +36,13 @@ assert 'docker' in maintenance['SetupDiscoveryService']['properties']['source'][
 assert 'containers' in maintenance['SetupDiscovery']['properties']
 assert 'recipeName' in maintenance['BuildCenterImage']['properties']['sources']['items']['properties']
 assert 'providerMode' in spec['paths']['/build-center/images/{key}/launch']['post']['requestBody']['content']['application/json']['schema']['properties']
+assistant_list = spec['paths']['/build-center/assistant-runs']['get']
+assert assistant_list['responses']['200']['content']['application/json']['schema']['$ref'].endswith('/BuildAssistantRunList')
+assistant_queries = [p for p in assistant_list['parameters'] if p['in'] == 'query']
+assert len(assistant_queries) == 1 and assistant_queries[0]['name'] == 'sourceBuildId' and assistant_queries[0]['required'] is True
+assert assistant_queries[0]['schema'] == {'type': 'string', 'pattern': '^[a-f0-9]{24}$', 'minLength': 24, 'maxLength': 24}
+assert maintenance['BuildAssistantRunList']['required'] == ['items', 'hasMore']
+assert maintenance['BuildAssistantRunList']['properties']['items']['maxItems'] == 20
 for route, method in [
     ('/backends', 'get'), ('/setup/environment', 'get'),
     ('/setup/codex-provider', 'get'), ('/setup/codex-provider', 'put'),
@@ -51,6 +58,7 @@ for route, method in [
     ('/setup/auto-repairs', 'get'), ('/setup/auto-repairs', 'post'),
     ('/setup/public-images', 'get'), ('/setup/public-images', 'put'),
     ('/build-center/sources/defaults', 'get'), ('/build-center/runtime-options', 'get'),
+    ('/build-center/assistant-runs', 'get'),
     ('/build-center/publications', 'get'), ('/build-center/publications', 'post'),
     ('/build-center/publications/{id}', 'get'),
     ('/build-center/publications/{id}/log', 'get'),

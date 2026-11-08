@@ -33,6 +33,8 @@ Agent 创建时可显式继承当前默认 Codex 模型服务，也可保留原�
 
 初始化可为本次新构建启用后台失败自动交接，也可手动将明确选中的失败或中断构建交给 Kun。`sourceBuildId` 为该修复任务授权只读来源快照；助手能读取原日志、导出冻结上下文，在自身工作区修改后打包成新的独立配方。未显式选择的其他任务、配方和工作区不属于修复范围。修复构建保留原源配置，除非本次明确选择新的配置；旧配方、镜像及应用绑定不覆盖。
 
+0.64.0 的初始化页将原构建、后台交接、修复对话、候选与检查结果合在同一准备任务中。管理员可按精确的原构建编号读取持久修复关联，重新打开页面不必重新提交修复。助手任务结束与候选通过验证分别判断：`maintenance.verifiedBuildId` 及对应 offline/smoke 证据才表示维护验证成功；原失败记录保持原状态。
+
 助手为每次任务 bootstrap 一个独立 Skill，并向对应 Codex 线程或 Kun 请求注入短期构建 MCP；回执返回 `runtimeKind`、可选 `sourceBuildId`，以及 `skillBootstrap:true`、`nativePluginInstalled:false`。MCP 提供上下文导出/打包、源能力读取和构建检查，Kun 不需要为打包而开启宿主 Bash。`build_wait` 可等待 1–45 秒后读取状态，避免长构建反复消耗模型轮询；服务端每项构建助手最多提交三次构建。初始化 Kun 构建任务的两小时预算不覆盖其他用户实例原有设置。原生插件源包见 [rundesk-build-tools](../plugins/rundesk-build-tools/README.md)，插件安装另见[原生插件支持](NATIVE-PLUGINS.md)。
 
 修复经验记录失败指纹、源快照、实际改动、成功镜像和验证编号。服务端从冻结目录比较文件摘要和有界 Dockerfile 差异；没有冻结目录时明确标记缺失，不读取后来变化的配方来补证据。成功构建仍须有精确绑定的 offline 和 smoke 才能形成已验证镜像经验，缺项保留候选。后续修复可检索匹配经验，不能据一次网络失败永久改写全局下载策略。完整边界见[初始化与经验](SETUP.md#修复经验与持续改进)。
@@ -112,7 +114,8 @@ manifest 示例：
 | `/build-center/publications/{id}`、`/{id}/log` | GET 状态与增量脱敏日志 |
 | `/build-center/publications/{id}/cancel` | POST 取消排队或运行中的发布 |
 | `/build-center/publications/{id}/check-public` | POST 使用独立空 Docker 配置核对固定 manifest 的匿名访问、Digest 和平台 |
-| `/build-center/assistant-runs`、`/{id}` | POST prompt/requestId，可选 instanceId、workspaceId、sourceBuildId；GET Codex/Kun 助手与任务绑定 |
+| `/build-center/assistant-runs` | POST prompt/requestId，可选 instanceId、workspaceId、sourceBuildId；GET `?sourceBuildId=精确原构建编号` 读取对应修复，最多 20 条并返回 hasMore |
+| `/build-center/assistant-runs/{id}` | GET 指定 Codex/Kun 助手与任务、维护验证绑定 |
 | `/build-center/assistant-runs/{id}/revoke` | POST 撤销构建工具权限 |
 
 唯一例外为 `POST /api/build-center/mcp`（及 v1 别名）：只接受任务短期 Bearer 能力，端点自己验证任务、会话、实例、工作区、路径和有效期。它只可导入自己工作区的配方、构建自己的/内置配方、查看或取消自己的构建、检查自己的产出；不能删除镜像、启动/改变实例、安装插件或访问其他任务。它不是通用管理 API，管理员令牌也不替代该任务能力。

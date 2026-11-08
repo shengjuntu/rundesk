@@ -46,7 +46,9 @@ The instance-centered WebUI does **not** yet synchronize instance configuration 
 
 ## Current source version
 
-**RunDesk 0.63.0 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.64.0 source · external Kun 0.17.0 · worker protocol 16**
+
+Version 0.64.0 simplifies the optional Docker setup page. Downloading a ready image and building from a recipe are distinct choices. A preparation task keeps its failure, Kun repair, candidate builds and verification results together, with the matching repair conversation available from that task. Download failures remain download retries; repair completion alone does not prove an image is verified. The LLM and Codex setup steps retain their existing flow. See [setup](docs/SETUP.md) and [WebUI](docs/WEBUI.md).
 
 Version 0.63.0 groups conversations into expandable rounds and adds trace timing analysis, with wall duration kept separate from overlapping step work. A compact navigation rail leaves the workspace panel for conversations and gives management pages more room. Existing records and the 0.62 build/provider workflows remain available. See [WebUI](docs/WEBUI.md) and [trace analysis](docs/TRACE.md).
 
