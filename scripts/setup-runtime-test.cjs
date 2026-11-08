@@ -1,3 +1,4 @@
+const qaOutput = require('./qa-output.cjs')(__filename);
 // Real setup view with a DOM fixture: interaction contracts, not visual layout.
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 class Element{
@@ -37,5 +38,5 @@ function fixture(){
  g.resolveInstall({ok:true,codex:'/managed/codex',log:'fixture log',error:''});await install;assert.equal(get(dialog,'setup-codex').value,'/managed/codex');assert(!g.requests.some(x=>x.options.method==='PUT'),'installation selected itself');
  await byText(dialog,'关闭').click();await g.context.window.RunDeskSetup.maybeOpen();assert.equal(g.body.children.length,0,'dismissed wizard reopened');
  const proof={version:fs.readFileSync(root+'/internal/app/api_v1.go','utf8').match(/const Version = "([^"]+)"/)[1],passed:true,scope:'real setup JS in Node DOM fixture; browser layout not tested',checks:['startup prerequisite probe without installation/model calls','Kun selection hides optional Codex install','saved configuration preserves advanced Kun settings and carries both revisions','unchecked installation is inert','save blocked during install','installed executable requires explicit save','dismissal respected']};
- fs.mkdirSync(root+'/docs/validation/current',{recursive:true});fs.writeFileSync(root+'/docs/validation/current/setup-ui.json',JSON.stringify(proof,null,2)+'\n');console.log(JSON.stringify(proof));
+ fs.mkdirSync(qaOutput(''),{recursive:true});fs.writeFileSync(qaOutput('setup-ui.json'),JSON.stringify(proof,null,2)+'\n');console.log(JSON.stringify(proof));
 })().catch(e=>{console.error(e);process.exitCode=1});

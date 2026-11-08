@@ -47,10 +47,8 @@ video-use 的转写依赖 **ElevenLabs Scribe ASR**；它与 TTS 是两种服务
 
 上游策略确认、自评和艺术自由继续保留；已明确批准的任务按实际授权执行。TTS/图片/视频生成来源由接入 Skill 指向 Video App，实际编辑、动画选择、字幕和产物仍服从上游工作方式。
 
-## 已验证范围
+## 检查与验收范围
 
-- 上游原生26项单元测试通过，日志在 [历史测试日志](../../docs/validation/archive/profiles/video-use/validation/upstream-tests.log)。
-- 未修改的 `helpers/render.py` 使用原生 EDL 在宿主实际剪切和拼接测试素材，生成 H.264/AAC、1280×720 视频；抽样帧不同，解码音频非静音。报告和测试视频在 [历史渲染报告](../../docs/validation/archive/profiles/video-use/validation/native-render.json)、[测试视频](../../docs/validation/archive/profiles/video-use/validation/native-final.mp4)。这是测试音调与测试画面，不是新闻制作质量验收。
-- 接入 Skill 元数据、Python 语法和安装脚本语法已检查；容器内 `doctor.py` 只核对完整源码、固定依赖和原生 helpers 启动，不调用生成或 ASR。
+上游单元测试、原生 EDL 宿主渲染及接入语法检查的早期记录保留在[历史源码包](../../docs/validation/README.md)中，当前实际复验见[验证说明](../../docs/VALIDATION.md)。早期宿主剪切与拼接使用测试画面和测试音调，不代表新闻制作质量或容器内运行已验收。
 
-当前环境没有真实 Docker Engine；未实际构建或启动该镜像，也未调用真实 Codex、IndexTTS、图像/视频模型或 Scribe。后续部署需分别验收容器工具、生成连接和一条完整剪辑任务。
+容器内 `doctor.py` 只核对完整源码、固定依赖和原生 helpers 启动，不调用生成或 ASR。部署时需分别验收真实 Docker 镜像、Codex 认证、Video App 生成连接，以及一条完整剪辑任务；离线工具检查不证明 IndexTTS、图像／视频模型或 Scribe 已可用。

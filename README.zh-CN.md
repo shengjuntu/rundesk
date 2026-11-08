@@ -46,44 +46,28 @@ RunDesk 通过 Kun 集成提供模块状态检查和执行循环策略选择。�
 
 ## 当前源码版本
 
-**RunDesk 0.65.0 · 外部 Kun 0.17.0 · worker 协议 16**
+**RunDesk 0.66.0 · 外部 Kun 0.17.0 · worker 协议 16**
 
-0.65.0 移除旧的 `examples/` 目录，以 `recipes/` 为唯一可编辑配方来源。生产读取代码、应用客户端和部署文件分别归入 `internal/`、`clients/python/`、`deploy/systemd/`。构建快照生成各自的锁文件，已审阅的本地依赖和可选配方继续保留。操作见[配方与统一 CLI](recipes/README.md)及[启动部署](docs/SETUP.md)。
+0.66.0 继续清理源码：发布包移除旧验证产物和过时整理文档，可再生检查结果进入 `build/qa/`，并增加检查防止这些文件重新混入。完整历史证据保留在此前的 0.65.0 源码包。见[升级说明](docs/UPGRADING.md)与[验证范围](docs/VALIDATION.md)。
 
-0.64.0 简化可选的 Docker 初始化页，将“下载现成镜像”和“从配方构建”明确区分。每个准备任务集中展示失败原因、Kun 修复、候选构建和验证结果，并可直接查看对应修复对话。下载失败仍由用户调整地址或重试；修复任务结束不等于镜像已验证。前两步模型与 Codex 配置沿用原流程。详见[启动与部署](docs/SETUP.md)与[WebUI](docs/WEBUI.md)。
+`recipes/` 是唯一可编辑配方来源，生产读取器、应用客户端和部署文件分别位于 `internal/`、`clients/python/`、`deploy/systemd/`。构建快照生成各自的锁文件。news2douyin、people-search 1.1.2 保留已审阅的 Agent-Reach 本地源码及 wheel 打包修复；其他依赖仍需相应下载通道。操作见[配方与 CLI](recipes/README.md)及[启动部署](docs/SETUP.md)。
 
-0.63.0 将对话整理为可展开的轮次，并增加轨迹耗时分析，区分整轮经过时间和可能重叠的步骤耗时。主导航收窄，工作区栏用于会话，管理页面获得更多内容空间。历史记录和 0.62 的构建、模型配置流程继续可用。详见[WebUI](docs/WEBUI.md)与[轨迹分析](docs/TRACE.md)。
+新安装采用**寻找和配置 LLM → 配置和安装 Codex → 准备 Docker 环境**三步向导。Docker 可跳过，以后从“环境设置”重开。下载现成镜像、本机构建、检查本机镜像分别选择；每个准备任务集中展示失败、Kun 修复、候选构建与验证，修复任务结束不等于镜像已验证。
 
-0.62.0 将构建中心整理成“配方 → 镜像 → Agent”工作台，可复用已有镜像，镜像卡片首先显示配方名称，同一镜像可创建多个 Agent。初始化发现补充本机 Docker 已发布的模型服务，并展示失败候选的原因。Codex 模型服务与 Kun 模型发现分别配置，可作用于明确的 Agent／工作区环境。详见[构建中心](docs/BUILD-CENTER.md)与[Codex 模型服务](docs/CODEX-PROVIDERS.md)。
+日常会话和应用任务使用 Codex；Kun 负责安装与配方修复、只读轨迹问答。Skill 提取及 MCP 自动优化仍待实现。工作区组织会话，每个会话选择自己的 Codex 环境；应用可绑定多个批准的环境，并按项目建立独立工作区。详见[WebUI](docs/WEBUI.md)、[内部维护](docs/MAINTENANCE.md)及[运行预设](docs/APPLICATION-RUNTIME-PRESETS.md)。
 
-0.61.0 收入近期应用多预设绑定修复和“工作区 → 会话”整理，并将日常会话与应用任务统一到 Codex。Kun 负责安装修复、Docker 配方准备与修复，以及只读轨迹问答。新的 Kun 构建任务每轮先记录有限目标的计划，由服务端对同一候选执行 offline 与 smoke 检查，验证通过后保留修复经验。Skill 提取和 MCP 优化属于后续阶段。详见[内部维护](docs/MAINTENANCE.md)。
+构建中心连接**配方 → 镜像 → Agent**。Dockerfile 与源列表是可编辑文件，源分国际／中国镜像两组，覆盖 pip、conda、npm、Docker、APT、YUM/DNF、Hugging Face 和 GitHub；实际生效取决于配方声明的参数。构建冻结输入，可复用精确匹配的受管 Codex 运行时。Codex 模型配置与 Kun 模型发现分别保存，作用于明确的 Agent／工作区环境。详见[构建中心](docs/BUILD-CENTER.md)、[下载源](docs/BUILD-SOURCES.md)及[模型服务](docs/CODEX-PROVIDERS.md)。
 
-0.60.0 从 Docker 镜像自动建议简短 Agent 名称，应用可按视频项目为已有 Agent 建立独立工作区与容器。RunDesk 在容器里注入项目 ID，并在创建时复制 Agent 的现有配置；应用界面可隐藏工作区编号。详见[应用项目环境](docs/APPLICATION-PROJECT-ENVIRONMENTS.md)。
+发布者可在匹配的 offline、smoke 检查通过后分发固定 Digest 镜像。**随包公开目录暂为空，须先发布真实镜像再登记地址**；不预填官方镜像空间，也不据此宣称匿名公网下载已验收。见[镜像分发](docs/IMAGE-DISTRIBUTION.md)。
 
-0.59.1 将应用的默认和额外 Agent 环境放在应用首页。新签发的应用凭据默认勾选当前已启用的预设，已有凭据保持原授权。VideoAPP 读到空预设列表时，要检查环境是否已登记，以及它正在使用的凭据是否包含该环境；详见[运行预设](docs/APPLICATION-RUNTIME-PRESETS.md)。
-
-0.59.0 将初始化做成三页向导。Docker 是可选步骤：在 Codex 页即可完成基本设置，此后用左侧“环境设置”重开。Agent 列表分别提供准备镜像与从已有镜像添加 Agent；对话输入框显示 Agent 和工作区，Skills、MCP、插件仍在同一个设置对话框中。Docker 配置目前仍按 Agent 与工作区分别保存，详见 [WebUI](docs/WEBUI.md)。
-
-0.57.0 的启动界面是**三步初始化向导：寻找和配置 LLM → 配置和安装 Codex → 准备 Docker 环境**。第一步在同一页发现服务器硬件和模型服务、测试推理与函数调用，并启用独立的 Kun 初始化助手；第三步默认下载预构建镜像，也可本机构建或检查已有本地镜像，并在此保存设置、进入工作台。安装和构建失败可交给可追踪的 Kun 修复任务，验证过的修复保留版本化经验供以后复用。前置条件和自动发现范围见[启动与部署](docs/SETUP.md)。
-
-发布者可在同一镜像的 offline 和 smoke 检查通过后上传镜像，再通过可编辑的公开镜像目录分发固定 Digest。**随包目录暂为空，须先发布真实镜像再登记地址**；本版不虚构官方镜像空间，也不宣称已完成匿名公网下载验收。操作见[镜像分发](docs/IMAGE-DISTRIBUTION.md)。
-
-0.58.0 保持一套配方，提供**中国网络／国际网络**两组下载设置。本机构建可复用版本匹配的受管 Linux Codex 安装，或明确选择兼容的基础镜像，减少重复下载 Codex。OpenMontage 支持完整归档地址与 SHA-256 校验缓存；源列表补充阿里云 Debian 镜像。升级保留已有源配置。详见[构建运行时复用](docs/BUILD-RUNTIME.md)与[下载源配置](docs/BUILD-SOURCES.md)。
-
-本源码包含运行与资源契约、统一观测模型、对话式轨迹阅读器、构建中心，以及共享同一任务核心的两个 API 入口：
+两个 API 入口共享同一任务核心：
 
 | 入口 | 用途 |
 | --- | --- |
-| **RDCA v1** — `/api/v1` | RunDesk 自有的应用与管理 API；机器契约位于 `/api/v1/openapi.json` |
-| **UHP** — `/v1` | 面向协议 `2026-10-19` 的附加服务入口；已实现并有[明确限制](docs/UHP.md)，不声明完整规范兼容 |
+| **RDCA v1** — `/api/v1` | 应用与管理 API；机器契约位于 `/api/v1/openapi.json` |
+| **UHP** — `/v1` | 面向协议 `2026-10-19` 的附加接口，具备[明确限制](docs/UHP.md)，不声明完整兼容 |
 
-0.55.0 从 `recipes/<profile>/` 的普通文件读取构建配方，不再把配方 ZIP 嵌入可执行文件。构建中心可预览 Dockerfile、下载完整构建目录，并在构建前选择或修改下载源。源列表分为“国际（美国/官方为主）”和“中国镜像”，覆盖 pip、conda、npm、Docker、APT、YUM/DNF、Hugging Face、GitHub；配方须声明对应的构建参数。每次构建保存实际源设置快照。详见[下载源配置](docs/BUILD-SOURCES.md)与[升级说明](docs/UPGRADING.md)。
-
-news2douyin、people-search 1.1.2 保留 0.54.1 的 Agent-Reach 本地源码及 wheel 打包修复。Codex 继续精确选版，其他依赖仍需相应下载通道。
-
-0.54.0 整理实例导航与配置上下文，不改变存储和 API schema。继续保留 0.53.0 引入的持久任务截止时间、进度与审批交接、明确的执行能力声明和 [Python UHP 客户端](clients/python/uhp_client.py)。不支持的步数与输出 Token 预算仍明确披露，应用可在提交时要求必需能力。
-
-RunDesk 独立运行，不依赖 HarnessRouter 服务。详见[当前状态](docs/STATUS.md)、[系统架构](docs/ARCHITECTURE.md)和[验证范围](docs/VALIDATION.md)。视频和研究应用是第二个使命的接入示例，各自配套版本放在[配方文档](recipes/README.md)中维护。
+RunDesk 独立运行，不依赖 HarnessRouter。UHP 不支持的步数及输出 Token 硬预算继续明确披露。当前能力、执行边界及各配方组件版本分别见[当前状态](docs/STATUS.md)、[系统架构](docs/ARCHITECTURE.md)和[配方文档](recipes/README.md)。
 
 ## 快速开始
 
@@ -134,7 +118,7 @@ Kun 连接支持工具调用的 Chat Completions 服务；Codex 使用原生模�
 | Harness 开发者与研究者 | [Kun 接入](docs/KUN.md) · [Harness 控制](docs/KUN-HARNESS.md) · [研究 API 与历史资料](docs/README.md#3-harness-开发与研究--harness-research) |
 | 维护者与部署者 | [架构](docs/ARCHITECTURE.md) · [构建中心](docs/BUILD-CENTER.md) · [下载源](docs/BUILD-SOURCES.md) · [升级](docs/UPGRADING.md) · [安全](SECURITY.md) |
 
-本地开发可用 `make test` 运行宿主与 SDK 测试；`make check` 增加 race 检查及 `go vet`。部分集成测试需要独立 Kun 可执行文件。复验方法与历史结果分别见[验证说明](docs/VALIDATION.md)。
+本地开发可用 `make test` 运行宿主与 SDK 测试；`make check` 增加 race 检查及 `go vet`。部分集成测试需要独立 Kun 可执行文件。复验方法与当前范围见[验证说明](docs/VALIDATION.md)，历史结果的保留位置见[来源说明](docs/validation/README.md)。
 
 ## 执行边界
 

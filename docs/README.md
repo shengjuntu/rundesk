@@ -4,7 +4,7 @@
 
 RunDesk 的三个使命：为 Agent 落地提供调试工作台、连接领域应用与 Agent Harness、为 Harness 研究提供实验场。下面按使用者的任务导航，专题文档描述当前行为；旧版本经过与测试证据单独归档。
 
-当前源码：**RunDesk 0.65.0 / 独立 Kun 0.17.0 / worker 协议 16**。新安装先进入[初始化](SETUP.md#首次初始化)；完成后，日常界面从[Agent 与 WebUI](WEBUI.md)开始。配方唯一来源在 `recipes/`，客户端和部署文件分别位于 `clients/python/`、`deploy/systemd/`；Docker 准备任务集中展示失败、Kun 修复和验证进度。构建中心准备运行基础，应用接入管理外部调用；应用按项目分配独立环境见[项目环境](APPLICATION-PROJECT-ENVIRONMENTS.md)。
+当前源码：**RunDesk 0.66.0 / 独立 Kun 0.17.0 / worker 协议 16**。新安装先进入[初始化](SETUP.md#首次初始化)；完成后，日常界面从[Agent 与 WebUI](WEBUI.md)开始。配方唯一来源在 `recipes/`，客户端和部署文件分别位于 `clients/python/`、`deploy/systemd/`；Docker 准备任务集中展示失败、Kun 修复和验证进度。构建中心准备运行基础，应用接入管理外部调用；应用按项目分配独立环境见[项目环境](APPLICATION-PROJECT-ENVIRONMENTS.md)。
 
 ## 1. Agent 落地与调试 / Agent debugging
 
@@ -52,4 +52,4 @@ RDCA 的 `/api/v1/openapi.json` 包含应用与管理 API；按权限标记选�
 - [实例与 WebUI](WEBUI.md)、[对话界面](CONVERSATION.md)、[协作预览](COLLABORATION.md)。
 - [验证与复验](VALIDATION.md)、[版本变更](../CHANGELOG.md)、[上游来源](UPSTREAM.md)、[安全](../SECURITY.md)。
 
-文档维护以当前行为为准，版本沿革写入 CHANGELOG，历史证据进入 [验证归档](validation/archive/README.md)。0.52.0 的文档清理范围见[整理记录](DOCUMENTATION-CLEANUP.md)，本轮界面调整见 [WebUI](WEBUI.md)。
+文档维护以当前行为为准，发布变更见 [CHANGELOG](../CHANGELOG.md)，兼容要求见[升级说明](UPGRADING.md)。本版实际检查见[验证范围](VALIDATION.md)；完整旧证据保留在此前的 0.65.0 源码包，校验与保留规则见[验证资料说明](validation/README.md)。

@@ -16,7 +16,7 @@ from unittest.mock import patch
 from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
-ADAPTER = ROOT / "recipes/news2douyin/tools/video_use_adapter.py"
+ADAPTER = ROOT / "recipes/video-build/tools/video_use_adapter.py"
 SMOKE = ADAPTER.with_name("video_use_smoke.py")
 
 

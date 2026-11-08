@@ -1,0 +1,254 @@
+{
+  "version": "0.66.0",
+  "date": "2026-11-06",
+  "status": "passed",
+  "scope": [
+    "Remove obsolete validation output and documentation from the active source tree",
+    "Prune unreachable cross-profile tools and obsolete script entry points",
+    "Keep developer output separate and enforce release source hygiene"
+  ],
+  "baseline": {
+    "name": "rundesk-v0.65.0-source.zip",
+    "sha256": "6b889209f4726bf4de79b9a04814064a0b9edfb684072ebfd6ad7e753f955122",
+    "note": "The complete v0.65.0 source archive retains the historical files removed here."
+  },
+  "cleanup": {
+    "removedFiles": 238,
+    "removedBytes": 5852640,
+    "byReason": {
+      "historical-validation-retained-in-v0.65-source": 224,
+      "obsolete-v0.15-external-integration-harness": 1,
+      "obsolete-v0.52-cleanup-note-retained-in-v0.65-source": 1,
+      "redundant-entry-canonical-mcp-permissions-retained": 1,
+      "unreachable-cross-profile-helper": 11
+    },
+    "sourceFilesBefore": 1129,
+    "sourceFilesAfter": 896,
+    "activeValidationFiles": [
+      "README.md",
+      "current/release-066.json"
+    ]
+  },
+  "removedResourceHelpers": [
+    {
+      "path": "recipes/news2douyin/tools/hyperframes_smoke.py",
+      "sha256": "8ef78583d6e2da68f2df070b2eaadca627eee591901951da89611ac127f005f8",
+      "reason": "Video-only helper; this research profile never executes the video-build doctor branch."
+    },
+    {
+      "path": "recipes/news2douyin/tools/video_smoke.py",
+      "sha256": "4932c6fd45b18a7e7e10e431e9c2ff4f810e66a3110ef8cfd7a681e4f34b7020",
+      "reason": "Video-only helper; this research profile never executes the video-build doctor branch."
+    },
+    {
+      "path": "recipes/news2douyin/tools/video_use_adapter.py",
+      "sha256": "4bc4f735932827c3395c397278d880f8ca32f2b926bf99050cf0299736715859",
+      "reason": "Video-only helper; this research profile never executes the video-build doctor branch."
+    },
+    {
+      "path": "recipes/news2douyin/tools/video_use_smoke.py",
+      "sha256": "8834f6d6bd3976e0e94a40ca4c462f208348135b135883602133436519ff9d20",
+      "reason": "Video-only helper; this research profile never executes the video-build doctor branch."
+    },
+    {
+      "path": "recipes/people-search/tools/hyperframes_smoke.py",
+      "sha256": "8ef78583d6e2da68f2df070b2eaadca627eee591901951da89611ac127f005f8",
+      "reason": "Video-only helper; this research profile never executes the video-build doctor branch."
+    },
+    {
+      "path": "recipes/people-search/tools/video_smoke.py",
+      "sha256": "4932c6fd45b18a7e7e10e431e9c2ff4f810e66a3110ef8cfd7a681e4f34b7020",
+      "reason": "Video-only helper; this research profile never executes the video-build doctor branch."
+    },
+    {
+      "path": "recipes/people-search/tools/video_use_adapter.py",
+      "sha256": "4bc4f735932827c3395c397278d880f8ca32f2b926bf99050cf0299736715859",
+      "reason": "Video-only helper; this research profile never executes the video-build doctor branch."
+    },
+    {
+      "path": "recipes/people-search/tools/video_use_smoke.py",
+      "sha256": "8834f6d6bd3976e0e94a40ca4c462f208348135b135883602133436519ff9d20",
+      "reason": "Video-only helper; this research profile never executes the video-build doctor branch."
+    },
+    {
+      "path": "recipes/video-build/tools/agent_reach_config.py",
+      "sha256": "cdbf3202a180b4385384da9c0265afece2311c26f5a24adaec9cfe3721a083c0",
+      "reason": "Research-only helper; video-build has no Agent-Reach/search mode or agent-tools installation."
+    },
+    {
+      "path": "recipes/video-build/tools/mcporter",
+      "sha256": "12c70dca94ac2290e22943f1698b73bf3b66b47b9f02f0902c0cc82deebd897e",
+      "reason": "Research-only helper; video-build has no Agent-Reach/search mode or agent-tools installation."
+    },
+    {
+      "path": "recipes/video-build/tools/read_web.py",
+      "sha256": "30ba6da6ff324145efff1c34fba5543d78f246cedc7b7ff90f92b403d78daf8f",
+      "reason": "Research-only helper; video-build has no Agent-Reach/search mode or agent-tools installation."
+    }
+  ],
+  "preservedGroups": {
+    "ui": {
+      "files": 99,
+      "byteIdentical": true
+    },
+    "vendoredRecipeInputs": {
+      "files": 115,
+      "byteIdentical": true
+    },
+    "licensesAndNotices": {
+      "files": 14,
+      "byteIdentical": true
+    },
+    "clients": {
+      "files": 4,
+      "byteIdentical": true
+    },
+    "config": {
+      "files": 2,
+      "byteIdentical": true
+    }
+  },
+  "checks": [
+    {
+      "command": "go test -p 1 ./...",
+      "result": "passed"
+    },
+    {
+      "command": "go vet -p 1 ./...",
+      "result": "passed"
+    },
+    {
+      "command": "go test -p 1 ./... and go vet -p 1 ./... in third_party/kun-sdk",
+      "result": "passed"
+    },
+    {
+      "name": "Linux and Windows amd64 builds",
+      "result": "passed",
+      "notes": "Linux native binary executed; Windows cross-compiled, not run on Windows."
+    },
+    {
+      "name": "Recipe exports and optional-variant/helper contracts",
+      "result": "passed",
+      "suites": [
+        {
+          "command": "python3 scripts/test_profiles.py",
+          "tests": 24
+        },
+        {
+          "command": "python3 scripts/test_video_use_adapter.py",
+          "tests": 15
+        },
+        {
+          "command": "python3 scripts/test_upstream_profiles.py",
+          "tests": 7
+        }
+      ]
+    },
+    {
+      "name": "Source hygiene positive/negative fixtures",
+      "result": "passed",
+      "tests": 6
+    },
+    {
+      "name": "Developer evidence writers",
+      "result": "passed",
+      "syntaxFiles": 40,
+      "domSuites": [
+        "setup-runtime-test",
+        "kun-compare-test",
+        "kun-hypothesis-test"
+      ],
+      "notes": "39 writers now default to build/qa/<script-stem>; existing explicit output overrides remain valid. Shared output helper verified from a different working directory."
+    },
+    {
+      "name": "Independent deletion and resource preservation audit",
+      "result": "passed",
+      "notes": "All 238 removals match the approved set and the immutable baseline; reviewed upstream assets, licenses, clients, configuration and UI remain byte-identical."
+    },
+    {
+      "name": "Actual isolated portable package outside the checkout",
+      "result": "passed",
+      "scenarios": 7
+    },
+    {
+      "command": "python3 scripts/check-docs.py",
+      "result": "passed",
+      "documents": 123,
+      "paths": 248,
+      "operations": 299
+    },
+    {
+      "command": "python3 scripts/check-source.py --release",
+      "result": "passed"
+    },
+    {
+      "command": "python3 scripts/check-source.py --verify-manifest",
+      "result": "passed"
+    }
+  ],
+  "portable": {
+    "passed": true,
+    "checks": [
+      "staged native executable, all resource hashes, preserved license notices and source version agree",
+      "all six recipe exports work without examples, source ancestry, Python, Node or Docker on PATH",
+      "generic template export reads packaged external resources",
+      "external Dockerfile edits affect new exports while imported context bytes stay frozen",
+      "missing packaged recipes fail visibly rather than falling back into a checkout",
+      "recipe reads/imports create no tasks, sessions or image builds",
+      "packaged launcher handles a path with spaces without Python and restart retains frozen custom recipes"
+    ],
+    "scope": "Actual packaged native Go demo server outside the checkout; recipe metadata/export/import only. No real Docker, model or worker execution.",
+    "version": "0.66.0",
+    "binarySHA256": "474d7fa683c5714a72b40cf509b3cc989d3d5196b012ef2d2ce99e4476cd91b1",
+    "contexts": {
+      "hyperframes": {
+        "files": 23,
+        "sha256": "0e40e6c498799d65ab775af72575b6d0ce643e0836659acdc062ec3b1b8dc262"
+      },
+      "news2douyin": {
+        "files": 75,
+        "sha256": "4e1f59c7c86f773287fed8f6052a098964e47677b72a05e4025ce85e655637fa"
+      },
+      "openmontage": {
+        "files": 32,
+        "sha256": "65a68e1fe4df515b5e5d6cf084f0d5289210edf231a4eb49149229b89e1a33ef"
+      },
+      "people-search": {
+        "files": 74,
+        "sha256": "0577d6f49d399561e510c4e0a53d5eb46198a73618aec34645bac41f9386327c"
+      },
+      "video-build": {
+        "files": 25,
+        "sha256": "0cb7414aa698ff2e60fde7b89dc382a88186d289a27bae8f289e0e9a93efebe3"
+      },
+      "video-use": {
+        "files": 20,
+        "sha256": "08daf6172e08f2a4ebd86ddef37bab1781d72dbc8be6feb9b971d35337957fd6"
+      }
+    }
+  },
+  "artifacts": {
+    "rundesk": {
+      "bytes": 26339126,
+      "sha256": "474d7fa683c5714a72b40cf509b3cc989d3d5196b012ef2d2ce99e4476cd91b1"
+    },
+    "rundesk.exe": {
+      "bytes": 26626560,
+      "sha256": "957eb9844838efd6b3fc31ebde13d26672f43fdb3cacd71dca1eb6262e1986ad"
+    }
+  },
+  "sourcePolicy": [
+    "Current source retains validation policy and one passed current-version summary; raw output goes to build/qa or an explicit directory.",
+    "Regular checks permit known local developer outputs; strict release checks reject generated directories, caches, runtime data, native payloads, unsafe links and competing source recipe metadata.",
+    "Final SHA256SUMS verification requires complete safe path coverage and matching file hashes.",
+    "No vendored dependency pruning or regenerated upstream archive was used to reduce source size."
+  ],
+  "limits": [
+    "No real Docker image build, provider/model authentication, GPU, vLLM, VideoApp or production Kun worker execution.",
+    "No new browser run: all 99 internal/web source files are byte-identical to the v0.65 baseline.",
+    "No repeat of the complete UHP client integration: all four Python client implementations are byte-identical to baseline.",
+    "Historical raw evidence remains in the immutable v0.65 source archive; it is intentionally absent from active v0.66 source.",
+    "Existing credential browser smoke harnesses have legacy navigation and were retained for later maintenance; they are not counted as passing browser workflows.",
+    "The retired v0.15 external integration harness is retained only in the baseline source archive; no new acceptance claim is made for its old external application routes."
+  ]
+}

@@ -1,3 +1,4 @@
+const qaOutput = require('./qa-output.cjs')(__filename);
 // Real host + worker + local HTTP model. Deliberately no browser acceptance.
 const {spawn}=require('node:child_process'),http=require('node:http'),fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 (async()=>{
@@ -31,6 +32,6 @@ const {spawn}=require('node:child_process'),http=require('node:http'),fs=require
   assert.deepEqual(await api('/kun-evaluations',grading,'POST',gradeKey),graded);assert.deepEqual(await api('/kun-evaluations/'+graded.id),graded);assert.equal((await api('/kun-evaluations?previewId='+child.id)).items[0].id,graded.id);checks.push('immutable rubric and fixed evaluation of real replies; independentValidation=false; idempotent write/read without extra calls');
   assert((await (await fetch(base+'/kun-evaluation.js')).text()).includes('RunDeskKunEvaluation'));
   assert((await (await fetch(base+'/kun-task-sets.js')).text()).includes('RunDeskKunTaskSets'));assert(spec.paths['/kun-task-sets'].post['x-administrator-only']);assert.deepEqual(await api('/kun-task-sets/'+taskSet.id),taskSet);assert.equal(modelCalls,6);
-  const report={version:'0.45.0',passed:true,scope:'actual RunDesk HTTP + Kun process + local model fixture; browser and remote services not tested',modelCalls,assumedCalls,checks};fs.writeFileSync(root+'/docs/validation/current/kun-evaluation-http-validation.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
+  const report={version:'0.45.0',passed:true,scope:'actual RunDesk HTTP + Kun process + local model fixture; browser and remote services not tested',modelCalls,assumedCalls,checks};fs.writeFileSync(qaOutput('kun-evaluation-http-validation.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
  }finally{if(host&&host.exitCode===null){const done=new Promise(r=>host.once('exit',r));host.kill();await Promise.race([done,pause(3000)]);if(host.exitCode===null)host.kill('SIGKILL')}if(model)await new Promise(r=>model.close(r));fs.rmSync(tmp,{recursive:true,force:true})}
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """Check current documentation links and the generated startup/API contract."""
 import json
+import importlib.util
 from pathlib import Path
 import re
+import sys
+
+sys.dont_write_bytecode = True
 
 root = Path(__file__).resolve().parents[1]
 errors = []
@@ -17,6 +21,10 @@ for file in files:
         if target and not (file.parent / target).exists():
             errors.append(f'{file.relative_to(root)}: missing {target}')
 version = re.search(r'const Version = "([^"]+)"', (root / 'internal/app/api_v1.go').read_text()).group(1)
+source_check_spec = importlib.util.spec_from_file_location('source_hygiene', root / 'scripts/check-source.py')
+source_check = importlib.util.module_from_spec(source_check_spec)
+source_check_spec.loader.exec_module(source_check)
+errors.extend(source_check.validation_issues(root, version))
 spec = json.loads((root / 'internal/app/openapi.json').read_text())
 assert spec['info']['version'] == version
 for name in ['README.md', 'README.zh-CN.md', 'docs/README.md', 'docs/STATUS.md', 'docs/WEBUI.md']:

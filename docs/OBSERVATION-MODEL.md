@@ -1,6 +1,6 @@
 # 统一观测模型 v1
 
-这次在 RunDesk v0.52.0 的资源与 UHP 重构基础上，增加共同的观测读取模型。Codex App Server、Kun SDK、observeproxy 和宿主任务事件进入同一份查询契约。后续轨迹展示、调试和诊断可以复用该模型。
+RunDesk 提供共同的观测读取模型，复用资源与 UHP 的公共运行服务。Codex App Server、Kun SDK、observeproxy 和宿主任务事件进入同一份查询契约。后续轨迹展示、调试和诊断可以复用该模型。
 
 原始证据继续保存在现有 `state.db` 的 `events` 表。模型是只读投影，既有历史记录可以直接查询，不迁移或复制 Agent 原生目录、检查点和模型正文。旧的轨迹、事件、HTTP 详情接口继续可用；本轮保持工作台布局与展示方式。
 

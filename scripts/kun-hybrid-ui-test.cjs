@@ -1,3 +1,4 @@
+const qaOutput = require('./qa-output.cjs')(__filename);
 // Executes the shipped Hybrid dialog with a DOM stub and controlled HTTP
 // responses. Covers interaction semantics; this is not a browser/layout test.
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
@@ -45,5 +46,5 @@ const buttons=d=>d.querySelectorAll('button'),byText=(d,text)=>buttons(d).find(n
  d=ctx.window.RunDeskKunForks.open({previewId:'one'});await flush();await byText(d,'读取可替换结果').click();field(d,'替换理由').value='controlled assumption';field(d,'完整假设输出').value='new output';const before=started;await byText(d,'保存假设固定预览').click();assert.equal(started,before);assert(d.textContent.includes('固定替换全文'));assert(d.textContent.includes('new output'));await byText(d,'启动或打开 Hybrid 分支').click();assert.equal(writes.at(-1).path,'/kun-forks/hyp-child/start');assert.equal(writes.at(-1).body.expectedHash,'hash-hyp-child');
  assert(writes.every(v=>v.path==='/kun-forks'||/^\/kun-forks\/[^/]+\/(?:start|hypotheses)$/.test(v.path)),'dialog controlled source');
  const report={version:'0.45.0',passed:true,scope:'Node DOM stub + shipped view code; browser layout not tested',checks:['preview does not start models','fixed source selection and expected hash','edits invalidate preview','duplicate start click guarded','literal text rendering','stale preview response ignored','closing dialog suppresses late navigation','no source control routes','hypothesis child becomes current preview; explicit start uses child hash']};
- fs.writeFileSync(root+'/docs/validation/current/kun-hybrid-ui-validation.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
+ fs.writeFileSync(qaOutput('kun-hybrid-ui-validation.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
 })().catch(e=>{console.error(e);process.exitCode=1});

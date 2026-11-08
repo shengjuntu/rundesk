@@ -1,3 +1,4 @@
+const qaOutput = require('./qa-output.cjs')(__filename);
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 class Element{
  constructor(tag,attrs={},...children){this.tagName=tag.toUpperCase();this.attrs=attrs;this.children=[];this.listeners={};this.value=attrs.value??'';this.disabled=false;this.append(...children);}
@@ -35,5 +36,5 @@ const edit=(node,label,value)=>{const f=field(node,label);f.value=value;f.emit('
  active=true;const secondNode=ctx.window.RunDeskKunTaskSets.create({isActive:()=>active}).node;edit(cases(secondNode)[0],'固定输入','late');edit(cases(secondNode)[0],'规则内容','late');const late=byText(secondNode,'保存固定任务集').click(),last=pending.shift();active=false;last.resolve(saved(last.options.body));await late;assert(!secondNode.textContent.includes('已保存 ·'),'closed save applied');
  assert(requests.every(r=>r.url.startsWith('/kun-task-sets')),'unexpected runtime/evaluation endpoint');
  const report={version:'0.45.0',passed:true,scope:'Node DOM stub + shipped task-set editor; not browser layout acceptance',checks:['fixture opt-in, path validation, literal seed content and immutable copy','artifact path validation, literal value preservation, immutable copy and busy controls','explicit bounded definition save','unique case keys and rule limits','literal input whitespace and HTML preserved','duplicate request guards','immutable copy to new draft','metadata pagination and explicit full read','response identity checked','closed detail/save responses ignored','no execution or grading requests']};
- fs.writeFileSync(root+'/docs/validation/current/kun-task-sets-ui-validation.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
+ fs.writeFileSync(qaOutput('kun-task-sets-ui-validation.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
 })().catch(e=>{console.error(e);process.exitCode=1});

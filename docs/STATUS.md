@@ -1,36 +1,12 @@
 # 当前能力与后续工作
 
-**RunDesk 0.65.0 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。这里区分源码已实现、后端能力边界和目标环境验收；三个使命的产品定位见[中文 README](../README.zh-CN.md)。
+**RunDesk 0.66.0 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。三个使命的产品定位见[中文 README](../README.zh-CN.md)。
 
-0.65.0 完成配方目录归位：`recipes/` 是唯一声明来源，`recipe.json` 在冻结上下文时生成 `profile.lock.json`；旧外置锁文件配方保持可读。生产 Go 读取器迁入 `internal/`，客户端与 systemd 文件迁至正式目录，源码不再保留第二套 `examples/` 配方。已有镜像、实例、会话及历史构建快照保持原有语义。见[配方目录](../recipes/README.md)与[升级说明](UPGRADING.md)。
+本版继续清理发布源码，保留唯一配方来源，移除历史验证产物和过时整理文档，将可再生检查输出集中到 `build/qa/` 并增加源码检查。完整旧证据保留在 0.65.0 源码包，详见[验证资料说明](validation/README.md)。已有镜像、实例、会话和冻结构建快照保持原有语义。
 
-0.64.0 聚焦 Docker 初始化：下载现成镜像、本机构建和本机镜像检查分别选择；每个准备任务将失败原因、Kun 修复、候选构建和检查结果放在一起。修复关联可从持久记录恢复，任务结束与镜像通过 offline/smoke 验证分别显示。前两步配置流程、Docker 可选规则及已有数据保持原语义。详见[初始化](SETUP.md#首次初始化)、[WebUI](WEBUI.md)与[升级说明](UPGRADING.md)。
+当前界面按“工作区 → 会话”组织日常工作，Codex 执行日常会话与应用任务，Kun 负责受限内部维护和只读轨迹问答。初始化分三步，Docker 可选；每个准备任务关联其失败、Kun 修复及候选验证。构建工作台连接配方、镜像与 Agent，模型发现可读取本机 Docker 发布端口；Codex Provider 与 Kun 配置分别管理。操作见[WebUI](WEBUI.md)、[构建中心](BUILD-CENTER.md)、[模型服务](CODEX-PROVIDERS.md)和[维护](MAINTENANCE.md)。
 
-0.63.0 增加会话整轮展开与收起、轨迹耗时汇总和紧凑导航。耗时使用同一轮次与固定事件范围的证据，缺失区间不按零计算，并行步骤的耗时合计不冒充整轮耗时。工作区及会话仍为两层组织；构建中心、模型服务和应用预设按现有契约使用。详见[WebUI](WEBUI.md)、[轨迹](TRACE.md)及[升级说明](UPGRADING.md)。
-
-0.62.0 增加配方、镜像和 Agent 相连的构建工作台，保留已有镜像直接创建 Agent 的路径；镜像展示优先使用冻结配方名称和版本。模型发现补充 Docker 发布端口及容器来源，失败候选保留可见原因。Codex 默认模型服务及具体环境配置与 Kun 初始化配置分别管理。详见[构建中心](BUILD-CENTER.md)、[Codex 模型服务](CODEX-PROVIDERS.md)与[升级说明](UPGRADING.md)。
-
-0.61.0 包含近期应用多预设绑定修复，并将日常会话与应用统一到 Codex，Kun 用于内部维护及只读轨迹问答。会话按工作区组织；构建维护新增计划、候选、同源独立检查和经验留存，最多三次尝试。已补齐公开 API 的维护状态与来源字段。Skill/MCP 自动优化仍待实现，真实模型及 Docker 联调仍需目标环境验收。详见[内部维护](MAINTENANCE.md)与[升级说明](UPGRADING.md)。
-
-0.60.0 增加[应用项目环境](APPLICATION-PROJECT-ENVIRONMENTS.md)：同一批准的 Agent 可以为不同视频项目建立独立工作区、容器和配置快照；应用提交带 projectId 的任务，RunDesk 核验归属并注入 MCP 项目 ID。构建中心从镜像自动命名 Agent。真实 VideoAPP 与 Docker 联调仍待验收。
-
-0.59.1 将应用可用环境从折叠项移到应用首页，展示默认环境、额外预设和有效凭据授权数；新凭据预选当前启用的环境。已签发 key 的精确授权和独立工作区规则不变。空列表排查见[运行预设](APPLICATION-RUNTIME-PRESETS.md)。
-
-0.59.0 的三页向导允许在 Codex 页完成基本设置，Docker 可稍后再做；Agent 列表分开镜像准备与从镜像添加，输入框明确当前工作区，Skills/MCP/插件使用同一对话框。配置存储边界未变，详见 [WebUI](WEBUI.md)。
-
-0.54.0 将日常 WebUI 围绕实例组织，集中配置入口并保留工作区上下文；构建中心和应用接入分别管理运行基础与外部调用。Kun 分叉、评测任务集、K4 Skill 工作台和离线实验的常驻/创建入口撤下，研究 API、数据与已有分支查看保留。详见 [WebUI](WEBUI.md)。
-
-0.54.1 修复两套研究预置的 Agent-Reach 源码下载与 wheel 打包问题；内置配方及 CLI 同步至 1.1.2。构建不再下载该上游源码，其他依赖仍需网络。更新方式见[升级说明](UPGRADING.md)，本轮检查见[验证说明](VALIDATION.md)。
-
-0.55.0 将构建配方改为可编辑的外置目录，并在构建前提供国际/中国镜像源选择及逐项修改。源列表覆盖八类下载入口，实际应用取决于配方声明的参数；六套默认配方支持基础镜像、Debian APT、npm、pip。原配置重建沿用冻结上下文和源参数。详见[构建源配置](BUILD-SOURCES.md)。
-
-0.56.0 增加首次初始化首页、本机硬件与模型服务发现、主动推理/函数调用检查、专用 Kun 初始化助手、无需 Node/npm 的 Codex 后台受管安装，以及多选 Docker 预设。失败安装和构建可形成 Kun 修复任务；经实际记录验证的经验以版本保存并可检索复用，不自动改写公共 Skill 或默认源。运行前置条件见[部署](SETUP.md)。
-
-0.56.1 将启动向导收拢为三步：寻找和配置 LLM（含 Kun 启用）、配置和安装 Codex、构建 Docker。第三步直接完成设置并进入工作台，保留自动修复、构建源编辑和版本化经验。已完成初始化的安装可从左侧齿轮“环境检查”重开。
-
-0.57.0 在第三步加入预构建镜像下载优先入口、固定 Digest 的外置公开目录，以及经同源 offline/smoke 检查后的后台镜像发布。随包目录为空；尚未配置实际发布账号和公共镜像地址，源码能力不等于镜像已经公开托管。详见[镜像分发](IMAGE-DISTRIBUTION.md)。
-
-0.58.0 在同一套配方上补充 Codex 运行时复用、完整归档下载地址与校验缓存，以及阿里云 Debian 源选项。网络选择与运行时来源独立；保留现有源配置，管理员可显式合并新增默认条目。受管原生包与基础镜像按精确版本和实际身份检查，不因采用镜像源而跳过 smoke。详见[运行时复用](BUILD-RUNTIME.md)与[构建源配置](BUILD-SOURCES.md)。
+以下区分已实现能力、后端契约与待目标环境验收的内容。升级兼容要求见[升级说明](UPGRADING.md)，本版实际检查见[验证范围](VALIDATION.md)。
 
 ## 围绕三个使命的能力
 
@@ -67,14 +43,4 @@
 5. 用可重复执行的任务集验证 Harness 策略和 Skill 复用的质量、成本与适用范围，再扩展裁判和统计能力。
 6. 完成 UHP 真实 APP–Codex/Kun 闭环验收；仅在后端提供可靠契约后实现硬工具轮次、输出 token 预算和原生指令语义。harness 写入等 Full 管理能力按应用需求扩展，不把平台配置与调试职责全部搬入 UHP。
 
-0.54.1 预置修复检查见 [profile-build-0541.json](validation/current/profile-build-0541.json)；0.54.0 的实际检查以 [webui-054.json](validation/current/webui-054.json) 为准，不从旧报告继承通过数。0.53.0 的 [UHP 加固](validation/current/uhp-hardening.json)、0.52.0 的[轨迹阅读器验证](validation/current/trace-reader.json)及文档整理记录保留为历史证据，不计作本轮重跑结果。真实 Kun、Docker、供应商模型与业务制品仍待目标环境验收；[验证说明](VALIDATION.md)区分各轮范围。
-
-0.55.0 的历史检查见 [build-sources-055.json](validation/current/build-sources-055.json)：外置文件、源配置、HTTP、WebUI 与编译测试；没有 Docker 实构建或源测速验收。
-
-0.57.0 的[公开镜像分发验证](validation/current/public-images-057.json)记录该版公开目录、拉取、发布与匿名访问检查的验证范围。
-
-0.56.1 的[三步向导验证](validation/current/onboarding-0561.json)记录该版界面、编译服务与针对性 Go 检查。
-
-0.56.0 的[初始化总验证](validation/current/onboarding-056.json)包含 Go 回归、专项 race、真实 Codex 原生下载、真实 Kun 配合脚本模型的修复闭环，以及产品 WebUI/HTTP 验证；具体范围见[验证说明](VALIDATION.md)，不推导为真实模型诊断能力或 Docker 部署验收。
-
-用户在 2026-10-28 提供了六套修复配方的实际构建、smoke 与 available 记录，作为部署经验收录在[运行时说明](BUILD-RUNTIME.md#这次实机修复的来源)。这些记录不计入 0.58.0 源码回归通过数；本版实际执行范围以[验证说明](VALIDATION.md)为准。
+本版检查及未覆盖范围见[验证说明](VALIDATION.md)。用户提供的六套配方实机构建经验独立保留在[运行时说明](BUILD-RUNTIME.md#这次实机修复的来源)，不计作本版回归结果。

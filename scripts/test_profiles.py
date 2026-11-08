@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 import zipfile
@@ -48,6 +49,8 @@ class ProfilesTest(unittest.TestCase):
 
     def test_all_context_variants_and_toml(self):
         import tomllib
+        video_helpers = {"hyperframes_smoke.py", "video_smoke.py", "video_use_adapter.py", "video_use_smoke.py"}
+        research_helpers = {"agent_reach_config.py", "mcporter", "read_web.py"}
         for name in profiles.PROFILE_IDS:
             p = profiles.load_profile(name)
             for backend in p["searchBackends"]:
@@ -56,6 +59,31 @@ class ProfilesTest(unittest.TestCase):
                     profiles.render(p, profiles.resolve(p, backend, agent), "0.144.6", "node:22-bookworm-slim", dest)
                     config = tomllib.loads((dest / "seed/config.toml").read_text())
                     docker = (dest / "Dockerfile").read_text()
+                    tools = {file.name for file in (dest / "tools").iterdir()}
+                    if name in ("news2douyin", "people-search"):
+                        self.assertFalse(tools & video_helpers)
+                        self.assertTrue({"profile_doctor.py", "read_web.py", "install-codex.sh"} <= tools)
+                        if not agent:
+                            # Run the real research doctor without video helpers.
+                            # All process calls are mocked; an accidental video
+                            # subprocess would fail rather than contacting tools.
+                            doctor = module("research_doctor_" + name, dest / "tools/profile_doctor.py")
+                            pins = json.loads((dest / "profile.lock.json").read_text())["dependencies"]["python"]
+                            def checked_command(argv):
+                                return {"ok": True, "exitCode": 0, "output": "codex-cli 0.144.6" if argv == ["codex", "--version"] else "fixture"}
+                            with patch.object(sys, "argv", ["doctor", "--manifest", str(dest / "profile.lock.json")]), \
+                                 patch.object(doctor, "run", side_effect=checked_command), \
+                                 patch.object(doctor, "os", SimpleNamespace(environ={"HOME": str(self.root)})), \
+                                 patch.object(doctor.importlib.metadata, "version", side_effect=lambda package: pins[package]), \
+                                 patch.object(doctor.Path, "is_file", return_value=True), \
+                                 patch.object(doctor.tempfile, "TemporaryDirectory", side_effect=lambda *a, **kw: contextlib.nullcontext(str(self.root))), \
+                                 patch.object(doctor.subprocess, "run", side_effect=AssertionError("Unexpected video subprocess")), \
+                                 contextlib.redirect_stdout(io.StringIO()) as output:
+                                self.assertEqual(doctor.main(), 0)
+                            self.assertTrue(json.loads(output.getvalue())["ready"])
+                    elif name == "video-build":
+                        self.assertTrue(video_helpers <= tools)
+                        self.assertFalse(tools & research_helpers)
                     self.assertNotIn("VOLUME ", docker)
                     self.assertNotIn("docker.sock", docker)
                     self.assertIn("COPY skills/ /etc/codex/skills/", docker)

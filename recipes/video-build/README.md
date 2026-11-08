@@ -47,6 +47,6 @@ python3 /opt/rundesk-profile/tools/hyperframes_smoke.py --out ./hyperframes-smok
 
 doctor 核对实际 Node 最低版本、npm 包版本、浏览器、字体和工具，并真实渲染本地 HTML+GSAP 动画。烟测先执行 HyperFrames check，再生成1秒H.264，检查尺寸、时长、解码后帧内容是否变化；另用 FFmpeg 生成2秒视频+音频检查H.264/AAC。可选 video-use 才执行其来源、依赖和旧适配器合成检查。doctor 不安装软件、不下载浏览器、不调用模型或生成服务。
 
-[历史验证目录](../../docs/validation/archive/profiles/video-build/)保存原有 dependency-validation 与宿主离线渲染、契约测试记录。宿主验收使用 Node 24 和现有 Chrome Headless Shell，不等于 Node 22 Debian Chromium Docker 镜像验收；本轮无 Docker CLI，未构建镜像，也未验收真实 IndexTTS、模型生成或 Codex 自主制作闭环。
+早期 dependency-validation、宿主离线渲染和契约测试记录保留在[历史源码包](../../docs/validation/README.md)中；当前复验见[验证说明](../../docs/VALIDATION.md)。早期宿主环境使用 Node 24 和现有 Chrome Headless Shell，不等于 Node 22 Debian Chromium Docker 镜像验收；真实 IndexTTS、模型生成及 Codex 自主制作闭环仍须在目标环境验收。
 
 [自主导演规程设计说明](../../docs/recipes/video-build/WORKFLOW-DESIGN.md)保留项目设计背景，不作为容器内的默认 Skill 文件。

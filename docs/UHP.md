@@ -1,6 +1,6 @@
 # UHP 服务入口
 
-RunDesk v0.53.0 在 v0.52.0 引入的 `/v1` 服务入口上补充严格能力准入、持久任务时限、进度与审批衔接及应用客户端示例，线协议仍固定为 UHP `2026-10-19`。RDCA v1 继续使用 `/api/v1`；两者共享 RunDesk 的任务准入、队列、原生运行模块、取消和资源服务。运行 RunDesk 不需要启动 HarnessRouter。
+RunDesk 的 `/v1` 服务入口提供严格能力准入、持久任务时限、进度与审批衔接及应用客户端示例，线协议固定为 UHP `2026-10-19`。RDCA v1 继续使用 `/api/v1`；两者共享 RunDesk 的任务准入、队列、原生运行模块、取消和资源服务。运行 RunDesk 不需要启动 HarnessRouter。
 
 这是一版有明确限制的实现，不声明完整 UHP conformant。发现文档中的 `conformance_class: core` 表示本版采用的基础接口等级；它不是独立认证结果。两种后端均不提供 UHP 硬工具轮次预算或输出 token 预算，原生指令优先级和 Kun 图片输入等差异见下文。即使选定测试后端通过官方套件，也不能据此推断所有原生后端和全部规范要求都已验证。
 
@@ -157,9 +157,9 @@ UHP 的映射和投影位于现有 `state.db` 的 `uhp-*` 记录中；任务状�
 
 协议版本仍为 `2026-10-19`；本版官方套件固定到 HarnessRouter 提交 `038d4d27afed078db339b107f8bf6031ebb37872`、套件版本 `2026.10.19.post3`。官方套件独立运行，不成为 RunDesk 的构建或运行依赖；本仓库不复制其实现。
 
-0.52.0 的历史验证在 2026-10-20 使用原生 Codex 协议模拟器完成 post2 官方 Extended 全套：**50/50 通过，0 失败、0 跳过、0 错误**，当时固定提交为 `caa3c0a109fffd84ef245dcdad23f2cdfeff7153`。原始报告见 [uhp-conformance-demo.json](validation/current/uhp-conformance-demo.json)，不回写为本轮结果。该报告的取消项在请求取消前已完成，附件项未验证真实模型读取内容。
+官方 Extended 套件、应用内预算／时限／进度专项和客户端测试必须分别报告。post3 的 T-12 属于 Full 等级的工具轮次预算测试，依赖本服务未提供的 `createHarness`；Extended 检查不能验证硬步数限制，也不能据此声明完整 Full 兼容。应用内检查覆盖能力披露与严格拒绝、时限调度及竞争、审批身份和重试等边界，不冒充 T-12。
 
-0.53.0 的实际执行范围与结果统一记录在 [uhp-hardening.json](validation/current/uhp-hardening.json)，应分别查看官方 Extended 套件、预算/时限/进度定向测试及客户端测试。post3 的 T-12 是 Full 等级的工具轮次预算测试，依赖本服务未提供的 `createHarness`；Extended 的 50 项不能据此验证硬步数限制。应用内测试验证能力披露与严格拒绝、时限调度及竞争、审批身份和重试等边界，不冒充 T-12 或完整 Full 验证。真实 Kun、Docker 与模型凭据链路仍待目标环境验收。
+本版实际执行与未覆盖范围见[验证说明](VALIDATION.md)。此前使用原生协议模拟器的报告保留在[历史源码包](validation/README.md)中，不继承为当前结果；真实 Kun、Docker 与模型凭据链路仍需在目标环境验收。
 
 `scripts/test-uhp-conformance.sh` 检查外部 checkout 的固定提交及 suite 未修改，然后运行原始套件。准备 Python 3.10+ 和 `jsonschema`，对已经运行的服务执行：
 
@@ -170,8 +170,8 @@ scripts/test-uhp-conformance.sh \
   --base-url http://127.0.0.1:3210 \
   --class extended \
   --model demo-fixture \
-  --label 'RunDesk v0.53.0 UHP / native demo fixture' \
-  --json build/uhp-0.53.0-conformance.json \
+  --label 'RunDesk v0.66.0 UHP / native demo fixture' \
+  --json build/qa/uhp-conformance/report.json \
   --plain
 ```
 
@@ -182,7 +182,7 @@ scripts/test-uhp-conformance.sh \
 ```sh
 go test ./internal/app -run 'TestUHP|TestTaskDeadline' -count=1 -timeout=300s
 python3 scripts/test_uhp_client.py
-python3 scripts/test_uhp_client_integration.py --binary ./bin/rundesk --output-dir ./build/uhp-client-checks
+python3 scripts/test_uhp_client_integration.py --binary ./bin/rundesk --output-dir ./build/qa/uhp-client-checks
 ```
 
 `test_uhp_client.py` 使用本地 HTTP fixture；`test_uhp_client_integration.py` 使用指定的已编译 RunDesk，自行启动并清理隔离的 `--demo` 服务，验证完整 HTTP/SQLite/原生协议模拟链路。后者不能指向线上服务，也不会批准工具。两者均不证明真实模型执行或业务结果质量。

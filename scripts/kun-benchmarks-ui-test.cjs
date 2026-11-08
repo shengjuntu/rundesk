@@ -1,3 +1,4 @@
+const qaOutput = require('./qa-output.cjs')(__filename);
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 class Element{
  constructor(tag,attrs={},...children){this.tagName=tag.toUpperCase();this.attrs=attrs;this.children=[];this.listeners={};this.value=attrs.value??'';this.disabled=false;this.append(...children);}
@@ -31,5 +32,5 @@ const result=async(task,value)=>{assert(pending.length);pending.shift().resolve(
  const detail=byText(node,'读取所选对照案例').click();assert.equal(pending[0].url,'/kun-case-runs/p1');await result(detail,{preview:{hash:'ph',benchmarkId:'paired',effectiveInput:'literal <script>'}});assert(node.textContent.includes('literal <script>'));
  const late=byText(node,'刷新对照进度').click();active=false;await result(late,{benchmark:{...batch,title:'LATE'},execution:{status:'completed',next:2,total:2}});assert(!node.textContent.includes('LATE'));
  const proof={version:'0.45.0',passed:true,scope:'shipped UI in Node DOM fixture; browser layout not tested',checks:['preview makes no execution request','duplicate clicks suppressed','whole-batch consent and exact hash','stop does not claim in-flight cancellation','unknown metrics show known/missing counts','reports cannot promote candidates','response bindings checked','literal rendering and closed response suppression']};
- fs.writeFileSync(root+'/docs/validation/current/kun-benchmarks-ui-validation.json',JSON.stringify(proof,null,2)+'\n');console.log(JSON.stringify(proof));
+ fs.writeFileSync(qaOutput('kun-benchmarks-ui-validation.json'),JSON.stringify(proof,null,2)+'\n');console.log(JSON.stringify(proof));
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -1,3 +1,4 @@
+const qaOutput = require('./qa-output.cjs')(__filename);
 const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
 const {spawn}=require('child_process');
 const http=require('http');
@@ -6,7 +7,7 @@ const assert=require('assert');
 const path=require('node:path'),os=require('node:os');
 const root=path.resolve(__dirname,'..');
 const scratch=fs.mkdtempSync(path.join(os.tmpdir(),'rundesk-kun-ui-'));
-const pictures=path.join(root,'docs/screenshots/0.49.0');fs.mkdirSync(pictures,{recursive:true});
+const pictures=qaOutput('screenshots');fs.mkdirSync(pictures,{recursive:true});
 (async()=>{
  let calls=0,server,browser;const requests=[];const errors=[];
  const model=http.createServer(async(req,res)=>{
@@ -130,6 +131,6 @@ const pictures=path.join(root,'docs/screenshots/0.49.0');fs.mkdirSync(pictures,{
   await page.screenshot({path:pictures+'/kun-mobile.png'});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false,'mobile overflow');
   assert.deepEqual(errors,[],'browser errors');
-  const report={passed:true,modelCalls:calls,checks:['UI config','model/tool step boundaries','steer before next request','actual request context tree','snapshot diff','expanded details survive refresh','snapshot inspection','reported usage','budget settings','four structured module cards','current Sources control gating','MCP state and performance tables','fixed snapshot across panels and refresh','live inspection','conditional after-model breakpoint','Console read-only query and control proposal','explicit checkpoint recovery','reload persistence','mobile viewport'],pageErrors:errors};fs.writeFileSync(path.join(root,'docs/validation/current/kun-ui-validation.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
+  const report={passed:true,modelCalls:calls,checks:['UI config','model/tool step boundaries','steer before next request','actual request context tree','snapshot diff','expanded details survive refresh','snapshot inspection','reported usage','budget settings','four structured module cards','current Sources control gating','MCP state and performance tables','fixed snapshot across panels and refresh','live inspection','conditional after-model breakpoint','Console read-only query and control proposal','explicit checkpoint recovery','reload persistence','mobile viewport'],pageErrors:errors};fs.writeFileSync(qaOutput('kun-ui-validation.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
  }finally{if(browser)await browser.close();if(server&&server.exitCode===null&&server.signalCode===null){server.kill('SIGTERM');await new Promise(resolve=>server.once('exit',resolve));}model.closeAllConnections();model.close();fs.rmSync(scratch,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1});

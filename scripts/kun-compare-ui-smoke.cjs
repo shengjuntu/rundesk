@@ -1,10 +1,11 @@
+const qaOutput = require('./qa-output.cjs')(__filename);
 // Actual host/worker, local model fixture and Chromium. No remote model account.
 const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
 const {spawn}=require('node:child_process'),http=require('node:http'),fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 (async()=>{
  const root=path.resolve(__dirname,'..'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'rd-compare-')),port=process.env.RUNDESK_COMPARE_PORT||38936,base='http://127.0.0.1:'+port,pause=ms=>new Promise(r=>setTimeout(r,ms)),checks=[],errors=[];
  let host,browser,model,modelCalls=0;
- const reportPath=root+'/docs/validation/current/kun-compare-browser-validation.json';
+ const reportPath=qaOutput('kun-compare-browser-validation.json');
  const report=extra=>fs.writeFileSync(reportPath,JSON.stringify({version:'0.36.0',scope:'real RunDesk/Kun, local HTTP model fixture and Chromium; no remote service acceptance',modelCalls,checks,pageErrors:errors,...extra},null,2)+'\n');
  const api=async(p,body,method)=>{const r=await fetch(base+'/api/v1'+p,{method:method||(body?'POST':'GET'),headers:{'Content-Type':'application/json','Idempotency-Key':crypto.randomUUID()},body:body?JSON.stringify(body):undefined});assert(r.ok,await r.clone().text());return r.json()};
  const stopped=async id=>{for(let n=0;n<150;n++){const s=await api('/sessions/'+id);if(s.status==='completed')return s;if(['failed','interrupted'].includes(s.status))throw Error(JSON.stringify(s));await pause(100)}throw Error('run not completed')};
@@ -21,7 +22,7 @@ const {spawn}=require('node:child_process'),http=require('node:http'),fs=require
   const query='/kun-forks/comparisons/'+hybrid.id,comparison=await api(query),pair=await api(query+'?against='+live.id);
   assert(comparison.left.complete&&comparison.right.complete&&pair.left.complete);assert.equal(comparison.right.tools[0].replayed,1);assert.equal(pair.left.tools[0].dispatched,1);assert.equal(comparison.delta.reportedTokens,0);assert.equal(modelCalls,6);checks.push('real HTTP source/Hybrid/Live comparisons with inherited/new accounting and dispatch/replay separation');
   try{browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH,headless:true,args:['--no-sandbox']})}catch(e){report({passed:false,browserStatus:'blocked',reason:String(e.message).includes('Operation not permitted')?'Chromium process singleton socket() failed: Operation not permitted':String(e.message).split('\n')[0]});throw e}
-  const pictures=root+'/docs/screenshots/0.36.0';fs.mkdirSync(pictures,{recursive:true});const page=await browser.newPage({viewport:{width:1440,height:1050},locale:'zh-CN'});page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(()=>{if(location.protocol!=='http:')return;localStorage.setItem('rundesk-language','zh');sessionStorage.setItem('rundesk-setup-dismissed','1')});
+  const pictures=qaOutput('screenshots');fs.mkdirSync(pictures,{recursive:true});const page=await browser.newPage({viewport:{width:1440,height:1050},locale:'zh-CN'});page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(()=>{if(location.protocol!=='http:')return;localStorage.setItem('rundesk-language','zh');sessionStorage.setItem('rundesk-setup-dismissed','1')});
   await page.goto(base);await page.waitForFunction(()=>window.RunDeskKunForks&&window.RunDeskKunCompare);await page.evaluate(id=>window.RunDeskKunForks.open({previewId:id}),hybrid.id);
   const d=page.locator('#kun-fork-workbench');await d.getByRole('button',{name:'读取最新对照'}).click();await d.getByText('固定范围对照',{exact:true}).waitFor();assert.equal(await d.locator('img').count(),0);assert.equal(await page.evaluate(()=>window.compareXSS),undefined);
   await d.getByRole('button',{name:'重读固定范围'}).click();await d.getByText('已固定两侧宿主记录上界。新事件不会自动改变当前对照。',{exact:true}).waitFor();

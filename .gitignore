@@ -1,5 +1,8 @@
 /bin/
 /dist/
+/build/
+/coverage/
+/htmlcov/
 *.db
 *.db-shm
 *.db-wal
@@ -7,3 +10,8 @@ server.lock
 .env
 node_modules/
 __pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

@@ -46,44 +46,28 @@ The instance-centered WebUI does **not** yet synchronize instance configuration 
 
 ## Current source version
 
-**RunDesk 0.65.0 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.66.0 source · external Kun 0.17.0 · worker protocol 16**
 
-Version 0.65.0 removes the old `examples/` tree and makes `recipes/` the single editable recipe source. Production readers live under `internal/`, application clients under `clients/python/`, and service files under `deploy/systemd/`. Build snapshots generate their own lock files, while reviewed local dependencies and optional recipe variants remain available. Use the unified [recipe CLI](recipes/README.md) and [deployment instructions](docs/SETUP.md).
+Version 0.66.0 cleans the active source tree: old QA output and superseded documentation leave the release, generated results go to `build/qa/`, and source checks prevent them from returning. Complete earlier evidence remains in the preserved 0.65.0 source package. See [upgrading](docs/UPGRADING.md) and [validation scope](docs/VALIDATION.md).
 
-Version 0.64.0 simplifies the optional Docker setup page. Downloading a ready image and building from a recipe are distinct choices. A preparation task keeps its failure, Kun repair, candidate builds and verification results together, with the matching repair conversation available from that task. Download failures remain download retries; repair completion alone does not prove an image is verified. The LLM and Codex setup steps retain their existing flow. See [setup](docs/SETUP.md) and [WebUI](docs/WEBUI.md).
+`recipes/` is the single editable recipe source. Production readers live under `internal/`, application clients under `clients/python/`, and service files under `deploy/systemd/`. Build snapshots generate their own lock files. Reviewed local Agent-Reach sources and the wheel packaging fix remain in news2douyin and people-search 1.1.2; other dependencies still require their download channels. Use the [recipe CLI](recipes/README.md) and [deployment instructions](docs/SETUP.md).
 
-Version 0.63.0 groups conversations into expandable rounds and adds trace timing analysis, with wall duration kept separate from overlapping step work. A compact navigation rail leaves the workspace panel for conversations and gives management pages more room. Existing records and the 0.62 build/provider workflows remain available. See [WebUI](docs/WEBUI.md) and [trace analysis](docs/TRACE.md).
+New installations use a three-step guide: **find and configure LLM → configure and install Codex → prepare Docker environments**. Docker is optional and setup can be reopened from **Environment setup**. Downloading a ready image, building locally and checking an existing image are distinct choices. A preparation task keeps its failure, Kun repair, candidate builds and verification together; repair completion alone does not prove an image is verified.
 
-Version 0.62.0 makes Build Center a recipe → image → Agent workbench. Existing images can be reused, recipe names lead image cards, and the same image can support multiple Agents. Setup also discovers published local Docker model services and shows failed candidates with their causes. Codex provider settings are separate from Kun model discovery and can be applied to an exact Agent/workspace environment. See [Build Center](docs/BUILD-CENTER.md) and [Codex model providers](docs/CODEX-PROVIDERS.md).
+Daily conversations and application tasks use Codex; Kun handles installation and recipe repair plus read-only trace questions. Skill extraction and MCP optimization remain future work. Workspaces organize conversations, each with its own Codex environment. Applications may bind several approved environments and create isolated project workspaces. See [WebUI](docs/WEBUI.md), [internal maintenance](docs/MAINTENANCE.md) and [application presets](docs/APPLICATION-RUNTIME-PRESETS.md).
 
-Version 0.61.0 includes the recent application preset binding fixes and workspace → conversation navigation. Daily conversations and application tasks now use Codex. Kun handles installation repair, Docker recipe preparation/repair and read-only trace questions. New Kun build tasks record a bounded plan before each candidate, accept success only from matching host-run offline and smoke checks, and retain repair evidence. Skill extraction and MCP optimization are future stages. See [internal maintenance](docs/MAINTENANCE.md).
+Build Center connects **recipe → image → Agent**. Dockerfiles and source lists are editable files, with international and China mirror groups covering pip, conda, npm, Docker, APT, YUM/DNF, Hugging Face and GitHub; each recipe must declare the arguments it supports. Builds freeze their inputs and can reuse matching managed Codex runtimes. Codex provider settings are separate from Kun model discovery and apply to the selected Agent/workspace environment. See [Build Center](docs/BUILD-CENTER.md), [build sources](docs/BUILD-SOURCES.md) and [model providers](docs/CODEX-PROVIDERS.md).
 
-Version 0.60.0 names Agents automatically from Docker images and lets an authorized application bind each video project to its own workspace and container using an existing Agent. RunDesk injects the project ID into the container and snapshots the Agent's current configuration. The application's user interface can keep workspace IDs hidden. See [application project environments](docs/APPLICATION-PROJECT-ENVIRONMENTS.md).
+Publishers can distribute fixed image digests after matching offline and smoke checks. **The bundled public-image catalog is empty until real images are published**; no official image namespace or anonymous-download acceptance is implied. See [image distribution](docs/IMAGE-DISTRIBUTION.md).
 
-Version 0.59.1 shows each application's default and additional Agent environments on its main page. New application credentials preselect currently enabled presets; an existing credential keeps its original grants. An empty preset list under an application credential does not mean the image or Agent is missing. See [application runtime presets](docs/APPLICATION-RUNTIME-PRESETS.md).
-
-Version 0.59.0 makes setup a three-page guide. Docker is optional: finish basic setup after the Codex page and return to it from **Environment setup**. The Agent list separates image preparation from adding an Agent based on an existing image. The chat composer shows the selected Agent and workspace; Skills, MCP and native plugins stay inside one settings dialog. Docker configuration still belongs to each Agent/workspace environment. See [WebUI](docs/WEBUI.md).
-
-Version 0.57.0 starts new installations with a **three-step wizard**: **find and configure LLM → configure and install Codex → prepare Docker environments**. The first step discovers server hardware and model services, tests inference and function calling, and enables the dedicated Kun setup assistant on the same page. The third step defaults to downloading a prebuilt image, with local builds and existing local images available as alternatives; it also saves setup and opens the workbench. Installation and build failures can become traceable Kun repair tasks; verified repairs retain versioned evidence for later reuse. See [setup](docs/SETUP.md) for prerequisites and the limits of automatic discovery.
-
-Publishers can upload an image after its matching offline and smoke checks pass, then distribute its digest through an editable public-image catalog. **The bundled catalog is empty until real images are published**; this release does not claim an official RunDesk image namespace or an anonymous-download test. See [image distribution](docs/IMAGE-DISTRIBUTION.md).
-
-Version 0.58.0 keeps one set of recipes with **China and international network settings**. Local builds can reuse a matching managed Linux Codex installation or an explicitly selected compatible base image, reducing repeated Codex downloads. OpenMontage supports a complete archive URL and a SHA-256-verified download cache; Aliyun Debian mirrors join the editable source list. Existing source settings are preserved when upgrading. See [build runtime reuse](docs/BUILD-RUNTIME.md) and [build sources](docs/BUILD-SOURCES.md).
-
-This source includes runtime/resource contracts, a unified observation model, the conversation trace reader, the build center, and two API entry points over the same task core:
+Two API entry points share the same task core:
 
 | Entry point | Purpose |
 | --- | --- |
-| **RDCA v1** — `/api/v1` | RunDesk's application and management API; machine-readable contract at `/api/v1/openapi.json` |
-| **UHP** — `/v1` | An additional service interface targeting protocol `2026-10-19`; implemented with [documented limits](docs/UHP.md), without a full conformance claim |
+| **RDCA v1** — `/api/v1` | Application and management API; machine-readable contract at `/api/v1/openapi.json` |
+| **UHP** — `/v1` | Additional interface targeting protocol `2026-10-19`, with [documented limits](docs/UHP.md) and no full conformance claim |
 
-Version 0.55.0 loads build recipes from editable files in `recipes/<profile>/` instead of embedding their ZIPs in the executable. The build center previews Dockerfiles, exports complete contexts, and lets you select or edit download sources before a build. Source lists have international (primarily US/official) and China mirror groups covering pip, conda, npm, Docker, APT, YUM/DNF, Hugging Face, and GitHub; a recipe must declare the supported build arguments. Each build freezes its selected settings. See [build sources](docs/BUILD-SOURCES.md) and [upgrade instructions](docs/UPGRADING.md).
-
-The news2douyin and people-search 1.1.2 recipes retain the reviewed local Agent-Reach source and wheel packaging fix from 0.54.1. Codex remains an exact user-selected version; other dependencies still require their download channels.
-
-Version 0.54.0 focuses on instance navigation and configuration context without changing the storage or API schemas. It retains the persistent deadlines, progress and approval handoff, explicit capabilities, and [Python UHP client](clients/python/uhp_client.py) introduced in 0.53.0. Unsupported step/token budgets remain disclosed; applications can require supported capabilities before submission.
-
-RunDesk runs independently of HarnessRouter. See [current status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and [validation scope](docs/VALIDATION.md). Video and research integrations are examples of the application mission; their component versions belong in the [profile documentation](recipes/README.md).
+RunDesk runs independently of HarnessRouter. Unsupported UHP step/token budgets remain disclosed. Current behavior, execution boundaries and recipe component versions are maintained in [status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md) and the [profile documentation](recipes/README.md).
 
 ## Quick start
 
@@ -134,7 +118,7 @@ Kun uses a tool-capable Chat Completions service; Codex uses its native provider
 | Harness developers and researchers | [Kun integration](docs/KUN.md) · [Harness controls](docs/KUN-HARNESS.md) · [Research APIs and historical workflows](docs/README.md#3-harness-开发与研究--harness-research) |
 | Maintainers and operators | [Architecture](docs/ARCHITECTURE.md) · [Build center](docs/BUILD-CENTER.md) · [Download sources](docs/BUILD-SOURCES.md) · [Upgrading](docs/UPGRADING.md) · [Security](SECURITY.md) |
 
-For local development, `make test` runs the host and SDK tests; `make check` adds race checks and `go vet`. Some integration checks require an independent Kun executable. Reproduction instructions and historical results are separated in [validation](docs/VALIDATION.md).
+For local development, `make test` runs the host and SDK tests; `make check` adds race checks and `go vet`. Some integration checks require an independent Kun executable. See [validation](docs/VALIDATION.md) for reproduction and current scope, and [provenance](docs/validation/README.md) for preserved historical results.
 
 ## Execution boundaries
 

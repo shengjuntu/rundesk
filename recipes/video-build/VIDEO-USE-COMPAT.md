@@ -73,4 +73,4 @@ python3 -I /opt/rundesk-profile/tools/video_use_adapter.py --version
 python3 /opt/rundesk-profile/tools/video_use_smoke.py --out ./adapter-smoke-001
 ```
 
-doctor 不联网、不调用模型；核对来源 pin、适配器静态版本协议2、全部 Python 版本并真实合成两秒图片+静音模拟生成片段+连续 WAV+SRT，验证含CJK、emoji、CRLF、重复原文的多条引用，再检查 H.264/AAC、尺寸、帧率、时长、抽帧与完成清单。`--version` 无需输入文件，仅输出 schemaVersion、adapterVersion 和 upstreamCommit。这个烟测不证明真实 IndexTTS、生成服务、Codex 图片传递或端到端自主制作已验收。依赖解析及 CPython3.11/Linuxx86_64 二进制轮子选择、目标 Python 标记闭包验证记录在 [历史依赖验证](../../docs/validation/archive/profiles/video-build/dependency-validation-video-use-1.3.0.json)；尚未运行完整 Docker 镜像安装与部署验收。
+doctor 不联网、不调用模型；核对来源 pin、适配器静态版本协议2、全部 Python 版本并真实合成两秒图片+静音模拟生成片段+连续 WAV+SRT，验证含CJK、emoji、CRLF、重复原文的多条引用，再检查 H.264/AAC、尺寸、帧率、时长、抽帧与完成清单。`--version` 无需输入文件，仅输出 schemaVersion、adapterVersion 和 upstreamCommit。这个烟测不证明真实 IndexTTS、生成服务、Codex 图片传递或端到端自主制作已验收。依赖解析及 CPython3.11/Linuxx86_64 二进制轮子选择、目标 Python 标记闭包的早期记录保留在[历史源码包](../../docs/validation/README.md)；这些记录不替代完整 Docker 镜像安装与部署验收，当前范围见[验证说明](../../docs/VALIDATION.md)。

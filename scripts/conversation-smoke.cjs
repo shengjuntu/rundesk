@@ -1,3 +1,4 @@
+const qaOutput = require('./qa-output.cjs')(__filename);
 // Optional development test: npm install --no-save playwright && npx playwright install chromium
 // node scripts/ui-smoke.cjs
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || "playwright");
@@ -56,7 +57,7 @@ const assert = require("node:assert/strict");
     await page.waitForFunction(
       () => document.querySelector("#workspace").options.length > 0,
     );
-    const screenshots = path.resolve("docs/screenshots/0.8.0/streaming");
+    const screenshots = qaOutput('screenshots/streaming');
     fs.mkdirSync(screenshots, { recursive: true });
     await page.evaluate(() => {
       state.session = { id: "conversation-regression" };
