@@ -1,0 +1,41 @@
+{
+  "passed": true,
+  "checks": [
+    "staged native executable, all resource hashes, preserved license notices and source version agree",
+    "all six recipe exports work without examples, source ancestry, Python, Node or Docker on PATH",
+    "generic template export reads packaged external resources",
+    "external Dockerfile edits affect new exports while imported context bytes stay frozen",
+    "missing packaged recipes fail visibly rather than falling back into a checkout",
+    "recipe reads/imports create no tasks, sessions or image builds",
+    "packaged launcher handles a path with spaces without Python and restart retains frozen custom recipes"
+  ],
+  "scope": "Actual packaged native Go demo server outside the checkout; recipe metadata/export/import only. No real Docker, model or worker execution.",
+  "version": "0.65.0",
+  "binarySHA256": "abed71ec3f02d10019fca86d961292b2db00d00142f97a6b30118c7d0e1bcc9f",
+  "contexts": {
+    "hyperframes": {
+      "files": 23,
+      "sha256": "0e40e6c498799d65ab775af72575b6d0ce643e0836659acdc062ec3b1b8dc262"
+    },
+    "news2douyin": {
+      "files": 79,
+      "sha256": "9bd8d50378f365cfa5734eda99c091182d5a9add805bb79171ba4bf96c03db21"
+    },
+    "openmontage": {
+      "files": 32,
+      "sha256": "65a68e1fe4df515b5e5d6cf084f0d5289210edf231a4eb49149229b89e1a33ef"
+    },
+    "people-search": {
+      "files": 78,
+      "sha256": "e4f3e81486627daa6f1831ac3ffe17201e0bfa70094baae484550264cb365082"
+    },
+    "video-build": {
+      "files": 28,
+      "sha256": "21e8f395a26cb0f2a9f7b0abc0411636b19b4abc08874b212d8c657dd77d3af6"
+    },
+    "video-use": {
+      "files": 20,
+      "sha256": "47a80123c9906aa5afa2701faf529839fdfc9375d1634d3825355f5f4f44b537"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "passed": true,
+  "syntaxFiles": 5,
+  "suites": [
+    {
+      "script": "scripts/test_build_helpers.py",
+      "exitCode": 0,
+      "elapsedSeconds": 0.366,
+      "log": "release-065-helpers-build.log"
+    },
+    {
+      "script": "scripts/test_video_app_media.py",
+      "exitCode": 0,
+      "elapsedSeconds": 4.629,
+      "log": "release-065-helpers-media.log"
+    },
+    {
+      "script": "scripts/test_video_use_adapter.py",
+      "exitCode": 0,
+      "elapsedSeconds": 13.125,
+      "log": "release-065-helpers-video.log"
+    }
+  ],
+  "wheel": {
+    "executed": false,
+    "reason": "hatchling is not installed in selected Python, and no cached wheel/private environment was found; source/hash tests cover vendored files"
+  },
+  "externalVideoAppIntegration": {
+    "executed": false,
+    "syntaxPassed": true,
+    "reason": "Requires a separate VideoApp binary and app/provider integration fixtures; no runtime invoked"
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "historicalEvidence": [
+    {
+      "oldPath": "examples/hyperframes/validation.json",
+      "newPath": "docs/validation/archive/profiles/hyperframes/validation.json",
+      "sha256": "a0976273525ab8389c1e55e159f53aef71b9529dec65783f4d05016a2c2a8fc3",
+      "bytes": 1604
+    },
+    {
+      "oldPath": "examples/openmontage/validation/native-bridge-tests.log",
+      "newPath": "docs/validation/archive/profiles/openmontage/validation/native-bridge-tests.log",
+      "sha256": "889cf475a970fff7edd92a7f33eb3fc5e53be07ab4e89a849b5c00ce1ace72e9",
+      "bytes": 1384
+    },
+    {
+      "oldPath": "examples/openmontage/validation.json",
+      "newPath": "docs/validation/archive/profiles/openmontage/validation.json",
+      "sha256": "920f252943b0d13c1f872f09a200b667e26814d48caeaabe766e484256dc4302",
+      "bytes": 2009
+    },
+    {
+      "oldPath": "examples/video-build/dependency-validation-video-use-1.3.0.json",
+      "newPath": "docs/validation/archive/profiles/video-build/dependency-validation-video-use-1.3.0.json",
+      "sha256": "bae96fffb481db13444d38f6ecbc5253e828ee265773056fad1ee1414ef38a19",
+      "bytes": 11477
+    },
+    {
+      "oldPath": "examples/video-build/dependency-validation.json",
+      "newPath": "docs/validation/archive/profiles/video-build/dependency-validation.json",
+      "sha256": "75a2832b44e3ef03f8d68f3c6587bfff8e13d431e76936124bc7098f897aa466",
+      "bytes": 3141
+    },
+    {
+      "oldPath": "examples/video-build/validation/ffmpeg-probe.json",
+      "newPath": "docs/validation/archive/profiles/video-build/validation/ffmpeg-probe.json",
+      "sha256": "3d1c35663fd082f61a8ae622cd3e68c302f357087c851c8625bf839b7c422f2d",
+      "bytes": 3522
+    },
+    {
+      "oldPath": "examples/video-build/validation/ffmpeg-render.json",
+      "newPath": "docs/validation/archive/profiles/video-build/validation/ffmpeg-render.json",
+      "sha256": "8dd9955ce53deb858556d10359a98d7958c66ec7a4e4a3e29404291ee529c84b",
+      "bytes": 618
+    },
+    {
+      "oldPath": "examples/video-build/validation/hyperframes-animation.mp4",
+      "newPath": "docs/validation/archive/profiles/video-build/validation/hyperframes-animation.mp4",
+      "sha256": "890f6bb5d66b85e70cc039dff583a68a06bf60f3beda98d964872db854d50bbc",
+      "bytes": 5508
+    },
+    {
+      "oldPath": "examples/video-build/validation/hyperframes-probe.json",
+      "newPath": "docs/validation/archive/profiles/video-build/validation/hyperframes-probe.json",
+      "sha256": "e1c6f4fa264d8beae9304d5eb439079a111c39db59cfff5634063648a874cc05",
+      "bytes": 2454
+    },
+    {
+      "oldPath": "examples/video-build/validation/hyperframes-render.json",
+      "newPath": "docs/validation/archive/profiles/video-build/validation/hyperframes-render.json",
+      "sha256": "81eb2a1d28cae45aa5eb28f79b6fe46d664f2c7166decbce0d3116507c0933c4",
+      "bytes": 17953
+    },
+    {
+      "oldPath": "examples/video-build/validation/profile-contract-tests.log",
+      "newPath": "docs/validation/archive/profiles/video-build/validation/profile-contract-tests.log",
+      "sha256": "513343e162692d8c5136774b526a022d63f1c96d39feaeb362589288def686c3",
+      "bytes": 2106
+    },
+    {
+      "oldPath": "examples/video-build/validation/runtime-diagnostics-tests.log",
+      "newPath": "docs/validation/archive/profiles/video-build/validation/runtime-diagnostics-tests.log",
+      "sha256": "717c707f725f8c1aad3c9550510a3963956b8ba6eb3c2d1ca34fd713df5813e3",
+      "bytes": 9985
+    },
+    {
+      "oldPath": "examples/video-use/validation/native-final.mp4",
+      "newPath": "docs/validation/archive/profiles/video-use/validation/native-final.mp4",
+      "sha256": "fdde2aaa283cc3d5ede793f19d3c19ebc9ee95657c9c10cb6a8bb3c4098364d1",
+      "bytes": 286190
+    },
+    {
+      "oldPath": "examples/video-use/validation/native-render.json",
+      "newPath": "docs/validation/archive/profiles/video-use/validation/native-render.json",
+      "sha256": "a3ef36c9e8e1986fcf0569a180d284049d3d9d84e6701ab6214f67aff597bf08",
+      "bytes": 906
+    },
+    {
+      "oldPath": "examples/video-use/validation/upstream-tests.log",
+      "newPath": "docs/validation/archive/profiles/video-use/validation/upstream-tests.log",
+      "sha256": "03a7674073e3c297322d2397f5a1021d4270d06becea85a7042c7928ed48cd43",
+      "bytes": 3307
+    }
+  ]
+}

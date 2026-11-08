@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shengjuntu/rundesk/examples/profiletemplates"
+	"github.com/shengjuntu/rundesk/internal/recipefiles"
 )
 
 func (m *Manager) buildRecipeFileContext(id, codexVersion string, allowTemplate bool) (BuildRecipe, []byte, bool, error) {
@@ -19,7 +19,7 @@ func (m *Manager) buildRecipeFileContext(id, codexVersion string, allowTemplate 
 		return r, nil, false, err
 	}
 	if r.Kind == "builtin" {
-		data, err := profiletemplates.Files.ReadFile(r.ProfileID + ".zip")
+		data, err := recipefiles.Files.ReadFile(r.ProfileID + ".zip")
 		if err != nil {
 			return r, nil, false, err
 		}

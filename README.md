@@ -26,7 +26,7 @@ The intended application contract is simple: **submit a task → track its progr
 
 **Runtime Presets** lower the setup burden by giving an application a prepared, reusable runtime binding. The goal is to assemble the needed Skills, plugins, MCP services, and tools in advance. In this version, named presets bind administrator-approved Codex Docker instances and workspaces; build recipes and configuration prepare the tools, Skills, and MCP integrations. Native plugin support currently covers inspection and observed component origins; stable native install/uninstall is not implemented. Registering a preset alone does not build an image, install a plugin, or authenticate a model account.
 
-Start with the [application API](docs/API-V1.md), [runtime presets](docs/APPLICATION-RUNTIME-PRESETS.md), [example profiles](examples/README.md), and [build center](docs/BUILD-CENTER.md).
+Start with the [application API](docs/API-V1.md), [runtime presets](docs/APPLICATION-RUNTIME-PRESETS.md), [build recipes](recipes/README.md), and [build center](docs/BUILD-CENTER.md).
 
 ### 3. Provide an experimental environment for Harness researchers
 
@@ -46,7 +46,9 @@ The instance-centered WebUI does **not** yet synchronize instance configuration 
 
 ## Current source version
 
-**RunDesk 0.64.0 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.65.0 source · external Kun 0.17.0 · worker protocol 16**
+
+Version 0.65.0 removes the old `examples/` tree and makes `recipes/` the single editable recipe source. Production readers live under `internal/`, application clients under `clients/python/`, and service files under `deploy/systemd/`. Build snapshots generate their own lock files, while reviewed local dependencies and optional recipe variants remain available. Use the unified [recipe CLI](recipes/README.md) and [deployment instructions](docs/SETUP.md).
 
 Version 0.64.0 simplifies the optional Docker setup page. Downloading a ready image and building from a recipe are distinct choices. A preparation task keeps its failure, Kun repair, candidate builds and verification results together, with the matching repair conversation available from that task. Download failures remain download retries; repair completion alone does not prove an image is verified. The LLM and Codex setup steps retain their existing flow. See [setup](docs/SETUP.md) and [WebUI](docs/WEBUI.md).
 
@@ -79,13 +81,13 @@ Version 0.55.0 loads build recipes from editable files in `recipes/<profile>/` i
 
 The news2douyin and people-search 1.1.2 recipes retain the reviewed local Agent-Reach source and wheel packaging fix from 0.54.1. Codex remains an exact user-selected version; other dependencies still require their download channels.
 
-Version 0.54.0 focuses on instance navigation and configuration context without changing the storage or API schemas. It retains the persistent deadlines, progress and approval handoff, explicit capabilities, and [Python UHP client](examples/uhp_client.py) introduced in 0.53.0. Unsupported step/token budgets remain disclosed; applications can require supported capabilities before submission.
+Version 0.54.0 focuses on instance navigation and configuration context without changing the storage or API schemas. It retains the persistent deadlines, progress and approval handoff, explicit capabilities, and [Python UHP client](clients/python/uhp_client.py) introduced in 0.53.0. Unsupported step/token budgets remain disclosed; applications can require supported capabilities before submission.
 
-RunDesk runs independently of HarnessRouter. See [current status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and [validation scope](docs/VALIDATION.md). Video and research integrations are examples of the application mission; their component versions belong in the [profile documentation](examples/README.md).
+RunDesk runs independently of HarnessRouter. See [current status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and [validation scope](docs/VALIDATION.md). Video and research integrations are examples of the application mission; their component versions belong in the [profile documentation](recipes/README.md).
 
 ## Quick start
 
-The Linux amd64 and Windows amd64 ready-to-run packages include RunDesk, the standalone Kun executable, `recipes/` and `config/`. They do not require Go, Node.js or npm on the host.
+A staged Linux or Windows package includes RunDesk, `recipes/`, `config/` and a platform launcher. The standalone Kun executable is included when explicitly provided for packaging. The resulting package does not require Go, Python, Node.js or npm on the host.
 
 On Linux, extract the package and run:
 
@@ -105,7 +107,7 @@ make build
 ./bin/rundesk --data ./data
 ```
 
-When deploying the binary outside this source checkout, also deploy `recipes/` and `config/` beside it. Set `RUNDESK_RECIPES_DIR` for another recipe directory and `RUNDESK_BUILD_SOURCES` for a chosen source-list JSON file. The WebUI remains embedded; editable build assets are external. See [deployment](docs/SETUP.md).
+Use `make package PACKAGE_DIR=../rundesk-portable` to stage a new deployment directory outside this checkout; add `KUN_BINARY=/absolute/path/to/kun` when needed. When deploying the binary outside this source checkout, also deploy `recipes/` and `config/` beside it. Set `RUNDESK_RECIPES_DIR` for another recipe directory and `RUNDESK_BUILD_SOURCES` for a chosen source-list JSON file. The WebUI remains embedded; editable build assets are external. See [deployment](docs/SETUP.md).
 
 Open <http://127.0.0.1:3210> to initialize the installation. Discovery checks the machine running RunDesk, which may be a remote server. You can enter a model endpoint manually and skip Codex or Docker when they are not needed yet. To explore the interface without real model calls:
 
@@ -128,7 +130,7 @@ Kun uses a tool-capable Chat Completions service; Codex uses its native provider
 | Audience | Documentation |
 | --- | --- |
 | Agent deployment engineers | [Debugging](docs/DEBUG.md) · [Observation and capture](docs/UNIFIED_DEBUGGING.md) · [Read-only debug API/MCP](docs/DEBUG-SERVICE.md) |
-| Application developers | [Connect an application](docs/APPLICATION-CONNECT.md) · [API](docs/API-V1.md) · [Presets](docs/APPLICATION-RUNTIME-PRESETS.md) · [Python example](examples/application_quickstart.py) |
+| Application developers | [Connect an application](docs/APPLICATION-CONNECT.md) · [API](docs/API-V1.md) · [Presets](docs/APPLICATION-RUNTIME-PRESETS.md) · [Python example](clients/python/application_quickstart.py) |
 | Harness developers and researchers | [Kun integration](docs/KUN.md) · [Harness controls](docs/KUN-HARNESS.md) · [Research APIs and historical workflows](docs/README.md#3-harness-开发与研究--harness-research) |
 | Maintainers and operators | [Architecture](docs/ARCHITECTURE.md) · [Build center](docs/BUILD-CENTER.md) · [Download sources](docs/BUILD-SOURCES.md) · [Upgrading](docs/UPGRADING.md) · [Security](SECURITY.md) |
 

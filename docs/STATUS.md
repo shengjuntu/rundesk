@@ -1,6 +1,8 @@
 # 当前能力与后续工作
 
-**RunDesk 0.64.0 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。这里区分源码已实现、后端能力边界和目标环境验收；三个使命的产品定位见[中文 README](../README.zh-CN.md)。
+**RunDesk 0.65.0 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。这里区分源码已实现、后端能力边界和目标环境验收；三个使命的产品定位见[中文 README](../README.zh-CN.md)。
+
+0.65.0 完成配方目录归位：`recipes/` 是唯一声明来源，`recipe.json` 在冻结上下文时生成 `profile.lock.json`；旧外置锁文件配方保持可读。生产 Go 读取器迁入 `internal/`，客户端与 systemd 文件迁至正式目录，源码不再保留第二套 `examples/` 配方。已有镜像、实例、会话及历史构建快照保持原有语义。见[配方目录](../recipes/README.md)与[升级说明](UPGRADING.md)。
 
 0.64.0 聚焦 Docker 初始化：下载现成镜像、本机构建和本机镜像检查分别选择；每个准备任务将失败原因、Kun 修复、候选构建和检查结果放在一起。修复关联可从持久记录恢复，任务结束与镜像通过 offline/smoke 验证分别显示。前两步配置流程、Docker 可选规则及已有数据保持原语义。详见[初始化](SETUP.md#首次初始化)、[WebUI](WEBUI.md)与[升级说明](UPGRADING.md)。
 
@@ -50,9 +52,9 @@
 
 ## 示例应用
 
-[示例目录](../examples/README.md)包含 news2douyin、people-search、video-build、HyperFrames、video-use 和 OpenMontage 六套运行配置。它们演示不同领域如何使用 RunDesk，具体依赖、应用配套版本和操作流程在各自文档维护。工具环境与业务应用分别部署；工具检查通过不等于真实模型任务或业务制品已经验收。
+[配方目录](../recipes/README.md)包含 news2douyin、people-search、video-build、HyperFrames、video-use 和 OpenMontage 六套运行配置。它们演示不同领域如何使用 RunDesk，具体依赖、应用配套版本和操作流程在各自文档维护。工具环境与业务应用分别部署；工具检查通过不等于真实模型任务或业务制品已经验收。
 
-[UHP Python 客户端](../examples/uhp_client.py)提供上传、幂等提交、轮询、续接、取消和产物下载的最小接入流程。示例区分客户端观察超时与服务端任务时限，遇到待审批时返回控制权，便于 APP 接入自己的用户流程。
+[UHP Python 客户端](../clients/python/uhp_client.py)提供上传、幂等提交、轮询、续接、取消和产物下载的最小接入流程。示例区分客户端观察超时与服务端任务时限，遇到待审批时返回控制权，便于 APP 接入自己的用户流程。
 
 ## 后续工作
 

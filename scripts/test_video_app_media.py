@@ -18,7 +18,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-MODULE = ROOT / "examples/_shared/video_app_media.py"
+MODULE = ROOT / "recipes/hyperframes/tools/video_app_media.py"
 spec = importlib.util.spec_from_file_location("video_app_media", MODULE)
 bridge = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(bridge)

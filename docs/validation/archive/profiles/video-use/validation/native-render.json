@@ -1,0 +1,27 @@
+{
+  "passed": true,
+  "upstreamCommit": "43cfc566833548093455c9d4a46bd69913b7e552",
+  "engine": "unmodified upstream helpers/render.py; native EDL",
+  "scope": "Actual host Python/FFmpeg render. No Docker, model, ASR, or Video App generation service called.",
+  "width": 1280,
+  "height": 720,
+  "fps": "163840/16169",
+  "duration": "1.621333",
+  "videoCodec": "h264",
+  "audioCodec": "aac",
+  "distinctSampleFrames": true,
+  "nonSilentDecodedAudio": true,
+  "command": [
+    "python3",
+    "/workspace/scratch/62bf478f3a8e/upstream-sources/video-use/helpers/render.py",
+    "/workspace/scratch/62bf478f3a8e/video-use-native-smoke/edit/edl.json",
+    "-o",
+    "/workspace/scratch/62bf478f3a8e/video-use-native-smoke/edit/final.mp4",
+    "--draft",
+    "--no-subtitles",
+    "--no-loudnorm",
+    "--fps",
+    "10"
+  ],
+  "outputSHA256": "fdde2aaa283cc3d5ede793f19d3c19ebc9ee95657c9c10cb6a8bb3c4098364d1"
+}

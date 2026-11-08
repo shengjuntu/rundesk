@@ -11,12 +11,13 @@ esac
 printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' || { echo 'Invalid CODEX_VERSION.' >&2; exit 64; }
 
 verify_codex() {
-    actual=$(codex --version) || return 1
+    executable=${1:-codex}
+    actual=$("$executable" --version) || return 1
     [ "$actual" = "codex-cli $version" ] || [ "$actual" = "codex $version" ] || {
         echo "Codex version mismatch: expected $version, found $actual" >&2
         return 1
     }
-    codex app-server --help >/dev/null
+    "$executable" app-server --help >/dev/null
 }
 
 case "$mode" in
@@ -32,11 +33,8 @@ case "$mode" in
         [ -n "$binary" ] || { echo 'Native Codex payload is missing or not executable.' >&2; exit 64; }
         # The managed builder verifies the frozen payload hash before Docker.
         # This executable check also catches incompatible architecture/libc.
-        "$binary" --version >/dev/null
+        verify_codex "$binary"
         ln -sf "$binary" /usr/local/bin/codex
-        PATH="/usr/local/bin:$PATH"
-        export PATH
-        verify_codex
         echo "Reused native Codex $version."
         ;;
     base)

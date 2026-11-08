@@ -31,7 +31,7 @@ if args[:2]==['image','inspect']:
  ref=args[2];meta_path=root/'images.json';meta=json.loads(meta_path.read_text()) if meta_path.exists() else {}
  if ref in meta.get('missing',[]):print('Fixture image missing: '+ref,file=sys.stderr);sys.exit(1)
  image=ref if ref.startswith('sha256:') else meta.get('tags',{}).get(ref,'sha256:'+hashlib.sha256(ref.encode()).hexdigest())
- labels={'org.opencontainers.image.version':'fixture-'+image[-4:],'org.opencontainers.image.source':'https://example.test/news-source','org.opencontainers.image.revision':image[-12:],'io.rundesk.codex.version':'fixture-only','io.rundesk.capabilities.tools':'Python 3, Git','io.rundesk.capabilities.skills':'news-research','io.rundesk.capabilities.mcp':'search-provider','io.rundesk.build.dockerfile':'examples/docker/Dockerfile'}
+ labels={'org.opencontainers.image.version':'fixture-'+image[-4:],'org.opencontainers.image.source':'https://example.test/news-source','org.opencontainers.image.revision':image[-12:],'io.rundesk.codex.version':'fixture-only','io.rundesk.capabilities.tools':'Python 3, Git','io.rundesk.capabilities.skills':'news-research','io.rundesk.capabilities.mcp':'search-provider','io.rundesk.build.dockerfile':'recipes/generic/Dockerfile'}
  finish([{'Id':image,'Os':'linux','Architecture':'amd64','Size':230686720,'Created':'2026-10-01T12:00:00Z','RepoDigests':['registry.example/news@sha256:'+image[7:]],'Config':{'Labels':labels,'Env':['API_KEY=hidden-fixture']}}])
 if args[:2]==['container','ls']:
  name=next((s[7:-1] for s in args if s.startswith('name=^/')),None);running='status=running' in args

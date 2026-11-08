@@ -1,7 +1,13 @@
-.PHONY: build test check clean
+.PHONY: build package test check clean
+
+PACKAGE_DIR ?= ../rundesk-portable
+KUN_BINARY ?=
 
 build:
 	CGO_ENABLED=0 go build -buildvcs=false -trimpath -o bin/rundesk ./cmd/rundesk
+
+package: build
+	python3 scripts/package-release.py --binary bin/rundesk --output-dir "$(PACKAGE_DIR)" $(if $(KUN_BINARY),--kun "$(KUN_BINARY)",)
 
 test:
 	go test ./...

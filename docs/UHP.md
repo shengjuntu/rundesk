@@ -112,18 +112,18 @@ APP 可轮询 `GET /v1/responses/{id}` 的 `metadata.rundesk_progress`。`state`
 
 ## 应用客户端示例
 
-[examples/uhp_client.py](../examples/uhp_client.py) 是 Python 3.10+ 标准库客户端，覆盖发现、上传、后台提交、轮询、续接、取消和产物下载。令牌通过环境变量 `UHP_API_KEY` 提供；服务根地址可用 `UHP_URL` 设置。
+[clients/python/uhp_client.py](../clients/python/uhp_client.py) 是 Python 3.10+ 标准库客户端，覆盖发现、上传、后台提交、轮询、续接、取消和产物下载。令牌通过环境变量 `UHP_API_KEY` 提供；服务根地址可用 `UHP_URL` 设置。
 
 ```sh
-python3 examples/uhp_client.py harnesses
-python3 examples/uhp_client.py upload notes.txt
-python3 examples/uhp_client.py submit '总结附件内容' \
+python3 clients/python/uhp_client.py harnesses
+python3 clients/python/uhp_client.py upload notes.txt
+python3 clients/python/uhp_client.py submit '总结附件内容' \
   --harness-id chrn_example --file-id file_example \
   --operation-key saved-job-001 --task-timeout 600 \
   --require-capability input_file --require-capability timeout_seconds
-python3 examples/uhp_client.py read resp_example --wait 60
-python3 examples/uhp_client.py files hsess_example
-python3 examples/uhp_client.py download cntr_example file_example --output report.txt
+python3 clients/python/uhp_client.py read resp_example --wait 60
+python3 clients/python/uhp_client.py files hsess_example
+python3 clients/python/uhp_client.py download cntr_example file_example --output report.txt
 ```
 
 示例中的 ID 应替换为实际返回值。续接提交使用 `--previous-response-id`；需要停止服务端执行时使用 `cancel`。`--wait` 是客户端观察时间，`--task-timeout` 才是服务端任务时限；等待超时不会取消任务。遇到待审批时客户端返回控制权，不自动批准工具。Python API 的 `events()` 支持用 `last_event_id` 续读 SSE。

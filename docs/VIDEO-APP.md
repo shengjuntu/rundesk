@@ -29,7 +29,7 @@ App 保存主播正文、素材与要求，一键提交原有 RunDesk 专用会�
 4. 使用管理员凭据完成所选预设的首次 App 连接与工具初配，再签发准确的 `presetIds` 应用凭据；应用凭据不会替管理员更改配置。在 App 连接/更新本版工具，核对选中环境实际启用的版本化 Skill、video_project MCP 和模型认证。MCP 地址为可达的 App /api/mcp，Authorization Header 使用 App Token，凭据不写入工程。
 5. 用短稿与已有图片做完整制作和局部修改，查看真实工具轨迹、revision、输出和审阅记录。依赖诊断、图片传输和离线烟测分别证明自己的检查范围，不证明模型已理解图像或完成自主制作。
 
-工具镜像默认 HyperFrames 0.8.87、GSAP 3.15.0，不内置图像/视频/TTS 模型或密钥。App 渲染镜像与 Codex 工具镜像分别更新，仅替换源码包或标签不会更换运行中的容器。Profile 使用与本地离线检查见 [video-build](../examples/video-build/README.md)。
+工具镜像默认 HyperFrames 0.8.87、GSAP 3.15.0，不内置图像/视频/TTS 模型或密钥。App 渲染镜像与 Codex 工具镜像分别更新，仅替换源码包或标签不会更换运行中的容器。Profile 使用与本地离线检查见 [video-build](../recipes/video-build/README.md)。
 
 旧 native/video_use/镜头项目不自动切换。video_use 兼容工程需要保留带可选 video-use 的镜像、adapter contract 2 及原有专用共享生产工作目录，按原冻结/渲染/归档流程使用；该目录不是 App 私人数据库。新 HyperFrames 路径不用添加这类挂载。
 

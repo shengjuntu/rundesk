@@ -1,0 +1,101 @@
+{
+  "version": "0.65.0",
+  "date": "2026-11-06",
+  "status": "passed",
+  "scope": [
+    "Remove the root examples directory and its production dependencies",
+    "Canonical external recipe manifests and non-destructive CLI exports",
+    "Relocated clients, deployment resources and complete portable packaging"
+  ],
+  "checks": [
+    {
+      "name": "go test -p 1 ./...",
+      "result": "passed",
+      "log": "release-065-go.log"
+    },
+    {
+      "name": "go vet -p 1 ./...",
+      "result": "passed",
+      "log": "release-065-vet.log"
+    },
+    {
+      "name": "Kun SDK tests and vet",
+      "result": "passed",
+      "logs": [
+        "release-065-sdk.log",
+        "release-065-sdk-vet.log"
+      ]
+    },
+    {
+      "name": "Final Linux and Windows amd64 builds",
+      "result": "passed",
+      "notes": "Linux RunDesk 0.65.0 executed; Windows cross-compiled, not run on Windows."
+    },
+    {
+      "name": "Go canonical/legacy recipe reader and application contracts",
+      "result": "passed",
+      "details": "release-065-go-recipes.json"
+    },
+    {
+      "name": "Recipe CLI, optional variants, helper and non-destructive legacy export checks",
+      "result": "passed",
+      "details": [
+        "release-065-recipes.json",
+        "release-065-helpers.json"
+      ]
+    },
+    {
+      "name": "Client units and portable staging boundaries",
+      "result": "passed",
+      "details": "release-065-clients-package.json"
+    },
+    {
+      "name": "Actual native portable package outside the source tree on minimal PATH",
+      "result": "passed",
+      "details": "release-065-portable.json"
+    },
+    {
+      "name": "Relocated UHP client against actual Go demo service",
+      "result": "passed",
+      "checks": 15,
+      "details": "release-065-uhp-client.json"
+    },
+    {
+      "name": "193 former examples files accounted; 15 historical evidence files preserved byte-for-byte",
+      "result": "passed",
+      "details": [
+        "release-065-accounting.json",
+        "release-065-accounting-audit.json",
+        "release-065-evidence-audit.json"
+      ]
+    },
+    {
+      "name": "Docs, versions and reproducible OpenAPI",
+      "result": "passed",
+      "notes": "126 documents, 248 paths, 299 operations. examples absence is now a documentation gate."
+    }
+  ],
+  "behavior_verified": [
+    "Six recipe.json files are the sole authoring metadata; frozen profile.lock.json/checksums and upstream metadata are generated in snapshots without source writes.",
+    "Legacy external lock-only recipe directories remain readable; two competing declarations are rejected.",
+    "Default exports retain external file edits. Lite Agent-Reach-free and optional video-use variants remain available through scripts/recipes.py.",
+    "Reviewed vendored Agent-Reach source, patch, manifests, licenses and pinned upstream archives remain present; seven installer helpers consistently verify native Codex before replacing its link.",
+    "Independent package includes recipes, config, portable launchers, root notices and compiled SDK license, all covered by file hashes.",
+    "Package executes without examples, source ancestry, Python, Node, Go or Docker on PATH for metadata/export operations; absent recipes fail visibly.",
+    "Existing imported contexts stay frozen through external edits and service restart; metadata reads/exports do not create tasks, sessions or Docker builds."
+  ],
+  "migration_notes": [
+    "Use the new version directory or a fresh staged package with the existing --data path. Overlaying old lock files beside recipe.json creates a deliberately rejected ambiguity.",
+    "Old python examples/<profile>/run.py commands are replaced by scripts/recipes.py; no compatibility examples directory or symlinks remain.",
+    "Historical logs retain their original paths and bytes as evidence, not current executable references.",
+    "This release does not change image-build data directory organization or add runtime global observation settings."
+  ],
+  "limits": [
+    "No actual Docker image build, live model/provider authentication, GPU, vLLM, VideoApp or production Kun worker execution.",
+    "Windows was cross-compiled and its package layout tested using executable-header fixtures; it was not run on Windows.",
+    "OpenMontage native bridge test was moved and parsed, but its separate exact upstream checkout was unavailable, so that native integration was not rerun.",
+    "Agent-Reach wheel building was not rerun because hatchling was unavailable; vendored source hashes, fixed local install paths and removal of duplicate force-include were checked.",
+    "No new browser workflow was run; this release changes directory/runtime resource loading rather than UI behavior."
+  ],
+  "qa_details": "release-065-qa.json"
+}

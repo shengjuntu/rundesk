@@ -237,7 +237,7 @@ def exercise(module, base, temp, token, report, emit):
     for key in ('SYSTEMROOT', 'WINDIR'):
         if key in os.environ:
             cli_env[key] = os.environ[key]
-    cli = subprocess.run([sys.executable, str(ROOT / 'examples/uhp_client.py'), '--url', base, 'harnesses'],
+    cli = subprocess.run([sys.executable, str(ROOT / 'clients/python/uhp_client.py'), '--url', base, 'harnesses'],
                          env=cli_env, text=True, capture_output=True, timeout=10)
     assert cli.returncode == 0 and hid in cli.stdout and token not in cli.stdout + cli.stderr
     passed('CLI reaches the actual service without revealing token')
@@ -254,13 +254,13 @@ def main():
         parser.error('--binary must name an executable RunDesk file')
     # Import the repository client without generating files in its source tree.
     sys.dont_write_bytecode = True
-    spec = importlib.util.spec_from_file_location('uhp_client', ROOT / 'examples/uhp_client.py')
+    spec = importlib.util.spec_from_file_location('uhp_client', ROOT / 'clients/python/uhp_client.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     report = {
         'scope': 'Python UHP client against an actual compiled RunDesk HTTP service, SQLite and subprocess native demo JSONL simulator',
         'startedAt': timestamp(), 'binarySHA256': digest(binary),
-        'clientSHA256': digest(ROOT / 'examples/uhp_client.py'),
+        'clientSHA256': digest(ROOT / 'clients/python/uhp_client.py'),
         'testSHA256': digest(Path(__file__)),
         'checks': [], 'passed': False,
         'limits': [

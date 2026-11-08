@@ -6,9 +6,10 @@ RunDesk 0.55.0 将构建配方放在磁盘目录中。用户可以修改 Dockerf
 
 | 文件或目录 | 用途 |
 | --- | --- |
-| `recipes/<profile>/` | 六套默认配方的完整可编辑构建目录 |
+| `recipes/<profile>/` | 六套默认配方的唯一可编辑来源，包含 Dockerfile、工具、Skills 和本地依赖 |
 | `recipes/generic/` | 初始化页面提供的通用 Docker 模板，同样从文件读取 |
-| `examples/<profile>/Dockerfile` 及变体文件 | 维护者使用的实际 Dockerfile；CLI 从这些文件生成上下文 |
+| `recipes/<profile>/recipe.json` | 唯一配方声明；导出和构建时生成快照内的 `profile.lock.json` |
+| `recipes/<profile>/variants/` | 明确选择的轻量或旧项目兼容变体 |
 | `config/build-sources.json` | 发行包默认源列表 |
 | `<data>/config/build-sources.json` | 首次使用复制的运行列表；页面和文件编辑都作用于这一份 |
 | `<data>/image-builds/<id>/context.zip` | 本次构建已冻结的完整输入；历史重建使用它 |
@@ -17,7 +18,7 @@ RunDesk 0.55.0 将构建配方放在磁盘目录中。用户可以修改 Dockerf
 
 `RUNDESK_BUILD_SOURCES` 指定另一份源列表 JSON。默认列表首次复制到数据目录后，修改发行包里的默认文件不会覆盖用户维护的列表。源配置属于构建节点；已有 Agent 实例使用成品镜像，不会因为换源而自动改变。
 
-维护者修改 examples 输入后可运行 `python3 scripts/embed-profiles.py` 同步发行目录，再用 `--check` 检查一致性。脚本名是兼容入口，当前行为不再将 ZIP 编译入 Go。
+维护者和部署者都编辑同一份 `recipes/` 来源。使用 `python3 scripts/recipes.py validate <profile>` 检查，使用 `prepare` 或 `pack` 导出独立上下文。`scripts/embed-profiles.py` 只保留非覆盖式检查／导出兼容入口，不会从另一套模板反向覆盖当前配方。旧外置配方若只有 `profile.lock.json` 仍可读取；同一来源目录同时出现两个声明会被拒绝。
 
 ## 构建前操作
 

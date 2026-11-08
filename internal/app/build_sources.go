@@ -18,7 +18,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/shengjuntu/rundesk/examples/profiletemplates"
+	"github.com/shengjuntu/rundesk/internal/recipefiles"
 )
 
 // Build source catalogs are ordinary deployment files, never compiled assets.
@@ -430,7 +430,7 @@ func builtinRecipeSourceContext(profile string) ([]byte, error) {
 	if !sourceIdentifier.MatchString(profile) {
 		return nil, failure(404, "recipe_not_found", "构建配方不存在")
 	}
-	data, err := profiletemplates.Files.ReadFile(profile + ".zip")
+	data, err := recipefiles.Files.ReadFile(profile + ".zip")
 	if err != nil {
 		return nil, failure(404, "recipe_not_found", "外置构建配方不存在或不可读")
 	}

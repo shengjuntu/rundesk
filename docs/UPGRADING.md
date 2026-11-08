@@ -1,5 +1,14 @@
 # 升级到当前版本
 
+## 0.65.0：统一配方来源并移除 examples（2026-11-06）
+
+- 从本版源码重新编译 RunDesk，并将外置 `recipes/` 和 `config/` 随程序一起部署。程序、元数据与 OpenAPI 版本应为 0.65.0；独立 Kun 0.17.0、worker 协议 16 不变。
+- `recipes/<profile>/` 是唯一配方来源；源码中的 `recipe.json` 在构建或导出时成为快照内的 `profile.lock.json`。旧部署只有锁文件的配方仍可读取；同一来源目录不要同时保留两种声明。
+- 原 `python3 examples/<profile>/run.py <命令>` 路径已移除，统一改用 `python3 scripts/recipes.py <命令> <profile>`。轻量 Agent-Reach 选项与旧 video-use 兼容变体仍保留，原始来源和许可证不删除。
+- Python 应用客户端迁至 `clients/python/`，systemd 文件迁至 `deploy/systemd/`。生产 Go 读取包归入 `internal/`；已有应用 API 和用户数据目录不迁移。
+- 新的部署打包步骤会复制外置资源与启动文件；应从源码目录之外启动验收，确认没有依赖源码树查找的后备路径。操作见[启动与部署](SETUP.md)。
+- 旧历史构建继续使用冻结 ZIP；升级不会重写已有镜像、实例、会话、认证或修复经验。历史验证材料中的旧路径保留其原始含义。本轮检查范围见 [release-065.json](validation/current/release-065.json)。
+
 ## 0.64.0：Docker 准备与修复进度整合（2026-11-06）
 
 - 从本版源码重新编译并更新 RunDesk，再刷新浏览器。程序、`/api/v1/meta`、OpenAPI 和左下角版本应为 0.64.0；独立 Kun 0.17.0、worker 协议 16 不变。
@@ -119,7 +128,7 @@
 - **默认任务时限**：新 UHP 任务省略 `timeout_seconds` 时为 3600 秒，显式范围 1–86400 秒，包含排队时间；0 不是关闭时限。绝对截止时间随公共任务持久保存，并由队列、派发检查和 Manager 计时器执行，重启后恢复。到期最终映射为 `incomplete` / `timeout`，协作取消不回滚外部动作。APP 应读取 `metadata.rundesk_deadline`，按业务时长设置预算。
 - **旧活动步数记录**：旧 UHP 记录保存了正数 `MaxStep` 且任务仍活动时，会停止执行并最终返回 `incomplete`，原因 `legacy_step_budget_unsupported`，避免继续假设旧步数承诺有效。旧终态记录保留原结果，不重新解释或执行。旧任务没有新的公共 deadline 字段时，不会凭空增加一小时预算；已有 UHP 截止时间仍由原响应刷新路径检查。
 - **指令与进度**：额外指令继续以 `task_text` 进入 `session_history`，不提供原生优先级或单次任务后的自动清除；要求 `native_instructions` 会被拒绝。新增 `metadata.rundesk_progress` 供轮询，待审批时返回工作台相对地址；沿用已有访问控制，不提供审批令牌或新控制接口。标准 SSE 不增加私有进度事件，初始与最终快照包含进度元数据。
-- **客户端恢复**：保留原凭据、operation key 和确切请求，未知提交结果用原身份/键重试。已有幂等回执仍指向首次执行，不因升级或修改请求体而创建新任务；不能为了刷新能力或预算而换键重试未知结果。示例见 [UHP 客户端](../examples/uhp_client.py)。
+- **客户端恢复**：保留原凭据、operation key 和确切请求，未知提交结果用原身份/键重试。已有幂等回执仍指向首次执行，不因升级或修改请求体而创建新任务；不能为了刷新能力或预算而换键重试未知结果。示例见 [UHP 客户端](../clients/python/uhp_client.py)。
 - **验证基线**：官方套件更新至 `2026.10.19.post3`，固定提交 `038d4d27afed078db339b107f8bf6031ebb37872`；旧 post2 报告保持历史身份。Extended 与应用内预算专项分别报告，不能当作 Full 的 T-12 已通过。真实 Kun、Docker 和模型链路仍需目标环境验收，见 [UHP](UHP.md) 与 [验证范围](VALIDATION.md)。
 
 能力声明依据是 RunDesk 适配器契约，不代替模型模态、账号或供应商就绪检查。以上为新提交与明确说明的旧活动记录处理变化，不自动修改应用预设、Skills、插件、MCP 或模型配置。
@@ -160,7 +169,7 @@
 
 ## 0.51.0：三个独立上游视频配置
 
-自研 `examples/video-build` 及已有实例不迁移、不切换。新增 hyperframes、video-use、openmontage 三套独立配置，构建新镜像后建立专用实例和工作区，运行时配置其 `video_app_media` MCP。完整上游代码或必要 Skill 快照按各自固定来源保留。OpenMontage 的完整源码在镜像构建时下载并验证摘要，prepare/pack 不代表镜像已构建。
+自研 `recipes/video-build` 及已有实例不迁移、不切换。新增 hyperframes、video-use、openmontage 三套独立配置，构建新镜像后建立专用实例和工作区，运行时配置其 `video_app_media` MCP。完整上游代码或必要 Skill 快照按各自固定来源保留。OpenMontage 的完整源码在镜像构建时下载并验证摘要，prepare/pack 不代表镜像已构建。
 
 调用任意文本 TTS 需升级 Video App 至 0.26.0；已有配音、生成服务、项目和凭据保留。三个上游从 RunDesk 独立会话运行，App 自研导演入口保持原流程。详见 [独立视频环境](UPSTREAM-VIDEO-ENVIRONMENTS.md)。
 
@@ -178,7 +187,7 @@
 
 重新构建或选择真实已有的 video-build 1.4.0 镜像，在 RunDesk 显式选择并更新/重建应用运行环境；保留原工作区、HOME、Codex 认证和 MCP 配置。仅替换源码包、App 或镜像标签不会更新已运行容器，不会自动迁移旧工程后端。
 
-video-use 改为可选。已有 video_use EDL 工作流继续使用 adapter contract 2、固定上游 MIT 资源及原专用共享目录；需要它时按 profile 配方显式使用 `--with-video-use` 构建。默认 HyperFrames-only 镜像没有这项可选依赖，不能用于误判旧视频工具已齐备。实际构建选项和检查见 [video-build](../examples/video-build/README.md)。
+video-use 改为可选。已有 video_use EDL 工作流继续使用 adapter contract 2、固定上游 MIT 资源及原专用共享目录；需要它时按 profile 配方显式使用 `--with-video-use` 构建。默认 HyperFrames-only 镜像没有这项可选依赖，不能用于误判旧视频工具已齐备。实际构建选项和检查见 [video-build](../recipes/video-build/README.md)。
 
 环境诊断和离线媒体烟测分别验证工具、路径/权限、图片传输或本地短动画，不会启动模型，也不证明模型视觉、IndexTTS 音质或真实新闻制作通过。真实部署、生成服务与自主创作仍需用材料验收；不将历史日志当成本轮实际测试。
 

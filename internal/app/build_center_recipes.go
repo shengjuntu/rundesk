@@ -19,7 +19,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/shengjuntu/rundesk/examples/profiletemplates"
+	"github.com/shengjuntu/rundesk/internal/recipefiles"
 	"github.com/shengjuntu/rundesk/internal/store"
 )
 
@@ -177,7 +177,7 @@ func recipeDigest(in BuildRecipeManifest, contextSHA string) string {
 func builtinBuildRecipes() ([]BuildRecipe, error) {
 	items := []BuildRecipe{}
 	for _, id := range []string{"news2douyin", "people-search", "video-build", "hyperframes", "video-use", "openmontage"} {
-		b, err := profiletemplates.Files.ReadFile(id + ".zip")
+		b, err := recipefiles.Files.ReadFile(id + ".zip")
 		if err != nil {
 			return nil, err
 		}

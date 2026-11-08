@@ -16,7 +16,7 @@ from unittest.mock import patch
 from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
-ADAPTER = ROOT / "examples/_shared/video_use_adapter.py"
+ADAPTER = ROOT / "recipes/news2douyin/tools/video_use_adapter.py"
 SMOKE = ADAPTER.with_name("video_use_smoke.py")
 
 
@@ -109,7 +109,7 @@ class VideoUseAdapterTest(unittest.TestCase):
         cls.temp = tempfile.TemporaryDirectory(prefix="rundesk-adapter-test-")
         cls.base = Path(cls.temp.name)
         cls.vendor = cls.base / "vendor"
-        source = next((ROOT / "examples/video-build/vendor").glob("video-use-*.tar.gz"))
+        source = ROOT / "recipes/video-build/variants/vendor/video-use.tar.gz"
         with tarfile.open(source, "r:gz") as archive:
             for member in archive.getmembers():
                 if not member.isfile():

@@ -10,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
@@ -18,11 +17,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shengjuntu/rundesk/examples/profiletemplates"
+	"github.com/shengjuntu/rundesk/internal/recipefiles"
 )
 
 type RuntimeImageInput struct {
-	CodexRuntime *BuildRuntimeOptions `json:"codexRuntime,omitempty"`
+	CodexRuntime    *BuildRuntimeOptions `json:"codexRuntime,omitempty"`
 	runtimeSnapshot *BuildRuntimeSnapshot
 	ProfileID       string `json:"profileId"`
 	CodexVersion    string `json:"codexVersion"`
@@ -49,7 +48,7 @@ func runtimeImageContext(profile, version string) ([]byte, error) {
 	default:
 		return nil, failure(400, "invalid_profile", "请选择内置运行环境")
 	}
-	data, err := profiletemplates.Files.ReadFile(profile + ".zip")
+	data, err := recipefiles.Files.ReadFile(profile + ".zip")
 	if err != nil {
 		return nil, err
 	}
@@ -173,9 +172,13 @@ func (m *Manager) PrepareRuntimeImage(in RuntimeImageInput) (ImageBuild, error) 
 	}
 	if in.Source == "build" {
 		in.runtimeSnapshot, err = m.resolveBuildRuntime(in.CodexRuntime, data, "Dockerfile", in.CodexVersion, nil, true)
-		if err != nil { return ImageBuild{}, err }
+		if err != nil {
+			return ImageBuild{}, err
+		}
 		data, err = freezeBuildRuntime(data, in.runtimeSnapshot)
-		if err != nil { return ImageBuild{}, err }
+		if err != nil {
+			return ImageBuild{}, err
+		}
 	} else if in.CodexRuntime != nil {
 		return ImageBuild{}, failure(400, "codex_runtime_acquisition", "下载或使用已有完整镜像时不能选择构建运行时")
 	}
@@ -271,16 +274,11 @@ func independentRuntimeIdentity(profile string) (independentImageIdentity, bool)
 }
 
 func readRuntimeProfileLock(profile string, value any) error {
-	directory, err := profiletemplates.ProfileDirectory(profile)
+	data, err := recipefiles.Metadata(profile)
 	if err != nil {
 		return err
 	}
-	file, err := os.Open(filepath.Join(directory, "profile.lock.json"))
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	return json.NewDecoder(io.LimitReader(file, 256<<10)).Decode(value)
+	return json.Unmarshal(data, value)
 }
 
 func runtimeProfileVersion(profile string) string {

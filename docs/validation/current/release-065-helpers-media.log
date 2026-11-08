@@ -1,0 +1,14 @@
+test_cli_and_stdio_use_real_http_without_credentials_in_output (__main__.BridgeTests.test_cli_and_stdio_use_real_http_without_credentials_in_output) ... ok
+test_download_integrity_size_and_workspace_do_not_overwrite (__main__.BridgeTests.test_download_integrity_size_and_workspace_do_not_overwrite) ... ok
+test_errors_malformed_receipts_and_exact_job_scope (__main__.BridgeTests.test_errors_malformed_receipts_and_exact_job_scope) ... ok
+test_generation_roundtrip_uses_one_request_and_real_download (__main__.BridgeTests.test_generation_roundtrip_uses_one_request_and_real_download) ... ok
+test_independent_tts_keeps_native_text_and_selects_audio (__main__.BridgeTests.test_independent_tts_keeps_native_text_and_selects_audio) ... ok
+test_lost_ack_and_pending_jobs_preserve_original_identity (__main__.BridgeTests.test_lost_ack_and_pending_jobs_preserve_original_identity) ... ok
+test_named_codex_env_fallback_respects_explicit_process_values (__main__.BridgeTests.test_named_codex_env_fallback_respects_explicit_process_values) ... ok
+test_redirect_and_wrong_origin_never_receive_the_token (__main__.BridgeTests.test_redirect_and_wrong_origin_never_receive_the_token) ... ok
+test_stdio_mcp_filters_tools_options_projects_and_secrets (__main__.BridgeTests.test_stdio_mcp_filters_tools_options_projects_and_secrets) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 4.347s
+
+OK

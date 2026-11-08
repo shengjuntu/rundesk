@@ -10,8 +10,8 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "examples"))
-import profiles
+sys.path.insert(0, str(ROOT / "scripts"))
+import recipes as profiles
 import upstream_profiles
 
 
@@ -24,7 +24,8 @@ class SourceBoundaryTest(unittest.TestCase):
         self.base.mkdir()
         self.profile = {"id": "video-use", "skill": "use-video-use", "upstream": "upstream.json"}
         for name in ("install.sh", "doctor.py"):
-            (self.base / name).write_text("# fixture\n")
+            (self.base / "upstream").mkdir(exist_ok=True)
+            (self.base / "upstream" / name).write_text("# fixture\n")
         self.archive()
 
     def archive(self, extras=None):
@@ -44,7 +45,7 @@ class SourceBoundaryTest(unittest.TestCase):
         self.save()
 
     def save(self):
-        (self.base / "upstream.json").write_text(json.dumps(self.manifest))
+        (self.base / "recipe.json").write_text(json.dumps({"upstream": self.manifest}))
 
     def load(self):
         self.save()
@@ -79,7 +80,7 @@ class SourceBoundaryTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "relative path"):
             self.load()
         self.manifest["buildFiles"].pop()
-        script = self.base / "install.sh"
+        script = self.base / "upstream/install.sh"
         script.unlink()
         script.symlink_to(self.base / "doctor.py")
         with self.assertRaisesRegex(ValueError, "symlink"):

@@ -1,0 +1,6 @@
+test_legacy_validator_keeps_operator_edits_and_rejects_source_export (__main__.ProfilesTest.test_legacy_validator_keeps_operator_edits_and_rejects_source_export) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.713s
+
+OK

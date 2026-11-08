@@ -1,0 +1,1595 @@
+{
+  "passed": true,
+  "sourceVersion": "0.64.0",
+  "accountedFiles": 193,
+  "records": [
+    {
+      "oldPath": "examples/README.md",
+      "sha256": "19813e4641458e0314824e05fae5574a716ae9fef69f6a3e2b18b08af7b26ebf",
+      "kind": "migrated-and-updated",
+      "newPath": "recipes/README.md"
+    },
+    {
+      "oldPath": "examples/_shared/THIRD_PARTY.md",
+      "sha256": "0ebc4132083120c24df566fcf8f530f959b98eb23b34ec5a2631ea2406b9d8df",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/THIRD_PARTY.md",
+        "recipes/people-search/THIRD_PARTY.md",
+        "recipes/news2douyin/THIRD_PARTY.md"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/agent-tools/package-lock.json",
+      "sha256": "35ff0ad61ae2e9f6d569ddad3d30dae4c1805a7f20c35b717bab66b85c56bfd7",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/agent-tools/package-lock.json",
+        "recipes/news2douyin/agent-tools/package-lock.json"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/agent-tools/package.json",
+      "sha256": "1c2e8ea49560f32768d6152ddec3f6cd9d3b6cd1e0b2863b9bfe4d04ee1be4f0",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/agent-tools/package.json",
+        "recipes/news2douyin/agent-tools/package.json"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/agent_reach_config.py",
+      "sha256": "cdbf3202a180b4385384da9c0265afece2311c26f5a24adaec9cfe3721a083c0",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/tools/agent_reach_config.py",
+        "recipes/people-search/tools/agent_reach_config.py",
+        "recipes/news2douyin/tools/agent_reach_config.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/configure-apt.sh",
+      "sha256": "df259b9be7a04f281dd6635fd84af044f62ebcc29db18f050ef15fd4b98a4d98",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/tools/configure-apt.sh",
+        "recipes/people-search/tools/configure-apt.sh",
+        "recipes/generic/tools/configure-apt.sh",
+        "recipes/openmontage/tools/configure-apt.sh",
+        "recipes/news2douyin/tools/configure-apt.sh",
+        "recipes/video-use/tools/configure-apt.sh",
+        "recipes/hyperframes/tools/configure-apt.sh"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/dependencies.json",
+      "sha256": "bbb4604c1549279f45930681cfd0a9e3c8632359ac546c6c1c8e160742d55c2e",
+      "kind": "canonical-manifest-field",
+      "newPath": "recipes/video-build/recipe.json",
+      "field": "dependencies",
+      "note": "Optional variant paths relocated; pinned versions and hashes unchanged."
+    },
+    {
+      "oldPath": "examples/_shared/dockerfile_files.py",
+      "sha256": "316f81f17c7660baef6cfff98965f4ceb9a1c17f6499dc5bdc47c13f46fe97a8",
+      "kind": "migrated-and-updated",
+      "newPath": "scripts/recipe_tools/dockerfile_files.py"
+    },
+    {
+      "oldPath": "examples/_shared/download-archive.sh",
+      "sha256": "f2f88cdb50df44da028eb233c24c592b93ea3f68ff06d0f25b59959cbd2831a8",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/openmontage/tools/download-archive.sh"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/hyperframes/LICENSES/Apache-2.0.txt",
+      "sha256": "7fab1461b41970ff376f1c9303a637076bfaaeb71cd12dd3a1c44aaf59a1a2b9",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/hyperframes/LICENSES/Apache-2.0.txt"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/hyperframes/package-lock.json",
+      "sha256": "b3f48e9687cd27dea097203e928e6e7fd84344b88122ab2bb546d38b48705de1",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/hyperframes/package-lock.json",
+        "recipes/openmontage/upstream/npm/package-lock.json",
+        "recipes/hyperframes/upstream/npm/package-lock.json"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/hyperframes/package.json",
+      "sha256": "8a3e1e5e7d0cf6bb83876489fcc302cd5068fa16459cb56b78cffbcd8d64f353",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/hyperframes/package.json",
+        "recipes/openmontage/upstream/npm/package.json",
+        "recipes/hyperframes/upstream/npm/package.json"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/hyperframes_smoke.py",
+      "sha256": "8ef78583d6e2da68f2df070b2eaadca627eee591901951da89611ac127f005f8",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/tools/hyperframes_smoke.py",
+        "recipes/people-search/tools/hyperframes_smoke.py",
+        "recipes/news2douyin/tools/hyperframes_smoke.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/install-codex.sh",
+      "sha256": "8239dbb5d61018e325365f2b85f856a8e4550f6e536f182cebbdfc51f2646004",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/tools/install-codex.sh",
+        "recipes/people-search/tools/install-codex.sh",
+        "recipes/generic/tools/install-codex.sh",
+        "recipes/openmontage/tools/install-codex.sh",
+        "recipes/news2douyin/tools/install-codex.sh",
+        "recipes/video-use/tools/install-codex.sh",
+        "recipes/hyperframes/tools/install-codex.sh"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/mcporter",
+      "sha256": "12c70dca94ac2290e22943f1698b73bf3b66b47b9f02f0902c0cc82deebd897e",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/tools/mcporter",
+        "recipes/people-search/tools/mcporter",
+        "recipes/news2douyin/tools/mcporter"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/profile_doctor.py",
+      "sha256": "ff74221106e8e2cae24e7c60deda318886dd305e6ec21799801ef14a2ef087df",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/tools/profile_doctor.py",
+        "recipes/people-search/tools/profile_doctor.py",
+        "recipes/news2douyin/tools/profile_doctor.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/read_web.py",
+      "sha256": "30ba6da6ff324145efff1c34fba5543d78f246cedc7b7ff90f92b403d78daf8f",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/tools/read_web.py",
+        "recipes/people-search/tools/read_web.py",
+        "recipes/news2douyin/tools/read_web.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/upstream_profile_doctor.py",
+      "sha256": "dedc7d13914993e9edc82246a1c6bdcf53da3a15bfaaf19b9331aa512d4a664c",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/openmontage/tools/profile_doctor.py",
+        "recipes/video-use/tools/profile_doctor.py",
+        "recipes/hyperframes/tools/profile_doctor.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/upstream_profiles.py",
+      "sha256": "81d8c483d821854f41ba3184b1fe2d80ae8de5ebe8cdbb8db8e50c098f96f1d4",
+      "kind": "migrated-and-updated",
+      "newPath": "scripts/recipe_tools/upstream_profiles.py"
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/.env.example",
+      "sha256": "d5aa1d02a7d2595dcb70dbb91fa4451aafca2777a7053954c62621dd4aa07c9e",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/.env.example",
+        "recipes/news2douyin/vendor/agent-reach/.env.example"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/.gitignore",
+      "sha256": "58d87e57bfba92e51fa92b2340dbd240684bb017a764764031e8e6702f0b0082",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/.gitignore",
+        "recipes/news2douyin/vendor/agent-reach/.gitignore"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/CHANGELOG.md",
+      "sha256": "63735fdbacdbe633952badf46e92bf8a91a275cdd8031a32f1cd19c99ee47787",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/CHANGELOG.md",
+        "recipes/news2douyin/vendor/agent-reach/CHANGELOG.md"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/LICENSE",
+      "sha256": "e94c131ac1c2f78cfd8f7e69da354c0ff58e4e54071697703d56856c036de402",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/LICENSE",
+        "recipes/news2douyin/vendor/agent-reach/LICENSE"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/README.md",
+      "sha256": "e4e3dc2b44afdcce1709dd542b62d93f06249ac1e735c9045301c55ee3bc06e0",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/README.md",
+        "recipes/news2douyin/vendor/agent-reach/README.md"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/__init__.py",
+      "sha256": "4afee678d13c0d7e51ea846c83f89d55ea44a20f431b2023b6ffff167783e509",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/__init__.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/__init__.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/channels/__init__.py",
+      "sha256": "dcafb6e9bf1ef7c3eeca078fcd2267717e6ad5e60657092534470c90cd047553",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/channels/__init__.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/channels/__init__.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/channels/base.py",
+      "sha256": "12d5f29761bcfbb89badb763e4092fada3ab0fa78a7fbf21dbb7cd427a36f452",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/channels/base.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/channels/base.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/channels/bilibili.py",
+      "sha256": "32c161f0ac65139156c2a46488cf188aeac90d454020ab16dd442fd79b24c80b",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/channels/bilibili.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/channels/bilibili.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/channels/bosszhipin.py",
+      "sha256": "4659543c022ea76284f7d52019a1a9d786cc04e21ce77721b2306e3db8414f43",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/channels/bosszhipin.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/channels/bosszhipin.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/channels/exa_search.py",
+      "sha256": "232f48ff2b82b1c8372eb7ec5e55253202803027c796b6aa354b1ff1b25783cc",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/channels/exa_search.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/channels/exa_search.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/channels/github.py",
+      "sha256": "0d0d65d5781f9ad67d3b5c1f74a065e257c8a0efe3e2085a2649e03497d790d1",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/channels/github.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/channels/github.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/channels/linkedin.py",
+      "sha256": "fd7493fc8e067f243f8b0ee402801b2a2ec7a309b37c5dfe34b9a69654bfdf23",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/channels/linkedin.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/channels/linkedin.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/channels/reddit.py",
+      "sha256": "00bfbc296ef892baacb1c59e6497f82b3d081cdd10616d3bf01a1c2b6342cc29",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/channels/reddit.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/channels/reddit.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/channels/rss.py",
+      "sha256": "3121198ebec7dcc380ce481dc7648ff6599d942ca6d9cab49bd5abb5bcaaea3b",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/channels/rss.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/channels/rss.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/channels/twitter.py",
+      "sha256": "76df0b7ebbed8ef7b21bf5c22716f27e2b956a01f4c53f2a2109c2931a477392",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/channels/twitter.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/channels/twitter.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/channels/web.py",
+      "sha256": "fb8f2de8e2229515c7244ee5db75f647a00b1ee9b3e0ccb675a874f49672b56e",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/channels/web.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/channels/web.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/channels/xiaohongshu.py",
+      "sha256": "9dfefb2b3c594b43b33bd97f286a2c626242e48bbbe35adb140a14b8110fb629",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/channels/xiaohongshu.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/channels/xiaohongshu.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/channels/youtube.py",
+      "sha256": "34f144080ee408ab54242830dc704168e59d8329adaaf50b2c13e5d5b4b9b95b",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/channels/youtube.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/channels/youtube.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/cli.py",
+      "sha256": "530238b4ae530cc35745d52cdc2406ad1afed8a9ca7a80efbc844d4368bb0617",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/cli.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/cli.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/config.py",
+      "sha256": "2d4ad43579b80bea837154b2f3643d63b86a9d9819f06db7958a4b18d6a429b2",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/config.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/config.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/cookie_extract.py",
+      "sha256": "7db3996b7f32c8f05681eaeddcf35b1205c7cfd7f1b187bb61acace3528e1020",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/cookie_extract.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/cookie_extract.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/core.py",
+      "sha256": "6a24ca03dc8360a016d6b9570fa5341712ba6e451d9128b437a5ab6231c3f5e3",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/core.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/core.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/doctor.py",
+      "sha256": "1544c383560eb769bf084e3a2ff5d3c25da3dc43bb2603cb36bd6a073a1760c4",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/doctor.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/doctor.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/guides/setup-exa.md",
+      "sha256": "99293f7dc7a5104a8470d178f6611f1c09582794064114e8366aea207b8f2168",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/guides/setup-exa.md",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/guides/setup-exa.md"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/guides/setup-groq.md",
+      "sha256": "9bb9b04a20d895dcf8293b4f1588d5f4aed99d7fa3c1fb7ad9d30035405290cc",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/guides/setup-groq.md",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/guides/setup-groq.md"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/guides/setup-reddit.md",
+      "sha256": "30a480eda00b71abb117dc982c48bfb5ff0cc8132ee1bee93dd9bb081c2e2cdb",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/guides/setup-reddit.md",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/guides/setup-reddit.md"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/guides/setup-twitter.md",
+      "sha256": "82b63c3427c07a6607a5a2764ba2def7edd485efd352e6b8b1324328e95c2054",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/guides/setup-twitter.md",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/guides/setup-twitter.md"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/guides/setup-wechat.md",
+      "sha256": "b176991b5ee80c5c1e0c61b8860990248722e03596eeab7a91fb84b5719606f5",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/guides/setup-wechat.md",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/guides/setup-wechat.md"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/guides/setup-xiaohongshu.md",
+      "sha256": "1f12f61146ad7124c6eac636402503515a2ad9093f1b28af890ccdc0680e282f",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/guides/setup-xiaohongshu.md",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/guides/setup-xiaohongshu.md"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/integrations/__init__.py",
+      "sha256": "8b084a9f378124b2b1a51563bf3c22444eb7ff33692017da28b2136ae56987ed",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/integrations/__init__.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/integrations/__init__.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/integrations/mcp_server.py",
+      "sha256": "f000fc3d681ebff83dec169f0267ebf90fa51bfa4196ee5bf99ed06704901f13",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/integrations/mcp_server.py",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/integrations/mcp_server.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/agent_reach/skill/SKILL.md",
+      "sha256": "136bbd9acf04e26b6f8cfd240dba20f51c1dc377247e718c1ad43f0595af8a1d",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/agent_reach/skill/SKILL.md",
+        "recipes/news2douyin/vendor/agent-reach/agent_reach/skill/SKILL.md"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/config/mcporter.json",
+      "sha256": "1f3cba30d6354cc2f3233224f6af3a3e44206f2fdaf9ecaaf2189a4a1e4a613d",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/config/mcporter.json",
+        "recipes/news2douyin/vendor/agent-reach/config/mcporter.json"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/docs/README_en.md",
+      "sha256": "d43631dd497a3c5554d238dcbe123327ca490c8bf77827a19cde241225cf04b3",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/docs/README_en.md",
+        "recipes/news2douyin/vendor/agent-reach/docs/README_en.md"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/docs/assets/logo-1.png",
+      "sha256": "a15044312da5f207a32ed8a8f244d0b08fed81c65d08acdc8977c49ea7a4f625",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/docs/assets/logo-1.png",
+        "recipes/news2douyin/vendor/agent-reach/docs/assets/logo-1.png"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/docs/assets/logo-1.svg",
+      "sha256": "1c0186477f299bf9d635b5a48c5c452f5c6a4e173acc917113b18f7e9c043283",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/docs/assets/logo-1.svg",
+        "recipes/news2douyin/vendor/agent-reach/docs/assets/logo-1.svg"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/docs/assets/logo-2.png",
+      "sha256": "1085bb695ef78f808596ddcc5c6edbc7e01565cf45f2d9a9d608606b09014c27",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/docs/assets/logo-2.png",
+        "recipes/news2douyin/vendor/agent-reach/docs/assets/logo-2.png"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/docs/assets/logo-2.svg",
+      "sha256": "f1948ae6a6fa2e54a6d81ccbf7251aa07ae113ab009bd969b49bf48eaff0c3bb",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/docs/assets/logo-2.svg",
+        "recipes/news2douyin/vendor/agent-reach/docs/assets/logo-2.svg"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/docs/assets/logo-3.png",
+      "sha256": "0312a0b3fdb44ceaa89b818a6a92265631e14255d44baafb7c2d2b922366db83",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/docs/assets/logo-3.png",
+        "recipes/news2douyin/vendor/agent-reach/docs/assets/logo-3.png"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/docs/assets/logo-3.svg",
+      "sha256": "a97a8d60747b76fc51bdc2a681a9f4f73dc5142f0aae990cf89be528dd61a531",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/docs/assets/logo-3.svg",
+        "recipes/news2douyin/vendor/agent-reach/docs/assets/logo-3.svg"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/docs/cookie-export.md",
+      "sha256": "16a5e67c46e69a530aa502606c1f7bf639f590e30fcb480f0bfb0783b038f564",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/docs/cookie-export.md",
+        "recipes/news2douyin/vendor/agent-reach/docs/cookie-export.md"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/docs/install.md",
+      "sha256": "d8c6823c2337e44955913983e08b9365101aa587d13c07023d5f9df082277b1a",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/docs/install.md",
+        "recipes/news2douyin/vendor/agent-reach/docs/install.md"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/docs/troubleshooting.md",
+      "sha256": "e3a469b05c446431d98027ac412b50b0e7f5b135fc40032bb93ed0315882f2ed",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/docs/troubleshooting.md",
+        "recipes/news2douyin/vendor/agent-reach/docs/troubleshooting.md"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/llms.txt",
+      "sha256": "84cf157916bdfcc40c82a0da2a6ca2a01205cf0ba6cc17b9f83372e8ae663754",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/llms.txt",
+        "recipes/news2douyin/vendor/agent-reach/llms.txt"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/pyproject.toml",
+      "sha256": "32fa621507fb5e3e540c1ea31349de4f73cf39435025e5e16f1000ed1feee8f9",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/pyproject.toml",
+        "recipes/news2douyin/vendor/agent-reach/pyproject.toml"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/scripts/sync-upstream.sh",
+      "sha256": "81558d6e821edb17c493b2957d10c167852f6d0c072ab3cdbc13814685b56240",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/scripts/sync-upstream.sh",
+        "recipes/news2douyin/vendor/agent-reach/scripts/sync-upstream.sh"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/test.sh",
+      "sha256": "5bbe3282b7b6243c909272d0e7fe6b0cafa62e8a173f30e89f49d91213c3ec55",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/test.sh",
+        "recipes/news2douyin/vendor/agent-reach/test.sh"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/tests/test_channels.py",
+      "sha256": "d947b3f80899590f657a7b471824f0c7a103c10c4e3485958583598ad8ab8c21",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/tests/test_channels.py",
+        "recipes/news2douyin/vendor/agent-reach/tests/test_channels.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/tests/test_cli.py",
+      "sha256": "bea41ea377aec02ff06372b3102c94ee92678040baca85b6f8096d72eece8e40",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/tests/test_cli.py",
+        "recipes/news2douyin/vendor/agent-reach/tests/test_cli.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/tests/test_config.py",
+      "sha256": "8eb567ef710650116dd8c54be641ea2ec735c3ae10f82a135d14041886d75cbd",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/tests/test_config.py",
+        "recipes/news2douyin/vendor/agent-reach/tests/test_config.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/tests/test_core.py",
+      "sha256": "02e421b5b49a991dd41d85a894cb92989d10e261dc6f1d7aa0977c8f55de5e79",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/tests/test_core.py",
+        "recipes/news2douyin/vendor/agent-reach/tests/test_core.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach/tests/test_doctor.py",
+      "sha256": "dfe7457eb5da5c69ab5b42b01cb2549a87c29fa1aad2e7fc097f5824e343377d",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach/tests/test_doctor.py",
+        "recipes/news2douyin/vendor/agent-reach/tests/test_doctor.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach-wheel.patch",
+      "sha256": "239d42674b9d0aec1f2d629a97d9751d8da78eebd1ef52d43619a2b3b58c3122",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach-wheel.patch",
+        "recipes/news2douyin/vendor/agent-reach-wheel.patch"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/vendor/agent-reach.sha256",
+      "sha256": "de0c2e9d75e61ad37967440975131414e91c8e36dcdff4ec652818da6e21d17b",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/vendor/agent-reach.sha256",
+        "recipes/news2douyin/vendor/agent-reach.sha256"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/video_app_media.py",
+      "sha256": "676d20932658bb266a29e93769f386cd1fee89a6839185e18579306673084369",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/openmontage/tools/video_app_media.py",
+        "recipes/video-use/tools/video_app_media.py",
+        "recipes/hyperframes/tools/video_app_media.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/video_smoke.py",
+      "sha256": "4932c6fd45b18a7e7e10e431e9c2ff4f810e66a3110ef8cfd7a681e4f34b7020",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/tools/video_smoke.py",
+        "recipes/people-search/tools/video_smoke.py",
+        "recipes/news2douyin/tools/video_smoke.py"
+      ]
+    },
+    {
+      "oldPath": "examples/_shared/video_use_adapter.py",
+      "sha256": "e5b6dbf85b584524481d783a9c4e9373ffe9246c1289f8c1036310d0cbc4cdba",
+      "kind": "migrated-and-updated",
+      "newPath": "recipes/video-build/tools/video_use_adapter.py"
+    },
+    {
+      "oldPath": "examples/_shared/video_use_smoke.py",
+      "sha256": "8834f6d6bd3976e0e94a40ca4c462f208348135b135883602133436519ff9d20",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/tools/video_use_smoke.py",
+        "recipes/people-search/tools/video_use_smoke.py",
+        "recipes/news2douyin/tools/video_use_smoke.py"
+      ]
+    },
+    {
+      "oldPath": "examples/activevlm_client.py",
+      "sha256": "28acc06c92ae9dd4e1320a38aa3e8c1bf96912d76074d521ce30934aac2088f2",
+      "kind": "migrated-and-updated",
+      "newPath": "clients/python/activevlm_client.py"
+    },
+    {
+      "oldPath": "examples/application_client.py",
+      "sha256": "61a3b605c85584e96e467b1522be50c1120028dd3226f61830cd6dbc0a324cd8",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "clients/python/application_client.py"
+      ]
+    },
+    {
+      "oldPath": "examples/application_quickstart.py",
+      "sha256": "6ed6016cd12b8b257ae283333a644469d9c5fd553a078413d4c1237c9790b4f4",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "clients/python/application_quickstart.py"
+      ]
+    },
+    {
+      "oldPath": "examples/docker/.dockerignore",
+      "sha256": "bb60e966c7a9eab0a8d91ce17c45f4d947119d1a862d311a9138bcc9816d2aa5",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/generic/.dockerignore"
+      ]
+    },
+    {
+      "oldPath": "examples/docker/Dockerfile",
+      "sha256": "60ff0a8424e14a55c5dd0a8d13e7f22f80b5e1fddb114810228584a3412805e9",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/generic/Dockerfile"
+      ]
+    },
+    {
+      "oldPath": "examples/docker/README.md",
+      "sha256": "8c8f21d1c734e6a13c3820a66d22e534fabe67152811e2e1c70a75917a1580b0",
+      "kind": "migrated-and-updated",
+      "newPath": "recipes/generic/README.md"
+    },
+    {
+      "oldPath": "examples/docker/build.sh",
+      "sha256": "aa9b3b8c5c13ce1cd6667c96a1a154c327d2746c5282cc7e1c37eec2e6284c48",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/generic/build.sh"
+      ]
+    },
+    {
+      "oldPath": "examples/docker/files.go",
+      "sha256": "452fd16e68b146b05c1e183aa67b51982d364843dcb84ff28874f91e6b064eea",
+      "kind": "migrated-and-updated",
+      "newPath": "internal/dockertemplate/files.go"
+    },
+    {
+      "oldPath": "examples/docker/files_test.go",
+      "sha256": "2ca730f44c0ff4786641c80b039e743d65b7404286b1c4a96c83a29ad1a67d40",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "internal/dockertemplate/files_test.go"
+      ]
+    },
+    {
+      "oldPath": "examples/docker/runtime/.keep",
+      "sha256": "f683a7b6f67bd433ea60129011a6d792ebc207a6c87dbecc3812cdfbaa2cbb2b",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/runtime/.keep",
+        "recipes/people-search/runtime/.keep",
+        "recipes/generic/runtime/.keep",
+        "recipes/openmontage/runtime/.keep",
+        "recipes/news2douyin/runtime/.keep",
+        "recipes/video-use/runtime/.keep",
+        "recipes/hyperframes/runtime/.keep"
+      ]
+    },
+    {
+      "oldPath": "examples/docker/seed/config.toml",
+      "sha256": "ec1f089fdf0723aef6a3dd09b5dcf4dbf00a6c70e7b9a42607320b90bef3cd8c",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/generic/seed/config.toml"
+      ]
+    },
+    {
+      "oldPath": "examples/docker/tools/configure-apt.sh",
+      "sha256": "df259b9be7a04f281dd6635fd84af044f62ebcc29db18f050ef15fd4b98a4d98",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/tools/configure-apt.sh",
+        "recipes/people-search/tools/configure-apt.sh",
+        "recipes/generic/tools/configure-apt.sh",
+        "recipes/openmontage/tools/configure-apt.sh",
+        "recipes/news2douyin/tools/configure-apt.sh",
+        "recipes/video-use/tools/configure-apt.sh",
+        "recipes/hyperframes/tools/configure-apt.sh"
+      ]
+    },
+    {
+      "oldPath": "examples/docker/tools/install-codex.sh",
+      "sha256": "17765adf153241e9573ca046855697d39b486a7e6c0b19618c46bec1f63b2a2e",
+      "kind": "reconciled-helper",
+      "newPath": "recipes/generic/tools/install-codex.sh",
+      "note": "Native executable verified before replacing link, consistent in all seven contexts."
+    },
+    {
+      "oldPath": "examples/hyperframes/Dockerfile",
+      "sha256": "f84a3259a755dbcba62f189cd85c795577eecc0560a3ab1e55f597aef757d034",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/hyperframes/Dockerfile"
+      ]
+    },
+    {
+      "oldPath": "examples/hyperframes/README.md",
+      "sha256": "93befd1c753c5b9aaa70ac7723cfbbc27a3838a353e603be9e4927a675566378",
+      "kind": "migrated-and-updated",
+      "newPath": "recipes/hyperframes/README.md"
+    },
+    {
+      "oldPath": "examples/hyperframes/doctor.py",
+      "sha256": "af7f2f6c966acee661024d463b439226def2e4fcf64e4ae6baf84285d76e8252",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/hyperframes/upstream/doctor.py"
+      ]
+    },
+    {
+      "oldPath": "examples/hyperframes/generation_guard.py",
+      "sha256": "07e2f7b5161ef01abe2523b7dba5bc96da19094b564bcf1af7387d03952a24ac",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/hyperframes/upstream/generation_guard.py"
+      ]
+    },
+    {
+      "oldPath": "examples/hyperframes/hyperframes",
+      "sha256": "726391edb3a39cffb545c570f5185e8057660c4fb1c31f545db5d91138983da1",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/hyperframes/upstream/hyperframes"
+      ]
+    },
+    {
+      "oldPath": "examples/hyperframes/install.sh",
+      "sha256": "65a540fc72b2e703f7ef2eb11e60d0587594b5630363a9696d4e1cca4993bd88",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/hyperframes/upstream/install.sh"
+      ]
+    },
+    {
+      "oldPath": "examples/hyperframes/npm/package-lock.json",
+      "sha256": "b3f48e9687cd27dea097203e928e6e7fd84344b88122ab2bb546d38b48705de1",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/hyperframes/package-lock.json",
+        "recipes/openmontage/upstream/npm/package-lock.json",
+        "recipes/hyperframes/upstream/npm/package-lock.json"
+      ]
+    },
+    {
+      "oldPath": "examples/hyperframes/npm/package.json",
+      "sha256": "8a3e1e5e7d0cf6bb83876489fcc302cd5068fa16459cb56b78cffbcd8d64f353",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/hyperframes/package.json",
+        "recipes/openmontage/upstream/npm/package.json",
+        "recipes/hyperframes/upstream/npm/package.json"
+      ]
+    },
+    {
+      "oldPath": "examples/hyperframes/profile.json",
+      "sha256": "84396a42a34a541483691f6bb0c03271b01f69c1d136d2123e4b4a2276c721c2",
+      "kind": "canonical-manifest-field",
+      "newPath": "recipes/hyperframes/recipe.json",
+      "field": "profile"
+    },
+    {
+      "oldPath": "examples/hyperframes/run.py",
+      "sha256": "51dd2ce8977581d962f127bb4395f81cb0e95a6b88f33c25a1a9810bda0e22ea",
+      "kind": "retired-wrapper",
+      "replacement": "scripts/recipes.py",
+      "note": "Unified CLI replaces old per-profile path."
+    },
+    {
+      "oldPath": "examples/hyperframes/skills/rundesk-hyperframes/SKILL.md",
+      "sha256": "f6a033493fde4e00d7690757dec41aaf977d61564632a19d6695d59bf0ae7e42",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/hyperframes/skills/rundesk-hyperframes/SKILL.md"
+      ]
+    },
+    {
+      "oldPath": "examples/hyperframes/skills/rundesk-hyperframes/agents/openai.yaml",
+      "sha256": "2e4c5adfd40655e50df1500eb9b92d846ad26049e2ec730170bc72e829eae53e",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/hyperframes/skills/rundesk-hyperframes/agents/openai.yaml"
+      ]
+    },
+    {
+      "oldPath": "examples/hyperframes/test_integration.py",
+      "sha256": "af6353df5b170b882461a8b3ff649cd97b02adc300bc813bcc3ffae995ca5440",
+      "kind": "migrated-and-updated",
+      "newPath": "tests/recipes/hyperframes/test_integration.py"
+    },
+    {
+      "oldPath": "examples/hyperframes/upstream.json",
+      "sha256": "9b010ca1d036d69e12ebb1ba09f1096d36c43a8fc53eb1672a1d53c7e891be77",
+      "kind": "canonical-manifest-field",
+      "newPath": "recipes/hyperframes/recipe.json",
+      "field": "upstream",
+      "note": "Local archive reference normalized; source bytes and digest preserved."
+    },
+    {
+      "oldPath": "examples/hyperframes/validation.json",
+      "sha256": "a0976273525ab8389c1e55e159f53aef71b9529dec65783f4d05016a2c2a8fc3",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "docs/validation/archive/profiles/hyperframes/validation.json"
+      ]
+    },
+    {
+      "oldPath": "examples/hyperframes/vendor/.gitignore",
+      "sha256": "106ac8c08c904f52f2f8bbb722c3cebc5b432f779489c0e4ece08312100aafda",
+      "kind": "retired-housekeeping",
+      "note": "Duplicate authoring tree removed."
+    },
+    {
+      "oldPath": "examples/hyperframes/vendor/hyperframes-skills-82ae73a03156f782e48d631907db08232aeed817.tar.gz",
+      "sha256": "492a80be9507b50abae44b6f10df4f5107feeab71d1dccfacd81c7f371c87fc2",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/hyperframes/vendor/source.tar.gz"
+      ]
+    },
+    {
+      "oldPath": "examples/news2douyin/AGENT-REACH.md",
+      "sha256": "0ee684b2e5d546afeff8d52a2235d844077ecdeb38f96c3510fcf9e5f6baecfc",
+      "kind": "migrated-and-updated",
+      "newPath": "recipes/news2douyin/AGENT-REACH.md"
+    },
+    {
+      "oldPath": "examples/news2douyin/Dockerfile",
+      "sha256": "9488f2bcee309dfcad6a11de3de6024d4e136ecd2bae97fa5ce255d031ce1784",
+      "kind": "migrated-and-updated",
+      "newPath": "recipes/news2douyin/Dockerfile"
+    },
+    {
+      "oldPath": "examples/news2douyin/Dockerfile.lite",
+      "sha256": "0ddc921727b6307893aa221994f2c123c0972a84e6d85474828ac501b2203fd5",
+      "kind": "migrated-and-updated",
+      "newPath": "recipes/news2douyin/variants/Dockerfile.lite"
+    },
+    {
+      "oldPath": "examples/news2douyin/README.md",
+      "sha256": "978f099c51255b8d278e15800c26473a710ac2b8795f6d44cfd7bcd525b68e35",
+      "kind": "migrated-and-updated",
+      "newPath": "recipes/news2douyin/README.md"
+    },
+    {
+      "oldPath": "examples/news2douyin/profile.json",
+      "sha256": "481227196cd364b2a21b4ee8da9f10e0a8aef07a60a017e6013c4002f0eeae96",
+      "kind": "canonical-manifest-field",
+      "newPath": "recipes/news2douyin/recipe.json",
+      "field": "profile"
+    },
+    {
+      "oldPath": "examples/news2douyin/run.py",
+      "sha256": "8a560d56e2c8525add7fcfa560fa5ecd5d14dd3155ca3c17cd791c3d6b5fa7d9",
+      "kind": "retired-wrapper",
+      "replacement": "scripts/recipes.py",
+      "note": "Unified CLI replaces old per-profile path."
+    },
+    {
+      "oldPath": "examples/news2douyin/skills/collect-news-evidence/SKILL.md",
+      "sha256": "72aed4df8ca262b48e22c8a84b0782e0bdf2e0cf57afcbbce36fa3bb4d7d2a38",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/news2douyin/skills/collect-news-evidence/SKILL.md"
+      ]
+    },
+    {
+      "oldPath": "examples/news2douyin/skills/collect-news-evidence/agents/openai.yaml",
+      "sha256": "f9a94ea22cc1d35963dc6b07838a9545b0e823b1b5b62f6c4fc72731c70def2a",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/news2douyin/skills/collect-news-evidence/agents/openai.yaml"
+      ]
+    },
+    {
+      "oldPath": "examples/openmontage/Dockerfile",
+      "sha256": "333286641c8fe2dc1273f14b6f38e9454d7c83eaf1ca28dcb9bb52cc7c31c13a",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/openmontage/Dockerfile"
+      ]
+    },
+    {
+      "oldPath": "examples/openmontage/LICENSE-AGPL-3.0.txt",
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/openmontage/upstream/LICENSE-AGPL-3.0.txt"
+      ]
+    },
+    {
+      "oldPath": "examples/openmontage/README.md",
+      "sha256": "be8e0ed72411fac47a32ef7d97e6a40ed9ae707fd3f669bd3ad97aa6d2cbff2a",
+      "kind": "migrated-and-updated",
+      "newPath": "recipes/openmontage/README.md"
+    },
+    {
+      "oldPath": "examples/openmontage/doctor.py",
+      "sha256": "86c17c3d38905a06a101a5ff351afddecd0323ac6c7c33740cc2bf13c44c4eb4",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/openmontage/upstream/doctor.py"
+      ]
+    },
+    {
+      "oldPath": "examples/openmontage/hyperframes",
+      "sha256": "f3ad66e8f83297e3b1cefed9035413080ce058583d08ea8a53d3261f7e870cd4",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/openmontage/upstream/hyperframes"
+      ]
+    },
+    {
+      "oldPath": "examples/openmontage/install.sh",
+      "sha256": "bdfd9acaf520c2f8935a5eaa04e0e4e9c8b61656fc2ea9016faf16698879559d",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/openmontage/upstream/install.sh"
+      ]
+    },
+    {
+      "oldPath": "examples/openmontage/launch.py",
+      "sha256": "41b991076e1466fca32cb848a316d08b8eb485f685b92c92b55ed51d45fec865",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/openmontage/upstream/launch.py"
+      ]
+    },
+    {
+      "oldPath": "examples/openmontage/npm/package-lock.json",
+      "sha256": "b3f48e9687cd27dea097203e928e6e7fd84344b88122ab2bb546d38b48705de1",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/hyperframes/package-lock.json",
+        "recipes/openmontage/upstream/npm/package-lock.json",
+        "recipes/hyperframes/upstream/npm/package-lock.json"
+      ]
+    },
+    {
+      "oldPath": "examples/openmontage/npm/package.json",
+      "sha256": "8a3e1e5e7d0cf6bb83876489fcc302cd5068fa16459cb56b78cffbcd8d64f353",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/hyperframes/package.json",
+        "recipes/openmontage/upstream/npm/package.json",
+        "recipes/hyperframes/upstream/npm/package.json"
+      ]
+    },
+    {
+      "oldPath": "examples/openmontage/openmontage-python",
+      "sha256": "385833f41e5740a77c8d20b481c12be7851a636149a7d8e20e3e43ff1b43a235",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/openmontage/upstream/openmontage-python"
+      ]
+    },
+    {
+      "oldPath": "examples/openmontage/overlays/rundesk_video_app.py",
+      "sha256": "e7979670eda88a596c07c9d53b69397d785e39dd41df1c8f0a4ff58d5082f597",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/openmontage/upstream/overlays/rundesk_video_app.py"
+      ]
+    },
+    {
+      "oldPath": "examples/openmontage/overlays/video_app_image.py",
+      "sha256": "5a65477f698bc2cd04f657efa41ea4785582f87c42e514d3859d13d3c76988b8",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/openmontage/upstream/overlays/video_app_image.py"
+      ]
+    },
+    {
+      "oldPath": "examples/openmontage/overlays/video_app_tts.py",
+      "sha256": "b455c936e7b0f62047d99e85102c18c864df8cff84c97346911922053c9dfe51",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/openmontage/upstream/overlays/video_app_tts.py"
+      ]
+    },
+    {
+      "oldPath": "examples/openmontage/overlays/video_app_video.py",
+      "sha256": "709862028993e46e30dd3b507640d15233a146ac3e4777952cc1c394c11f0f6b",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/openmontage/upstream/overlays/video_app_video.py"
+      ]
+    },
+    {
+      "oldPath": "examples/openmontage/patch_runtime.py",
+      "sha256": "6feffd372d9b367f5a2a951b9fb382437e0a191e68a696400a24bcb9473d8b50",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/openmontage/upstream/patch_runtime.py"
+      ]
+    },
+    {
+      "oldPath": "examples/openmontage/profile.json",
+      "sha256": "7bcb36b4d5532433d2169c0fc58b23bd2641cabf5a6bb55112c76e67d0f9ec30",
+      "kind": "canonical-manifest-field",
+      "newPath": "recipes/openmontage/recipe.json",
+      "field": "profile"
+    },
+    {
+      "oldPath": "examples/openmontage/run.py",
+      "sha256": "069da3066f2f14a6eb429cb50d76c0ef23a177663d63c34f3b3239e3196fe019",
+      "kind": "retired-wrapper",
+      "replacement": "scripts/recipes.py",
+      "note": "Unified CLI replaces old per-profile path."
+    },
+    {
+      "oldPath": "examples/openmontage/skills/use-openmontage/SKILL.md",
+      "sha256": "f823a6da4452d2d2250c8065bb6b147d2a2c3fa0c57b94451d6f1bd1fd650813",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/openmontage/skills/use-openmontage/SKILL.md"
+      ]
+    },
+    {
+      "oldPath": "examples/openmontage/skills/use-openmontage/agents/openai.yaml",
+      "sha256": "a480039f02c4a147401f2c7fdb94ed75cdf383e3be3f3da2f2ff183e9a394989",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/openmontage/skills/use-openmontage/agents/openai.yaml"
+      ]
+    },
+    {
+      "oldPath": "examples/openmontage/skills/use-openmontage/references/video-app-providers.md",
+      "sha256": "605a1553af1e425cdc98a7138435ea2d74c8c938a68467c25c2fcfc34e7bd43e",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/openmontage/skills/use-openmontage/references/video-app-providers.md"
+      ]
+    },
+    {
+      "oldPath": "examples/openmontage/tests/test_native_bridge.py",
+      "sha256": "d8892f9a16be64a2b19b9f2111d51cd795bec00f28c235067d0ccc384adba1fe",
+      "kind": "migrated-and-updated",
+      "newPath": "tests/recipes/openmontage/test_native_bridge.py"
+    },
+    {
+      "oldPath": "examples/openmontage/upstream.json",
+      "sha256": "7ba88c66e591fc91d425defeaacedb3e4e24567c3f1d5156acad8ffb7848830b",
+      "kind": "canonical-manifest-field",
+      "newPath": "recipes/openmontage/recipe.json",
+      "field": "upstream",
+      "note": "Local archive reference normalized; source bytes and digest preserved."
+    },
+    {
+      "oldPath": "examples/openmontage/validation/native-bridge-tests.log",
+      "sha256": "889cf475a970fff7edd92a7f33eb3fc5e53be07ab4e89a849b5c00ce1ace72e9",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "docs/validation/archive/profiles/openmontage/validation/native-bridge-tests.log"
+      ]
+    },
+    {
+      "oldPath": "examples/openmontage/validation.json",
+      "sha256": "920f252943b0d13c1f872f09a200b667e26814d48caeaabe766e484256dc4302",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "docs/validation/archive/profiles/openmontage/validation.json"
+      ]
+    },
+    {
+      "oldPath": "examples/people-search/Dockerfile",
+      "sha256": "b12aca733516079407e7dadb70309e18e4e5eb87bf0e9a2cfbfc5e4afc3124d2",
+      "kind": "migrated-and-updated",
+      "newPath": "recipes/people-search/Dockerfile"
+    },
+    {
+      "oldPath": "examples/people-search/Dockerfile.lite",
+      "sha256": "5cbdf566956b2137affb8723c3607159bc54878adfb9782eaeabd0683ae7652b",
+      "kind": "migrated-and-updated",
+      "newPath": "recipes/people-search/variants/Dockerfile.lite"
+    },
+    {
+      "oldPath": "examples/people-search/README.md",
+      "sha256": "00e843e40e8d3185961b98e9a9383d47f4871ac436a97b5f095c8db4e8c4afaa",
+      "kind": "migrated-and-updated",
+      "newPath": "recipes/people-search/README.md"
+    },
+    {
+      "oldPath": "examples/people-search/profile.json",
+      "sha256": "27a2958ec6cc9e4176f34113c4f2cf9f423c6333e02aaa77a57e93153d17b4ba",
+      "kind": "canonical-manifest-field",
+      "newPath": "recipes/people-search/recipe.json",
+      "field": "profile"
+    },
+    {
+      "oldPath": "examples/people-search/run.py",
+      "sha256": "1c1889f32678c7eb9940c7fbf60a77d128d45ac58245d96b3a163a4c87b923f6",
+      "kind": "retired-wrapper",
+      "replacement": "scripts/recipes.py",
+      "note": "Unified CLI replaces old per-profile path."
+    },
+    {
+      "oldPath": "examples/people-search/skills/research-public-people/SKILL.md",
+      "sha256": "673ab5abfae512134a10f173dcbef85462d7437cdf7b6aee404faf376c08ae90",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/skills/research-public-people/SKILL.md"
+      ]
+    },
+    {
+      "oldPath": "examples/people-search/skills/research-public-people/agents/openai.yaml",
+      "sha256": "2d3fc84780c613f48404ccf5ceef24d920a09f267ec963f94adbef5a66a7ec81",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/people-search/skills/research-public-people/agents/openai.yaml"
+      ]
+    },
+    {
+      "oldPath": "examples/profile.schema.json",
+      "sha256": "888066f27ec770e686621029fa45c5ffbd16d5405553f31780480236c4275926",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/profile.schema.json"
+      ]
+    },
+    {
+      "oldPath": "examples/profiles.py",
+      "sha256": "7626a30999cbad84be16045601951fd4b28283945cc69365ba2b58438343bfc4",
+      "kind": "migrated-and-updated",
+      "newPath": "scripts/recipes.py"
+    },
+    {
+      "oldPath": "examples/profiletemplates/files.go",
+      "sha256": "d281249775b8ffb4ae7b2c60c89a31c807bf48ee0efee04c4ee6dfda98d9dcfe",
+      "kind": "migrated-and-updated",
+      "newPath": "internal/recipefiles/files.go"
+    },
+    {
+      "oldPath": "examples/profiletemplates/files_test.go",
+      "sha256": "e05a79aaf0676840c6f676f700405467a9f326548a7278963dee951bf2e7d84d",
+      "kind": "migrated-and-updated",
+      "newPath": "internal/recipefiles/files_test.go"
+    },
+    {
+      "oldPath": "examples/systemd/README.md",
+      "sha256": "ca635fe7d738923995e853f922f7af8408ccdd393ff61bde5f1a080cf26fdc60",
+      "kind": "migrated-and-updated",
+      "newPath": "deploy/systemd/README.md"
+    },
+    {
+      "oldPath": "examples/systemd/environment.example",
+      "sha256": "b18e0f46830df081b099f15a81ba41a6cea4ca3a94c1056bc9418cd3ce6c176b",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "deploy/systemd/environment.example"
+      ]
+    },
+    {
+      "oldPath": "examples/systemd/rundesk.service",
+      "sha256": "d681856e9a32fc0268cc4c97106d9386b73216ddb2952941d493b767fd44fe0d",
+      "kind": "migrated-and-updated",
+      "newPath": "deploy/systemd/rundesk.service"
+    },
+    {
+      "oldPath": "examples/uhp_client.py",
+      "sha256": "f1dc7192534b2b2a46d2b4c320110aedc527a2626b8c69f5d0904a349e80b751",
+      "kind": "migrated-and-updated",
+      "newPath": "clients/python/uhp_client.py"
+    },
+    {
+      "oldPath": "examples/video-build/Dockerfile",
+      "sha256": "3d378fa3264908ee529e8ee891bf50f9c6ee18f3e88464adb36814b2358d86c1",
+      "kind": "migrated-and-updated",
+      "newPath": "recipes/video-build/Dockerfile"
+    },
+    {
+      "oldPath": "examples/video-build/Dockerfile.video-use",
+      "sha256": "a6f1b85fa818cb351a177751c4b148859a28c1d240c8e2739148375493cbb066",
+      "kind": "migrated-and-updated",
+      "newPath": "recipes/video-build/variants/Dockerfile.video-use"
+    },
+    {
+      "oldPath": "examples/video-build/README.md",
+      "sha256": "c6052dd523e7bc79cd428255e94d0ddfe6b2483c67a510bfc63f56528594f7b0",
+      "kind": "migrated-and-updated",
+      "newPath": "recipes/video-build/README.md"
+    },
+    {
+      "oldPath": "examples/video-build/VIDEO-USE-COMPAT.md",
+      "sha256": "046e1497625c7b48849c1fd35b5fbea01e7c8a684e144d81f99bf3eccbf224ee",
+      "kind": "migrated-and-updated",
+      "newPath": "recipes/video-build/VIDEO-USE-COMPAT.md"
+    },
+    {
+      "oldPath": "examples/video-build/dependency-validation-video-use-1.3.0.json",
+      "sha256": "bae96fffb481db13444d38f6ecbc5253e828ee265773056fad1ee1414ef38a19",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "docs/validation/archive/profiles/video-build/dependency-validation-video-use-1.3.0.json"
+      ]
+    },
+    {
+      "oldPath": "examples/video-build/dependency-validation.json",
+      "sha256": "75a2832b44e3ef03f8d68f3c6587bfff8e13d431e76936124bc7098f897aa466",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "docs/validation/archive/profiles/video-build/dependency-validation.json"
+      ]
+    },
+    {
+      "oldPath": "examples/video-build/profile.json",
+      "sha256": "396b883a1b634976a1497b3270ba6eb48a52624cd9a7d126c9c8a355296f16de",
+      "kind": "canonical-manifest-field",
+      "newPath": "recipes/video-build/recipe.json",
+      "field": "profile"
+    },
+    {
+      "oldPath": "examples/video-build/run-app.sh",
+      "sha256": "da7ffbb77383ace48b78846a9f3b4e5c3ef20a190f248e3c7146296e4c196946",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/run-app.sh"
+      ]
+    },
+    {
+      "oldPath": "examples/video-build/run.py",
+      "sha256": "9d825c2e57597807cb4b902f0d167faa52a77cda249faaaccd6d747bba2e9fd7",
+      "kind": "retired-wrapper",
+      "replacement": "scripts/recipes.py",
+      "note": "Unified CLI replaces old per-profile path."
+    },
+    {
+      "oldPath": "examples/video-build/skills/build-video-artifacts/SKILL.md",
+      "sha256": "9a90fce5880b108d177b19a4161e6217f0f0f30f04417cf76b1f140ead6bdd99",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/skills/build-video-artifacts/SKILL.md"
+      ]
+    },
+    {
+      "oldPath": "examples/video-build/skills/build-video-artifacts/WORKFLOW-DESIGN.md",
+      "sha256": "868513496a35cd4405ede63b6329c8bb1b38489123077d68289449564f2d1cf4",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "docs/recipes/video-build/WORKFLOW-DESIGN.md"
+      ]
+    },
+    {
+      "oldPath": "examples/video-build/skills/build-video-artifacts/agents/openai.yaml",
+      "sha256": "51c41a85aa8104a6560d2ffb8665e5885ea46e91b97e52a791fe1d53bc0b57c6",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/skills/build-video-artifacts/agents/openai.yaml"
+      ]
+    },
+    {
+      "oldPath": "examples/video-build/skills/build-video-artifacts/references/backend-compatibility.md",
+      "sha256": "76d94279ee8cfea22fa6fda5f26ae8ded3e93c5da3d7a0de05574cf977e2d1fe",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/skills/build-video-artifacts/references/backend-compatibility.md"
+      ]
+    },
+    {
+      "oldPath": "examples/video-build/skills/build-video-artifacts/references/hyperframes-authoring.md",
+      "sha256": "d48b5c2ae3ccf6f14f7c777cdc0069a0bdfa8e27c80b1e4b149d971491d2674e",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/skills/build-video-artifacts/references/hyperframes-authoring.md"
+      ]
+    },
+    {
+      "oldPath": "examples/video-build/validation/ffmpeg-probe.json",
+      "sha256": "3d1c35663fd082f61a8ae622cd3e68c302f357087c851c8625bf839b7c422f2d",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "docs/validation/archive/profiles/video-build/validation/ffmpeg-probe.json"
+      ]
+    },
+    {
+      "oldPath": "examples/video-build/validation/ffmpeg-render.json",
+      "sha256": "8dd9955ce53deb858556d10359a98d7958c66ec7a4e4a3e29404291ee529c84b",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "docs/validation/archive/profiles/video-build/validation/ffmpeg-render.json"
+      ]
+    },
+    {
+      "oldPath": "examples/video-build/validation/hyperframes-animation.mp4",
+      "sha256": "890f6bb5d66b85e70cc039dff583a68a06bf60f3beda98d964872db854d50bbc",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "docs/validation/archive/profiles/video-build/validation/hyperframes-animation.mp4"
+      ]
+    },
+    {
+      "oldPath": "examples/video-build/validation/hyperframes-probe.json",
+      "sha256": "e1c6f4fa264d8beae9304d5eb439079a111c39db59cfff5634063648a874cc05",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "docs/validation/archive/profiles/video-build/validation/hyperframes-probe.json"
+      ]
+    },
+    {
+      "oldPath": "examples/video-build/validation/hyperframes-render.json",
+      "sha256": "81eb2a1d28cae45aa5eb28f79b6fe46d664f2c7166decbce0d3116507c0933c4",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "docs/validation/archive/profiles/video-build/validation/hyperframes-render.json"
+      ]
+    },
+    {
+      "oldPath": "examples/video-build/validation/profile-contract-tests.log",
+      "sha256": "513343e162692d8c5136774b526a022d63f1c96d39feaeb362589288def686c3",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "docs/validation/archive/profiles/video-build/validation/profile-contract-tests.log"
+      ]
+    },
+    {
+      "oldPath": "examples/video-build/validation/runtime-diagnostics-tests.log",
+      "sha256": "717c707f725f8c1aad3c9550510a3963956b8ba6eb3c2d1ca34fd713df5813e3",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "docs/validation/archive/profiles/video-build/validation/runtime-diagnostics-tests.log"
+      ]
+    },
+    {
+      "oldPath": "examples/video-build/vendor/video-use-43cfc566833548093455c9d4a46bd69913b7e552.tar.gz",
+      "sha256": "b7c181c855265f5e88a2bacde46959b3a07034ee7dce00aed1f4b00bce6a3367",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/variants/vendor/video-use.tar.gz",
+        "recipes/video-use/vendor/source.tar.gz"
+      ]
+    },
+    {
+      "oldPath": "examples/video-build/video-use-requirements.txt",
+      "sha256": "7523bd37ce256469fa2d52fff4687e591528c463f15dc462acc19bffcd1b8ae6",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/variants/video-use-requirements.txt",
+        "recipes/video-use/upstream/requirements.lock"
+      ]
+    },
+    {
+      "oldPath": "examples/video-use/Dockerfile",
+      "sha256": "801deb300948ef4f517bda70e05db83efb8b8f60aa63d098a8cc22b779f7c3dd",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-use/Dockerfile"
+      ]
+    },
+    {
+      "oldPath": "examples/video-use/README.md",
+      "sha256": "bd642bf22f1976c504e799df7e90bc9459ae33dd045106a9a76115323ab980fe",
+      "kind": "migrated-and-updated",
+      "newPath": "recipes/video-use/README.md"
+    },
+    {
+      "oldPath": "examples/video-use/doctor.py",
+      "sha256": "c045a5df1ba610ed406b315482d72dfba9d9e1287cf849d2bdb4f1bc57a71adc",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-use/upstream/doctor.py"
+      ]
+    },
+    {
+      "oldPath": "examples/video-use/install.sh",
+      "sha256": "2ba38b37a24c2fd6719e5c42d74b2c1bf34fb06012c4a00207a370f140f42a53",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-use/upstream/install.sh"
+      ]
+    },
+    {
+      "oldPath": "examples/video-use/profile.json",
+      "sha256": "0843b62a6e8ae39e24c7e977005170dd453cb53520f3f70a453d555715c712a9",
+      "kind": "canonical-manifest-field",
+      "newPath": "recipes/video-use/recipe.json",
+      "field": "profile"
+    },
+    {
+      "oldPath": "examples/video-use/requirements.lock",
+      "sha256": "7523bd37ce256469fa2d52fff4687e591528c463f15dc462acc19bffcd1b8ae6",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/variants/video-use-requirements.txt",
+        "recipes/video-use/upstream/requirements.lock"
+      ]
+    },
+    {
+      "oldPath": "examples/video-use/run.py",
+      "sha256": "62ecfb8b32f0d99f97352e823299b6e20d5058ae3b13b8b04d9b8bcf55b81c1f",
+      "kind": "retired-wrapper",
+      "replacement": "scripts/recipes.py",
+      "note": "Unified CLI replaces old per-profile path."
+    },
+    {
+      "oldPath": "examples/video-use/skills/edit-with-video-use/SKILL.md",
+      "sha256": "c72d8f669987dfaeb3efa4b62a2a695e877189db2904ccb70160acd686d4f51c",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-use/skills/edit-with-video-use/SKILL.md"
+      ]
+    },
+    {
+      "oldPath": "examples/video-use/skills/edit-with-video-use/agents/openai.yaml",
+      "sha256": "fe29ec33dabb45aaca4d2579eb757c316d4dd40ab8d3d12054b2584097881a53",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-use/skills/edit-with-video-use/agents/openai.yaml"
+      ]
+    },
+    {
+      "oldPath": "examples/video-use/skills/edit-with-video-use/references/generation-services.md",
+      "sha256": "136edc751e3f3fcdaff211e349c78565b098df3fb51e2b8031983766a4ee3156",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-use/skills/edit-with-video-use/references/generation-services.md"
+      ]
+    },
+    {
+      "oldPath": "examples/video-use/upstream.json",
+      "sha256": "63484bd598cec9825ba977e6586e52f4d9d0330762fac01d80a35a8b8ac1be85",
+      "kind": "canonical-manifest-field",
+      "newPath": "recipes/video-use/recipe.json",
+      "field": "upstream",
+      "note": "Local archive reference normalized; source bytes and digest preserved."
+    },
+    {
+      "oldPath": "examples/video-use/validation/native-final.mp4",
+      "sha256": "fdde2aaa283cc3d5ede793f19d3c19ebc9ee95657c9c10cb6a8bb3c4098364d1",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "docs/validation/archive/profiles/video-use/validation/native-final.mp4"
+      ]
+    },
+    {
+      "oldPath": "examples/video-use/validation/native-render.json",
+      "sha256": "a3ef36c9e8e1986fcf0569a180d284049d3d9d84e6701ab6214f67aff597bf08",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "docs/validation/archive/profiles/video-use/validation/native-render.json"
+      ]
+    },
+    {
+      "oldPath": "examples/video-use/validation/upstream-tests.log",
+      "sha256": "03a7674073e3c297322d2397f5a1021d4270d06becea85a7042c7928ed48cd43",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "docs/validation/archive/profiles/video-use/validation/upstream-tests.log"
+      ]
+    },
+    {
+      "oldPath": "examples/video-use/vendor/video-use-43cfc566833548093455c9d4a46bd69913b7e552.tar.gz",
+      "sha256": "b7c181c855265f5e88a2bacde46959b3a07034ee7dce00aed1f4b00bce6a3367",
+      "kind": "preserved-bytes",
+      "newPaths": [
+        "recipes/video-build/variants/vendor/video-use.tar.gz",
+        "recipes/video-use/vendor/source.tar.gz"
+      ]
+    }
+  ]
+}

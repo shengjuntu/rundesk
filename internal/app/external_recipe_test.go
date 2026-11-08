@@ -16,6 +16,14 @@ import (
 )
 
 func TestExternalRecipeChangesDoNotChangeFrozenImageIdentity(t *testing.T) {
+	for _, source := range []string{"legacy-lock", "canonical-descriptor"} {
+		t.Run(source, func(t *testing.T) {
+			testExternalRecipeChangesDoNotChangeFrozenImageIdentity(t, source == "canonical-descriptor")
+		})
+	}
+}
+
+func testExternalRecipeChangesDoNotChangeFrozenImageIdentity(t *testing.T, canonical bool) {
 	context, err := runtimeImageContext("news2douyin", "0.157.1")
 	if err != nil {
 		t.Fatal(err)
@@ -53,6 +61,13 @@ func TestExternalRecipeChangesDoNotChangeFrozenImageIdentity(t *testing.T) {
 	}
 	t.Setenv("RUNDESK_RECIPES_DIR", root)
 	lockPath := filepath.Join(directory, "profile.lock.json")
+	if canonical {
+		descriptor := filepath.Join(directory, "recipe.json")
+		if err := os.Rename(lockPath, descriptor); err != nil {
+			t.Fatal(err)
+		}
+		lockPath = descriptor
+	}
 	data, err := os.ReadFile(lockPath)
 	if err != nil {
 		t.Fatal(err)
@@ -90,6 +105,9 @@ func TestExternalRecipeChangesDoNotChangeFrozenImageIdentity(t *testing.T) {
 	}
 	selectedArchive, _ := zip.NewReader(bytes.NewReader(selected), int64(len(selected)))
 	for _, entry := range selectedArchive.File {
+		if entry.Name == "recipe.json" {
+			t.Fatal("export leaked the mutable authoring descriptor")
+		}
 		if entry.Name != "Dockerfile" {
 			continue
 		}
@@ -98,6 +116,11 @@ func TestExternalRecipeChangesDoNotChangeFrozenImageIdentity(t *testing.T) {
 		reader.Close()
 		if !bytes.Contains(content, []byte("ARG CODEX_VERSION=0.157.1")) || bytes.Contains(content, []byte("8.8.8")) {
 			t.Fatal("UI version was not bound to editable recipe", string(content))
+		}
+	}
+	if canonical {
+		if _, err := os.Stat(filepath.Join(directory, "profile.lock.json")); !os.IsNotExist(err) {
+			t.Fatal("export materialized a generated lock in the canonical recipe source", err)
 		}
 	}
 }

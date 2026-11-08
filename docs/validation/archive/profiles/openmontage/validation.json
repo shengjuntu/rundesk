@@ -1,0 +1,35 @@
+{
+  "profile": "openmontage",
+  "version": "1.0.0",
+  "upstreamCommit": "c8066452325cb57c8fc1ba8c2a71b6e8842e6b65",
+  "sourceURL": "https://codeload.github.com/calesthio/OpenMontage/tar.gz/c8066452325cb57c8fc1ba8c2a71b6e8842e6b65",
+  "downloadedSourceBytes": 75957235,
+  "downloadedSourceSHA256": "dff7cd1cdf2cb0522398e00b3f0b75f32336b695a8be34ac8e6b6913055aab25",
+  "nativeContractTests": {
+    "passed": 9,
+    "failed": 0,
+    "command": "python3 examples/openmontage/tests/test_native_bridge.py /path/to/pinned/OpenMontage",
+    "scope": "Actual upstream BaseTool, ToolRegistry discovery and TTS/Image/Video selectors; bridge subprocess and downloaded local bytes are fixtures. Runtime patch applies to pinned native files; workspace-copy uses small source fixture. Installed profile/buildFiles identity changes select new preserved workspace copies without scanning node_modules.",
+    "evidence": "validation/native-bridge-tests.log",
+    "sha256": "889cf475a970fff7edd92a7f33eb3fc5e53be07ab4e89a849b5c00ce1ace72e9"
+  },
+  "profileValidation": "passed",
+  "offlineBuildContext": "prepared and checksummed, not a built Docker image",
+  "skillValidation": "passed quick_validate.py",
+  "syntaxChecks": "Python py_compile, POSIX shell sh -n, diff whitespace passed",
+  "productionCodeChanged": [
+    "three added Video App native providers and helper",
+    "three native render deployment paths patched with originals retained",
+    "workspace launch wrapper for a read-only container root"
+  ],
+  "nativePipelinesChanged": false,
+  "dockerImageBuilt": false,
+  "modelTested": false,
+  "productionVideoRendered": false,
+  "limitations": [
+    "Docker dependency installation and complete native production have not been executed in this environment.",
+    "Native stage approval behavior is preserved.",
+    "OpenMontage final MP4 is not automatically ingested into Video App render history.",
+    "Python dependencies follow pinned upstream minimum requirements; full pip resolution is not locked."
+  ]
+}

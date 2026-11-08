@@ -8,7 +8,8 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-SHARED = ROOT / "examples/_shared"
+TOOLS = ROOT / "recipes/news2douyin/tools"
+DOWNLOAD_HELPER = ROOT / "recipes/openmontage/tools/download-archive.sh"
 
 
 class BuildHelpersTest(unittest.TestCase):
@@ -29,7 +30,8 @@ class BuildHelpersTest(unittest.TestCase):
         return target
 
     def call(self, helper, *args, **overrides):
-        return subprocess.run(["sh", str(SHARED / helper), *map(str, args)],
+        path = DOWNLOAD_HELPER if helper == "download-archive.sh" else TOOLS / helper
+        return subprocess.run(["sh", str(path), *map(str, args)],
                               env=dict(self.env, **overrides), capture_output=True, text=True)
 
     def commands(self):

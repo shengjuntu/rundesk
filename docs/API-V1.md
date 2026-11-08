@@ -214,7 +214,7 @@ TaskSpec.input 的稳定入口是 `{text,files?,skills?}`；files 使用服务�
 
 ## 可执行示例与契约维护
 
-[Python 客户端](../examples/application_client.py) 和 [最小接入程序](../examples/application_quickstart.py) 只使用 Python 标准库。运行前设置 RUNDESK_URL、RUNDESK_APP_TOKEN、RUNDESK_WORKSPACE_ID 和本次固定的 RUNDESK_OPERATION_KEY；程序提交后查询真实 Task 状态，不自动重试写操作。
+[Python 客户端](../clients/python/application_client.py) 和 [最小接入程序](../clients/python/application_quickstart.py) 只使用 Python 标准库。运行前设置 RUNDESK_URL、RUNDESK_APP_TOKEN、RUNDESK_WORKSPACE_ID 和本次固定的 RUNDESK_OPERATION_KEY；程序提交后查询真实 Task 状态，不自动重试写操作。
 
 路由和契约修改必须同步更新 `scripts/generate-openapi.py`，重新生成 `internal/app/openapi.json`；运行 Go 应用/API/凭据/幂等回归。后端变化需验证既有 API 行为与取消/恢复/副作用边界。当前验证结果见 [VALIDATION](VALIDATION.md)。
 

@@ -1,0 +1,35 @@
+{
+  "passed": true,
+  "scope": "Client/deployment relocation and package staging boundaries; executable-header fixtures do not demonstrate actual binary execution. Actual staged-service and UHP protocol checks require the final compiled binary.",
+  "checks": [
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_package_release.py",
+      "result": "passed",
+      "tests": 7,
+      "skipped": 0,
+      "notes": "Final package boundary rerun passed after preserving LICENSE, THIRD_PARTY_NOTICES.md, LICENSES/ and the compiled Kun SDK license; all notice files are covered by the package manifest."
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_uhp_client.py",
+      "result": "passed",
+      "tests": 14
+    },
+    {
+      "command": "python3 clients/python/application_quickstart.py --help",
+      "result": "passed"
+    },
+    {
+      "command": "python3 clients/python/uhp_client.py --help",
+      "result": "passed"
+    },
+    {
+      "name": "AST parse for relocated clients and affected Python scripts",
+      "result": "passed",
+      "files": 8
+    }
+  ],
+  "platform_limits": [
+    "Windows launcher bytes and PE packaging structure are tested; no Windows-native process was executed."
+  ],
+  "packaging_cli": "python3 scripts/package-release.py --binary /absolute/rundesk --output-dir /new/outside/checkout/path [--kun /absolute/kun]"
+}

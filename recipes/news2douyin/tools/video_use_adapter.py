@@ -2,7 +2,7 @@
 """Render a script-led EDL with pinned video-use and continuous external narration.
 
 No transcription, cloud model, shell command interpolation or network is required.
-See examples/video-build/README.md for the input/EDL/completion contract.
+See recipes/video-build/README.md for the input/EDL/completion contract.
 """
 from __future__ import annotations
 

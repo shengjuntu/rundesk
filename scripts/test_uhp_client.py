@@ -18,7 +18,7 @@ from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location("uhp_client", ROOT / "examples/uhp_client.py")
+SPEC = importlib.util.spec_from_file_location("uhp_client", ROOT / "clients/python/uhp_client.py")
 uhp = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(uhp)
 TOKEN = "uhp-fixture-secret-never-real"

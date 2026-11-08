@@ -50,9 +50,9 @@ Windows/macOS 仍可运行本机助手；这两个平台以及远程 Docker daem
 
 ```bash
 # 在发布包根目录构建；版本由管理员明确选择。
-docker build -f examples/docker/Dockerfile \
+docker build -f recipes/generic/Dockerfile \
   --build-arg CODEX_VERSION=0.159.2 \
-  -t rundesk-news:1.0 examples/docker
+  -t rundesk-news:1.0 recipes/generic
 ```
 
 示例版本曾用于先前的本机协议验证；本版未在真实 Docker 中验证它。可选择你已验证的 Codex 版本。示例 Dockerfile 包含 Node、Python、Git；按应用需要添加工具、MCP 依赖和 `seed/skills/<name>/` 目录。不要声明 VOLUME、安装时嵌入密钥，或依赖启动 ENTRYPOINT：RunDesk 会覆盖入口并挂载自身静态编译的监管助手。

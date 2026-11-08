@@ -58,7 +58,7 @@ def main():
     data = output / 'app-data'
     if data.exists():
         raise RuntimeError('Use a fresh output directory; existing app-data is never overwritten')
-    bridge = root / 'examples/_shared/video_app_media.py'
+    bridge = root / 'recipes/hyperframes/tools/video_app_media.py'
     version = subprocess.check_output([str(binary), '--version'], text=True).strip()
     assert '0.26.0' in version, version
     wav = io.BytesIO()

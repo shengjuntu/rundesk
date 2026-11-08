@@ -16,8 +16,8 @@ from unittest.mock import patch
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "examples"))
-import profiles
+sys.path.insert(0, str(ROOT / "scripts"))
+import recipes as profiles
 
 
 def module(name, file):
@@ -38,12 +38,12 @@ class ProfilesTest(unittest.TestCase):
             except SystemExit as exc: code = exc.code
         return code, stdout.getvalue(), stderr.getvalue()
 
-    def test_catalog_and_uniform_wrappers(self):
+    def test_catalog_and_unified_cli(self):
         code, out, _ = self.cli("list")
         self.assertEqual(code, 0)
         self.assertEqual([p["id"] for p in json.loads(out)["items"]], list(profiles.PROFILE_IDS))
         for name in profiles.PROFILE_IDS:
-            data = subprocess.check_output([sys.executable, str(ROOT / "examples" / name / "run.py"), "inspect"], cwd=self.root)
+            data = subprocess.check_output([sys.executable, str(ROOT / "scripts/recipes.py"), "inspect", name], cwd=self.root)
             self.assertEqual(json.loads(data)["profile"]["id"], name)
 
     def test_all_context_variants_and_toml(self):
@@ -83,8 +83,8 @@ class ProfilesTest(unittest.TestCase):
         self.assertEqual(code, 2); self.assertEqual(archives[0].read_bytes(), original)
 
     def test_dockerfile_is_read_from_editable_file(self):
-        copy = self.root / "examples"
-        shutil.copytree(ROOT / "examples", copy, ignore=shutil.ignore_patterns("__pycache__"))
+        copy = self.root / "recipes"
+        shutil.copytree(ROOT / "recipes", copy, ignore=shutil.ignore_patterns("__pycache__"))
         file = copy / "news2douyin/Dockerfile"
         file.write_text(file.read_text().replace("USER node", "RUN echo external-file-change\nUSER node"))
         with patch.object(profiles, "ROOT", copy):
@@ -95,6 +95,72 @@ class ProfilesTest(unittest.TestCase):
         self.assertIn("RUN echo external-file-change", docker)
         self.assertIn("ARG RD_BASE_IMAGE=registry.example.test/library/node:22-bookworm-slim", docker)
         self.assertIn("FROM ${RD_BASE_IMAGE}", docker)
+
+    def test_canonical_tool_and_config_edits_survive_default_export(self):
+        copy = self.root / "canonical"
+        shutil.copytree(ROOT / "recipes", copy)
+        helper = copy / "news2douyin/tools/read_web.py"
+        helper.write_text(helper.read_text() + "\n# operator-tool-edit\n")
+        seed = copy / "news2douyin/seed/config.toml"
+        seed.write_text(seed.read_text() + "\n# operator-config-edit\n")
+        with patch.object(profiles, "ROOT", copy):
+            target = self.root / "edited"
+            code, _, err = self.cli("prepare", "news2douyin", "--codex-version", "0.157.1", "--output", str(target))
+            self.assertEqual(code, 0, err)
+            self.assertEqual((target / "tools/read_web.py").read_bytes(), helper.read_bytes())
+            self.assertEqual((target / "seed/config.toml").read_bytes(), seed.read_bytes())
+            self.assertTrue((copy / "news2douyin/recipe.json").is_file())
+            self.assertFalse((copy / "news2douyin/profile.lock.json").exists())
+            self.assertFalse((target / "recipe.json").exists())
+            self.assertFalse((target / "variants").exists())
+
+    def test_output_cannot_enter_canonical_tree_even_through_alias(self):
+        copy = self.root / "canonical"
+        shutil.copytree(ROOT / "recipes", copy)
+        alias = self.root / "source-alias"; alias.symlink_to(copy, target_is_directory=True)
+        with patch.object(profiles, "ROOT", copy):
+            for output in (copy / "news2douyin/generated", alias / "news2douyin/generated"):
+                code, _, err = self.cli("prepare", "news2douyin", "--codex-version", "0.157.1", "--output", str(output))
+                self.assertEqual(code, 2, err)
+                self.assertFalse(output.exists())
+        existing = self.root / "existing"; existing.mkdir()
+        output_link = self.root / "out-link"; output_link.symlink_to(existing, target_is_directory=True)
+        self.assertEqual(self.cli("prepare", "news2douyin", "--codex-version", "0.157.1", "--output", str(output_link))[0], 2)
+
+    def test_generated_metadata_twins_are_rejected(self):
+        copy = self.root / "canonical"
+        shutil.copytree(ROOT / "recipes", copy)
+        directory = copy / "news2douyin"
+        (directory / "profile.lock.json").write_bytes((directory / "recipe.json").read_bytes())
+        with patch.object(profiles, "ROOT", copy):
+            self.assertEqual(self.cli("validate", "news2douyin")[0], 2)
+
+    def test_legacy_validator_keeps_operator_edits_and_rejects_source_export(self):
+        copy = self.root / "canonical"
+        shutil.copytree(ROOT / "recipes", copy)
+        helper = copy / "news2douyin/tools/read_web.py"
+        helper.write_text(helper.read_text() + "\n# retained-operator-edit\n")
+        before = {str(p.relative_to(copy)): p.read_bytes() for p in copy.rglob("*") if p.is_file()}
+        legacy = module("legacy_recipe_validator", ROOT / "scripts/embed-profiles.py")
+        with patch.object(profiles, "ROOT", copy), patch.object(sys, "argv", ["embed-profiles.py", "--check"]), contextlib.redirect_stdout(io.StringIO()):
+            legacy.main()
+        after = {str(p.relative_to(copy)): p.read_bytes() for p in copy.rglob("*") if p.is_file()}
+        self.assertEqual(before, after)
+        exported = self.root / "exported"
+        with patch.object(profiles, "ROOT", copy), patch.object(sys, "argv", ["embed-profiles.py", "--output-dir", str(exported), "--codex-version", "0.157.1"]), contextlib.redirect_stdout(io.StringIO()):
+            legacy.main()
+        for name in profiles.PROFILE_IDS:
+            self.assertTrue((exported / name / "profile.lock.json").is_file())
+            self.assertFalse((exported / name / "recipe.json").exists())
+            self.assertFalse((exported / name / "variants").exists())
+        self.assertEqual((exported / "news2douyin/tools/read_web.py").read_bytes(), helper.read_bytes())
+        self.assertTrue((exported / "generic/Dockerfile").is_file())
+        self.assertEqual(before, {str(p.relative_to(copy)): p.read_bytes() for p in copy.rglob("*") if p.is_file()})
+        alias = self.root / "alias"; alias.symlink_to(copy, target_is_directory=True)
+        with patch.object(profiles, "ROOT", copy), patch.object(sys, "argv", ["embed-profiles.py", "--output-dir", str(alias / "generated")]), contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as result: legacy.main()
+        self.assertEqual(result.exception.code, 2)
+        self.assertFalse((copy / "generated").exists())
 
     def test_source_arguments_apply_only_during_package_install(self):
         for name in profiles.PROFILE_IDS:
@@ -129,7 +195,7 @@ class ProfilesTest(unittest.TestCase):
         legacy = sources / "legacy.list"
         legacy.write_text("deb [signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] https://deb.debian.org/debian bookworm main\ndeb https://third-party.example.test/repo stable main\n")
         env = dict(os.environ, RD_APT_MIRROR="https://mirror.example.test/debian", RD_APT_SECURITY_MIRROR="https://mirror.example.test/debian-security")
-        script = ROOT / "examples/_shared/configure-apt.sh"
+        script = ROOT / "recipes/news2douyin/tools/configure-apt.sh"
         subprocess.run(["sh", str(script), str(root)], env=env, check=True)
         content = path.read_text()
         self.assertIn("URIs: https://mirror.example.test/debian\n", content)
@@ -183,9 +249,9 @@ class ProfilesTest(unittest.TestCase):
                 self.assertNotIn("COPY vendor/", (lite / "Dockerfile").read_text())
 
     def test_agent_reach_rejects_modified_extra_or_linked_source(self):
-        copy = self.root / "examples"
-        shutil.copytree(ROOT / "examples", copy, ignore=shutil.ignore_patterns("__pycache__"))
-        source = copy / "_shared/vendor/agent-reach"
+        copy = self.root / "recipes"
+        shutil.copytree(ROOT / "recipes", copy, ignore=shutil.ignore_patterns("__pycache__"))
+        source = copy / "news2douyin/vendor/agent-reach"
         file = source / "pyproject.toml"
         original = file.read_bytes()
         with patch.object(profiles, "ROOT", copy):
@@ -195,7 +261,7 @@ class ProfilesTest(unittest.TestCase):
             file.write_bytes(original)
             extra = source / "unexpected.txt"; extra.write_text("do not sweep unreviewed files")
             with self.assertRaisesRegex(profiles.ProfileError, "file list mismatch"):
-                profiles.load_profile("people-search")
+                profiles.load_profile("news2douyin")
             extra.unlink()
             guide = source / "agent_reach/guides/setup-exa.md"
             guide.unlink(); guide.symlink_to(file)
@@ -218,7 +284,7 @@ class ProfilesTest(unittest.TestCase):
         self.assertNotIn('librosa', (target / "requirements.txt").read_text())
         self.assertFalse((target / "vendor").exists())
         for reference in profile["skillFiles"]:
-            self.assertEqual((target / "skills/build-video-artifacts" / reference).read_bytes(), (ROOT / "examples/video-build/skills/build-video-artifacts" / reference).read_bytes())
+            self.assertEqual((target / "skills/build-video-artifacts" / reference).read_bytes(), (ROOT / "recipes/video-build/skills/build-video-artifacts" / reference).read_bytes())
         lock = json.loads((target / "profile.lock.json").read_text())
         self.assertFalse(lock["selection"]["videoUse"])
         self.assertEqual(hashlib.sha256((target / "hyperframes/package-lock.json").read_bytes()).hexdigest(), lock["dependencies"]["hyperframes"]["npmLockSHA256"])
@@ -242,9 +308,9 @@ class ProfilesTest(unittest.TestCase):
         self.assertEqual(self.cli("validate", "news2douyin", "--with-video-use")[0], 2)
 
     def test_hyperframes_rejects_tampered_dependency_lock(self):
-        copy = self.root / "examples"
-        shutil.copytree(ROOT / "examples", copy, ignore=shutil.ignore_patterns("__pycache__"))
-        lock = copy / "_shared/hyperframes/package-lock.json"
+        copy = self.root / "recipes"
+        shutil.copytree(ROOT / "recipes", copy, ignore=shutil.ignore_patterns("__pycache__"))
+        lock = copy / "video-build/hyperframes/package-lock.json"
         lock.write_bytes(lock.read_bytes() + b" ")
         with patch.object(profiles, "ROOT", copy):
             code, _, error = self.cli("validate", "video-build")
@@ -259,8 +325,8 @@ class ProfilesTest(unittest.TestCase):
         self.assertEqual(self.cli("validate", "video-build", "--with-agent-reach")[0], 2)
 
     def test_only_declared_skill_files_and_symlink_rejection(self):
-        copy = self.root / "examples"
-        shutil.copytree(ROOT / "examples", copy, ignore=shutil.ignore_patterns("__pycache__"))
+        copy = self.root / "recipes"
+        shutil.copytree(ROOT / "recipes", copy, ignore=shutil.ignore_patterns("__pycache__"))
         secret = copy / "news2douyin/skills/collect-news-evidence/auth.json"
         secret.write_text('{"token":"test-sentinel"}')
         with patch.object(profiles, "ROOT", copy):
@@ -271,11 +337,11 @@ class ProfilesTest(unittest.TestCase):
             self.assertEqual(self.cli("validate", "news2douyin")[0], 2)
 
     def test_declared_skill_rejects_traversal_and_nested_symlink(self):
-        copy = self.root / "examples"
-        shutil.copytree(ROOT / "examples", copy, ignore=shutil.ignore_patterns("__pycache__"))
-        manifest = copy / "video-build/profile.json"
+        copy = self.root / "recipes"
+        shutil.copytree(ROOT / "recipes", copy, ignore=shutil.ignore_patterns("__pycache__"))
+        manifest = copy / "video-build/recipe.json"
         original = json.loads(manifest.read_text())
-        invalid = dict(original, skillFiles=original["skillFiles"] + ["references/../SKILL.md"])
+        invalid = json.loads(json.dumps(original)); invalid["profile"]["skillFiles"] += ["references/../SKILL.md"]
         manifest.write_text(json.dumps(invalid))
         with patch.object(profiles, "ROOT", copy):
             self.assertEqual(self.cli("validate", "video-build")[0], 2)
@@ -287,10 +353,10 @@ class ProfilesTest(unittest.TestCase):
             self.assertEqual(self.cli("validate", "video-build")[0], 2)
 
     def test_invalid_manifest_types_are_structured_errors(self):
-        copy = self.root / "examples"
-        shutil.copytree(ROOT / "examples", copy, ignore=shutil.ignore_patterns("__pycache__"))
-        path = copy / "news2douyin/profile.json"
-        data = json.loads(path.read_text()); data["resources"]["cpus"] = True
+        copy = self.root / "recipes"
+        shutil.copytree(ROOT / "recipes", copy, ignore=shutil.ignore_patterns("__pycache__"))
+        path = copy / "news2douyin/recipe.json"
+        data = json.loads(path.read_text()); data["profile"]["resources"]["cpus"] = True
         path.write_text(json.dumps(data))
         with patch.object(profiles, "ROOT", copy):
             code, _, err = self.cli("validate", "news2douyin")
@@ -305,7 +371,7 @@ class ProfilesTest(unittest.TestCase):
             self.assertFalse(result["ready"]); self.assertEqual(run.call_count, 2)
 
     def test_agent_reach_runtime_config_is_per_home_and_preserves_existing(self):
-        config = module("agent_config", ROOT / "examples/_shared/agent_reach_config.py")
+        config = module("agent_config", ROOT / "recipes/news2douyin/tools/agent_reach_config.py")
         first = self.root / 'first'; second = self.root / 'second'
         path = config.initialize(first)
         self.assertEqual(json.loads(path.read_text())['mcpServers']['exa']['baseUrl'], 'https://mcp.exa.ai/mcp')
@@ -332,7 +398,7 @@ class ProfilesTest(unittest.TestCase):
         self.assertNotIn('wigolo', docker)
         self.assertNotIn('chromium', docker)
         lock = json.loads((target / 'agent-tools/package-lock.json').read_text())
-        for name, version in json.loads((ROOT / 'examples/_shared/dependencies.json').read_text())['npm'].items():
+        for name, version in profiles.dependency_pins()['npm'].items():
             self.assertEqual(lock['packages']['node_modules/' + name]['version'], version)
         self.assertIn('COPY tools/mcporter /usr/local/bin/mcporter', docker)
 
@@ -346,7 +412,7 @@ class ProfilesTest(unittest.TestCase):
             self.assertEqual(cleanup[1:3], ["rm", "--force"])
 
     def test_web_evidence_success_failure_and_no_overwrite(self):
-        read = module("read_web", ROOT / "examples/_shared/read_web.py")
+        read = module("read_web", ROOT / "recipes/news2douyin/tools/read_web.py")
         class Response(io.BytesIO):
             status = 200; headers = {"Content-Type": "text/markdown"}
         def call(out, fail=False):

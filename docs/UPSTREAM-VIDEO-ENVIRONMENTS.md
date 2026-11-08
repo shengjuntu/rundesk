@@ -1,13 +1,13 @@
 # 自研 Video Builder 与三个独立上游环境
 
-RunDesk 0.51.0 新增三个独立运行配置，不改变 `examples/video-build` 的制作流程和目录内容。
+RunDesk 0.51.0 新增三个独立运行配置，不改变 `recipes/video-build` 的制作流程和目录内容。
 
 | 目录 | 使用的制作方式 | 与 Video App 的关系 |
 | --- | --- | --- |
-| `examples/video-build` | 我们自己的 Video Builder：Codex、领域 MCP、工程和归档流程 | 保留现有一键初稿、对话修改和导出 |
-| `examples/hyperframes` | 上游 HyperFrames 的原生 Skills、HTML 工程和 CLI 渲染 | 调用 App 的生成服务，下载素材进入原生工程 |
-| `examples/video-use` | 上游 video-use 的 Skill、原生 EDL 与剪辑 helpers | 调用 App 的生成服务，不走自研 adapter 2 |
-| `examples/openmontage` | 上游 OpenMontage 的指南、pipelines、tools 和 selectors | 通过独立 provider 模块调用 App 的生成 MCP |
+| `recipes/video-build` | 我们自己的 Video Builder：Codex、领域 MCP、工程和归档流程 | 保留现有一键初稿、对话修改和导出 |
+| `recipes/hyperframes` | 上游 HyperFrames 的原生 Skills、HTML 工程和 CLI 渲染 | 调用 App 的生成服务，下载素材进入原生工程 |
+| `recipes/video-use` | 上游 video-use 的 Skill、原生 EDL 与剪辑 helpers | 调用 App 的生成服务，不走自研 adapter 2 |
+| `recipes/openmontage` | 上游 OpenMontage 的指南、pipelines、tools 和 selectors | 通过独立 provider 模块调用 App 的生成 MCP |
 
 三套上游环境分别构建镜像，使用独立 Codex Docker 实例、工作区和认证配置。它们用于直接运行、比较和研究上游方法；自己的 Video Builder 以后按需要吸收优点，不自动随上游更新。
 
@@ -26,9 +26,9 @@ Video App 在这里承担生成服务：IndexTTS 配音、已配置的图像生�
 在初始化向导选择对应运行配置，或在源码根目录使用各目录的 `run.py`。以 HyperFrames 为例，将版本换成实际选择的 Codex 精确版本：
 
 ```bash
-python3 examples/hyperframes/run.py prepare --codex-version X.Y.Z --output ./hyperframes-context
-python3 examples/hyperframes/run.py build --codex-version X.Y.Z --image rundesk-hyperframes:local
-python3 examples/hyperframes/run.py doctor --image rundesk-hyperframes:local
+python3 scripts/recipes.py prepare hyperframes --codex-version X.Y.Z --output ./hyperframes-context
+python3 scripts/recipes.py build hyperframes --codex-version X.Y.Z --image rundesk-hyperframes:local
+python3 scripts/recipes.py doctor hyperframes --image rundesk-hyperframes:local
 ```
 
 `video-use` 和 `openmontage` 使用各自目录，不能用 `video-build --with-video-use` 代替新的独立配置。`prepare/pack` 生成上下文；构建依赖网络和 Docker，构建成功后仍须在 RunDesk 显式选择镜像、建立专用实例和工作区，并完成 Codex 认证。可复用 0.50.0 的命名运行预设机制，但登记名字本身不会构建镜像。

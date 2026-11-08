@@ -47,7 +47,7 @@ Agent 创建时可显式继承当前默认 Codex 模型服务，也可保留原�
 
 ## 动态配方
 
-自定义配方存于 `data/build-recipes/<id>/revisions/<revision>/`，包含冻结 manifest、原始 ZIP 和摘要；无需修改 examples 或重新编译宿主。每次导入产生独立配方版本，修改内容应导入新版本。归档不删除历史输入。默认配方的完整文件在 `recipes/<profile>/`，可直接编辑；Go 不再嵌入 ZIP。修改影响新建构建，无需重编译或重启；已冻结的历史 ZIP 不改变。news2douyin、people-search 保留 1.1.2 的 Agent-Reach 本地源码修复。外置目录、源字段及边界见[下载源配置](BUILD-SOURCES.md)。
+自定义配方存于 `data/build-recipes/<id>/revisions/<revision>/`，包含冻结 manifest、原始 ZIP 和摘要；无需修改宿主源码或重新编译。每次导入产生独立配方版本，修改内容应导入新版本。归档不删除历史输入。默认配方的唯一来源在 `recipes/<profile>/`，可直接编辑；`recipe.json` 在冻结上下文时生成 `profile.lock.json`，Go 不嵌入配方 ZIP，也不依赖 Python。修改影响新建构建，无需重编译或重启；已冻结的历史 ZIP 不改变。news2douyin、people-search 保留 1.1.2 的 Agent-Reach 本地源码修复。外置目录、源字段及边界见[下载源配置](BUILD-SOURCES.md)。
 
 manifest 示例：
 

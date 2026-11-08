@@ -6,7 +6,9 @@ import re
 
 root = Path(__file__).resolve().parents[1]
 errors = []
-files = [root / 'README.md', root / 'README.zh-CN.md', *sorted((root / 'docs').rglob('*.md')), *sorted((root / 'examples').rglob('*.md'))]
+files = [root / 'README.md', root / 'README.zh-CN.md', root / 'THIRD_PARTY_NOTICES.md', *[file for directory in ('docs', 'recipes', 'clients', 'deploy') for file in sorted((root / directory).rglob('*.md'))]]
+if (root / 'examples').exists():
+    errors.append('examples/: obsolete source tree must not be shipped')
 for file in files:
     for target in re.findall(r'\]\(([^)]+)\)', file.read_text()):
         if '://' in target or target.startswith(('#', 'mailto:')):

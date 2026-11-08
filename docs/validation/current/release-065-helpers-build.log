@@ -1,0 +1,11 @@
+test_archive_corruption_and_failed_download_do_not_commit (__main__.BuildHelpersTest.test_archive_corruption_and_failed_download_do_not_commit) ... ok
+test_archive_full_url_precedence_and_verified_reuse (__main__.BuildHelpersTest.test_archive_full_url_precedence_and_verified_reuse) ... ok
+test_auto_install_keeps_exact_version_and_selected_registry (__main__.BuildHelpersTest.test_auto_install_keeps_exact_version_and_selected_registry) ... ok
+test_base_mismatch_or_missing_app_server_never_downloads (__main__.BuildHelpersTest.test_base_mismatch_or_missing_app_server_never_downloads) ... ok
+test_existing_exact_runtime_avoids_npm (__main__.BuildHelpersTest.test_existing_exact_runtime_avoids_npm) ... ok
+test_native_payload_is_verified_before_symlink_and_preserves_companions (__main__.BuildHelpersTest.test_native_payload_is_verified_before_symlink_and_preserves_companions) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.173s
+
+OK

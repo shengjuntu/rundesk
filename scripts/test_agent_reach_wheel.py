@@ -15,12 +15,12 @@ import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "examples"))
-import profiles
+sys.path.insert(0, str(ROOT / "scripts"))
+import recipes as profiles
 
 
 def main():
-    pin = profiles.read_json(ROOT / "examples/_shared/dependencies.json")["agentReach"]
+    pin = profiles.dependency_pins("news2douyin")["agentReach"]
     source, files = profiles.agent_reach_files(pin)
     with tempfile.TemporaryDirectory(prefix="rundesk-reach-wheel-") as tmp:
         temp = Path(tmp)

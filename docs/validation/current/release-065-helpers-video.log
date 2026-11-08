@@ -1,0 +1,22 @@
+test_exact_unicode_multiple_references_and_coverage (__main__.TextReferencesTest.test_exact_unicode_multiple_references_and_coverage) ... ok
+test_invalid_references (__main__.TextReferencesTest.test_invalid_references) ... ok
+test_optional_legacy_without_source (__main__.TextReferencesTest.test_optional_legacy_without_source) ... ok
+test_overlapping_occurrence_matches (__main__.TextReferencesTest.test_overlapping_occurrence_matches) ... ok
+test_source_integrity_before_media (__main__.TextReferencesTest.test_source_integrity_before_media) ... ok
+test_static_version_without_required_render_arguments (__main__.TextReferencesTest.test_static_version_without_required_render_arguments) ... ok
+test_aac_padding_does_not_accumulate_across_one_frame_cuts (__main__.VideoUseAdapterTest.test_aac_padding_does_not_accumulate_across_one_frame_cuts) ... ok
+test_changed_input_and_symlink_rejected (__main__.VideoUseAdapterTest.test_changed_input_and_symlink_rejected) ... ok
+test_completion_is_not_overwritten (__main__.VideoUseAdapterTest.test_completion_is_not_overwritten) ... ok
+test_edit_changed_during_render_does_not_change_snapshot (__main__.VideoUseAdapterTest.test_edit_changed_during_render_does_not_change_snapshot) ... concat → base.mp4
+ok
+test_invalid_edl_fails_without_completion (__main__.VideoUseAdapterTest.test_invalid_edl_fails_without_completion) ... ok
+test_invalid_source_hash_or_quote_fails_before_media_probe (__main__.VideoUseAdapterTest.test_invalid_source_hash_or_quote_fails_before_media_probe) ... ok
+test_old_edl_and_manifest_without_references_still_render (__main__.VideoUseAdapterTest.test_old_edl_and_manifest_without_references_still_render) ... ok
+test_playlist_and_long_audio_do_not_bypass_visual_bounds (__main__.VideoUseAdapterTest.test_playlist_and_long_audio_do_not_bypass_visual_bounds) ... ok
+test_real_render_completion_and_continuous_audio (__main__.VideoUseAdapterTest.test_real_render_completion_and_continuous_audio) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 12.862s
+
+OK
+concat → concat.mp4

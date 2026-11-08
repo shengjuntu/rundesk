@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "scope": "Go recipe reader migration and canonical source snapshots; no Docker daemon, model or worker execution.",
+  "checks": [
+    {
+      "command": "go test ./internal/recipefiles ./internal/dockertemplate",
+      "exitCode": 0,
+      "notes": "New canonical and legacy metadata, regenerated lock/checksums, upstream projection, immutable prior snapshots, no source writes, descriptor ambiguity, limits and link safety passed."
+    },
+    {
+      "command": "go test ./internal/app -run 'TestRuntimeImageEmbeddedContext|TestIndependentUpstreamRuntimeContextsAndExactImageIdentity|TestResearchRecipeVendoredContext|TestExternalRecipeChangesDoNotChangeFrozenImageIdentity|TestRecipeFilesHTTPPreviewAndCompleteExport|TestBuildSourceCapabilityEndpointAndStaleRecipe|TestBuildCenterRecipeImportsAndImmutableSnapshots' -count=1",
+      "exitCode": 0,
+      "packageElapsedSeconds": 8.703,
+      "stdout": "ok github.com/shengjuntu/rundesk/internal/app 8.703s"
+    }
+  ],
+  "notes": [
+    "A compile-only check initially caught an unused filepath import; removed before passing compilation and focused tests. Compile-only no-tests result is not counted as a behavior test.",
+    "Production Go source has no examples/ import or active path reference after moving both runtime readers to internal/."
+  ]
+}

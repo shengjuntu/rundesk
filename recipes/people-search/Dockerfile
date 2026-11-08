@@ -1,4 +1,4 @@
-# Editable RunDesk Dockerfile. Keep profile.lock.json and source settings with this recipe.
+# Editable RunDesk Dockerfile. Author metadata in recipe.json; profile.lock.json is generated in each build snapshot.
 ARG RD_BASE_IMAGE=node:22-bookworm-slim
 FROM ${RD_BASE_IMAGE}
 # All managed profiles require the Node runtime and unprivileged node user.

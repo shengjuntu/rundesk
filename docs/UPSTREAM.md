@@ -62,6 +62,6 @@ The independent `/v1` adapter follows UHP `2026-10-19`, pinned to HarnessRouter 
 
 ## Runtime profiles in 0.46.0
 
-Thanks to Agent-Reach contributors. The user-selected fork https://github.com/silently0801/agent-reach is pinned to cf70302e928155703829439115a18132928f8913 (1.1.0, MIT). RunDesk installs the CLI, its upstream tools and its Skill in the generated image; no credentials are distributed. Its system setup is translated into explicit Docker layers instead of running an unpinned best-effort installer. See [assessment](../examples/news2douyin/AGENT-REACH.md) and [notices](../examples/_shared/THIRD_PARTY.md).
+Thanks to Agent-Reach contributors. The user-selected fork https://github.com/silently0801/agent-reach is pinned to cf70302e928155703829439115a18132928f8913 (1.1.0, MIT). RunDesk installs the CLI, its upstream tools and its Skill in the generated image; no credentials are distributed. Its system setup is translated into explicit Docker layers instead of running an unpinned best-effort installer. See [assessment](../recipes/news2douyin/AGENT-REACH.md) and [notices](../recipes/news2douyin/THIRD_PARTY.md).
 
 Wigolo was evaluated previously; it is no longer included in current recipes. Thank you to its contributors for the earlier reference material.

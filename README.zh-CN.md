@@ -26,7 +26,7 @@ RunDesk 把用户请求、模型交互、工具调用、审批、异常和制品
 
 **运行预设（Runtime Presets）**用于提供预先准备、可重复使用的运行配置，目标是把所需 Skills、插件、MCP 服务和工具提前组合好，让应用直接使用。本版的命名预设绑定管理员批准的 Codex Docker 实例与工作区，通过构建配方和配置准备工具、Skills 与 MCP 接入。原生插件目前支持检查和已观察到的组件来源展示，稳定的原生安装/卸载尚未实现。仅登记一个预设，不代表已经构建镜像、安装插件或完成模型账号认证。
 
-入口：[应用 API](docs/API-V1.md)、[运行预设](docs/APPLICATION-RUNTIME-PRESETS.md)、[示例配置](examples/README.md)、[构建中心](docs/BUILD-CENTER.md)。
+入口：[应用 API](docs/API-V1.md)、[运行预设](docs/APPLICATION-RUNTIME-PRESETS.md)、[构建配方](recipes/README.md)、[构建中心](docs/BUILD-CENTER.md)。
 
 ### 3. 成为 Harness 开发者与研究者的实验场
 
@@ -46,7 +46,9 @@ RunDesk 通过 Kun 集成提供模块状态检查和执行循环策略选择。�
 
 ## 当前源码版本
 
-**RunDesk 0.64.0 · 外部 Kun 0.17.0 · worker 协议 16**
+**RunDesk 0.65.0 · 外部 Kun 0.17.0 · worker 协议 16**
+
+0.65.0 移除旧的 `examples/` 目录，以 `recipes/` 为唯一可编辑配方来源。生产读取代码、应用客户端和部署文件分别归入 `internal/`、`clients/python/`、`deploy/systemd/`。构建快照生成各自的锁文件，已审阅的本地依赖和可选配方继续保留。操作见[配方与统一 CLI](recipes/README.md)及[启动部署](docs/SETUP.md)。
 
 0.64.0 简化可选的 Docker 初始化页，将“下载现成镜像”和“从配方构建”明确区分。每个准备任务集中展示失败原因、Kun 修复、候选构建和验证结果，并可直接查看对应修复对话。下载失败仍由用户调整地址或重试；修复任务结束不等于镜像已验证。前两步模型与 Codex 配置沿用原流程。详见[启动与部署](docs/SETUP.md)与[WebUI](docs/WEBUI.md)。
 
@@ -79,13 +81,13 @@ RunDesk 通过 Kun 集成提供模块状态检查和执行循环策略选择。�
 
 news2douyin、people-search 1.1.2 保留 0.54.1 的 Agent-Reach 本地源码及 wheel 打包修复。Codex 继续精确选版，其他依赖仍需相应下载通道。
 
-0.54.0 整理实例导航与配置上下文，不改变存储和 API schema。继续保留 0.53.0 引入的持久任务截止时间、进度与审批交接、明确的执行能力声明和 [Python UHP 客户端](examples/uhp_client.py)。不支持的步数与输出 Token 预算仍明确披露，应用可在提交时要求必需能力。
+0.54.0 整理实例导航与配置上下文，不改变存储和 API schema。继续保留 0.53.0 引入的持久任务截止时间、进度与审批交接、明确的执行能力声明和 [Python UHP 客户端](clients/python/uhp_client.py)。不支持的步数与输出 Token 预算仍明确披露，应用可在提交时要求必需能力。
 
-RunDesk 独立运行，不依赖 HarnessRouter 服务。详见[当前状态](docs/STATUS.md)、[系统架构](docs/ARCHITECTURE.md)和[验证范围](docs/VALIDATION.md)。视频和研究应用是第二个使命的接入示例，各自配套版本放在[示例文档](examples/README.md)中维护。
+RunDesk 独立运行，不依赖 HarnessRouter 服务。详见[当前状态](docs/STATUS.md)、[系统架构](docs/ARCHITECTURE.md)和[验证范围](docs/VALIDATION.md)。视频和研究应用是第二个使命的接入示例，各自配套版本放在[配方文档](recipes/README.md)中维护。
 
 ## 快速开始
 
-Linux amd64 与 Windows amd64 可运行包包含 RunDesk、独立 Kun 程序、`recipes/` 和 `config/`，宿主无需先装 Go、Node.js 或 npm。
+Linux 或 Windows 部署目录包含 RunDesk、`recipes/`、`config/` 和对应平台的启动文件；打包时明确提供独立 Kun 才会一并加入。部署后宿主机无需 Go、Python、Node.js 或 npm。
 
 Linux 解压后执行：
 
@@ -105,7 +107,7 @@ make build
 ./bin/rundesk --data ./data
 ```
 
-将程序部署到源码目录之外时，还需把 `recipes/`、`config/` 放到可执行文件旁。其他配方目录使用 `RUNDESK_RECIPES_DIR`，自选源列表 JSON 使用 `RUNDESK_BUILD_SOURCES`。WebUI 继续内嵌，用户需要修改的构建资源改为外置文件。详见[部署](docs/SETUP.md)。
+用 `make package PACKAGE_DIR=../rundesk-portable` 在源码树之外生成新的部署目录；需要 Kun 时增加 `KUN_BINARY=/absolute/path/to/kun`。部署到源码目录之外时，还需把 `recipes/`、`config/` 放到可执行文件旁。其他配方目录使用 `RUNDESK_RECIPES_DIR`，自选源列表 JSON 使用 `RUNDESK_BUILD_SOURCES`。WebUI 继续内嵌，用户需要修改的构建资源改为外置文件。详见[部署](docs/SETUP.md)。
 
 打开 <http://127.0.0.1:3210> 开始初始化。扫描对象是运行 RunDesk 的机器，也可能是远程服务器；可手工填写模型服务地址，暂不需要的 Codex 或 Docker 可以跳过。仅体验界面、不调用真实模型：
 
@@ -128,7 +130,7 @@ Kun 连接支持工具调用的 Chat Completions 服务；Codex 使用原生模�
 | 面向用户 | 文档入口 |
 | --- | --- |
 | 企业 Agent 落地开发者 | [调试](docs/DEBUG.md) · [观测与采集](docs/UNIFIED_DEBUGGING.md) · [只读调试 API/MCP](docs/DEBUG-SERVICE.md) |
-| 应用开发者 | [应用注册](docs/APPLICATION-CONNECT.md) · [API](docs/API-V1.md) · [运行预设](docs/APPLICATION-RUNTIME-PRESETS.md) · [Python 示例](examples/application_quickstart.py) |
+| 应用开发者 | [应用注册](docs/APPLICATION-CONNECT.md) · [API](docs/API-V1.md) · [运行预设](docs/APPLICATION-RUNTIME-PRESETS.md) · [Python 示例](clients/python/application_quickstart.py) |
 | Harness 开发者与研究者 | [Kun 接入](docs/KUN.md) · [Harness 控制](docs/KUN-HARNESS.md) · [研究 API 与历史资料](docs/README.md#3-harness-开发与研究--harness-research) |
 | 维护者与部署者 | [架构](docs/ARCHITECTURE.md) · [构建中心](docs/BUILD-CENTER.md) · [下载源](docs/BUILD-SOURCES.md) · [升级](docs/UPGRADING.md) · [安全](SECURITY.md) |
 

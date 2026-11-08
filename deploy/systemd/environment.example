@@ -1,0 +1,6 @@
+# Copy to ~/.config/rundesk/environment; restrict it to mode 0600.
+# Values are literal systemd EnvironmentFile values, not shell commands.
+# Use absolute paths; no ~, $HOME, command substitution or shell activation.
+# PATH=/home/YOUR_USER/.local/bin:/usr/local/bin:/usr/bin:/bin
+# RUNDESK_TOKEN=replace-with-a-long-random-admin-token
+# OPENAI_API_KEY=your-provider-key-if-required

@@ -5,8 +5,8 @@
 ## 操作
 
 1. 在应用运行环境中启用 Docker。主机需要 Linux、本机 Docker Engine、Docker CLI 和 Buildx/BuildKit；服务用户需要访问所配置的 Unix socket。
-2. 推荐用 [典型配置 CLI](../examples/README.md) 的 `pack` 生成已填写 Codex 版本的 ZIP，根目录即 Dockerfile，无需 build args。也可自行准备 Dockerfile、工具、Skills 等目录。ZIP 根目录就是构建上下文；如果 ZIP 顶层包含文件夹，Dockerfile 路径要包含该文件夹，COPY 的路径也仍相对于 ZIP 根目录。
-   使用 `examples/docker/Dockerfile` 时，先把 `ARG CODEX_VERSION` 改成你已验证版本的默认值（`ARG CODEX_VERSION=...`），其他版本标签也可填写默认值；本版页面不传入 build args。将 `examples/docker` 内的 Dockerfile 与 seed 目录一起打包。
+2. 推荐用 [典型配置 CLI](../recipes/README.md) 的 `pack` 生成已填写 Codex 版本的 ZIP，根目录即 Dockerfile，无需 build args。也可自行准备 Dockerfile、工具、Skills 等目录。ZIP 根目录就是构建上下文；如果 ZIP 顶层包含文件夹，Dockerfile 路径要包含该文件夹，COPY 的路径也仍相对于 ZIP 根目录。
+   使用 `recipes/generic/Dockerfile` 时，先把 `ARG CODEX_VERSION` 改成你已验证版本的默认值（`ARG CODEX_VERSION=...`），其他版本标签也可填写默认值；本版页面不传入 build args。将 `recipes/generic` 内的 Dockerfile 与 seed 目录一起打包。
 3. 进入「应用 → 镜像与构建 → 构建任务 → 新建构建」。上传 ZIP，填写名称、Dockerfile 相对路径、超时分钟数，可选择不使用缓存。
 4. 上传后状态为「待启动」。检查后点击「开始构建」。所有应用共用一个串行构建队列。
 5. 查看日志和错误。成功后点击「查看镜像版本」，再显式设置应用版本、更新指定项目环境。构建成功不会自动切换正在使用的镜像。

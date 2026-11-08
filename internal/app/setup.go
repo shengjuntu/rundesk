@@ -20,7 +20,7 @@ import (
 	p "github.com/your-org/kun/sdk/protocol"
 	"github.com/shengjuntu/rundesk/internal/store"
 
-	dockertemplate "github.com/shengjuntu/rundesk/examples/docker"
+	dockertemplate "github.com/shengjuntu/rundesk/internal/dockertemplate"
 )
 
 type SetupState struct {

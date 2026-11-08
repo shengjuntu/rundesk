@@ -35,7 +35,7 @@
 
 单个标签最多读取 4096 字节，超过则按未提供处理。未知字段显示“未提供”；不把登记时间、拉取时间或镜像创建时间冒充声明的构建时间。外部地址以文本展示，不自动访问。不要在这些元数据里填写凭据。
 
-`examples/docker/Dockerfile` 已提供标签示例，可传入 `IMAGE_VERSION`、`SOURCE_URL`、`SOURCE_REVISION`、`BUILD_DATE`、`BUILD_URL` 等构建参数。`CODEX_VERSION` 仍必须明确指定。工具清单由维护镜像的人随 Dockerfile 更新。
+`recipes/generic/Dockerfile` 已提供标签示例，可传入 `IMAGE_VERSION`、`SOURCE_URL`、`SOURCE_REVISION`、`BUILD_DATE`、`BUILD_URL` 等构建参数。`CODEX_VERSION` 仍必须明确指定。工具清单由维护镜像的人随 Dockerfile 更新。
 
 镜像预装能力与环境中实际启用的配置不同：首次初始化从 seed 补充文件，之后已有 Skills、MCP 连接和认证保存在宿主机。升级镜像不会覆盖已经初始化的配置；要更新技能请显式导入目录或 ZIP。
 

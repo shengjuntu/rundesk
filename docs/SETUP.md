@@ -1,6 +1,6 @@
 # 启动与部署
 
-当前组合：RunDesk 0.59.1、独立 Kun 0.17.0、worker 协议 16。两者独立构建、以独立程序运行，也可在可运行包中一起分发；接口和旧版本兼容规则见 [Kun 拆分](KUN-SEPARATION.md)。
+当前组合：RunDesk 0.65.0、独立 Kun 0.17.0、worker 协议 16。两者独立构建、以独立程序运行，也可在可运行包中一起分发；接口和旧版本兼容规则见 [Kun 拆分](KUN-SEPARATION.md)。
 
 ## 可运行包
 
@@ -8,9 +8,12 @@
 
 ```text
 rundesk / rundesk.exe
-kun / kun.exe
+kun / kun.exe（可选）
 recipes/
 config/
+LICENSE
+THIRD_PARTY_NOTICES.md
+LICENSES/
 start-rundesk.sh / start-rundesk.cmd
 README.txt
 ```
@@ -24,7 +27,7 @@ chmod +x ./start-rundesk.sh
 
 Windows 双击 `start-rundesk.cmd`。启动脚本以自身目录为基准使用 `data/`，无需从指定当前目录启动；不要让多个服务共用同一数据目录。也可直接执行 `./rundesk --data ./data` 或 `.\rundesk.exe --data .\data`。打开 <http://127.0.0.1:3210> 开始初始化。
 
-可运行包无需 Go、Node.js 或 npm。Kun 与 RunDesk 仍是两个独立程序；仅提供模型服务地址不会自动下载模型权重或启动 vLLM/llama.cpp。拉取、检查、构建和运行 Docker 镜像需另外安装受支持的 Docker Engine；不需要 Docker 时可以跳过。其他系统或架构可从源码分别构建。
+可运行包无需 Go、Python、Node.js 或 npm。Kun 与 RunDesk 仍是两个独立程序；仅提供模型服务地址不会自动下载模型权重或启动 vLLM/llama.cpp。拉取、检查、构建和运行 Docker 镜像需另外安装受支持的 Docker Engine；不需要 Docker 时可以跳过。其他系统或架构可从源码分别构建。
 
 ## 从源码构建
 
@@ -49,6 +52,26 @@ Linux/macOS：
 
 默认 http://127.0.0.1:3210。`--kun /absolute/path/to/kun` 指定 worker；否则在 RunDesk 可执行文件旁查找。路径属于服务器。缺少或协议不兼容时明确报错，不改用 Codex。`--data` 在启动时确定，向导不迁移数据。已有 Kun 执行目录不需要搬迁；替换二进制前先停止相关执行，保持原数据目录。
 
+## 从源码生成部署目录
+
+`make build` 只编译程序。生成可移出源码树的 Linux 部署目录，可执行：
+
+```bash
+make package PACKAGE_DIR=../rundesk-portable
+# 需要同时提供独立 Kun 时：
+make package PACKAGE_DIR=../rundesk-with-kun KUN_BINARY=/absolute/path/to/kun
+```
+
+目标必须在源码目录之外且尚不存在。目录中包含本机程序、`recipes/`、`config/`、对应平台的启动文件及说明；Kun 仅在明确提供时加入。启动脚本以自身目录定位资源和默认 `data/`，运行时不需要 Python、Node 或 npm。
+
+已有跨平台二进制可直接交给打包脚本；它按可执行文件头选择 Linux 或 Windows 启动文件，不执行跨平台程序：
+
+```bash
+python3 scripts/package-release.py --binary ./bin/rundesk.exe --output-dir ../rundesk-windows
+```
+
+应核对所提供程序的 `--version` 与本次来源一致，并在目标平台验收。移出源码树后检查启动、配方读取、上下文导出和配置保存，避免当前工作目录的后备查找掩盖资源漏包。
+
 ## 外置构建文件
 
 WebUI 仍嵌入程序；Docker 构建配方从磁盘读取。若只在源码根目录启动，上级目录查找可以定位本仓库的 `recipes/` 和默认源配置；发布到其他目录时，把 `recipes/`、`config/` 与 RunDesk 程序一起部署。
@@ -61,7 +84,7 @@ export RUNDESK_BUILD_SOURCES=/srv/rundesk/build-sources.json
 
 `RUNDESK_BUILD_SOURCES` 指向要使用的完整源列表文件；可先复制发行包中的 `config/build-sources.json`。不设置该变量时，默认源列表首次复制到 `<data>/config/build-sources.json`。Windows 可用 PowerShell 的 `$env:RUNDESK_RECIPES_DIR`、`$env:RUNDESK_BUILD_SOURCES` 设置绝对路径。
 
-显式配方目录有误会报错，不会悄悄使用另一份默认配方。目录内完整上下文可直接修改，新构建会读取并冻结当前内容；历史重建继续使用原快照。源列表、构建前选择、Dockerfile 参数与镜像拉取边界见[下载源配置](BUILD-SOURCES.md)。宿主运行构建仍不要求 Python/npm；Docker 镜像中安装工具需要相应软件源。
+显式配方目录有误会报错，不会悄悄使用另一份默认配方。目录内的 Dockerfile、`recipe.json`、工具和 Skills 可直接修改，新构建会读取并冻结当前内容；历史重建继续使用原快照。源列表、构建前选择、Dockerfile 参数与镜像拉取边界见[下载源配置](BUILD-SOURCES.md)。宿主运行构建仍不要求 Python/npm；Docker 镜像中安装工具需要相应软件源。
 
 ## 首次初始化
 
@@ -126,7 +149,7 @@ export RUNDESK_TOKEN='替换为足够长的随机密钥'
 
 使用 HTTPS 反向代理。应用后端使用独立应用凭据；不要将管理员 Token 或模型密钥放在前端。服务账户的环境才是运行时环境，修改环境变量后重启服务。使用本地可靠文件系统；同一数据目录只运行一个服务。
 
-[systemd 示例](../examples/systemd/README.md) · [升级](UPGRADING.md) · [当前验证范围](VALIDATION.md)
+[systemd 示例](../deploy/systemd/README.md) · [升级](UPGRADING.md) · [当前验证范围](VALIDATION.md)
 
 ## 初始化应用 Docker 镜像
 
@@ -142,4 +165,4 @@ export RUNDESK_TOKEN='替换为足够长的随机密钥'
 
 已有“应用运行检查”继续提供单个镜像准备入口，支持构建、从真实仓库拉取或检查本地镜像。随包公开目录不预填尚未发布的地址；可维护真实发布条目，或手工填写实际存在的地址并核对身份。任务关闭页面后继续，重开可以查看进度和日志。成功只意味着该任务声明的离线工具检查通过，仍需应用级模型认证、MCP 连通性和真实研究验收。
 
-产出镜像是全局可复用资源；初始化不会更改已有应用的镜像绑定。镜像配方与应用运行预设是两种资源：管理员准备镜像、认证、Skills/MCP 和专用实例/工作区后登记运行预设并签发凭据，应用随后选择预设、提交任务、跟踪进度、获取产物。详见[典型配置](../examples/README.md)、[应用连接](APPLICATION-CONNECT.md)、[运行预设](APPLICATION-RUNTIME-PRESETS.md)与[插件支持](NATIVE-PLUGINS.md)。
+产出镜像是全局可复用资源；初始化不会更改已有应用的镜像绑定。镜像配方与应用运行预设是两种资源：管理员准备镜像、认证、Skills/MCP 和专用实例/工作区后登记运行预设并签发凭据，应用随后选择预设、提交任务、跟踪进度、获取产物。详见[典型配置](../recipes/README.md)、[应用连接](APPLICATION-CONNECT.md)、[运行预设](APPLICATION-RUNTIME-PRESETS.md)与[插件支持](NATIVE-PLUGINS.md)。
