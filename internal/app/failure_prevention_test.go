@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/your-org/rundesk/internal/rpc"
+	"github.com/shengjuntu/rundesk/internal/rpc"
 )
 
 // A separate process speaks the real JSONL protocol. Faults are injected at the

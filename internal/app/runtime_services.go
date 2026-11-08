@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/your-org/rundesk/internal/rpc"
+	"github.com/shengjuntu/rundesk/internal/rpc"
 )
 
 // RuntimeRun is one admitted execution. Session and Workspace are value

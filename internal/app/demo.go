@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/your-org/rundesk/internal/rpc"
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/rpc"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 func DemoAgent() {

@@ -7,7 +7,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/your-org/rundesk/internal/redaction"
+	"github.com/shengjuntu/rundesk/internal/redaction"
 	_ "modernc.org/sqlite"
 	"net/url"
 	"path/filepath"

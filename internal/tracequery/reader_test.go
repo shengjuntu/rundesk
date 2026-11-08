@@ -3,7 +3,7 @@ package tracequery
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/store"
 	"path/filepath"
 	"strings"
 	"testing"

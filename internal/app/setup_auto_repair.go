@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 // An automatic handoff is a durable authorization for exactly one source job,

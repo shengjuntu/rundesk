@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	d "github.com/your-org/rundesk/internal/debugapi"
+	d "github.com/shengjuntu/rundesk/internal/debugapi"
 )
 
 var descriptions = map[string]string{

@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/your-org/rundesk/internal/store"
-	"github.com/your-org/rundesk/internal/web"
+	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/web"
 )
 
 type Server struct {

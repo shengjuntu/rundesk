@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 // Each application project gets an independent workspace and Docker HOME for

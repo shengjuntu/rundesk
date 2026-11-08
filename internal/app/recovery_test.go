@@ -3,8 +3,8 @@ package app
 import (
 	"encoding/json"
 	"errors"
-	"github.com/your-org/rundesk/internal/rpc"
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/rpc"
+	"github.com/shengjuntu/rundesk/internal/store"
 	"net/http/httptest"
 	"os"
 	"path/filepath"

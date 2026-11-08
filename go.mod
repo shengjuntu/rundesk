@@ -1,4 +1,4 @@
-module github.com/your-org/rundesk
+module github.com/shengjuntu/rundesk
 
 go 1.25.12
 

@@ -4,7 +4,7 @@ package mcptest
 import (
 	"context"
 	"encoding/json"
-	"github.com/your-org/rundesk/internal/mcp"
+	"github.com/shengjuntu/rundesk/internal/mcp"
 	"net/http"
 	"os/exec"
 )

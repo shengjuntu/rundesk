@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 func TestSessionManagementAndFileRetention(t *testing.T) {

@@ -20,7 +20,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 // BuildExperienceInput contains an explanation and references, never a claimed

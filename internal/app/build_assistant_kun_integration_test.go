@@ -17,7 +17,7 @@ import (
 	"time"
 
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 // Decode the actual result as it travels through MCP text blocks and the

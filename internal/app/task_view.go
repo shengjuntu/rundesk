@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/your-org/rundesk/internal/resource"
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/resource"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 // TaskResourceView is a point-in-time projection of platform state and resource

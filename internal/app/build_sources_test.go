@@ -16,7 +16,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 func sourceTestContext(t *testing.T) []byte {

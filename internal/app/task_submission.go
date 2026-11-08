@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 // SubmitTask shares admission, authorization, queueing and persistence across

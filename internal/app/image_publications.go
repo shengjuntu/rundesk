@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 // Publication uploads an already validated immutable image. It does not build,

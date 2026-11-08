@@ -9,8 +9,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/your-org/rundesk/internal/rpc"
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/rpc"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 type RuntimeNotice struct {

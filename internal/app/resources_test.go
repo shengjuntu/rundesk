@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/your-org/rundesk/internal/resource"
+	"github.com/shengjuntu/rundesk/internal/resource"
 )
 
 func TestSessionResourcesKeepOriginalPathsWithoutCopyOrNativeLaunch(t *testing.T) {

@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/your-org/rundesk/internal/resource"
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/resource"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 // Personal artifacts retain their content identity independently of their

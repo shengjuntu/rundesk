@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/your-org/rundesk/internal/resource"
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/resource"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 const personalFileLimit int64 = 512 << 20

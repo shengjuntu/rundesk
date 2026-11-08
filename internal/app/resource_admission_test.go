@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/your-org/rundesk/internal/resource"
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/resource"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 // Exercise the real HTTP/queue/native-demo path, then change the declaration.

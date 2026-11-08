@@ -2,7 +2,7 @@ package app
 
 import (
 	"encoding/json"
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/store"
 	"net/http"
 	"net/url"
 	"regexp"

@@ -1,5 +1,0 @@
-{
-  "command": "go test -p 1 ./...",
-  "exitCode": 0,
-  "elapsedSeconds": 233.578
-}

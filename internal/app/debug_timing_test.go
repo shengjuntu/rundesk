@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/your-org/rundesk/internal/tracequery"
+	"github.com/shengjuntu/rundesk/internal/tracequery"
 )
 
 func TestDebugTimingSortBaseAndMemberRemainFrozenAndScoped(t *testing.T) {

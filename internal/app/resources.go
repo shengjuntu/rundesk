@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/your-org/rundesk/internal/resource"
+	"github.com/shengjuntu/rundesk/internal/resource"
 )
 
 // RuntimeResourceService resolves host-owned bindings after task admission.

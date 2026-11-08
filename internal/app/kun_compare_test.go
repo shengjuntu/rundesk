@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 func comparisonDraft(t *testing.T, m *Manager, id, mode string, state p.State) kunForkDraft {

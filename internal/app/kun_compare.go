@@ -11,7 +11,7 @@ import (
 	"time"
 
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 type KunCompareReply struct {

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/your-org/rundesk/internal/resource"
+	"github.com/shengjuntu/rundesk/internal/resource"
 )
 
 func (b codexBackend) Run(run RuntimeRun) {

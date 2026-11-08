@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 func validateTaskDeadline(deadline int64) error {

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/your-org/rundesk/internal/tracequery"
+	"github.com/shengjuntu/rundesk/internal/tracequery"
 )
 
 func TestTranscriptHTTPReadBoundaryAndSnapshot(t *testing.T) {

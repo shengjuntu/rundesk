@@ -17,8 +17,8 @@ import (
 
 	kc "github.com/your-org/kun/sdk/client"
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/your-org/rundesk/internal/redaction"
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/redaction"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 type KunForkInput struct {

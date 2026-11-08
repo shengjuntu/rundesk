@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 var slug = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,64}$`)

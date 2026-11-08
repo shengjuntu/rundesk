@@ -2,7 +2,7 @@ package app
 
 import (
 	"encoding/json"
-	"github.com/your-org/rundesk/internal/tracequery"
+	"github.com/shengjuntu/rundesk/internal/tracequery"
 	"net/http/httptest"
 	"path/filepath"
 	"reflect"

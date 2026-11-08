@@ -8,8 +8,8 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/your-org/rundesk/internal/app"
-	"github.com/your-org/rundesk/internal/debugmcp"
+	"github.com/shengjuntu/rundesk/internal/app"
+	"github.com/shengjuntu/rundesk/internal/debugmcp"
 )
 
 func runDebugMCP(args []string, in io.Reader, out, errout io.Writer) error {

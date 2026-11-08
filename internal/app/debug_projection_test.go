@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/your-org/rundesk/internal/debugmcp"
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/debugmcp"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 func TestDebugProjectionHTTPMCPAuthorizationAndFrozenEvidence(t *testing.T) {

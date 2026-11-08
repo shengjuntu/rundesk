@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 // This catalog is deliberately an index of RunDesk's records. Listing it does

@@ -1,9 +1,0 @@
-{
-  "passed": true,
-  "historicalEvidenceFiles": 15,
-  "bytes": 352164,
-  "checks": [
-    "Baseline and migrated evidence bytes match",
-    "Recorded SHA-256 and sizes match"
-  ]
-}

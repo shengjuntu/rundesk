@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/your-org/rundesk/internal/observeproxy"
-	"github.com/your-org/rundesk/internal/rpc"
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/observeproxy"
+	"github.com/shengjuntu/rundesk/internal/rpc"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 // ObservationOptions controls only transport observation, never model routing,

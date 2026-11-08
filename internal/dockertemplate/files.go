@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/your-org/rundesk/internal/recipefiles"
+	"github.com/shengjuntu/rundesk/internal/recipefiles"
 )
 
 var Files diskTemplate

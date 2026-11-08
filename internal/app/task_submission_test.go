@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 func pauseSubmissionQueue(t *testing.T, m *Manager) {

@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/your-org/rundesk/internal/store"
-	"github.com/your-org/rundesk/internal/tracequery"
+	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/tracequery"
 )
 
 type TraceSelection struct {

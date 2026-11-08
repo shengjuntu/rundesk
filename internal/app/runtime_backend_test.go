@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/your-org/rundesk/internal/resource"
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/resource"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 func TestRuntimeAdmissionKeepsNativeCapabilitiesSeparate(t *testing.T) {

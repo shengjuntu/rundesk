@@ -10,9 +10,9 @@ import (
 	"testing"
 
 	p "github.com/your-org/kun/sdk/protocol"
-	d "github.com/your-org/rundesk/internal/debugapi"
-	"github.com/your-org/rundesk/internal/debugmcp"
-	"github.com/your-org/rundesk/internal/store"
+	d "github.com/shengjuntu/rundesk/internal/debugapi"
+	"github.com/shengjuntu/rundesk/internal/debugmcp"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 func TestCodexDebugScopePagingChunksAndReadonlyMCP(t *testing.T) {

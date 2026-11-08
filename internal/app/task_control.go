@@ -1,6 +1,6 @@
 package app
 
-import "github.com/your-org/rundesk/internal/store"
+import "github.com/shengjuntu/rundesk/internal/store"
 
 // TaskControl is the platform task lifecycle contract. It is shared by API
 // facades and never exposes a native client, a worker process or Manager state.

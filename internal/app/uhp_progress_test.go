@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/your-org/rundesk/internal/rpc"
+	"github.com/shengjuntu/rundesk/internal/rpc"
 )
 
 func uhpProgressFixture(t *testing.T, backend, status string) (*Manager, *uhpService, *uhpRecord, Task, Session) {

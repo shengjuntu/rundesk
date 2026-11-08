@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/your-org/rundesk/internal/rpc"
+	"github.com/shengjuntu/rundesk/internal/rpc"
 )
 
 func TestApprovalOfferedDecisionsHTTPAndAudit(t *testing.T) {

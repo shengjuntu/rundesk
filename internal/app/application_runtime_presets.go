@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 // Runtime presets approve a dedicated execution identity, rather than allowing

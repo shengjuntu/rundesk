@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/your-org/rundesk/internal/store"
+	"github.com/shengjuntu/rundesk/internal/store"
 )
 
 func assertNoGuardedNativeDispatch(t *testing.T, m *Manager, s Session, h *handle) {

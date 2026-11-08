@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/your-org/rundesk/internal/recipefiles"
+	"github.com/shengjuntu/rundesk/internal/recipefiles"
 )
 
 type RuntimeImageInput struct {

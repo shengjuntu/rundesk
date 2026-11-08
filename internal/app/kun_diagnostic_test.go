@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/your-org/rundesk/internal/tracequery"
+	"github.com/shengjuntu/rundesk/internal/tracequery"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
