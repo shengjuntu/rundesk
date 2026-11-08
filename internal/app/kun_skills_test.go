@@ -3,7 +3,7 @@ package app
 import (
 	"encoding/json"
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 	"net/http"
 	"net/http/httptest"
 	"strings"

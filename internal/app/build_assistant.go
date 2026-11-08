@@ -19,8 +19,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shengjuntu/rundesk/internal/store"
-	buildtools "github.com/shengjuntu/rundesk/plugins/rundesk-build-tools"
+	"github.com/your-org/rundesk/internal/store"
+	buildtools "github.com/your-org/rundesk/plugins/rundesk-build-tools"
 )
 
 // An assistant run uses a new workspace and one queued Codex task. A referenced

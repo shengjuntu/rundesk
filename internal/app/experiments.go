@@ -12,8 +12,8 @@ import (
 	"unicode/utf8"
 
 	p "github.com/your-org/kun/sdk/protocol"
-	x "github.com/shengjuntu/rundesk/internal/experiment"
-	"github.com/shengjuntu/rundesk/internal/store"
+	x "github.com/your-org/rundesk/internal/experiment"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 type ExperimentInput struct {

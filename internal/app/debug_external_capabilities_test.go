@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	p "github.com/your-org/kun/sdk/protocol"
-	d "github.com/shengjuntu/rundesk/internal/debugapi"
+	d "github.com/your-org/rundesk/internal/debugapi"
 )
 
 func TestExternalKunDebugCapabilitiesAreObserved(t *testing.T) {

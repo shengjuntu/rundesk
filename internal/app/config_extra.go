@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 func prepareMCP(value, old map[string]any) (map[string]any, error) {

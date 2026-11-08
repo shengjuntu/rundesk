@@ -6,7 +6,8 @@ RunDesk 0.55.0 将构建配方放在磁盘目录中。用户可以修改 Dockerf
 
 | 文件或目录 | 用途 |
 | --- | --- |
-| `recipes/<profile>/` | 六套默认配方的唯一可编辑来源，包含 Dockerfile、工具、Skills 和本地依赖 |
+| `recipes/<profile>/` | 各配方的 Dockerfile、声明与独有资源；同名本地普通文件可覆盖共享目标 |
+| `recipes/common/` | 各配方通过 `sharedFiles` 显式引用的公共工具、Skills 与本地依赖 |
 | `recipes/generic/` | 初始化页面提供的通用 Docker 模板，同样从文件读取 |
 | `recipes/<profile>/recipe.json` | 唯一配方声明；导出和构建时生成快照内的 `profile.lock.json` |
 | `recipes/<profile>/variants/` | 明确选择的轻量或旧项目兼容变体 |
@@ -19,6 +20,20 @@ RunDesk 0.55.0 将构建配方放在磁盘目录中。用户可以修改 Dockerf
 `RUNDESK_BUILD_SOURCES` 指定另一份源列表 JSON。默认列表首次复制到数据目录后，修改发行包里的默认文件不会覆盖用户维护的列表。源配置属于构建节点；已有 Agent 实例使用成品镜像，不会因为换源而自动改变。
 
 维护者和部署者都编辑同一份 `recipes/` 来源。使用 `python3 scripts/recipes.py validate <profile>` 检查，使用 `prepare` 或 `pack` 导出独立上下文。`scripts/embed-profiles.py` 只保留非覆盖式检查／导出兼容入口，不会从另一套模板反向覆盖当前配方。旧外置配方若只有 `profile.lock.json` 仍可读取；同一来源目录同时出现两个声明会被拒绝。
+
+<a id="shared-recipe-files"></a>
+
+## 配方共享输入
+
+配方的 `recipe.json` 可在顶层声明 `sharedFiles` 字典：键是本次构建上下文中的目标相对路径，值是 `recipes/common/` 内的来源相对路径。只有明确列出的内容参与该配方；common 不是自动扫描后全部复制的资源库。
+
+- 来源树保留一份公共工具、Skills 或本地依赖；修改共享来源只影响之后从引用它的配方新建的上下文。
+- 配方内同名的本地普通文件覆盖共享目标，便于单独定制；不使用链接覆盖。缺失的共享来源明确失败，不回退到别处。
+- `prepare`、`pack` 和构建中心导出会物化所需内容，产物全部是普通文件。导出的 Dockerfile 和本地安装路径继续读取完整上下文，Docker 构建不需要回到源码的 common 目录。
+- 冻结快照与 `profile.lock.json` 不保留 `sharedFiles`。历史重建只使用原上下文，即使 common 后来修改也不改变旧输入。
+- `generic/` 仍为自含模板。部署运行时保留完整的 `recipes/`；只交付单套配方时，先导出独立上下文。
+
+共享 Agent-Reach 仍是已审阅的完整本地源码，保留去除重复 wheel 包含项的补丁；镜像通过本地路径安装，不重新下载该 GitHub 源码。共享并不意味着 APT、pip/npm 运行依赖也已离线。
 
 ## 构建前操作
 
@@ -88,7 +103,7 @@ RunDesk 0.55.0 将构建配方放在磁盘目录中。用户可以修改 Dockerf
 | `/build-center/recipes/{rid}/context.zip` | GET 完整 ZIP；内置配方需要精确 `codexVersion`，自定义配方导出原冻结输入 |
 | `/build-center/recipes/{rid}/build` | POST 构建；可选 `buildSources` 包含 group、catalogRevision、selections、overrides |
 
-字段和错误契约以 [OpenAPI](../internal/app/openapi.json) 为准。构建幂等键、原始输入限制和镜像管理见[构建中心](BUILD-CENTER.md)。
+字段和错误契约以 [OpenAPI](../internal/app/openapi.json) 为准。构建幂等键、原始输入限制和镜像管理见[构建中心](BUILD-CENTER.md#build-workbench)。
 
 ## 配置依据
 

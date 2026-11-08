@@ -1,0 +1,10 @@
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -56,7 +56,3 @@
+ 
+ [tool.hatch.build.targets.wheel]
+ packages = ["agent_reach"]
+-
+-[tool.hatch.build.targets.wheel.force-include]
+-"agent_reach/guides" = "agent_reach/guides"
+-"agent_reach/skill" = "agent_reach/skill"

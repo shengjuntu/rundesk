@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shengjuntu/rundesk/internal/rpc"
+	"github.com/your-org/rundesk/internal/rpc"
 )
 
 func TestHTTPDiagnosticErrorDetails(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"unicode/utf8"
 
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 // A task set freezes authored inputs and rules, not runs or benchmark results.

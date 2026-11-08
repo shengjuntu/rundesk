@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shengjuntu/rundesk/internal/debugmcp"
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/debugmcp"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 func TestUnifiedObservationHTTPMCPReadBoundaryAndSnapshot(t *testing.T) {

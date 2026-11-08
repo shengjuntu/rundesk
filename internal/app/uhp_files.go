@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shengjuntu/rundesk/internal/resource"
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/resource"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 // Uploads are bounded independently of output artifacts. Artifact downloads use

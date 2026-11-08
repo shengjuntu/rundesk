@@ -98,5 +98,11 @@
     "imageBuilt": false,
     "modelTested": false,
     "networkTested": false
+  },
+  "sharedFiles": {
+    "tools/configure-apt.sh": "tools/configure-apt.sh",
+    "tools/install-codex.sh": "tools/install-codex.sh",
+    "tools/profile_doctor.py": "tools/media/profile_doctor.py",
+    "tools/video_app_media.py": "tools/media/video_app_media.py"
   }
 }

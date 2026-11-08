@@ -16,7 +16,7 @@ This is RunDesk's starting point. Engineers bringing agents into enterprise appl
 
 RunDesk brings user requests, model interactions, tool calls, approvals, errors, and artifacts into one debugging workbench. Developers can inspect recorded behavior and execution traces, follow the evidence, and diagnose problems. Both Codex and Kun have trace inspection; Kun additionally exposes internal state, stepping, breakpoints, checkpoints, and runtime forks. Capabilities remain explicit for each backend.
 
-Start with [trace debugging](docs/DEBUG.md), the [trace reader](docs/TRACE-READER.md), and [backend capabilities](docs/BACKENDS.md).
+Start with [trace debugging](docs/TRACE.md#debug-overview), the [trace reader](docs/TRACE.md#trace-reader), and [backend capabilities](docs/BACKENDS.md).
 
 ### 2. Connect focused applications to Agent Harnesses
 
@@ -26,7 +26,7 @@ The intended application contract is simple: **submit a task → track its progr
 
 **Runtime Presets** lower the setup burden by giving an application a prepared, reusable runtime binding. The goal is to assemble the needed Skills, plugins, MCP services, and tools in advance. In this version, named presets bind administrator-approved Codex Docker instances and workspaces; build recipes and configuration prepare the tools, Skills, and MCP integrations. Native plugin support currently covers inspection and observed component origins; stable native install/uninstall is not implemented. Registering a preset alone does not build an image, install a plugin, or authenticate a model account.
 
-Start with the [application API](docs/API-V1.md), [runtime presets](docs/APPLICATION-RUNTIME-PRESETS.md), [build recipes](recipes/README.md), and [build center](docs/BUILD-CENTER.md).
+Start with the [application API](docs/API-V1.md), [runtime presets](docs/APPLICATION-RUNTIME-PRESETS.md), [build recipes](recipes/README.md), and [build center](docs/BUILD-CENTER.md#build-workbench).
 
 ### 3. Provide an experimental environment for Harness researchers
 
@@ -34,7 +34,7 @@ Harness developers and researchers need a place to test execution strategies, in
 
 RunDesk's Kun integration supports module-state inspection and loop-policy selection. Research APIs retain offline record experiments, Hybrid/Live forks, fixed task sets, and comparative evaluation; validated traces can become candidate reusable tool flows. These remain primarily Kun-specific research capabilities, with business effects still requiring validation. RunDesk does not yet expose a dynamically loadable SDK for arbitrary Harness modules.
 
-Start with [Harness controls](docs/KUN-HARNESS.md). The [runtime fork](docs/KUN-FORKS.md) and [repeated comparison](docs/KUN-BENCHMARKS.md) documents describe retained research APIs and historical workflows, not current navigation entries.
+Start with [Harness controls](docs/KUN-HARNESS.md). The [runtime fork](docs/KUN-FORKS.md#runtime-forks) and [repeated comparison](docs/KUN-EVALUATION.md#repeated-benchmarks) documents describe retained research APIs and historical workflows, not current navigation entries.
 
 ## Work with instances
 
@@ -46,17 +46,17 @@ The instance-centered WebUI does **not** yet synchronize instance configuration 
 
 ## Current source version
 
-**RunDesk 0.66.0 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.67.0 source · external Kun 0.17.0 · worker protocol 16**
 
-Version 0.66.0 cleans the active source tree: old QA output and superseded documentation leave the release, generated results go to `build/qa/`, and source checks prevent them from returning. Complete earlier evidence remains in the preserved 0.65.0 source package. See [upgrading](docs/UPGRADING.md) and [validation scope](docs/VALIDATION.md).
+Version 0.67.0 consolidates related guides and test suites, and makes common recipe inputs explicit through `sharedFiles`. Exported contexts contain ordinary files and remain independently buildable; local recipe files can override shared targets. Generated QA results stay under `build/qa/`, and earlier raw evidence remains in the preserved 0.65.0 source package. See [upgrading](docs/UPGRADING.md) and [validation scope](docs/VALIDATION.md).
 
-`recipes/` is the single editable recipe source. Production readers live under `internal/`, application clients under `clients/python/`, and service files under `deploy/systemd/`. Build snapshots generate their own lock files. Reviewed local Agent-Reach sources and the wheel packaging fix remain in news2douyin and people-search 1.1.2; other dependencies still require their download channels. Use the [recipe CLI](recipes/README.md) and [deployment instructions](docs/SETUP.md).
+`recipes/` is the single editable recipe source. Shared tools, Skills and reviewed local dependencies live under `recipes/common/`; each recipe declares the files it uses. Missing declared sources fail explicitly, while generic templates remain self-contained. Production readers live under `internal/`, application clients under `clients/python/`, and service files under `deploy/systemd/`. Build snapshots generate their own lock files. Reviewed local Agent-Reach sources and the wheel packaging fix remain in news2douyin and people-search 1.1.2; other dependencies still require their download channels. Use the [recipe CLI](recipes/README.md) and [deployment instructions](docs/SETUP.md).
 
 New installations use a three-step guide: **find and configure LLM → configure and install Codex → prepare Docker environments**. Docker is optional and setup can be reopened from **Environment setup**. Downloading a ready image, building locally and checking an existing image are distinct choices. A preparation task keeps its failure, Kun repair, candidate builds and verification together; repair completion alone does not prove an image is verified.
 
 Daily conversations and application tasks use Codex; Kun handles installation and recipe repair plus read-only trace questions. Skill extraction and MCP optimization remain future work. Workspaces organize conversations, each with its own Codex environment. Applications may bind several approved environments and create isolated project workspaces. See [WebUI](docs/WEBUI.md), [internal maintenance](docs/MAINTENANCE.md) and [application presets](docs/APPLICATION-RUNTIME-PRESETS.md).
 
-Build Center connects **recipe → image → Agent**. Dockerfiles and source lists are editable files, with international and China mirror groups covering pip, conda, npm, Docker, APT, YUM/DNF, Hugging Face and GitHub; each recipe must declare the arguments it supports. Builds freeze their inputs and can reuse matching managed Codex runtimes. Codex provider settings are separate from Kun model discovery and apply to the selected Agent/workspace environment. See [Build Center](docs/BUILD-CENTER.md), [build sources](docs/BUILD-SOURCES.md) and [model providers](docs/CODEX-PROVIDERS.md).
+Build Center connects **recipe → image → Agent**. Dockerfiles and source lists are editable files, with international and China mirror groups covering pip, conda, npm, Docker, APT, YUM/DNF, Hugging Face and GitHub; each recipe must declare the arguments it supports. Builds freeze their inputs and can reuse matching managed Codex runtimes. Codex provider settings are separate from Kun model discovery and apply to the selected Agent/workspace environment. See [Build Center](docs/BUILD-CENTER.md#build-workbench), [build sources](docs/BUILD-SOURCES.md) and [model providers](docs/CODEX-PROVIDERS.md).
 
 Publishers can distribute fixed image digests after matching offline and smoke checks. **The bundled public-image catalog is empty until real images are published**; no official image namespace or anonymous-download acceptance is implied. See [image distribution](docs/IMAGE-DISTRIBUTION.md).
 
@@ -113,10 +113,10 @@ Kun uses a tool-capable Chat Completions service; Codex uses its native provider
 
 | Audience | Documentation |
 | --- | --- |
-| Agent deployment engineers | [Debugging](docs/DEBUG.md) · [Observation and capture](docs/UNIFIED_DEBUGGING.md) · [Read-only debug API/MCP](docs/DEBUG-SERVICE.md) |
+| Agent deployment engineers | [Debugging](docs/TRACE.md#debug-overview) · [Observation and capture](docs/UNIFIED_DEBUGGING.md) · [Read-only debug API/MCP](docs/DEBUG-SERVICE.md) |
 | Application developers | [Connect an application](docs/APPLICATION-CONNECT.md) · [API](docs/API-V1.md) · [Presets](docs/APPLICATION-RUNTIME-PRESETS.md) · [Python example](clients/python/application_quickstart.py) |
 | Harness developers and researchers | [Kun integration](docs/KUN.md) · [Harness controls](docs/KUN-HARNESS.md) · [Research APIs and historical workflows](docs/README.md#3-harness-开发与研究--harness-research) |
-| Maintainers and operators | [Architecture](docs/ARCHITECTURE.md) · [Build center](docs/BUILD-CENTER.md) · [Download sources](docs/BUILD-SOURCES.md) · [Upgrading](docs/UPGRADING.md) · [Security](SECURITY.md) |
+| Maintainers and operators | [Architecture](docs/ARCHITECTURE.md) · [Build center](docs/BUILD-CENTER.md#build-workbench) · [Download sources](docs/BUILD-SOURCES.md) · [Upgrading](docs/UPGRADING.md) · [Security](SECURITY.md) |
 
 For local development, `make test` runs the host and SDK tests; `make check` adds race checks and `go vet`. Some integration checks require an independent Kun executable. See [validation](docs/VALIDATION.md) for reproduction and current scope, and [provenance](docs/validation/README.md) for preserved historical results.
 

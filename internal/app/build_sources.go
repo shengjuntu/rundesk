@@ -18,7 +18,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/shengjuntu/rundesk/internal/recipefiles"
+	"github.com/your-org/rundesk/internal/recipefiles"
 )
 
 // Build source catalogs are ordinary deployment files, never compiled assets.

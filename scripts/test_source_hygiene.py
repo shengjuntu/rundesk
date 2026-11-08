@@ -52,6 +52,20 @@ class SourceHygieneTests(unittest.TestCase):
         self.manifest()
         self.assertTrue(hygiene.inspect_source(self.root, verify_manifest=True)["manifestVerified"])
 
+    def test_shared_recipe_sources_keep_the_same_release_and_manifest_boundaries(self):
+        self.write("recipes/common/tools/install-codex.sh", "#!/bin/sh\nset -eu\n")
+        self.write("recipes/common/vendor/agent-reach/LICENSE", "MIT fixture\n")
+        self.write("recipes/common/vendor/agent-reach/agent_reach/core.py", "value = 1\n")
+        self.write("recipes/common/vendor/agent-reach.sha256", "reviewed manifest fixture\n")
+        self.write("recipes/common/vendor/agent-reach-wheel.patch", "reviewed patch fixture\n")
+        self.manifest()
+        result = hygiene.inspect_source(self.root, verify_manifest=True)
+        self.assertTrue(result["manifestVerified"], result)
+        self.write("recipes/common/vendor/agent-reach/agent_reach/core.py", "value = 2\n")
+        self.assertTrue(hygiene.inspect_source(self.root)["passed"])
+        result = hygiene.inspect_source(self.root, verify_manifest=True)
+        self.assertTrue(any("checksum mismatch: recipes/common/" in error for error in result["errors"]), result)
+
     def test_developer_outputs_ignored_but_cannot_enter_release(self):
         self.write("build/qa/test-result.json", "{}")
         self.write("bin/rundesk", b"\x7fELFfixture")
@@ -63,19 +77,22 @@ class SourceHygieneTests(unittest.TestCase):
         self.assertEqual(len(result["errors"]), 4, result)
 
     def test_canonical_resources_reject_cache_and_competing_derived_metadata(self):
-        for name in ("recipes/news/node_modules/package/index.js", "recipes/news/__pycache__/source.pyc",
-                     "recipes/news/profile.lock.json", "recipes/news/SHA256SUMS", "recipes/news/upstream/upstream.json"):
+        names = [f"recipes/{base}/{suffix}" for base in ("news", "common")
+                 for suffix in ("node_modules/package/index.js", "__pycache__/source.pyc",
+                                "profile.lock.json", "SHA256SUMS", "upstream/upstream.json")]
+        for name in names:
             with self.subTest(name=name):
                 self.write(name, "generated")
                 result = hygiene.inspect_source(self.root)
                 self.assertFalse(result["passed"], result)
                 (self.root / name).unlink()
-                for directory in sorted((self.root / "recipes/news").rglob("*"), key=lambda p: len(p.parts), reverse=True):
+                for directory in sorted((self.root / "recipes").rglob("*"), key=lambda p: len(p.parts), reverse=True):
                     if directory.is_dir() and not any(directory.iterdir()):
                         directory.rmdir()
 
     def test_native_output_temporary_file_and_resource_link_rejected(self):
-        for name, data in (("rundesk", b"\x7fELFfixture"), ("recipes/news/testdata/native", b"\x7fELFfixture"), ("scripts/editor.py.bak", b"old")):
+        for name, data in (("rundesk", b"\x7fELFfixture"), ("recipes/news/testdata/native", b"\x7fELFfixture"),
+                           ("recipes/common/vendor/native", b"\x7fELFfixture"), ("scripts/editor.py.bak", b"old")):
             with self.subTest(name=name):
                 self.write(name, data)
                 self.assertFalse(hygiene.inspect_source(self.root)["passed"])

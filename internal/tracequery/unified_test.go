@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shengjuntu/rundesk/internal/observation"
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/observation"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 func unifiedFixture(t *testing.T) (*store.Store, string) {

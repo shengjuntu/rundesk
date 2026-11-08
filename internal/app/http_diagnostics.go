@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shengjuntu/rundesk/internal/rpc"
+	"github.com/your-org/rundesk/internal/rpc"
 )
 
 type requestDiagnostic struct {

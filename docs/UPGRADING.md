@@ -1,10 +1,18 @@
 # 升级到当前版本
 
-## 0.66.0：清理发布源码（2026-11-06）
+## 0.67.0：整理专题与共享配方输入（2026-11-06）
 
-本版继续整理源码，移除旧验证产物、过时整理文档及无用副本，并将可再生检查结果移到 `build/qa/`。程序、`/api/v1/meta`、OpenAPI 与界面版本应为 **0.66.0**；独立 Kun 0.17.0、worker 协议 16 和 UHP `2026-10-19` 不变。本版不引入用户数据迁移或新的后端能力。
+本版合并同主题文档与测试，并将配方公共工具、Skills 和已审阅的本地依赖归入 `recipes/common/`。程序、`/api/v1/meta`、OpenAPI 与界面版本应为 **0.67.0**；独立 Kun 0.17.0、worker 协议 16 和 UHP `2026-10-19` 不变。已有用户数据、API 契约、环境绑定及历史冻结上下文保持原语义。
 
-历史原始日志、截图、测试视频和版本记录完整保留在此前的 0.65.0 源码包；校验摘要见[历史资料说明](validation/README.md)。当前实际检查以[本版验证](VALIDATION.md)为准，不继承旧报告的通过数。
+升级应部署完整的 `recipes/`，包括 `common/`。配方声明中的顶层 `sharedFiles` 字典以“上下文目标相对路径 → common 内来源相对路径”引用共享内容。同名本地普通文件优先覆盖；缺失共享来源明确失败，不悄悄改用另一来源。generic 模板仍自含。
+
+旧配方目录中的工具如果整包复制回来，会成为本地覆盖并遮住公共文件的后续更新。请在新的程序目录中只迁移确认过的自定义差异。
+
+导出、打包及新构建会把所需共享内容物化成普通文件，生成独立可构建的上下文；冻结快照与 `profile.lock.json` 不保留 `sharedFiles` 声明，不需要再查公共目录。需要只交付一套配方时，交付其导出上下文，不直接复制一个仍含共享引用的来源目录。Agent-Reach 继续完整本地安装，保留已审阅的 wheel 打包补丁。详见[共享输入与作用范围](BUILD-SOURCES.md#shared-recipe-files)。
+
+相关操作与契约统一到[构建中心](BUILD-CENTER.md)、[轨迹分析](TRACE.md)、[Kun 调试](KUN-DEBUG.md)、[分叉与对照](KUN-FORKS.md)及[评测](KUN-EVALUATION.md)。重命名的测试入口保留原有独立场景；这项整理不删除后端能力、授权检查或历史记录。
+
+历史原始日志、截图和测试视频保留在此前的 0.65.0 源码包；校验摘要见[历史资料说明](validation/README.md)。本版实际检查以[验证范围](VALIDATION.md)为准，不继承旧报告通过数。
 
 ## 更新程序和外置资源
 
@@ -17,7 +25,7 @@
 
 ## 从旧配方目录升级
 
-- `recipes/<profile>/` 是唯一可编辑配方来源。源码中的 `recipe.json` 在冻结构建或导出上下文时生成 `profile.lock.json`。旧外置锁文件配方仍可读；同一来源目录不要同时保留两种声明，因此应使用新的程序目录。
+- `recipes/` 是唯一可编辑配方来源；`<profile>/` 保存配方特有内容，`common/` 保存声明引用的公共输入。源码中的 `recipe.json` 在冻结构建或导出上下文时生成 `profile.lock.json`。旧外置锁文件配方仍可读；同一来源目录不要同时保留两种声明，因此应使用新的程序目录。
 - 原 `python3 examples/<profile>/run.py <命令>` 已移除，改用 `python3 scripts/recipes.py <命令> <profile>`。Python 应用客户端位于 `clients/python/`，systemd 文件位于 `deploy/systemd/`；生产 Go 读取器位于 `internal/`。轻量 Agent-Reach 选项、可选 video-use 兼容变体、原始来源与许可证继续保留。
 - 配方查找优先级为显式 `RUNDESK_RECIPES_DIR`、可执行文件旁的 `recipes/`、从当前工作目录向上查找的 `recipes/`。显式路径缺失或无效会直接报错。修改外置 Dockerfile、依赖或 vendor 后，须从配方新建构建，无需重编译或重启。
 - 历史构建继续使用冻结的 `context.zip` 与源参数。“原配置重建”不读取今天的新配方或网络默认值；旧记录缺少上下文时明确失败，应重新导入原输入。删除构建记录不删除 Docker 镜像，删除镜像不删除项目或 HOME。
@@ -35,7 +43,7 @@
 
 已有 completed 初始化状态不重置，可从“环境设置”重开三步向导；Docker 是可选步骤。自动发现不切换默认后端，也不开启宿主 Bash。Codex 安装使用精确版本及摘要，不自动登录。下载失败保持下载重试，Kun 修复任务完成与候选通过 offline/smoke 分别判断；不自动替换现有镜像。修复经验按真实记录追加版本，不覆盖默认源、Skill 或已有配方。见[初始化](SETUP.md#首次初始化)与[内部维护](MAINTENANCE.md)。
 
-构建助手需要容器可达的 `RUNDESK_BUILD_MCP_ORIGIN` 或 `--public-url`；容器 localhost 不是宿主。权限限当前任务并到期失效，不传 Docker socket 或宿主管理员令牌。插件检查只读，不把展开 Skill 当作原生插件安装。见[构建中心](BUILD-CENTER.md)与[插件边界](NATIVE-PLUGINS.md)。
+构建助手需要容器可达的 `RUNDESK_BUILD_MCP_ORIGIN` 或 `--public-url`；容器 localhost 不是宿主。权限限当前任务并到期失效，不传 Docker socket 或宿主管理员令牌。插件检查只读，不把展开 Skill 当作原生插件安装。见[构建中心](BUILD-CENTER.md#build-workbench)与[插件边界](NATIVE-PLUGINS.md)。
 
 公开镜像目录 `<data>/config/public-images.json` 或 `RUNDESK_PUBLIC_IMAGES` 指定的文件由管理员维护；随包目录为空。发布需真实仓库权限和匹配的 offline/smoke 记录；上传后仍需设置公开可见性、核对匿名 manifest 并验收完整下载，再登记固定 Digest。升级不公开上传已有产物，不自动改写目录。离线机器可由管理员 `docker save` / `docker load` 后检查本地镜像。见[镜像分发](IMAGE-DISTRIBUTION.md)。
 

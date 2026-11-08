@@ -1,0 +1,176 @@
+{
+  "version": "0.67.0",
+  "status": "passed",
+  "date": "2026-11-06",
+  "scope": "Source consolidation with editable shared recipe inputs, self-contained export, documentation/test consolidation, and translation source reconciliation.",
+  "baseline": {
+    "version": "0.66.0",
+    "archive": "rundesk-v0.66.0-source.zip",
+    "sha256": "641a08c97adaee8b5527aabd40ac3a190736f5adac3c88c98946aeec12b3c22d"
+  },
+  "source": {
+    "beforeFiles": 896,
+    "afterFiles": 801,
+    "netReduction": 95,
+    "removedOldPaths": 164,
+    "addedNewPaths": 69,
+    "byDirectory": {
+      "(root)": 11,
+      "LICENSES": 2,
+      "clients": 5,
+      "cmd": 4,
+      "config": 2,
+      "deploy": 3,
+      "docs": 52,
+      "internal": 429,
+      "plugins": 9,
+      "recipes": 182,
+      "scripts": 74,
+      "tests": 2,
+      "third_party": 26
+    },
+    "recipesBefore": 255,
+    "recipesAfter": 182,
+    "docsBefore": 67,
+    "docsAfter": 52,
+    "scriptsBefore": 77,
+    "scriptsAfter": 74,
+    "note": "Moved shared files are retained once, not discarded. scripts adds one Python shared-input resolver while consolidating six old CJS entries into existing suites with two shared fixtures."
+  },
+  "changes": [
+    "63 shared resource files replace 137 recipe-local copies: complete Agent-Reach reviewed source/manifest/patch and eight common helpers; generic remains independently buildable.",
+    "Go and Python resolve sharedFiles, preserve local regular-file overrides, reject missing declared sources and unsafe/conflicting paths, materialize standalone files, and strip authoring references from frozen lock metadata.",
+    "Final context limits include generated metadata and SHA256SUMS; generated path conflicts and pre-filter variant conflicts fail explicitly.",
+    "15 guides merged into complete topical documents with stable anchors and updated links; six obsolete test entrypoints folded into named suites with retained assertions.",
+    "Five small Kun store query files merged without changing SQL, signatures or registered research APIs.",
+    "All 1800 active English translations are reconciled into one catalog; generation is stable, runtime logic unchanged, and two duplicate secondary-page script inclusions removed."
+  ],
+  "checks": [
+    {
+      "command": "go test -p 1 ./...",
+      "result": "passed",
+      "scope": "Final production reader after boundary fixes; complete host suite."
+    },
+    {
+      "command": "go vet ./...",
+      "result": "passed"
+    },
+    {
+      "command": "cd third_party/kun-sdk && go test ./...",
+      "result": "passed"
+    },
+    {
+      "command": "CGO_ENABLED=0 go build -buildvcs=false -trimpath ./cmd/rundesk",
+      "result": "passed",
+      "targets": [
+        "linux/amd64",
+        "windows/amd64"
+      ]
+    },
+    {
+      "command": "python3 scripts/test_profiles.py",
+      "result": "passed",
+      "tests": 34
+    },
+    {
+      "command": "python3 scripts/test_upstream_profiles.py",
+      "result": "passed",
+      "tests": 8
+    },
+    {
+      "command": "python3 scripts/test_video_app_media.py",
+      "result": "passed",
+      "tests": 9,
+      "scope": "Real local HTTP/stdio fixtures; no external VideoApp or model."
+    },
+    {
+      "command": "python3 scripts/test_source_hygiene.py",
+      "result": "passed",
+      "tests": 7
+    },
+    {
+      "name": "Merged developer scripts",
+      "result": "passed",
+      "syntaxFiles": 44,
+      "offlineSuites": 4,
+      "namedOfflineCases": 9,
+      "realDemoCredentialAPI": "passed",
+      "browserUIExecuted": false
+    },
+    {
+      "name": "Translation reconciliation",
+      "result": "passed",
+      "catalogEntries": 1800,
+      "actualChineseEnglishLookups": 3600,
+      "generationIdempotent": true
+    },
+    {
+      "name": "Independent shared-reader boundary recheck",
+      "result": "passed",
+      "cases": 7,
+      "sourceSHA256": "19cceee0b45aec476f65e55dcb537bd1cce89c3d7224eb40a4b99c26bd75760c"
+    },
+    {
+      "name": "OpenAPI comparison",
+      "result": "passed",
+      "paths": 248,
+      "operations": 299,
+      "onlyDifference": "info.version"
+    },
+    {
+      "name": "Final actual portable package",
+      "result": "passed",
+      "checks": [
+        "packaging rejects missing declared shared sources before creating the destination",
+        "staged native executable, all resource hashes, preserved license notices and source version agree",
+        "all six recipe exports work without examples, source ancestry, Python, Node or Docker on PATH",
+        "generic template export reads packaged external resources",
+        "shared sources materialize with local overrides; missing inputs, traversal, metadata injection and symlinks fail",
+        "all six fully self-contained legacy recipes export identical files and permissions without common",
+        "external Dockerfile edits affect new exports while imported context bytes stay frozen",
+        "missing packaged recipes fail visibly rather than falling back into a checkout",
+        "recipe reads/imports create no tasks, sessions or image builds",
+        "packaged launcher handles spaces without Python; frozen custom recipes survive restart with common unavailable",
+        "all six Go exports preserve baseline paths, permissions and bytes except explicitly reviewed file changes"
+      ],
+      "scope": "Actual packaged native Go demo server outside the checkout; recipe metadata/export/import only. No real Docker, model or worker execution.",
+      "binarySHA256": "03f6112240fc1c8504b524d9d6c495481284245cd2a9c9d9bfc466ed71d8e370"
+    },
+    {
+      "name": "Go six-default and Python nine-variant baseline comparison",
+      "result": "passed",
+      "scope": "Exact paths, bytes and modes except reviewed news2douyin AGENT-REACH.md and its regenerated SHA256SUMS; seven Python ZIPs remain byte-identical."
+    },
+    {
+      "name": "Unchanged support inputs",
+      "result": "passed",
+      "byteIdenticalGroups": {
+        "third_party": 26,
+        "config": 2,
+        "clients": 5,
+        "plugins": 9,
+        "deploy": 3,
+        "LICENSES": 2
+      },
+      "rootLicensePreserved": true
+    }
+  ],
+  "artifacts": {
+    "rundesk": {
+      "bytes": 26371488,
+      "sha256": "03f6112240fc1c8504b524d9d6c495481284245cd2a9c9d9bfc466ed71d8e370"
+    },
+    "rundesk.exe": {
+      "bytes": 26658304,
+      "sha256": "d0c06ff2bc5e477331bdfd048014fb6f682485eafa802c1b16b8d1d8cbde10ce"
+    }
+  },
+  "limitations": [
+    "No real Docker image build, provider authentication, GPU/model inference, external VideoApp or production Kun worker run.",
+    "Chromium authentication smoke was blocked before page launch by sandbox process-singleton socket restrictions; it is not counted as a UI pass. The corresponding demo API checks and offline DOM suites passed.",
+    "A real Agent-Reach wheel build was not rerun because hatchling and a local cached build environment were unavailable. Full reviewed source files, patch/hash manifests and local installation paths were validated.",
+    "Existing no-shared Go acceptance of colon-bearing local names and recipe-root ancestor symlinks was not changed; these are pre-existing differences from the Python validator.",
+    "Windows was cross-compiled, not executed natively. Full UHP conformance and public image distribution are not claimed."
+  ],
+  "provenance": "Raw execution evidence stays outside the source release. Historical raw evidence remains in the prior source archives; only this current summary ships."
+}

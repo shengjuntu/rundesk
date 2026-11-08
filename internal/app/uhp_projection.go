@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 // The projection is a durable view of the native journal, not another execution

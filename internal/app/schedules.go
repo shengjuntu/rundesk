@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/robfig/cron/v3"
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 	"strings"
 	"time"
 	_ "time/tzdata"

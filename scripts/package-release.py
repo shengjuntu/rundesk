@@ -15,9 +15,12 @@ import re
 import shutil
 import stat
 import struct
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from recipe_tools.shared_inputs import context_files, unique_object
 PROFILES = ("news2douyin", "people-search", "video-build", "hyperframes", "video-use", "openmontage")
 
 
@@ -97,7 +100,10 @@ def stage_release(binary: Path, output: Path, kun: Path | None = None, *, resour
             raise ValueError(f"Incomplete canonical recipe: {profile}")
         if (directory / "profile.lock.json").exists():
             raise ValueError(f"Recipe has two editable manifests: {profile}")
-        json.loads((directory / "recipe.json").read_text(encoding="utf-8"))
+        descriptor = json.loads((directory / "recipe.json").read_text(encoding="utf-8"), object_pairs_hook=unique_object)
+        # Validate the editable shared sources before shipping them. Packaging
+        # preserves common/; each later export materializes a standalone context.
+        context_files(recipes, profile, descriptor)
     for name in ("Dockerfile", "seed/config.toml"):
         if not (recipes / "generic" / name).is_file():
             raise ValueError(f"Incomplete generic recipe: {name}")

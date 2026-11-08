@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/shengjuntu/rundesk/internal/redaction"
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/redaction"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 type KunReplayReview struct {

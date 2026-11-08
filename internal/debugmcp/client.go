@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	d "github.com/shengjuntu/rundesk/internal/debugapi"
+	d "github.com/your-org/rundesk/internal/debugapi"
 )
 
 type Client struct {

@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shengjuntu/rundesk/internal/recipefiles"
+	"github.com/your-org/rundesk/internal/recipefiles"
 )
 
 func (m *Manager) buildRecipeFileContext(id, codexVersion string, allowTemplate bool) (BuildRecipe, []byte, bool, error) {

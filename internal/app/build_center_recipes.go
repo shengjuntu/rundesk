@@ -19,8 +19,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/shengjuntu/rundesk/internal/recipefiles"
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/recipefiles"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 // Recipes describe build inputs and requirements. Plugins remain native Codex

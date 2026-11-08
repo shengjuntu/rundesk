@@ -15,7 +15,7 @@ import (
 	"testing"
 
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 func TestOnboardingFirstRunSurvivesEarlySessionAndCompletionPreservesBackend(t *testing.T) {

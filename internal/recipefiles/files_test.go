@@ -3,12 +3,235 @@ package recipefiles
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func sharedRecipe(t *testing.T, mappings any) (string, string) {
+	t.Helper()
+	directory := testRecipe(t)
+	if err := os.Remove(filepath.Join(directory, "profile.lock.json")); err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := json.Marshal(mappings)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(directory, "recipe.json"), []byte(`{"profile":{"id":"example","version":"1.0.0"},"sharedFiles":`+string(encoded)+`}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	common := filepath.Join(filepath.Dir(directory), "common")
+	if err := os.Mkdir(common, 0755); err != nil {
+		t.Fatal(err)
+	}
+	return directory, common
+}
+
+func TestSharedFilesMaterializeAndLocalOverridesStayFrozen(t *testing.T) {
+	directory, common := sharedRecipe(t, map[string]string{"tools": "helpers"})
+	helper := filepath.Join(common, "helpers")
+	if err := os.Mkdir(helper, 0755); err != nil {
+		t.Fatal(err)
+	}
+	for name, value := range map[string]string{"install.sh": "#!/bin/sh\necho shared\n", "other.txt": "shared text\n"} {
+		if err := os.WriteFile(filepath.Join(helper, name), []byte(value), 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	before, err := Files.ReadFile("example.zip")
+	if err != nil {
+		t.Fatal(err)
+	}
+	again, err := Files.ReadFile("example.zip")
+	if err != nil || !bytes.Equal(before, again) {
+		t.Fatal("shared snapshot is not deterministic", err)
+	}
+	initial := zipFiles(t, before)
+	if initial["tools/other.txt"] != "shared text\n" || strings.Contains(initial["profile.lock.json"], "sharedFiles") || strings.Contains(initial["SHA256SUMS"], "common/") {
+		t.Fatal("shared inputs were not materialized as standalone files", initial)
+	}
+	archive, _ := zip.NewReader(bytes.NewReader(before), int64(len(before)))
+	for _, file := range archive.File {
+		if file.Name == "tools/install.sh" && file.Mode()&0111 == 0 && os.PathSeparator != '\\' {
+			t.Fatal("executable shared mode was lost")
+		}
+	}
+	if err := os.Mkdir(filepath.Join(directory, "tools"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(directory, "tools", "other.txt"), []byte("local override\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(helper, "install.sh"), []byte("changed shared\n"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	after, err := Files.ReadFile("example.zip")
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated := zipFiles(t, after)
+	if updated["tools/other.txt"] != "local override\n" || updated["tools/install.sh"] != "changed shared\n" || initial["tools/other.txt"] != "shared text\n" {
+		t.Fatal("local override, hot edit or snapshot isolation failed")
+	}
+	if err := os.Remove(filepath.Join(helper, "other.txt")); err != nil {
+		t.Fatal(err)
+	}
+	// The complete shared tree remains a valid source after removing a child;
+	// removing the declared source itself must fail even with local files.
+	if err := os.Rename(helper, helper+"-missing"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Files.ReadFile("example.zip"); err == nil {
+		t.Fatal("missing shared source was hidden by a local override")
+	}
+}
+
+func TestSharedPathsAndMetadataAreRejected(t *testing.T) {
+	for _, mappings := range []any{
+		nil, []string{"file"}, map[string]string{"tools/a": "../outside"},
+		map[string]string{"../outside": "file"}, map[string]string{"C:/outside": "file"},
+		map[string]string{"tools\\file": "file"}, map[string]string{"tools//file": "file"},
+		map[string]string{"tools/./file": "file"}, map[string]string{"tools/file": "/absolute"},
+		map[string]string{"recipe.json": "file"}, map[string]string{"SHA256SUMS/file": "file"},
+		map[string]string{"upstream/upstream.json": "file"},
+		map[string]string{"tools": "helpers", "tools/file": "file"},
+	} {
+		t.Run(fmt.Sprint(mappings), func(t *testing.T) {
+			_, common := sharedRecipe(t, mappings)
+			if err := os.WriteFile(filepath.Join(common, "file"), []byte("shared"), 0644); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := Files.ReadFile("example.zip"); err == nil {
+				t.Fatal("unsafe shared mapping accepted", mappings)
+			}
+		})
+	}
+}
+
+func TestSharedTreesRejectLinksMetadataAndPathConflicts(t *testing.T) {
+	for _, scenario := range []string{"symlink-parent", "symlink-file", "generated-metadata", "file-directory-conflict", "budget"} {
+		t.Run(scenario, func(t *testing.T) {
+			directory, common := sharedRecipe(t, map[string]string{"upstream": "tree"})
+			tree := filepath.Join(common, "tree")
+			if err := os.Mkdir(tree, 0755); err != nil {
+				t.Fatal(err)
+			}
+			file := filepath.Join(tree, "file")
+			if err := os.WriteFile(file, []byte("shared"), 0644); err != nil {
+				t.Fatal(err)
+			}
+			switch scenario {
+			case "symlink-parent":
+				if err := os.Rename(tree, tree+"-real"); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(tree+"-real", tree); err != nil {
+					t.Skip(err)
+				}
+			case "symlink-file":
+				if err := os.Symlink(file, filepath.Join(tree, "linked")); err != nil {
+					t.Skip(err)
+				}
+			case "generated-metadata":
+				if err := os.WriteFile(filepath.Join(tree, "upstream.json"), []byte("{}"), 0644); err != nil {
+					t.Fatal(err)
+				}
+			case "file-directory-conflict":
+				if err := os.WriteFile(filepath.Join(directory, "upstream"), []byte("local file"), 0644); err != nil {
+					t.Fatal(err)
+				}
+			case "budget":
+				if err := os.Truncate(file, 128<<20); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if _, err := Files.ReadFile("example.zip"); err == nil {
+				t.Fatal("invalid shared tree accepted", scenario)
+			}
+		})
+	}
+}
+
+func TestFrozenDescriptorPreservesOriginalBytes(t *testing.T) {
+	for _, value := range []string{
+		`{"name":"test","sharedFiles":{},"other":1}`,
+		`{"sharedFiles":{},"name":"test","other":1}`,
+		`{"name":"test","other":1,"sharedFiles":{}}`,
+	} {
+		frozen, err := frozenDescriptor([]byte(value))
+		if err != nil || string(frozen) != `{"name":"test","other":1}` {
+			t.Fatalf("unexpected frozen descriptor %s: %v", frozen, err)
+		}
+	}
+	value := []byte("{\n  \"name\": \"test\",\n  \"sharedFiles\": {}\n}\n")
+	frozen, err := frozenDescriptor(value)
+	if err != nil || string(frozen) != "{\n  \"name\": \"test\"\n}\n" {
+		t.Fatalf("lock formatting changed: %q, %v", frozen, err)
+	}
+}
+
+func TestCanonicalDuplicateKeysAreRejected(t *testing.T) {
+	for _, value := range []string{
+		`{"profile":{"id":"one","id":"two"}}`,
+		`{"profile":{},"sharedFiles":{"tools/a":"one","tools/a":"two"}}`,
+		`{"profile":{},"sharedFiles":{},"sharedFiles":{}}`,
+	} {
+		directory, _ := sharedRecipe(t, map[string]string{})
+		if err := os.WriteFile(filepath.Join(directory, "recipe.json"), []byte(value), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := Files.ReadFile("example.zip"); err == nil || !strings.Contains(err.Error(), "duplicate") {
+			t.Fatal("ambiguous canonical descriptor accepted", err)
+		}
+	}
+}
+
+func TestGeneratedFilesAndSkippedVariantsKeepValidContextBoundaries(t *testing.T) {
+	for _, scenario := range []string{"upstream-file", "upstream-metadata-directory", "variants-parent", "final-count"} {
+		t.Run(scenario, func(t *testing.T) {
+			directory, common := sharedRecipe(t, map[string]string{})
+			descriptor := `{"profile":{},"upstream":{"repository":"fixture"}}`
+			switch scenario {
+			case "upstream-file":
+				if err := os.WriteFile(filepath.Join(directory, "upstream"), []byte("local file"), 0644); err != nil {
+					t.Fatal(err)
+				}
+			case "upstream-metadata-directory":
+				if err := os.MkdirAll(filepath.Join(directory, "upstream", "upstream.json"), 0755); err != nil {
+					t.Fatal(err)
+				}
+			case "variants-parent":
+				descriptor = `{"profile":{},"sharedFiles":{"variants/file":"file"}}`
+				if err := os.WriteFile(filepath.Join(directory, "variants"), []byte("local file"), 0644); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(common, "file"), []byte("shared"), 0644); err != nil {
+					t.Fatal(err)
+				}
+			case "final-count":
+				descriptor = `{"profile":{}}`
+				// Dockerfile + descriptor + 3998 entries reaches the authoring
+				// limit. Its generated checksum would exceed the ZIP limit.
+				for index := 0; index < 3998; index++ {
+					if err := os.WriteFile(filepath.Join(directory, fmt.Sprintf("file-%04d", index)), nil, 0644); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			if err := os.WriteFile(filepath.Join(directory, "recipe.json"), []byte(descriptor), 0644); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := Files.ReadFile("example.zip"); err == nil {
+				t.Fatal("invalid or oversized final context accepted", scenario)
+			}
+		})
+	}
+}
 
 func testRecipe(t *testing.T) string {
 	t.Helper()

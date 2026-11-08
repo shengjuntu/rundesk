@@ -6,6 +6,7 @@ from pathlib import Path, PurePosixPath
 import re
 import shutil
 import tarfile
+import shared_inputs
 
 
 REPOSITORIES = {
@@ -85,12 +86,19 @@ def archive_members(path):
     return files
 
 
-def load(root, profile):
+def load(root, profile, inputs=None):
     name = profile["id"]
     if name not in REPOSITORIES or profile.get("upstream") != "upstream.json":
         raise ValueError("Only reviewed independent upstream profiles may use upstream.json")
-    base = root / name
-    value = json.loads(local(base, "recipe.json").read_text(encoding="utf-8"))["upstream"]
+    inputs = shared_inputs.context_files(root, name) if inputs is None else inputs
+
+    def file(value):
+        relative(value)
+        if value not in inputs:
+            raise ValueError("Missing upstream build input: " + value)
+        return inputs[value]
+
+    value = json.loads(file("recipe.json").read_text(encoding="utf-8"), object_pairs_hook=shared_inputs.unique_object)["upstream"]
     required = {"schemaVersion", "repository", "commit", "sourceSHA256", "license", "installScript", "buildFiles", "skillDirectories", "requiredFiles"}
     fields = set(value) - {"environment", "sourceScope"}
     if fields not in (required | {"sourceArchive"}, required | {"sourceURL"}) or value["schemaVersion"] != 1:
@@ -105,7 +113,7 @@ def load(root, profile):
         raise ValueError("Unknown upstream source scope")
     members = None
     if "sourceArchive" in value:
-        path = local(base, value["sourceArchive"])
+        path = file(value["sourceArchive"])
         if source_digest(path) != value["sourceSHA256"]:
             raise ValueError("Upstream source archive digest mismatch")
         try:
@@ -121,16 +129,11 @@ def load(root, profile):
         raise ValueError("Invalid upstream build file list")
     for item in build_files:
         relative(item)
-        path = base / "upstream" / item
-        if path.is_dir():
-            local(base / "upstream", item, directory=True)
-            for child in path.rglob("*"):
-                if child.is_symlink() or (not child.is_file() and not child.is_dir()):
-                    raise ValueError("Unsafe upstream build directory")
-        else:
-            local(base / "upstream", item)
+        target = "upstream/" + item
+        if target not in inputs and not any(path.startswith(target + "/") for path in inputs):
+            raise ValueError("Missing upstream build input: " + item)
     relative(value["installScript"])
-    if value["installScript"] not in build_files or not local(base / "upstream", value["installScript"]).is_file():
+    if value["installScript"] not in build_files or "upstream/" + value["installScript"] not in inputs:
         raise ValueError("Upstream install script must be a declared local file")
     if "doctor.py" not in build_files:
         raise ValueError("Independent upstream profiles must declare doctor.py")

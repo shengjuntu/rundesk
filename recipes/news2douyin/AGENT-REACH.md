@@ -6,7 +6,7 @@
 
 news2douyin、people-search 预置更新为 1.1.2。用户部署发现 GitHub archive URL 返回 403，改为 codeload 后又暴露 hatchling 重复包含 guides/skill 的上游打包缺陷。当前从同一固定提交取得源码，删除冗余 `force-include` 段，内置到共享 vendor；生成上下文使用 `/opt/rundesk-profile/vendor/agent-reach` 本地安装，先 COPY vendor 再执行 pip。
 
-保留原始来源、archive SHA-256、[补丁](vendor/agent-reach-wheel.patch)、[逐文件摘要](vendor/agent-reach.sha256)及完整 LICENSE；生成时核验来源文件，拒绝未审阅修改、额外文件与链接。此处源码已本地化，构建后端及其他 apt/pip/npm 依赖仍需下载。
+源码树保留原始来源、archive SHA-256、补丁 `recipes/common/vendor/agent-reach-wheel.patch`、逐文件摘要 `recipes/common/vendor/agent-reach.sha256` 及完整 LICENSE。导出时复制到上下文的 `vendor/agent-reach`、`vendor/agent-reach-wheel.patch` 和 `vendor/agent-reach.sha256`，构建不依赖源码树的 `common/`。生成时核验来源文件，拒绝未审阅修改、额外文件与链接。此处源码已本地化，构建后端及其他 apt/pip/npm 依赖仍需下载。
 
 用户报告 news2douyin 1.1.2（Codex 0.157.1）构建/smoke 成功，people-search 待导入；这些是用户部署记录。本次源码同步另行复现原始 wheel 失败、验证修复后的离线 wheel 构建/安装及资源保留，不将其等同于 Docker 或真实研究验收，见[本轮验证](../../docs/VALIDATION.md)。
 

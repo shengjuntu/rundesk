@@ -15,7 +15,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 func recipeTestManifest() BuildRecipeManifest {

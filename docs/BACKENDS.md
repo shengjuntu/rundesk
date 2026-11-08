@@ -1,6 +1,6 @@
 # 后端能力与扩展边界
 
-当前源码包为 RunDesk 0.66.0，后端为独立 Kun 0.17.0（worker 协议 16）与 Codex App Server。RDCA 任务接口保持 `/api/v1`，附加 UHP `/v1` 入口复用同一任务核心。内部准入、运行与停止通过后端注册表分派。
+当前源码包为 RunDesk 0.67.0，后端为独立 Kun 0.17.0（worker 协议 16）与 Codex App Server。RDCA 任务接口保持 `/api/v1`，附加 UHP `/v1` 入口复用同一任务核心。内部准入、运行与停止通过后端注册表分派。
 
 | 能力 | Kun | Codex |
 | --- | --- | --- |
@@ -31,4 +31,4 @@ Kun Bash 默认关闭，开启须明确完整宿主访问和独立命令策略�
 
 共同任务接口服务应用接入，共同观测接口服务部署调试；研究用的单步、分叉和评测按后端能力开放。UHP 的覆盖也受这些原生能力限制，不能由统一入口推定两个后端等价。见 [UHP 当前边界](UHP.md#当前边界)。
 
-[架构](ARCHITECTURE.md) · [调试](DEBUG.md) · [Kun 工具与边界](KUN-PIG-CORE.md)
+[架构](ARCHITECTURE.md) · [调试](TRACE.md#debug-overview) · [Kun 工具与边界](KUN-PIG-CORE.md)

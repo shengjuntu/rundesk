@@ -15,8 +15,8 @@ import (
 
 	kc "github.com/your-org/kun/sdk/client"
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/shengjuntu/rundesk/internal/store"
-	"github.com/shengjuntu/rundesk/internal/tracequery"
+	"github.com/your-org/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/tracequery"
 )
 
 type DiagnosticReviewInput struct {

@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	p "github.com/your-org/kun/sdk/protocol"
-	x "github.com/shengjuntu/rundesk/internal/experiment"
-	"github.com/shengjuntu/rundesk/internal/store"
+	x "github.com/your-org/rundesk/internal/experiment"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 func TestExperimentFrozenOfflineBranches(t *testing.T) {

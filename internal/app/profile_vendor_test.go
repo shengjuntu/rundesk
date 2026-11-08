@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 // Exercise the actual embedded contexts used by the build center, including

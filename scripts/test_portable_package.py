@@ -14,6 +14,7 @@ import argparse
 from contextlib import contextmanager
 import hashlib
 import http.client
+import importlib.util
 import io
 import json
 import os
@@ -21,6 +22,7 @@ from pathlib import Path
 import re
 import secrets
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -90,6 +92,18 @@ def read_json(base, token, path):
     return json.loads(request(base, token, path)[1])
 
 
+def context_manifest(payload):
+    """Compare exported content and execute permissions without ZIP metadata."""
+    with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+        files = {}
+        for entry in archive.infolist():
+            assert not entry.is_dir() and not stat.S_ISLNK(entry.external_attr >> 16)
+            assert entry.filename not in files
+            files[entry.filename] = {"sha256": sha256(archive.read(entry)), "bytes": entry.file_size,
+                                     "mode": oct((entry.external_attr >> 16) & 0o7777)}
+        return files
+
+
 def verify_context(payload, profile):
     with zipfile.ZipFile(io.BytesIO(payload)) as archive:
         names = archive.namelist()
@@ -99,6 +113,7 @@ def verify_context(payload, profile):
         assert "recipe.json" not in names and not any(name.startswith(("examples/", "variants/")) for name in names)
         lock = json.loads(archive.read("profile.lock.json"))
         assert lock["profile"]["id"] == profile and lock["codexVersion"] == CODEX_VERSION
+        assert "sharedFiles" not in lock, "frozen context must be self contained"
         dockerfile = archive.read("Dockerfile").decode()
         assert "ARG CODEX_VERSION=" + CODEX_VERSION in dockerfile
         assert 'LABEL io.rundesk.codex.version="' + CODEX_VERSION + '"' in dockerfile
@@ -121,7 +136,102 @@ def verify_context(payload, profile):
             assert "force-include" not in archive.read("vendor/agent-reach/pyproject.toml").decode()
             assert "vendor/agent-reach/LICENSE" in names
             assert 'verify_codex "$binary"' in archive.read("tools/install-codex.sh").decode()
-        return {"files": len(names), "sha256": sha256(payload)}
+        return {"files": len(names), "sha256": sha256(payload), "fileManifest": context_manifest(payload)}
+
+
+def exercise_shared_inputs(stage, base, token, exports, frozen_path, original_frozen, report):
+    """Mutate only disposable packaged resources; require a fully portable ZIP."""
+    recipes = stage / "recipes"
+    profile = recipes / "news2douyin"
+    descriptor_file = profile / "recipe.json"
+    original_descriptor = descriptor_file.read_bytes()
+    descriptor = json.loads(original_descriptor)
+    target = "tools/install-codex.sh"
+    assert target in descriptor["sharedFiles"]
+    shared = recipes / "common" / descriptor["sharedFiles"][target]
+    local = profile / target
+    assert shared.is_file() and not local.exists()
+    export_path = f"/build-center/recipes/builtin-news2douyin/context.zip?codexVersion={CODEX_VERSION}"
+
+    def rejected(reason):
+        status, _ = request(base, token, export_path, expected=None)
+        assert status >= 400, "unsafe or missing shared input was accepted: " + reason
+
+    def descriptor_case(value, reason):
+        try:
+            descriptor_file.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
+            rejected(reason)
+        finally:
+            descriptor_file.write_bytes(original_descriptor)
+
+    original_shared = shared.read_bytes()
+    local.parent.mkdir(parents=True, exist_ok=True)
+    marker = b"\n# portable-local-override-fixture\n"
+    try:
+        local.write_bytes(original_shared + marker)
+        local.chmod(0o755)
+        overridden = request(base, token, export_path)[1]
+        with zipfile.ZipFile(io.BytesIO(overridden)) as archive:
+            assert archive.read(target) == original_shared + marker
+            assert archive.getinfo(target).external_attr >> 16 & 0o111
+        hidden = shared.with_name(shared.name + ".portable-original")
+        shared.rename(hidden)
+        try:
+            rejected("missing shared source, even with local override")
+            assert request(base, token, frozen_path)[1] == original_frozen
+            shared.symlink_to(hidden)
+            try:
+                rejected("shared source symlink")
+            finally:
+                shared.unlink()
+        finally:
+            hidden.rename(shared)
+    finally:
+        local.unlink()
+    local.symlink_to(shared)
+    try:
+        rejected("local override symlink")
+    finally:
+        local.unlink()
+    for source in ("../news2douyin/Dockerfile", "/etc/passwd", "tools//install-codex.sh"):
+        changed = json.loads(original_descriptor)
+        changed["sharedFiles"][target] = source
+        descriptor_case(changed, "invalid source " + source)
+    for unsafe in ("../outside", "profile.lock.json", "tools/../outside"):
+        changed = json.loads(original_descriptor)
+        changed["sharedFiles"][unsafe] = descriptor["sharedFiles"][target]
+        descriptor_case(changed, "invalid target " + unsafe)
+    report["checks"].append("shared sources materialize with local overrides; missing inputs, traversal, metadata injection and symlinks fail")
+
+    # Exercise legacy self-contained authoring through the same real service.
+    # Materialize all profiles because builtin discovery validates the catalog.
+    backup = stage.parent / "recipes-authoring-backup"
+    shutil.copytree(recipes, backup)
+    try:
+        for name in sorted(PROFILES):
+            directory = recipes / name
+            metadata = directory / "recipe.json"
+            value = json.loads(metadata.read_bytes())
+            for destination, origin in value.pop("sharedFiles", {}).items():
+                source = recipes / "common" / origin
+                paths = source.rglob("*") if source.is_dir() else [source]
+                for path in paths:
+                    if not path.is_file():
+                        continue
+                    relative = path.relative_to(source) if source.is_dir() else Path()
+                    output = directory / destination / relative
+                    if not output.exists():
+                        output.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(path, output)
+            metadata.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
+        shutil.rmtree(recipes / "common")
+        for name in sorted(PROFILES):
+            payload = request(base, token, f"/build-center/recipes/builtin-{name}/context.zip?codexVersion={CODEX_VERSION}")[1]
+            assert context_manifest(payload) == context_manifest(exports[name]), "legacy authoring changed exported content: " + name
+    finally:
+        shutil.rmtree(recipes)
+        backup.rename(recipes)
+    report["checks"].append("all six fully self-contained legacy recipes export identical files and permissions without common")
 
 
 def import_recipe(base, token, payload):
@@ -137,12 +247,39 @@ def import_recipe(base, token, payload):
                               "multipart/form-data; boundary=" + boundary)[1])
 
 
+def verify_incomplete_package_rejected(binary, temp, report):
+    fixture = temp / "incomplete-source"
+    for name in ("recipes", "config", "LICENSES"):
+        shutil.copytree(ROOT / name, fixture / name)
+    for name in ("LICENSE", "THIRD_PARTY_NOTICES.md", "internal/app/api_v1.go", "third_party/kun-sdk/LICENSE"):
+        destination = fixture / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / name, destination)
+    descriptor = json.loads((fixture / "recipes/news2douyin/recipe.json").read_text())
+    missing = fixture / "recipes/common" / descriptor["sharedFiles"]["tools/install-codex.sh"]
+    missing.unlink()
+    spec = importlib.util.spec_from_file_location("portable_package_release", ROOT / "scripts/package-release.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    destination = temp / "must-not-be-packaged"
+    try:
+        module.stage_release(binary, destination, resource_root=fixture)
+    except (FileNotFoundError, ValueError) as error:
+        assert "install-codex.sh" in str(error), str(error)
+    else:
+        raise AssertionError("packager accepted a missing declared shared source")
+    assert not destination.exists()
+    shutil.rmtree(fixture)
+    report["checks"].append("packaging rejects missing declared shared sources before creating the destination")
+
+
 def exercise(binary, results, report):
     token = secrets.token_hex(24)
     with tempfile.TemporaryDirectory(prefix="rundesk portable qa-") as directory:
         temp = Path(directory)
         stage = temp / "package"
         assert ROOT not in stage.parents
+        verify_incomplete_package_rejected(binary, temp, report)
         command = [sys.executable, str(ROOT / "scripts/package-release.py"), "--binary", str(binary), "--output-dir", str(stage)]
         packaged = subprocess.run(command, text=True, capture_output=True)
         assert packaged.returncode == 0, packaged.stdout + packaged.stderr
@@ -191,6 +328,7 @@ def exercise(binary, results, report):
             frozen = import_recipe(base, token, exports["news2douyin"])
             frozen_path = f"/build-center/recipes/{frozen['id']}/context.zip"
             original_frozen = request(base, token, frozen_path)[1]
+            exercise_shared_inputs(stage, base, token, exports, frozen_path, original_frozen, report)
             marker = "# portable-external-edit-fixture\n"
             dockerfile = stage / "recipes/news2douyin/Dockerfile"
             dockerfile.write_bytes(dockerfile.read_bytes() + marker.encode())
@@ -211,16 +349,29 @@ def exercise(binary, results, report):
             report["checks"].append("missing packaged recipes fail visibly rather than falling back into a checkout")
             assert {kind: read_json(base, token, "/" + kind) for kind in before} == before
             report["checks"].append("recipe reads/imports create no tasks, sessions or image builds")
-        with service(stage, data, token, env, results / "server-launcher.log", launcher=True) as base:
-            assert request(base, token, frozen_path)[1] == original_frozen
-            assert read_json(base, token, "/build-center/recipes")["items"]
-        report["checks"].append("packaged launcher handles a path with spaces without Python and restart retains frozen custom recipes")
+        common = stage / "recipes/common"
+        unavailable_common = stage.parent / "common-unavailable"
+        common.rename(unavailable_common)
+        try:
+            with service(stage, data, token, env, results / "server-launcher.log", launcher=True) as base:
+                assert request(base, token, frozen_path)[1] == original_frozen
+                status, _ = request(base, token, "/build-center/recipes", expected=None)
+                assert status >= 400, "missing common inputs were silently ignored after restart"
+                unavailable_common.rename(common)
+                assert read_json(base, token, "/build-center/recipes")["items"]
+        finally:
+            if unavailable_common.exists():
+                unavailable_common.rename(common)
+        report["checks"].append("packaged launcher handles spaces without Python; frozen custom recipes survive restart with common unavailable")
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--baseline", type=Path, help="compare all Go-exported files and modes with a prior exports.json")
+    parser.add_argument("--allow-baseline-change", action="append", default=[], metavar="PROFILE:PATH",
+                        help="explicit reviewed byte change allowed against baseline; modes and path set must remain unchanged")
     args = parser.parse_args()
     results = args.output_dir.resolve()
     if results == ROOT or ROOT in results.parents:
@@ -229,6 +380,26 @@ def main():
     report = {"passed": False, "checks": [], "scope": "Actual packaged native Go demo server outside the checkout; recipe metadata/export/import only. No real Docker, model or worker execution."}
     try:
         exercise(args.binary.resolve(strict=True), results, report)
+        if args.baseline:
+            previous = json.loads(args.baseline.read_text())["go"]
+            assert set(previous) == PROFILES
+            allowed = {profile: set() for profile in PROFILES}
+            for entry in args.allow_baseline_change:
+                profile, path = entry.split(":", 1)
+                assert profile in PROFILES and path in previous[profile]["files"], "invalid baseline exception: " + entry
+                allowed[profile].add(path)
+            reviewed = {}
+            for profile, exported in report["contexts"].items():
+                before, after = previous[profile]["files"], exported["fileManifest"]
+                assert before.keys() == after.keys(), "baseline path set changed: " + profile
+                changed = {path for path in before if before[path] != after[path]}
+                assert changed <= allowed[profile], "unreviewed baseline changes: " + profile + ": " + ", ".join(sorted(changed - allowed[profile]))
+                for path in changed:
+                    assert before[path]["mode"] == after[path]["mode"], "baseline permission changed: " + profile + ":" + path
+                    reviewed[profile + ":" + path] = {"before": before[path], "after": after[path]}
+            report["reviewedBaselineChanges"] = reviewed
+            report["checks"].append("all six Go exports preserve baseline paths, permissions and bytes except explicitly reviewed file changes")
+            report["baselineSHA256"] = sha256(args.baseline.read_bytes())
         report["passed"] = True
     except Exception as error:
         report["error"] = str(error)

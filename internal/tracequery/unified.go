@@ -10,7 +10,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/shengjuntu/rundesk/internal/observation"
+	"github.com/your-org/rundesk/internal/observation"
 )
 
 type UnifiedArgs struct {

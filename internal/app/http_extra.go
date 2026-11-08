@@ -3,7 +3,7 @@ package app
 import (
 	"net/http"
 
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 func filterFromRequest(r *http.Request) store.EventFilter {

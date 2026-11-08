@@ -17,10 +17,10 @@ import (
 
 	kc "github.com/your-org/kun/sdk/client"
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/shengjuntu/rundesk/internal/observeproxy"
-	"github.com/shengjuntu/rundesk/internal/redaction"
-	"github.com/shengjuntu/rundesk/internal/rpc"
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/observeproxy"
+	"github.com/your-org/rundesk/internal/redaction"
+	"github.com/your-org/rundesk/internal/rpc"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 type Workspace struct {

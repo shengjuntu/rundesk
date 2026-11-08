@@ -4,6 +4,20 @@ RunDesk 的 `/v1` 服务入口提供严格能力准入、持久任务时限、�
 
 这是一版有明确限制的实现，不声明完整 UHP conformant。发现文档中的 `conformance_class: core` 表示本版采用的基础接口等级；它不是独立认证结果。两种后端均不提供 UHP 硬工具轮次预算或输出 token 预算，原生指令优先级和 Kun 图片输入等差异见下文。即使选定测试后端通过官方套件，也不能据此推断所有原生后端和全部规范要求都已验证。
 
+<a id="application-integration-boundaries"></a>
+
+## 应用接入与能力边界
+
+RunDesk 为领域 APP 提供任务提交、进度订阅、会话续接与产物访问，把 Harness 配置和运行管理集中在工作台。管理员通过运行预设复用已准备的实例、工作区、Skills、MCP 和工具环境；APP 可以专注于领域数据、业务工具与结果审阅。配置资源不等于验证资源已加载或可用，原生插件安装仍受 [当前插件边界](NATIVE-PLUGINS.md) 限制。
+
+两个服务入口创建的运行都可在授权范围内观测和调试。单步、分叉和对照实验供 Harness 开发者研究使用，按实际后端开放，不成为所有 APP 或所有 Harness 都必须支持的公共能力。
+
+0.53.0 的接入约定是先发现目标 harness 能力，再由 `metadata.rundesk_require` 对必须具备的能力执行严格准入。未知或不支持的要求在创建任务、物化本次附件前拒绝。Codex/Kun 的硬工具轮次与输出 token 预算均未提供；普通请求会明确报告忽略，严格请求会拒绝。额外指令作为任务文本进入会话历史，不承诺原生优先级或每次任务后自动清除。
+
+能力声明与严格准入对应 RunDesk 适配器契约，不保证所选模型的模态、供应商或账号就绪；例如 Codex 能接收图片附件，实际模型仍须支持图片。配置、能力发现和真实运行验收应分别记录。
+
+任务时限持久保存在公共任务核心，默认一小时且包含排队；到期协作取消，不回滚已发生的外部动作。APP 通过 response 元数据轮询排队、执行、暂停和待审批等状态，待审批只提供受既有访问控制保护的工作台入口。标准 SSE 保持原有事件类型，调试、审批操作及预设管理继续使用 RunDesk 原有接口。可运行接入流程见 [UHP 客户端示例](../clients/python/uhp_client.py)。
+
 ## 协议身份与授权
 
 `GET /v1/uhp` 无须凭据，返回固定协议版本和不含调用者资料的能力文档。其余端点要求 `Authorization: Bearer <token>`，可使用配置的管理员令牌或 RunDesk 应用凭据。浏览器 Cookie 和个人用户令牌不能用于这个入口。GET 操作要求应用凭据具有 `read`；提交、取消等操作要求 `run`；文件上传、附件输入和产物访问还要求 `files`。队列在真正运行之前再次检查提交凭据。
@@ -142,6 +156,14 @@ python3 clients/python/uhp_client.py download cntr_example file_example --output
 
 UHP 的映射和投影位于现有 `state.db` 的 `uhp-*` 记录中；任务状态权威仍是公共 task/session 核心。它没有为每个任务再建立可独立写入的一套状态文件。任务资源导出是可重建视图，见 [TASK-RESOURCES](TASK-RESOURCES.md)。
 
+<a id="client-migration"></a>
+
+## 客户端迁移与历史身份
+
+目标是让原接 HarnessRouter 的业务客户端，在固定 UHP 版本和能力范围内改接 RunDesk，并使用 RunDesk 调试该入口创建的新运行。基础迁移应尽量收敛为服务地址、RunDesk 签发的凭据，以及目标 harness、model 和资源绑定配置；是否无需改业务调用代码，以真实客户端回归为准。
+
+协议兼容不等于服务数据可搬迁。旧服务的 session/response/file ID、原生线程、凭据、幂等回执、工作区和已安装资源不会自动在 RunDesk 生效。保留历史与继续旧执行需另做显式导出、导入及格式与引擎校验；未采集或未导出的轨迹无法补回。HarnessRouter 专属管理接口、私有扩展和控制台功能也不自动属于 UHP 兼容范围。
+
 ## 当前边界
 
 - 支持基础发现、模型查询、阻塞与流式任务、后台提交、同会话续接、取消、响应读回，以及文件和会话检查。
@@ -152,6 +174,30 @@ UHP 的映射和投影位于现有 `state.db` 的 `uhp-*` 记录中；任务状�
 - `input_history` 为 false：输入数组以最后一条用户消息作为本次任务，不将早期消息建立为导入会话记录。
 - 本版不提供 Full 所需的 harness CRUD 和会话分享，也不提供 UHP plugin、environment、memory 管理。RunDesk 已有的相应平台资源继续通过 RDCA 配置。
 - 不迁移 HarnessRouter 已有的 ID、凭据、原生线程、历史轨迹或幂等回执；改接服务只影响在 RunDesk 新建的运行。
+
+<a id="conformance-scope"></a>
+
+## 能力实施与一致性验收
+
+| 验收对象 | 当前边界 | 应保留的证据 |
+| --- | --- | --- |
+| 独立平台契约 | RDCA v1、公共任务／权限／资源／检查与引用存储已接入；统一资源写入和内容冻结仍需扩展 | 文档与 OpenAPI 一致，分别核对身份、归属与错误 |
+| UHP 运行和应用接入 | /v1 的任务、续接、日志、文件、会话、严格能力准入、持久时限、进度和审批入口已接入 | 固定 2026-10-19，官方套件与应用专项分别报告；硬预算和指令限制按本文披露 |
+| 真实应用与后端 | 测试替身不代替实际 APP、模型凭据、Codex／维护 Kun 和执行环境 | 提交、进度、审批、取消及产物的目标环境闭环，按后端区分 |
+| Full 管理能力 | harness 写入等按真实客户端需求扩展，当前未声明完整兼容 | 先明确与实例、预设、权限和资源管理的权威关系，再发布对应版本／class 的一致性报告 |
+
+完整兼容始终指明协议版本、class 和可选能力，不表示永久兼容后续草案或所有厂商扩展。实施时需核对规范正文、Schema、指南与测试的一致性，不根据滚动示例臆测端点。只通过局部检查时，不宣传完整兼容。
+
+<a id="protocol-provenance"></a>
+
+## 协议来源与许可
+
+本次根据固定版本公开规范实现独立 Go 适配层，官方套件从外部固定 checkout 运行，不复制上游 Schema 或实现。UHP 官方将规范与代码置于 Apache-2.0；今后采用或修改其材料时，应记录固定版本、文件、许可证、适用 NOTICE 与修改。官方将 UHP 兼容名称声明与一致性测试绑定，声明之前需完成对应验证。来源与当前分发范围见 [UPSTREAM](UPSTREAM.md)。
+
+- [UHP Architecture](https://unifiedharnessprotocol.org/spec/architecture)：完整 harness、server/client 和兼容等级。
+- [UHP Tasks](https://unifiedharnessprotocol.org/spec/tasks)：任务运行与 harness 内部工具执行。
+- [UHP Governance](https://unifiedharnessprotocol.org/governance)：规范许可证及兼容名称声明。
+- [UHP Conformance](https://unifiedharnessprotocol.org/conformance)：一致性验证及覆盖范围。
 
 ## 验证与复现
 
@@ -170,7 +216,7 @@ scripts/test-uhp-conformance.sh \
   --base-url http://127.0.0.1:3210 \
   --class extended \
   --model demo-fixture \
-  --label 'RunDesk v0.66.0 UHP / native demo fixture' \
+  --label 'RunDesk v0.67.0 UHP / native demo fixture' \
   --json build/qa/uhp-conformance/report.json \
   --plain
 ```

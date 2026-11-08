@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 const buildUploadLimit = 32 << 20

@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 // Plans are immutable declarations, not acceptance evidence. The host binds

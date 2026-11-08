@@ -36,7 +36,7 @@
 
 `PUT` 与主动测试请求使用 `Idempotency-Key`，同一逻辑重试保留原键与原请求。配置输入包含 `baseUrl`、`model`、`apiKeyEnv`、`revision`，协议固定为 `responses`。环境读回声明 `instanceId`、`workspaceId`、可选 `environmentId` 和 `scope`。完整请求、回执及权限以[OpenAPI](API-V1.md)为准。
 
-构建中心创建 Agent 可传 `providerMode: "inherit-default"` 与读取时的 `providerRevision`；选择 `existing` 保留原有配置。镜像和 Agent 的创建关系见[构建工作台](BUILD-CENTER.md)。
+构建中心创建 Agent 可传 `providerMode: "inherit-default"` 与读取时的 `providerRevision`；选择 `existing` 保留原有配置。镜像和 Agent 的创建关系见[构建工作台](BUILD-CENTER.md#build-workbench)。
 
 ## English summary
 

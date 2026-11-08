@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+# RunDesk replaces HOME for each environment. Initialize there, not at build time.
+if [ -z "${MCPORTER_CONFIG:-}" ]; then
+    MCPORTER_CONFIG="$(python3 /opt/rundesk-profile/tools/agent_reach_config.py)"
+    export MCPORTER_CONFIG
+fi
+exec node /opt/agent-tools/node_modules/mcporter/dist/cli.js "$@"

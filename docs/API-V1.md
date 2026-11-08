@@ -1,8 +1,8 @@
 # RunDesk Control API（RDCA）v1
 
-RunDesk 自身 API 的名称为 **RunDesk Control API（RDCA）**。本文对应 RunDesk 0.66.0 的契约。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
+RunDesk 自身 API 的名称为 **RunDesk Control API（RDCA）**。本文对应 RunDesk 0.67.0 的契约。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
 
-RunDesk 不依赖 HarnessRouter。附加 UHP 服务已在 `/v1` 提供入口，与 RDCA 共用任务核心和资源服务；各协议的授权与幂等细节分别定义。本版目标协议为 `2026-10-19`，不声明完整规范兼容，详见 [API 定位](API-STRATEGY.md) 和 [UHP 服务与限制](UHP.md)。
+RunDesk 不依赖 HarnessRouter。附加 UHP 服务已在 `/v1` 提供入口，与 RDCA 共用任务核心和资源服务；各协议的授权与幂等细节分别定义。本版目标协议为 `2026-10-19`，不声明完整规范兼容，详见 [API 定位](ARCHITECTURE.md#api-position) 和 [UHP 服务与限制](UHP.md)。
 
 ## 0.61.0 执行分工
 
@@ -175,7 +175,7 @@ TaskSpec.input 的稳定入口是 `{text,files?,skills?}`；files 使用服务�
 
 信封稳定，method/data 保留运行时差异；不要将 Codex 原生字段假定为 Kun 字段，也不要将 Kun sequence 用作宿主 id。流式 delta 是过程证据，最终回复应采用明确的完成消息/最终阶段记录。`GET /sessions/{sid}/messages/{eid}` 读取可识别的助手消息，`GET /sessions/{sid}/export?format=markdown` 导出对话。
 
-轨迹和只读调试说明见 [DEBUG](DEBUG.md)、[DEBUG-SERVICE](DEBUG-SERVICE.md)。未知、截断、缺失用量保持未知，不推算隐藏状态。Kun 的单步、断点和分叉为管理员扩展能力。
+轨迹和只读调试说明见 [DEBUG](TRACE.md#debug-overview)、[DEBUG-SERVICE](DEBUG-SERVICE.md)。未知、截断、缺失用量保持未知，不推算隐藏状态。Kun 的单步、断点和分叉为管理员扩展能力。
 
 ## 文件与产物
 
@@ -193,7 +193,7 @@ TaskSpec.input 的稳定入口是 `{text,files?,skills?}`；files 使用服务�
 
 取消、超时和中断不撤销已发生的文件修改或远端操作。Codex 可显式核对并继续原生任务，Kun 有独立安全检查点恢复；两者并非可互换的恢复协议。结果未知时先检查证据与业务状态，不能换后端自动重跑。
 
-[Codex 恢复](RECOVERY.md) · [Kun 检查点](KUN-CHECKPOINTS.md)
+[Codex 恢复](RECOVERY.md#task-recovery) · [Kun 检查点](KUN-CHECKPOINTS.md)
 
 ## 幂等与错误
 
@@ -240,7 +240,7 @@ TaskSpec.input 的稳定入口是 `{text,files?,skills?}`；files 使用服务�
 
 ## 公共构建中心与原生插件
 
-0.52.0 增加 `/build-center/recipes`、`/build-center/builds`、`/build-center/images`、`/build-center/tests`、`/build-center/assistant-runs` 等管理员管理资源，沿用现有构建队列和环境管理；新任务可自由选择资源，不增加工作流模型。multipart 动态配方导入及各资源操作通过 body/form 的 24 位十六进制 requestId 持久去重。详细路径、冻结输入、删除保护及测试范围见[构建中心](BUILD-CENTER.md)。
+0.52.0 增加 `/build-center/recipes`、`/build-center/builds`、`/build-center/images`、`/build-center/tests`、`/build-center/assistant-runs` 等管理员管理资源，沿用现有构建队列和环境管理；新任务可自由选择资源，不增加工作流模型。multipart 动态配方导入及各资源操作通过 body/form 的 24 位十六进制 requestId 持久去重。详细路径、冻结输入、删除保护及测试范围见[构建中心](BUILD-CENTER.md#build-workbench)。
 
 0.64.0 增加管理员只读 `GET /build-center/assistant-runs?sourceBuildId=<原构建编号>`，要求恰好一个精确、存在的 24 位小写十六进制 `sourceBuildId`，读取该构建对应的持久修复任务。结果为 `{items: BuildAssistantRun[], hasMore: boolean}`，最多 20 条，按创建时间倒序、相同时间按编号倒序；读取当前任务及维护状态，不返回内部短期能力，也不启动、重提或撤销修复。`hasMore` 表示还有较早记录，本查询不接受分页或其他筛选参数。缺失、重复或多余查询返回 400 `invalid_assistant_query`；空白或非法来源返回 400 `invalid_assistant_source`；合法但不存在的来源返回 404 `build_not_found`。初始化据此恢复原任务中的修复关联。是否验证成功应读取维护记录与同源 offline/smoke 证据，不能只看任务 completed。
 

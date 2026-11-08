@@ -1,6 +1,6 @@
 # Kun 独立工程与 RunDesk 接口
 
-当前配套版本为 **RunDesk 0.66.0、Kun 0.17.0、轻量 SDK 0.17.0、JSONL 协议 16**。Kun 自 0.49.4 起拆分为独立项目；本源码只分发 RunDesk 宿主和轻量 SDK。
+当前配套版本为 **RunDesk 0.67.0、Kun 0.17.0、轻量 SDK 0.17.0、JSONL 协议 16**。Kun 自 0.49.4 起拆分为独立项目；本源码只分发 RunDesk 宿主和轻量 SDK。
 
 ## 职责与依赖
 
@@ -34,7 +34,7 @@ make build
 
 | 组合或数据 | 规则 |
 | --- | --- |
-| 本源码 RunDesk 0.66.0 + Kun 0.17.0 | 当前配套组合；诊断使用宿主只读证据桥 |
+| 本源码 RunDesk 0.67.0 + Kun 0.17.0 | 当前配套组合；诊断使用宿主只读证据桥 |
 | RunDesk 0.49.3 + Kun 0.17.0 | 协议 16 的普通核心方法可兼容；旧宿主的 snapshot-path 诊断需要升级宿主 |
 | RunDesk 0.49.4 及后续宿主 + 旧协议 16 worker | 以实际握手能力决定是否可用；缺少新诊断 provider 能力时不得启动新诊断 |
 | Kun 0.16.0 执行目录、检查点与分叉清单 | 0.17.0 显式兼容既有格式，并继续执行结构、哈希与状态校验 |
@@ -68,7 +68,7 @@ python3 scripts/validate-kun.py --kun /absolute/path/to/kun/bin/kun
 
 ## 平台接口与公共资源
 
-RunDesk 保持独立，不依赖 HarnessRouter；向下使用原生 Codex App Server 和 Kun JSONL。自身 RunDesk Control API（RDCA）继续使用 `/api/v1`；本源码另有固定 UHP `2026-10-19` 的 `/v1` 服务入口，复用任务核心。该入口不替换 Kun 的内部协议，也不声明完整 UHP 一致性。覆盖范围与迁移边界见 [UHP 服务](UHP.md)和 [API 定位](API-STRATEGY.md)。
+RunDesk 保持独立，不依赖 HarnessRouter；向下使用原生 Codex App Server 和 Kun JSONL。自身 RunDesk Control API（RDCA）继续使用 `/api/v1`；本源码另有固定 UHP `2026-10-19` 的 `/v1` 服务入口，复用任务核心。该入口不替换 Kun 的内部协议，也不声明完整 UHP 一致性。覆盖范围与迁移边界见 [UHP 服务](UHP.md)和 [API 定位](ARCHITECTURE.md#api-position)。
 
 当前 Kun 仍拥有模型与工具循环、执行日志、检查点和分叉。进一步把 Kun 变成决策内核属于后续单独设计，不是本次拆分或 UHP 兼容已完成的能力。
 

@@ -2,7 +2,7 @@ package app
 
 import (
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 	"strings"
 	"testing"
 )

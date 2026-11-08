@@ -8,7 +8,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/shengjuntu/rundesk/internal/observation"
+	"github.com/your-org/rundesk/internal/observation"
 )
 
 func readTranscript(t *testing.T, r *Reader, a TranscriptArgs) TranscriptPage {

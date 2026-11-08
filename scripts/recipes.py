@@ -16,6 +16,7 @@ import zipfile
 sys.path.insert(0, str(Path(__file__).resolve().parent / "recipe_tools"))
 import upstream_profiles
 import dockerfile_files
+import shared_inputs
 
 ROOT = Path(__file__).resolve().parents[1] / "recipes"
 VERSION = "1.4.0"
@@ -24,12 +25,12 @@ EXACT = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?\Z")
 IMAGE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/:@-]{0,240}\Z")
 
 
-class ProfileError(Exception):
+class ProfileError(ValueError):
     pass
 
 
 def read_json(path):
-    return json.loads(path.read_text(encoding="utf-8"))
+    return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=shared_inputs.unique_object)
 
 
 def dump(value):
@@ -41,21 +42,37 @@ def dependency_pins(name="news2douyin"):
     return descriptor.get("dependencies", {})
 
 
-def agent_reach_files(pin, name="news2douyin"):
+def context_files(root, name, descriptor=None):
+    try:
+        return shared_inputs.context_files(root, name, descriptor)
+    except (ValueError, OSError) as error:
+        raise ProfileError(str(error)) from error
+
+
+def context_file(root, name, path, descriptor=None):
+    shared_inputs.relative(path)
+    try:
+        return context_files(root, name, descriptor)[path]
+    except KeyError:
+        raise ProfileError("Missing recipe input: " + path) from None
+
+
+def agent_reach_files(pin, name="news2douyin", files=None):
     """Validate the reviewed local source; never download or sweep a worktree."""
-    shared = ROOT / name
-    source = shared / "vendor/agent-reach"
+    files = context_files(ROOT, name) if files is None else files
+    prefix = "vendor/agent-reach/"
     if pin.get("sourceDirectory") != "vendor/agent-reach":
         raise ProfileError("Agent-Reach requires the reviewed vendored source directory")
     for field, digest in (("filesManifest", "filesManifestSHA256"), ("patchFile", "patchSHA256")):
-        rel = Path(pin.get(field, ""))
-        file = shared / rel
-        if rel.is_absolute() or ".." in rel.parts or not file.is_file() or any(p.is_symlink() for p in (file, *file.parents)):
+        rel = pin.get(field, "")
+        shared_inputs.relative(rel)
+        file = files.get(rel)
+        if file is None:
             raise ProfileError("Missing or unsafe Agent-Reach source manifest/patch")
         if hashlib.sha256(file.read_bytes()).hexdigest() != pin.get(digest):
             raise ProfileError("Agent-Reach source manifest/patch digest mismatch")
     expected = {}
-    for line in (shared / pin["filesManifest"]).read_text(encoding="utf-8").splitlines():
+    for line in files[pin["filesManifest"]].read_text(encoding="utf-8").splitlines():
         parts = line.split("  ", 1)
         if len(parts) != 2 or not re.fullmatch(r"[0-9a-f]{64}", parts[0]):
             raise ProfileError("Invalid Agent-Reach source manifest")
@@ -66,16 +83,13 @@ def agent_reach_files(pin, name="news2douyin"):
         expected[name] = digest
     if not {"pyproject.toml", "LICENSE", "agent_reach/skill/SKILL.md", "agent_reach/guides/setup-exa.md"} <= expected.keys():
         raise ProfileError("Agent-Reach source manifest is incomplete")
-    paths = list(source.rglob("*"))
-    if not source.is_dir() or any(p.is_symlink() for p in (source, *source.parents, *paths)):
-        raise ProfileError("Missing or unsafe Agent-Reach source")
-    actual = {p.relative_to(source).as_posix() for p in paths if p.is_file()}
+    actual = {path[len(prefix):] for path in files if path.startswith(prefix)}
     if actual != expected.keys():
         raise ProfileError("Agent-Reach source file list mismatch")
     for name, digest in expected.items():
-        if hashlib.sha256((source / name).read_bytes()).hexdigest() != digest:
+        if hashlib.sha256(files[prefix + name].read_bytes()).hexdigest() != digest:
             raise ProfileError("Agent-Reach source digest mismatch: " + name)
-    return source, sorted(expected)
+    return files[prefix + "pyproject.toml"].parent, sorted(expected)
 
 
 def load_profile(name):
@@ -88,6 +102,7 @@ def load_profile(name):
     if descriptor.is_symlink() or not descriptor.is_file() or descriptor.stat().st_size > 2 << 20:
         raise ProfileError("Missing, unsafe or oversized recipe descriptor")
     source_metadata = read_json(descriptor)
+    files = context_files(ROOT, name, source_metadata)
     if source_metadata.get("upstream") and (directory / "upstream/upstream.json").exists():
         raise ProfileError("upstream/upstream.json is generated from recipe.json")
     value = source_metadata["profile"]
@@ -136,7 +151,7 @@ def load_profile(name):
             raise ProfileError("Agent-Reach needs an exact commit")
         if pins["agentReach"]["repository"] != "https://github.com/silently0801/agent-reach":
             raise ProfileError("Review a new Agent-Reach source before changing repository")
-        agent_reach_files(pins["agentReach"], name)
+        agent_reach_files(pins["agentReach"], name, files)
     if "video-use" in value["optionalComponents"] and name != "video-build":
         raise ProfileError("video-use compatibility is only offered by video-build")
     if name == "video-build":
@@ -146,13 +161,14 @@ def load_profile(name):
         if not isinstance(hyper.get("npm"), dict) or set(hyper["npm"]) != {"hyperframes", "gsap"} or not all(EXACT.fullmatch(v) for v in hyper["npm"].values()):
             raise ProfileError("HyperFrames and GSAP need exact npm versions")
         rel = Path(hyper.get("npmLockFile", ""))
-        path = ROOT / name / rel
-        if rel.is_absolute() or ".." in rel.parts or not path.is_file() or path.is_symlink() or path.parent.is_symlink():
+        shared_inputs.relative(hyper.get("npmLockFile", ""))
+        path = files.get(rel.as_posix())
+        if path is None:
             raise ProfileError("Missing or unsafe HyperFrames npm lock")
         if hashlib.sha256(path.read_bytes()).hexdigest() != hyper.get("npmLockSHA256"):
             raise ProfileError("HyperFrames npm lock digest mismatch")
         lock = read_json(path)
-        package = read_json(path.with_name("package.json"))
+        package = read_json(files[(rel.parent / "package.json").as_posix()])
         if package.get("dependencies") != hyper["npm"] or lock["packages"][""].get("dependencies") != hyper["npm"]:
             raise ProfileError("HyperFrames package/lock does not match dependency metadata")
         for package_name, version in hyper["npm"].items():
@@ -163,31 +179,31 @@ def load_profile(name):
             raise ProfileError("video-use must use a reviewed exact source commit")
         for filekey, hashkey in (("sourceArchive", "sourceSHA256"), ("pythonLockFile", "pythonLockSHA256")):
             rel = Path(vendor.get(filekey, ""))
-            path = ROOT / name / rel
-            if rel.is_absolute() or ".." in rel.parts or not path.is_file() or path.is_symlink() or any(p.is_symlink() for p in path.parents if p != ROOT.parent):
+            shared_inputs.relative(vendor.get(filekey, ""))
+            path = files.get(rel.as_posix())
+            if path is None:
                 raise ProfileError("Missing or unsafe video-use source/lock file")
             if hashlib.sha256(path.read_bytes()).hexdigest() != vendor.get(hashkey):
                 raise ProfileError("video-use source/lock digest mismatch")
-        expected_lock = {line.strip() for line in (ROOT / name / vendor["pythonLockFile"]).read_text().splitlines() if line.strip() and not line.startswith("#")}
+        expected_lock = {line.strip() for line in files[vendor["pythonLockFile"]].read_text().splitlines() if line.strip() and not line.startswith("#")}
         for package, pin in vendor.get("python", {}).items():
             if not re.fullmatch(r"[A-Za-z0-9_.-]+", package) or not re.fullmatch(r"[0-9]+(?:\.[0-9]+)+(?:[a-z0-9.-]+)?", pin):
                 raise ProfileError("Invalid video-use Python dependency pin")
         if expected_lock != {package + "==" + version for package, version in vendor.get("python", {}).items()}:
             raise ProfileError("video-use Python lock does not match dependency metadata")
     # Copy only declared skill files; never sweep credentials or a working tree.
-    skill = ROOT / name / "skills" / value["skill"]
+    skill = Path("skills") / value["skill"]
     skill_files = value.get("skillFiles", ["SKILL.md", "agents/openai.yaml"])
     if not isinstance(skill_files, list) or len(skill_files) > 64 or not all(isinstance(rel, str) and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,159}", rel) and ".." not in Path(rel).parts and Path(rel).as_posix() == rel for rel in skill_files) or len(set(skill_files)) != len(skill_files) or not {"SKILL.md", "agents/openai.yaml"} <= set(skill_files):
         raise ProfileError("Invalid declared skill file list")
     for rel in skill_files:
-        path = skill / rel
-        if not path.is_file() or path.is_symlink() or any(parent.is_symlink() for parent in [skill.parent, skill, *[ancestor for ancestor in path.parents if skill in ancestor.parents]]):
-            raise ProfileError("Missing file or symlink in skill: " + str(path))
-    front = (skill / "SKILL.md").read_text(encoding="utf-8")
+        if (skill / rel).as_posix() not in files:
+            raise ProfileError("Missing file in skill: " + str(skill / rel))
+    front = files[(skill / "SKILL.md").as_posix()].read_text(encoding="utf-8")
     if not front.startswith("---\nname: " + value["skill"] + "\n") or "\ndescription: " not in front:
         raise ProfileError("Invalid skill frontmatter")
     if "upstream" in value:
-        upstream_profiles.load(ROOT, value)
+        upstream_profiles.load(ROOT, value, files)
     elif name in upstream_profiles.REPOSITORIES:
         raise ProfileError("Independent upstream profile requires upstream.json")
     return value
@@ -210,6 +226,8 @@ def resolve(profile, backend=None, agent_reach=None, video_use=False):
 
 
 def write(path, text, executable=False):
+    if path.is_symlink() or (path.exists() and not path.is_file()):
+        raise ProfileError("Generated file conflicts with a directory or special file: " + str(path))
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8", newline="\n")
     path.chmod(0o755 if executable else 0o644)
@@ -227,13 +245,9 @@ def seed_config(selection):
 
 def _copy_context(source, destination, profile):
     """Copy ordinary canonical files, never metadata twins or authoring variants."""
-    total = 0
-    count = 0
-    for path in sorted(source.rglob("*")):
-        rel = path.relative_to(source)
-        if path.is_symlink() or not (path.is_file() or path.is_dir()):
-            raise ProfileError("Recipe contains a link or special file: " + rel.as_posix())
-        if not path.is_file() or rel.parts[0] == "variants" or rel.as_posix() in {"recipe.json", "SHA256SUMS"}:
+    for filename, path in context_files(ROOT, profile["id"]).items():
+        rel = Path(filename)
+        if rel.parts[0] == "variants" or filename in {"recipe.json", "SHA256SUMS"}:
             continue
         if rel.parts[0] == "skills":
             declared = profile.get("skillFiles", ["SKILL.md", "agents/openai.yaml"])
@@ -241,10 +255,6 @@ def _copy_context(source, destination, profile):
                 continue
         if rel.as_posix() in {"profile.lock.json", "upstream/upstream.json"}:
             raise ProfileError("Generated metadata must not coexist with recipe.json: " + rel.as_posix())
-        total += path.stat().st_size
-        count += 1
-        if total > 128 << 20 or count > 4000:
-            raise ProfileError("Recipe exceeds build-context limits")
         target = destination / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(path, target)
@@ -259,6 +269,20 @@ def default_base_image(profile, selection):
     return values[0]
 
 
+def _snapshot_files(destination):
+    """Check the actual generated files, including metadata, against limits."""
+    files = []
+    total = 0
+    for path in sorted(destination.rglob("*")):
+        if path.is_symlink() or not (path.is_file() or path.is_dir()):
+            raise ProfileError("Build context contains a link or special file: " + str(path))
+        if path.is_file():
+            files.append(path)
+            total += path.stat().st_size
+            shared_inputs.check_budget(len(files), total)
+    return files, total
+
+
 def render(profile, selection, codex_version, base_image, destination):
     if not codex_version or not EXACT.fullmatch(codex_version):
         raise ProfileError("Pass --codex-version X.Y.Z using an exact, deployed Codex release")
@@ -268,8 +292,13 @@ def render(profile, selection, codex_version, base_image, destination):
     if source.is_symlink() or not source.is_dir():
         raise ProfileError("Missing or unsafe recipe directory")
     resolved = read_json(source / "recipe.json")
+    resolved.pop("sharedFiles", None)
     if (source / "profile.lock.json").exists():
         raise ProfileError("recipe.json is the only editable recipe descriptor")
+    if (source / "upstream/upstream.json").exists():
+        raise ProfileError("upstream/upstream.json is generated from recipe.json")
+    if (source / "SHA256SUMS").is_dir():
+        raise ProfileError("Generated SHA256SUMS conflicts with a source directory")
     _copy_context(source, destination, profile)
     resolved.update(generatorVersion=VERSION, profile=profile, selection=selection,
                     codexVersion=codex_version, baseImage=base_image,
@@ -293,11 +322,11 @@ def render(profile, selection, codex_version, base_image, destination):
         write(destination / "seed/config.toml", seed_config(selection))
     video_use = pins.get("videoUse") if selection.get("videoUse") else None
     if video_use:
-        archive = source / video_use["sourceArchive"]
+        archive = context_file(ROOT, profile["id"], video_use["sourceArchive"])
         target = destination / "vendor/video-use.tar.gz"
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(archive, target)
-        write(destination / "requirements.txt", (source / video_use["pythonLockFile"]).read_text())
+        write(destination / "requirements.txt", context_file(ROOT, profile["id"], video_use["pythonLockFile"]).read_text())
         write(destination / "vendor/video-use-pin.json", json.dumps({"repository": video_use["repository"], "commit": video_use["commit"], "sourceSHA256": video_use["sourceSHA256"], "license": "MIT"}, indent=2) + "\n")
     if resolved.get("upstream"):
         write(destination / "upstream/upstream.json", json.dumps(resolved["upstream"], ensure_ascii=False, indent=2) + "\n")
@@ -327,8 +356,11 @@ def render(profile, selection, codex_version, base_image, destination):
         labels.update({"io.rundesk.video-use.commit": video_use["commit"], "io.rundesk.video-use.adapter": "2"})
     dockerfile_files.render(ROOT, profile, selection, codex_version, base_image, destination, write, labels)
     write(destination / "profile.lock.json", json.dumps(resolved, ensure_ascii=False, indent=2) + "\n")
-    files = sorted(p for p in destination.rglob("*") if p.is_file())
-    write(destination / "SHA256SUMS", "".join(hashlib.sha256(p.read_bytes()).hexdigest() + "  " + p.relative_to(destination).as_posix() + "\n" for p in files))
+    files, total = _snapshot_files(destination)
+    manifest = "".join(hashlib.sha256(p.read_bytes()).hexdigest() + "  " + p.relative_to(destination).as_posix() + "\n" for p in files)
+    shared_inputs.check_budget(len(files) + 1, total + len(manifest.encode("utf-8")))
+    write(destination / "SHA256SUMS", manifest)
+    _snapshot_files(destination)
     return resolved
 
 

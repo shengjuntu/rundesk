@@ -1,10 +1,10 @@
 # 当前能力与后续工作
 
-**RunDesk 0.66.0 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。三个使命的产品定位见[中文 README](../README.zh-CN.md)。
+**RunDesk 0.67.0 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。三个使命的产品定位见[中文 README](../README.zh-CN.md)。
 
-本版继续清理发布源码，保留唯一配方来源，移除历史验证产物和过时整理文档，将可再生检查输出集中到 `build/qa/` 并增加源码检查。完整旧证据保留在 0.65.0 源码包，详见[验证资料说明](validation/README.md)。已有镜像、实例、会话和冻结构建快照保持原有语义。
+本版将相关文档、测试整理为完整流程，并将配方共享输入显式归入 `recipes/common/`。每套配方用 `sharedFiles` 声明需要的内容，导出时物化普通文件；本地同名文件覆盖，缺失共享来源明确失败。原始声明不进入冻结锁文件，可再生检查输出继续放在 `build/qa/`。完整旧证据保留在 0.65.0 源码包，详见[验证资料说明](validation/README.md)。已有镜像、实例、会话和冻结构建快照保持原有语义。
 
-当前界面按“工作区 → 会话”组织日常工作，Codex 执行日常会话与应用任务，Kun 负责受限内部维护和只读轨迹问答。初始化分三步，Docker 可选；每个准备任务关联其失败、Kun 修复及候选验证。构建工作台连接配方、镜像与 Agent，模型发现可读取本机 Docker 发布端口；Codex Provider 与 Kun 配置分别管理。操作见[WebUI](WEBUI.md)、[构建中心](BUILD-CENTER.md)、[模型服务](CODEX-PROVIDERS.md)和[维护](MAINTENANCE.md)。
+当前界面按“工作区 → 会话”组织日常工作，Codex 执行日常会话与应用任务，Kun 负责受限内部维护和只读轨迹问答。初始化分三步，Docker 可选；每个准备任务关联其失败、Kun 修复及候选验证。构建工作台连接配方、镜像与 Agent，模型发现可读取本机 Docker 发布端口；Codex Provider 与 Kun 配置分别管理。操作见[WebUI](WEBUI.md)、[构建中心](BUILD-CENTER.md#build-workbench)、[模型服务](CODEX-PROVIDERS.md)和[维护](MAINTENANCE.md)。
 
 以下区分已实现能力、后端契约与待目标环境验收的内容。升级兼容要求见[升级说明](UPGRADING.md)，本版实际检查见[验证范围](VALIDATION.md)。
 
@@ -21,7 +21,7 @@
 - **实例与配置**：WebUI 以实例为配置入口；Docker 后端仍按“实例 × 工作区”保存独立配置与运行状态。跨工作区配置版本应用、自动收集统一能力库、跨 Agent 格式适配尚未实现，不能将页面集中理解为配置已全局同步。
 - **后端**：Codex 与 Kun 由独立运行模块及显式宿主服务接入，共享任务准入、取消和资源契约。新增后端仍需代码适配与契约测试，不是登记一个名称即可使用。见[后端能力](BACKENDS.md)与[资源契约](RESOURCE-CONTRACTS.md)。
 - **API**：RDCA v1 使用 `/api/v1`；UHP `/v1` 的协议仍为 `2026-10-19`。UHP 通过 `metadata.rundesk_require` 在任务和附件物化前拒绝所需但不支持的能力；默认任务时限 3600 秒，包含排队时间；APP 可轮询进度并将待审批用户引向工作台。标准 SSE 不新增私有进度事件。两入口共用任务核心，不依赖 HarnessRouter 服务，不声明完整 UHP conformant。见 [UHP 范围](UHP.md)。
-- **预设与构建**：一个应用可登记多个管理员批准的命名预设，分别固定 Codex Docker 实例与工作区，凭据精确授权。构建配方、镜像、运行预设、Skills、MCP 和插件是可组合资源；登记预设不代表资源已安装或账号已认证。构建目录和源列表可独立修改，镜像可显式拉取、复用或构建后选择；公开分发条目与来源镜像分别校验。见[运行预设](APPLICATION-RUNTIME-PRESETS.md)、[构建中心](BUILD-CENTER.md)与[下载源](BUILD-SOURCES.md)。
+- **预设与构建**：一个应用可登记多个管理员批准的命名预设，分别固定 Codex Docker 实例与工作区，凭据精确授权。构建配方、镜像、运行预设、Skills、MCP 和插件是可组合资源；登记预设不代表资源已安装或账号已认证。构建目录和源列表可独立修改，镜像可显式拉取、复用或构建后选择；公开分发条目与来源镜像分别校验。见[运行预设](APPLICATION-RUNTIME-PRESETS.md)、[构建中心](BUILD-CENTER.md#build-workbench)与[下载源](BUILD-SOURCES.md)。
 - **插件**：提供 Codex build-tools 插件包、Codex/Kun 构建 Skill 与限于任务的 MCP；支持原生包只读检查和已观察到的组件来源。稳定原生安装/卸载接口未接入，Kun 不加载 Codex 插件。见[插件能力](NATIVE-PLUGINS.md)。
 - **启动与执行环境**：首次页面支持本机发现、Kun worker/模型验证、可选固定版本 Codex 原生受管安装和预构建镜像下载、本机构建或本地镜像检查；失败可交给受限 Kun 修复并记录经验。Kun 容器托管仍待实现，Bash 为显式授权的宿主执行。见[部署](SETUP.md)。
 - **文件与任务资源**：新产物默认保留原件引用，需要冻结时显式保存快照；旧托管副本仍可读取。任务资源目录是可重建视图，不是另一份任务状态源。见[个人文件](PERSONAL-FILES.md)与[任务资源](TASK-RESOURCES.md)。

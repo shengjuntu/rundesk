@@ -16,10 +16,10 @@ import (
 	"testing"
 	"time"
 
-	d "github.com/shengjuntu/rundesk/internal/debugapi"
-	"github.com/shengjuntu/rundesk/internal/observeproxy"
-	"github.com/shengjuntu/rundesk/internal/rpc"
-	"github.com/shengjuntu/rundesk/internal/store"
+	d "github.com/your-org/rundesk/internal/debugapi"
+	"github.com/your-org/rundesk/internal/observeproxy"
+	"github.com/your-org/rundesk/internal/rpc"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 // This child process models only the App Server control protocol. Real Codex

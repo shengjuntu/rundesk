@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 func experienceInstallFixture(t *testing.T, m *Manager) BuildExperienceInput {

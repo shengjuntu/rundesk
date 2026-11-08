@@ -11,8 +11,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/shengjuntu/rundesk/internal/observeproxy"
-	"github.com/shengjuntu/rundesk/internal/redaction"
+	"github.com/your-org/rundesk/internal/observeproxy"
+	"github.com/your-org/rundesk/internal/redaction"
 )
 
 // Observation queries operate directly on the indexed journal without loading

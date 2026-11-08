@@ -6,15 +6,15 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/shengjuntu/rundesk/internal/tracequery"
+	"github.com/your-org/rundesk/internal/tracequery"
 	"net/http"
 	"net/url"
 	"path/filepath"
 
 	kc "github.com/your-org/kun/sdk/client"
 	p "github.com/your-org/kun/sdk/protocol"
-	d "github.com/shengjuntu/rundesk/internal/debugapi"
-	"github.com/shengjuntu/rundesk/internal/redaction"
+	d "github.com/your-org/rundesk/internal/debugapi"
+	"github.com/your-org/rundesk/internal/redaction"
 )
 
 // DebugService is read-only. HTTP authentication/ownership gates run before it.

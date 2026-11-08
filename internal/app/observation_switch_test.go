@@ -19,8 +19,8 @@ import (
 	"time"
 
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/shengjuntu/rundesk/internal/rpc"
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/rpc"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 func TestObservationSwitchDefaultPersistenceAndUpgrade(t *testing.T) {

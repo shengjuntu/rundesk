@@ -9,7 +9,7 @@ import (
 	"sort"
 
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 // This extension describes platform progress, not another UHP status machine.

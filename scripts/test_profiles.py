@@ -58,6 +58,7 @@ class ProfilesTest(unittest.TestCase):
                     dest = self.root / (name + backend + str(agent)); dest.mkdir()
                     profiles.render(p, profiles.resolve(p, backend, agent), "0.144.6", "node:22-bookworm-slim", dest)
                     config = tomllib.loads((dest / "seed/config.toml").read_text())
+                    self.assertNotIn("sharedFiles", json.loads((dest / "profile.lock.json").read_text()))
                     docker = (dest / "Dockerfile").read_text()
                     tools = {file.name for file in (dest / "tools").iterdir()}
                     if name in ("news2douyin", "people-search"):
@@ -128,7 +129,8 @@ class ProfilesTest(unittest.TestCase):
         copy = self.root / "canonical"
         shutil.copytree(ROOT / "recipes", copy)
         helper = copy / "news2douyin/tools/read_web.py"
-        helper.write_text(helper.read_text() + "\n# operator-tool-edit\n")
+        helper.parent.mkdir(parents=True, exist_ok=True)
+        helper.write_text(profiles.context_file(copy, "news2douyin", "tools/read_web.py").read_text() + "\n# operator-tool-edit\n")
         seed = copy / "news2douyin/seed/config.toml"
         seed.write_text(seed.read_text() + "\n# operator-config-edit\n")
         with patch.object(profiles, "ROOT", copy):
@@ -167,7 +169,8 @@ class ProfilesTest(unittest.TestCase):
         copy = self.root / "canonical"
         shutil.copytree(ROOT / "recipes", copy)
         helper = copy / "news2douyin/tools/read_web.py"
-        helper.write_text(helper.read_text() + "\n# retained-operator-edit\n")
+        helper.parent.mkdir(parents=True, exist_ok=True)
+        helper.write_text(profiles.context_file(copy, "news2douyin", "tools/read_web.py").read_text() + "\n# retained-operator-edit\n")
         before = {str(p.relative_to(copy)): p.read_bytes() for p in copy.rglob("*") if p.is_file()}
         legacy = module("legacy_recipe_validator", ROOT / "scripts/embed-profiles.py")
         with patch.object(profiles, "ROOT", copy), patch.object(sys, "argv", ["embed-profiles.py", "--check"]), contextlib.redirect_stdout(io.StringIO()):
@@ -223,7 +226,7 @@ class ProfilesTest(unittest.TestCase):
         legacy = sources / "legacy.list"
         legacy.write_text("deb [signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] https://deb.debian.org/debian bookworm main\ndeb https://third-party.example.test/repo stable main\n")
         env = dict(os.environ, RD_APT_MIRROR="https://mirror.example.test/debian", RD_APT_SECURITY_MIRROR="https://mirror.example.test/debian-security")
-        script = ROOT / "recipes/news2douyin/tools/configure-apt.sh"
+        script = profiles.context_file(ROOT / "recipes", "news2douyin", "tools/configure-apt.sh")
         subprocess.run(["sh", str(script), str(root)], env=env, check=True)
         content = path.read_text()
         self.assertIn("URIs: https://mirror.example.test/debian\n", content)
@@ -279,7 +282,7 @@ class ProfilesTest(unittest.TestCase):
     def test_agent_reach_rejects_modified_extra_or_linked_source(self):
         copy = self.root / "recipes"
         shutil.copytree(ROOT / "recipes", copy, ignore=shutil.ignore_patterns("__pycache__"))
-        source = copy / "news2douyin/vendor/agent-reach"
+        source = copy / "common/vendor/agent-reach-cf70302e"
         file = source / "pyproject.toml"
         original = file.read_bytes()
         with patch.object(profiles, "ROOT", copy):
@@ -293,7 +296,7 @@ class ProfilesTest(unittest.TestCase):
             extra.unlink()
             guide = source / "agent_reach/guides/setup-exa.md"
             guide.unlink(); guide.symlink_to(file)
-            with self.assertRaisesRegex(profiles.ProfileError, "unsafe Agent-Reach source"):
+            with self.assertRaisesRegex(ValueError, "[Ss]ymlink|[Uu]nsafe|[Ll]ink"):
                 profiles.load_profile("news2douyin")
 
     def test_video_build_defaults_to_pinned_hyperframes_without_video_use(self):
@@ -399,7 +402,7 @@ class ProfilesTest(unittest.TestCase):
             self.assertFalse(result["ready"]); self.assertEqual(run.call_count, 2)
 
     def test_agent_reach_runtime_config_is_per_home_and_preserves_existing(self):
-        config = module("agent_config", ROOT / "recipes/news2douyin/tools/agent_reach_config.py")
+        config = module("agent_config", profiles.context_file(ROOT / "recipes", "news2douyin", "tools/agent_reach_config.py"))
         first = self.root / 'first'; second = self.root / 'second'
         path = config.initialize(first)
         self.assertEqual(json.loads(path.read_text())['mcpServers']['exa']['baseUrl'], 'https://mcp.exa.ai/mcp')
@@ -440,7 +443,7 @@ class ProfilesTest(unittest.TestCase):
             self.assertEqual(cleanup[1:3], ["rm", "--force"])
 
     def test_web_evidence_success_failure_and_no_overwrite(self):
-        read = module("read_web", ROOT / "recipes/news2douyin/tools/read_web.py")
+        read = module("read_web", profiles.context_file(ROOT / "recipes", "news2douyin", "tools/read_web.py"))
         class Response(io.BytesIO):
             status = 200; headers = {"Content-Type": "text/markdown"}
         def call(out, fail=False):
@@ -455,6 +458,216 @@ class ProfilesTest(unittest.TestCase):
         failed = self.root / "failed"
         self.assertEqual(call(failed, True), 1)
         self.assertEqual(json.loads((failed / "source.json").read_text())["status"], "failed")
+
+
+class SharedInputTest(unittest.TestCase):
+    """Shared authoring files must become bounded, ordinary context files."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.local = self.root / "example"; self.local.mkdir()
+        self.common = self.root / "common"; self.common.mkdir()
+        self.bundle = self.common / "bundle"; self.bundle.mkdir()
+        (self.bundle / "a").write_text("aaaa")
+        (self.bundle / "b").write_text("bbbb")
+        self.descriptor = {"sharedFiles": {"tools": "bundle"}}
+
+    def files(self, descriptor=None):
+        return profiles.context_files(self.root, "example", self.descriptor if descriptor is None else descriptor)
+
+    def test_tree_files_and_local_overrides_resolve_without_mutating_source(self):
+        (self.bundle / "a").chmod(0o755)
+        local = self.local / "tools/a"; local.parent.mkdir(); local.write_text("override")
+        before = {str(p.relative_to(self.root)): p.read_bytes() for p in self.root.rglob("*") if p.is_file()}
+        files = self.files()
+        self.assertEqual(files["tools/a"], local)
+        self.assertEqual(files["tools/b"].read_bytes(), b"bbbb")
+        self.assertEqual(self.files({"sharedFiles": {"upstream": "bundle"}})["upstream/a"].read_bytes(), b"aaaa")
+        self.assertEqual(before, {str(p.relative_to(self.root)): p.read_bytes() for p in self.root.rglob("*") if p.is_file()})
+        # A stale shared reference is an error even if a local override exists.
+        (self.bundle / "a").unlink()
+        with self.assertRaises((ValueError, profiles.ProfileError)):
+            self.files({"sharedFiles": {"tools/a": "bundle/a"}})
+
+    def test_shared_paths_types_reserved_targets_and_overlap_are_rejected(self):
+        invalid = ("", ".", "..", "/etc/passwd", "a//b", "a/./b", "a/../b", "a/", "a\\b", "C:/file", "bad\nfile", "bad\x00file", "bad\x85file")
+        for path in invalid:
+            for target, source in ((path, "bundle/a"), ("tools/a", path)):
+                with self.subTest(target=target, source=source), self.assertRaises((ValueError, profiles.ProfileError)):
+                    self.files({"sharedFiles": {target: source}})
+        for target in ("recipe.json", "recipe.json/child", "profile.lock.json", "SHA256SUMS", "upstream/upstream.json", "upstream/upstream.json/child"):
+            with self.subTest(reserved=target), self.assertRaises((ValueError, profiles.ProfileError)):
+                self.files({"sharedFiles": {target: "bundle/a"}})
+        for value in (None, [], "bundle", {"tools": None}, {"tools": ["bundle"]}, {"tools": "bundle", "tools/a": "bundle/a"}):
+            with self.subTest(mapping=value), self.assertRaises((ValueError, profiles.ProfileError)):
+                self.files({"sharedFiles": value})
+
+    def test_duplicate_metadata_keys_are_rejected_before_resolution(self):
+        metadata = self.local / "recipe.json"
+        ambiguous = (
+            '{"sharedFiles":{"tools/a":"bundle/a"},"sharedFiles":{"tools/b":"bundle/b"}}',
+            '{"sharedFiles":{"tools/a":"bundle/a","tools/a":"bundle/b"}}',
+        )
+        for text in ambiguous:
+            metadata.write_text(text)
+            with self.subTest(metadata=text), self.assertRaises((ValueError, profiles.ProfileError)):
+                profiles.context_files(self.root, "example")
+
+    def test_source_and_local_links_and_special_files_are_rejected(self):
+        external = self.root / "external"; external.mkdir()
+        (external / "file").write_text("outside")
+        link = self.common / "linked"; link.symlink_to(external, target_is_directory=True)
+        for source in ("linked", "linked/file"):
+            with self.subTest(source=source), self.assertRaises((ValueError, profiles.ProfileError)):
+                self.files({"sharedFiles": {"tools": source}})
+        nested = self.bundle / "link"; nested.symlink_to(external / "file")
+        with self.assertRaises((ValueError, profiles.ProfileError)):
+            self.files()
+        nested.unlink()
+        local = self.local / "tools"; local.symlink_to(external, target_is_directory=True)
+        with self.assertRaises((ValueError, profiles.ProfileError)):
+            self.files()
+        local.unlink()
+        if hasattr(os, "mkfifo"):
+            special = self.bundle / "pipe"; os.mkfifo(special)
+            with self.assertRaises((ValueError, profiles.ProfileError)):
+                self.files()
+
+    def test_file_directory_conflicts_are_not_implicit_tree_overrides(self):
+        tools = self.local / "tools"; tools.write_text("not a directory")
+        with self.assertRaises((ValueError, profiles.ProfileError)):
+            self.files()
+        tools.unlink(); (tools / "a").mkdir(parents=True)
+        (tools / "a/child").write_text("not a file")
+        with self.assertRaises((ValueError, profiles.ProfileError)):
+            self.files()
+        shutil.rmtree(tools)
+        (self.local / "variants").write_text("local file")
+        # Authoring variants are filtered only after the input boundary has
+        # rejected a file that conflicts with a declared shared directory.
+        with self.assertRaises((ValueError, profiles.ProfileError)):
+            self.files({"sharedFiles": {"variants": "bundle"}})
+
+    def test_shared_and_local_budgets_are_combined_before_override(self):
+        tools = self.local / "tools"; tools.mkdir()
+        for name in ("a", "b"):
+            (tools / name).write_text("same")
+        # Each tree fits alone; together there are four input files, even
+        # though the two local files override the two shared output names.
+        with patch.object(profiles.shared_inputs, "MAX_FILES", 3), self.assertRaises((ValueError, profiles.ProfileError)):
+            self.files()
+        with patch.object(profiles.shared_inputs, "MAX_BYTES", 12), self.assertRaises((ValueError, profiles.ProfileError)):
+            self.files()
+
+    def render_fixture(self):
+        """Make a tiny valid ordinary recipe; its source has no shared map."""
+        descriptor = json.loads((ROOT / "recipes/news2douyin/recipe.json").read_text())
+        descriptor.pop("sharedFiles", None)
+        profile = descriptor["profile"]
+        profile.update(id="example", skill="fixture", aptPackages=[], pythonPackages=[],
+                       searchBackends=["none"], defaultSearchBackend="none", tools=[],
+                       outputs=[], optionalComponents=[])
+        descriptor["dependencies"] = {"python": {}, "npm": {}}
+        descriptor["selection"] = {"searchBackend": "none", "agentReach": False, "videoUse": False}
+        (self.local / "recipe.json").write_text(json.dumps(descriptor, separators=(",", ":")))
+        labels = ("org.opencontainers.image.title", "org.opencontainers.image.version", "io.rundesk.profile",
+                  "io.rundesk.profile.schema", "io.rundesk.codex.version", "io.rundesk.agent-reach",
+                  "io.rundesk.capabilities.tools", "io.rundesk.capabilities.skills", "io.rundesk.capabilities.mcp")
+        (self.local / "Dockerfile").write_text("ARG RD_BASE_IMAGE=node:22-bookworm-slim\nFROM ${RD_BASE_IMAGE}\nARG CODEX_VERSION=0.157.1\n" +
+                                               "".join('LABEL ' + name + '="fixture"\n' for name in labels))
+        skill = self.local / "skills/fixture"; (skill / "agents").mkdir(parents=True)
+        (skill / "SKILL.md").write_text("---\nname: fixture\ndescription: A local build-boundary fixture.\n---\n")
+        (skill / "agents/openai.yaml").write_text("display_name: Fixture\n")
+        seed = self.local / "seed"; seed.mkdir()
+        (seed / "config.toml").write_text("check_for_update_on_startup = false\n")
+        with patch.object(profiles, "ROOT", self.root), patch.object(profiles, "PROFILE_IDS", ("example",)):
+            return profiles.load_profile("example")
+
+    def test_generated_snapshot_and_manifest_also_obey_context_budgets(self):
+        profile = self.render_fixture()
+        with patch.object(profiles, "ROOT", self.root):
+            inputs = profiles.context_files(self.root, "example")
+            input_bytes = sum(path.stat().st_size for path in inputs.values())
+            baseline = self.root / "unlimited"
+            profiles.render(profile, profiles.resolve(profile), "0.157.1", "node:22-bookworm-slim", baseline)
+            files = [path for path in baseline.rglob("*") if path.is_file()]
+            without_manifest = sum(path.stat().st_size for path in files if path.name != "SHA256SUMS")
+            self.assertEqual(len(files), len(inputs) + 1)
+            self.assertGreater(without_manifest, input_bytes)
+            with patch.object(profiles.shared_inputs, "MAX_FILES", len(inputs)):
+                self.assertEqual(len(profiles.context_files(self.root, "example")), len(inputs))
+                with self.assertRaises((ValueError, profiles.ProfileError)):
+                    profiles.render(profile, profiles.resolve(profile), "0.157.1", "node:22-bookworm-slim", self.root / "file-cap")
+            # The first cap admits source inputs but excludes expanded generated
+            # metadata. The second admits every output except the hash manifest.
+            for name, limit in (("generated-metadata-cap", input_bytes), ("manifest-cap", without_manifest)):
+                with self.subTest(cap=name), patch.object(profiles.shared_inputs, "MAX_BYTES", limit):
+                    self.assertEqual(sum(path.stat().st_size for path in profiles.context_files(self.root, "example").values()), input_bytes)
+                    with self.assertRaises((ValueError, profiles.ProfileError)):
+                        profiles.render(profile, profiles.resolve(profile), "0.157.1", "node:22-bookworm-slim", self.root / name)
+
+    def test_direct_render_rejects_generated_metadata_directories(self):
+        profile = self.render_fixture()
+        for index, (name, child) in enumerate((("profile.lock.json", False), ("upstream/upstream.json", False),
+                                               ("SHA256SUMS", False), ("SHA256SUMS", True))):
+            reserved = self.local / name; reserved.mkdir(parents=True)
+            if child:
+                (reserved / "stale").write_text("must not hide behind manifest filtering")
+            with self.subTest(source=name, child=child), patch.object(profiles, "ROOT", self.root):
+                # Profile was already loaded before the conflicting directory
+                # appeared; render must validate its own inputs again.
+                with self.assertRaises((ValueError, profiles.ProfileError)):
+                    profiles.render(profile, profiles.resolve(profile), "0.157.1", "node:22-bookworm-slim", self.root / ("blocked-" + str(index)))
+            shutil.rmtree(self.local / name.split("/")[0])
+
+    def test_exports_freeze_shared_bytes_and_drop_authoring_references(self):
+        copy = self.root / "recipes"
+        shutil.copytree(ROOT / "recipes", copy)
+        with patch.object(profiles, "ROOT", copy):
+            shared = profiles.context_file(copy, "news2douyin", "tools/install-codex.sh")
+            first = self.root / "first"
+            profile = profiles.load_profile("news2douyin")
+            profiles.render(profile, profiles.resolve(profile), "0.157.1", "node:22-bookworm-slim", first)
+            frozen = (first / "tools/install-codex.sh").read_bytes()
+            self.assertTrue((first / "tools/install-codex.sh").stat().st_mode & 0o111)
+            shared.write_bytes(frozen + b"\n# later shared edit\n")
+            second = self.root / "second"
+            profiles.render(profile, profiles.resolve(profile), "0.157.1", "node:22-bookworm-slim", second)
+        self.assertEqual((first / "tools/install-codex.sh").read_bytes(), frozen)
+        self.assertEqual((second / "tools/install-codex.sh").read_bytes(), shared.read_bytes())
+        for context in (first, second):
+            self.assertNotIn("sharedFiles", json.loads((context / "profile.lock.json").read_text()))
+            self.assertFalse(any(p.is_symlink() for p in context.rglob("*")))
+            self.assertFalse((context / "common").exists())
+            for line in (context / "SHA256SUMS").read_text().splitlines():
+                digest, path = line.split("  ", 1)
+                self.assertEqual(hashlib.sha256((context / path).read_bytes()).hexdigest(), digest)
+
+    def test_shared_and_ordinary_authoring_export_identical_contexts(self):
+        copy = self.root / "recipes"
+        shutil.copytree(ROOT / "recipes", copy)
+        with patch.object(profiles, "ROOT", copy):
+            for name in profiles.PROFILE_IDS:
+                with self.subTest(profile=name):
+                    profile = profiles.load_profile(name)
+                    first = self.root / (name + "-shared")
+                    profiles.render(profile, profiles.resolve(profile), "0.157.1", "node:22-bookworm-slim", first)
+                    for target, source in profiles.context_files(copy, name).items():
+                        local = copy / name / target
+                        if source != local:
+                            local.parent.mkdir(parents=True, exist_ok=True)
+                            shutil.copyfile(source, local)
+                            local.chmod(source.stat().st_mode & 0o777)
+                    descriptor = copy / name / "recipe.json"
+                    data = json.loads(descriptor.read_text()); data.pop("sharedFiles", None)
+                    descriptor.write_text(json.dumps(data))
+                    profile = profiles.load_profile(name)
+                    second = self.root / (name + "-ordinary")
+                    profiles.render(profile, profiles.resolve(profile), "0.157.1", "node:22-bookworm-slim", second)
+                    def snapshot(path):
+                        return {str(p.relative_to(path)): (p.read_bytes(), p.stat().st_mode & 0o111) for p in path.rglob("*") if p.is_file()}
+                    self.assertEqual(snapshot(first), snapshot(second))
 
 
 if __name__ == "__main__":

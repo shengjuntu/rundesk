@@ -1,6 +1,6 @@
 # 可编辑的运行配方
 
-`recipes/` 是 RunDesk 配方的唯一来源。每个目录保存 Dockerfile、工具、Skills、已审阅的本地依赖和 `recipe.json`；Go 在新建构建时直接读取这些文件。编辑配方不需要重编译或重启 RunDesk。
+`recipes/` 是 RunDesk 配方的唯一来源。每个配方目录保存 Dockerfile、Skills、配置和 `recipe.json`；重复的工具与已审阅的本地依赖由 [`common/`](common/README.md) 保存，配方通过顶层 `sharedFiles` 明确引用。Go 在新建构建时直接读取这些普通文件。编辑配方不需要重编译或重启 RunDesk。
 
 | 配方 | 用途与工具 |
 | --- | --- |
@@ -47,6 +47,10 @@ python3 scripts/recipes.py prepare video-build --with-video-use --codex-version 
 ```
 
 `prepare` 和 `pack` 生成可单独交付的完整上下文，不调用 Docker、模型或业务服务。`build` 和 `doctor` 才需要对应运行条件。`scripts/embed-profiles.py` 保留为非覆盖式检查／导出兼容入口；不再从另一棵源码树反向生成并覆盖 `recipes/`。
+
+共用输入在导出时复制到配方原有的目标位置，`profile.lock.json` 不含 `sharedFiles`；得到的目录或 ZIP 可单独构建。需要只调整某个配方的工具时，在该配方目录创建同名普通文件即可覆盖共用版本；声明的共用来源仍须存在。具体规则见 [共用输入说明](common/README.md)。
+
+六份托管配方目录用于编辑来源文件；请通过构建中心或上述 CLI 构建，或先用 `prepare`／`pack` 导出完整上下文后运行 Docker。`generic/` 继续保留完整工具，可直接使用其 `build.sh` 或 Docker 命令。
 
 ## 构建与运行边界
 

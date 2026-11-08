@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 func (s *Server) instanceConfiguration(w http.ResponseWriter, r *http.Request) {

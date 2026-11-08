@@ -154,5 +154,16 @@
     "imageBuilt": false,
     "modelTested": false,
     "networkTested": false
+  },
+  "sharedFiles": {
+    "tools/agent_reach_config.py": "tools/research/agent_reach_config.py",
+    "tools/configure-apt.sh": "tools/configure-apt.sh",
+    "tools/install-codex.sh": "tools/install-codex.sh",
+    "tools/mcporter": "tools/research/mcporter",
+    "tools/profile_doctor.py": "tools/research/profile_doctor.py",
+    "tools/read_web.py": "tools/research/read_web.py",
+    "vendor/agent-reach": "vendor/agent-reach-cf70302e",
+    "vendor/agent-reach-wheel.patch": "vendor/agent-reach-wheel.patch",
+    "vendor/agent-reach.sha256": "vendor/agent-reach.sha256"
   }
 }

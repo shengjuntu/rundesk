@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 // Metadata is reported by the image producer. We never run the image to infer it

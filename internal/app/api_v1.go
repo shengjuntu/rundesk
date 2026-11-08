@@ -13,12 +13,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/shengjuntu/rundesk/internal/resource"
-	"github.com/shengjuntu/rundesk/internal/rpc"
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/resource"
+	"github.com/your-org/rundesk/internal/rpc"
+	"github.com/your-org/rundesk/internal/store"
 )
 
-const Version = "0.66.0"
+const Version = "0.67.0"
 
 type apiError struct {
 	Status        int

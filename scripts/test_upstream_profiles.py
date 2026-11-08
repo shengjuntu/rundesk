@@ -45,7 +45,10 @@ class SourceBoundaryTest(unittest.TestCase):
         self.save()
 
     def save(self):
-        (self.base / "recipe.json").write_text(json.dumps({"upstream": self.manifest}))
+        descriptor = {"upstream": self.manifest}
+        if hasattr(self, "shared"):
+            descriptor["sharedFiles"] = self.shared
+        (self.base / "recipe.json").write_text(json.dumps(descriptor))
 
     def load(self):
         self.save()
@@ -55,6 +58,22 @@ class SourceBoundaryTest(unittest.TestCase):
         self.assertEqual(self.load()["commit"], "a" * 40)
         self.manifest["sourceSHA256"] = "0" * 64
         with self.assertRaisesRegex(ValueError, "digest mismatch"):
+            self.load()
+
+    def test_shared_upstream_inputs_keep_archive_and_install_validation(self):
+        common = self.root / "common"; common.mkdir()
+        self.shared = {"source.tar.gz": "source.tar.gz", "upstream/install.sh": "install.sh"}
+        for source, target in ((self.base / "source.tar.gz", common / "source.tar.gz"),
+                               (self.base / "upstream/install.sh", common / "install.sh")):
+            source.rename(target)
+        self.assertEqual(self.load()["commit"], "a" * 40)
+        archive = common / "source.tar.gz"
+        original = archive.read_bytes(); archive.write_bytes(original + b"changed")
+        with self.assertRaisesRegex(ValueError, "digest mismatch"):
+            self.load()
+        archive.write_bytes(original)
+        install = common / "install.sh"; install.unlink(); install.symlink_to(self.base / "upstream/doctor.py")
+        with self.assertRaisesRegex(ValueError, "[Ss]ymlink|[Uu]nsafe|[Ll]ink"):
             self.load()
 
     def test_malformed_archive_is_a_structured_validation_error(self):
@@ -116,6 +135,7 @@ class ActualRecipeTest(unittest.TestCase):
                 destination = Path(tmp)
                 lock = profiles.render(profile, profiles.resolve(profile), "0.144.6", "node:22-bookworm-slim", destination)
                 self.assertEqual(lock["selection"]["nativeUpstream"], name)
+                self.assertNotIn("sharedFiles", lock)
                 docker = (destination / "Dockerfile").read_text()
                 self.assertIn("/opt/upstreams/" + name, docker)
                 self.assertIn('io.rundesk.video-app-media.contract="1"', docker)

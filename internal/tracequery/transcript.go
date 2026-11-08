@@ -11,8 +11,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/shengjuntu/rundesk/internal/observation"
-	"github.com/shengjuntu/rundesk/internal/redaction"
+	"github.com/your-org/rundesk/internal/observation"
+	"github.com/your-org/rundesk/internal/redaction"
 )
 
 // Transcript is a presentation projection, not another event store. Its activity

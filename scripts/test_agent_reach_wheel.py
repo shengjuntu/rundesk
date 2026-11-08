@@ -21,11 +21,16 @@ import recipes as profiles
 
 def main():
     pin = profiles.dependency_pins("news2douyin")["agentReach"]
-    source, files = profiles.agent_reach_files(pin)
+    inputs = profiles.context_files(profiles.ROOT, "news2douyin")
+    _, files = profiles.agent_reach_files(pin, files=inputs)
     with tempfile.TemporaryDirectory(prefix="rundesk-reach-wheel-") as tmp:
         temp = Path(tmp)
         local = temp / "source"
-        shutil.copytree(source, local)
+        local.mkdir()
+        for name in files:
+            target_file = local / name
+            target_file.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(inputs["vendor/agent-reach/" + name], target_file)
         env = dict(os.environ, PIP_NO_INDEX="1", PYTHONDONTWRITEBYTECODE="1")
         subprocess.run([sys.executable, "-m", "hatchling", "build", "-t", "wheel", "-d", str(temp / "wheels")], cwd=local, env=env, check=True)
         wheels = list((temp / "wheels").glob("*.whl"))
@@ -35,13 +40,13 @@ def main():
         with zipfile.ZipFile(wheels[0]) as wheel:
             assert len(wheel.namelist()) == len(set(wheel.namelist())), "duplicate wheel paths"
             for name in resources:
-                assert wheel.read(name) == (source / name).read_bytes(), name
+                assert wheel.read(name) == (local / name).read_bytes(), name
         target = temp / "installed"
         subprocess.run([sys.executable, "-m", "pip", "install", "--no-index", "--no-deps", "--no-compile", "--target", str(target), str(wheels[0])], env=env, check=True, stdout=subprocess.PIPE)
         distribution, = list(importlib.metadata.distributions(path=[str(target)]))
         assert distribution.version == pin["version"]
         for name in resources:
-            assert Path(distribution.locate_file(name)).read_bytes() == (source / name).read_bytes(), name
+            assert Path(distribution.locate_file(name)).read_bytes() == (local / name).read_bytes(), name
         print(json.dumps({"passed": True, "packageVersion": distribution.version, "hatchlingVersion": importlib.metadata.version("hatchling"), "resourceFiles": len(resources), "offlineBuildAndInstall": True, "runtimeDependenciesInstalled": False, "dockerTested": False}))
 
 

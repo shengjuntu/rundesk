@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 	"testing"
 )
 

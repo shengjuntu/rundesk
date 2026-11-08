@@ -18,9 +18,9 @@ import (
 	"time"
 
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 
-	dockertemplate "github.com/shengjuntu/rundesk/internal/dockertemplate"
+	dockertemplate "github.com/your-org/rundesk/internal/dockertemplate"
 )
 
 type SetupState struct {

@@ -17,7 +17,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 func (s *Server) uhpTransportAllowed(r *http.Request) bool {

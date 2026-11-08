@@ -160,5 +160,10 @@
     "imageBuilt": false,
     "modelTested": false,
     "networkTested": false
+  },
+  "sharedFiles": {
+    "tools/configure-apt.sh": "tools/configure-apt.sh",
+    "tools/install-codex.sh": "tools/install-codex.sh",
+    "tools/profile_doctor.py": "tools/research/profile_doctor.py"
   }
 }

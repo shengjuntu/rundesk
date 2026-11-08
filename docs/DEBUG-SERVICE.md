@@ -18,7 +18,7 @@ DebugService 提供统一只读入口，按后端声明能力。它不让 Codex 
 | breakpoints / actions | 不支持内部查询 | 断点状态、动作账本，只读 |
 | snapshot / evidence / diff | 不支持内部查询 | 固定快照、精确 worker 事件、双快照差异 |
 
-Codex 原有事件/轨迹、停止、steer 和审批入口继续可用；内部单步、条件断点、完整上下文快照及快照差异尚未实现。宿主保留事件中的工具调用不代表掌握整个模型内部状态。提供独立模型诊断会话，见 [诊断说明](KUN-DIAGNOSIS.md)；只读查询本身仍不调用模型。另提供管理员专用的 [Kun 离线记录分支](KUN-EXPERIMENTS.md)，不加入只读工具目录；当前已实现管理员 Hybrid/Live 分叉及同基线对照，见 KUN-FORKS.md 和 KUN-COMPARISON.md；它们不加入只读 MCP 工具目录。
+Codex 原有事件/轨迹、停止、steer 和审批入口继续可用；内部单步、条件断点、完整上下文快照及快照差异尚未实现。宿主保留事件中的工具调用不代表掌握整个模型内部状态。提供独立模型诊断会话，见 [诊断说明](KUN-DIAGNOSIS.md)；只读查询本身仍不调用模型。另提供管理员专用的 [Kun 离线记录分支](KUN-EXPERIMENTS.md)，不加入只读工具目录；当前已实现管理员 Hybrid/Live 分叉及同基线对照，见[分叉、假设与对照](KUN-FORKS.md)；它们不加入只读 MCP 工具目录。
 
 Kun 内部查询需要在线 worker。能力清单中的 `supported` 表示后端实现了该能力，`available` 表示检查时能否使用；离线时支持但不可用。纯检查不会创建 handle、启动进程、重开检查点、调用模型/工具、消费预算、审批或修改对话。工作进程随后退出仍可能使请求失败。
 
@@ -74,7 +74,7 @@ GET /api/v1/sessions/{sid}/debug/query?kind=statistics&through=500&runId=RUN_ID
 - 返回 `source=host_projection` 与顶层 `through`；它不是 worker sequence。首次可省略 through，后续查询与读取证据应原样保留，包括 0。不自动推进到最新记录。
 - runs/steps/issues 用 offset/limit 分页，默认且最多 50。steps/issues/statistics 可按 runId/type/status 精确筛选，query 为脱敏预览的字面子串搜索，不接受 SQL/正则。单个字符串限制 256 字符，query 1000 字符；step 需 stepId，传 runId 时须匹配。
 - 0.63.0 的 `steps/issues` 可加 `sort=recorded|duration_desc|duration_asc`；默认 recorded。耗时排序覆盖全部筛选结果后再做 offset/limit 分页，缺完整区间的步骤排在已知耗时后；同值保持原来源顺序。`statistics` 本身不接受 sort。
-- `kind=statistics` 的 `data.timing` 返回按来源声明的运行区间 `runs`、按类型步骤工作量 `byType` 和最多十项 `slowestSteps`。完整同钟区间才有 `durationMs`，`clock`、`startMethod` 和 `endMethod` 说明依据：宿主 `run/input` 起点包含提交后等待；原生 `turn/started` 或 Kun worker 起点不包含宿主启动前等待。运行中的 `observedElapsedMs` 仅取同一时钟内已保留事件跨度，不随当前系统时间增长。`knownWorkDurationMs` 不包含 HTTP／WebSocket 观测，嵌套或并行步骤仍可能重叠。字段合同见[OpenAPI](API-V1.md)与[耗时说明](TRACE.md#耗时分析)。
+- `kind=statistics` 的 `data.timing` 返回按来源声明的运行区间 `runs`、按类型步骤工作量 `byType` 和最多十项 `slowestSteps`。完整同钟区间才有 `durationMs`，`clock`、`startMethod` 和 `endMethod` 说明依据：宿主 `run/input` 起点包含提交后等待；原生 `turn/started` 或 Kun worker 起点不包含宿主启动前等待。运行中的 `observedElapsedMs` 仅取同一时钟内已保留事件跨度，不随当前系统时间增长。`knownWorkDurationMs` 不包含 HTTP／WebSocket 观测，嵌套或并行步骤仍可能重叠。字段合同见[OpenAPI](API-V1.md)与[耗时说明](TRACE.md#trace-2)。
 - 每个 step 的 ID 为 `step-首次宿主事件ID`。包含 eventIds、预览、状态、开始/结束来源、缺失项与异常信号。Kun 另列 workerSequences，两类编号不能互换。默认列表按首次来源事件顺序，不能当成完成先后排序；显式耗时排序也不表示完成顺序。
 - `association=observed/reconstructed/inferred/missing` 分别表示记录明确给出 runId、使用已知关联标识、按当前输入顺序推定、缺少身份。缺少 runId 的未知 turn 建立合成 observed-turn ID，不接到另一个已知 turn；无 item ID 不合并，多条开始记录无法唯一配对时保留歧义。
 - 0.63.0 在同一固定快照内预读明确的 `run/turn` 映射，可将晚到的原生 turn 证据归到其宿主 run；映射冲突时不强行合并。该映射不是耗时边界，超出 through 的映射不能影响旧快照。

@@ -9,7 +9,7 @@ import (
 	"unicode/utf8"
 
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 const kunEvaluator = "reply-rules-v1"

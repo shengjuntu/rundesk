@@ -23,8 +23,8 @@ import (
 
 	kc "github.com/your-org/kun/sdk/client"
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/shengjuntu/rundesk/internal/store"
-	setuptools "github.com/shengjuntu/rundesk/plugins/rundesk-setup-tools"
+	"github.com/your-org/rundesk/internal/store"
+	setuptools "github.com/your-org/rundesk/plugins/rundesk-setup-tools"
 )
 
 const setupKunInstanceID = "setup-kun"

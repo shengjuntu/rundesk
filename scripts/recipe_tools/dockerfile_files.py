@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import re
+import shared_inputs
 
 
 def source_path(root, profile, selection):
@@ -10,10 +11,7 @@ def source_path(root, profile, selection):
         filename = "variants/Dockerfile.lite"
     elif profile["id"] == "video-build" and selection.get("videoUse"):
         filename = "variants/Dockerfile.video-use"
-    path = root / profile["id"] / filename
-    if not path.is_file() or any(p.is_symlink() for p in (path, *path.parents)):
-        raise ValueError("Missing or unsafe external Dockerfile: " + str(path))
-    return path
+    return shared_inputs.context_file(root, profile["id"], filename)
 
 
 def render(root, profile, selection, codex_version, base_image, destination, write, labels):

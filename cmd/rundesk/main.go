@@ -15,10 +15,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/shengjuntu/rundesk/internal/app"
-	"github.com/shengjuntu/rundesk/internal/containerruntime"
-	"github.com/shengjuntu/rundesk/internal/servicelock"
-	"github.com/shengjuntu/rundesk/internal/tracequery"
+	"github.com/your-org/rundesk/internal/app"
+	"github.com/your-org/rundesk/internal/containerruntime"
+	"github.com/your-org/rundesk/internal/servicelock"
+	"github.com/your-org/rundesk/internal/tracequery"
 )
 
 func main() {

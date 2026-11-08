@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shengjuntu/rundesk/internal/redaction"
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/redaction"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 func project(t *testing.T, rows ...map[string]any) *projection {

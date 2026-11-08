@@ -1,8 +1,8 @@
 package app
 
 import (
-	"github.com/shengjuntu/rundesk/internal/rpc"
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/rpc"
+	"github.com/your-org/rundesk/internal/store"
 	"net/http"
 	"os"
 	"runtime"

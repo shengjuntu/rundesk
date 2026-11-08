@@ -1,6 +1,6 @@
 # 启动与部署
 
-当前组合：RunDesk 0.66.0、独立 Kun 0.17.0、worker 协议 16。两者独立构建、以独立程序运行，也可在可运行包中一起分发；接口和旧版本兼容规则见 [Kun 拆分](KUN-SEPARATION.md)。
+当前组合：RunDesk 0.67.0、独立 Kun 0.17.0、worker 协议 16。两者独立构建、以独立程序运行，也可在可运行包中一起分发；接口和旧版本兼容规则见 [Kun 拆分](KUN-SEPARATION.md)。
 
 ## 可运行包
 
@@ -84,7 +84,7 @@ export RUNDESK_BUILD_SOURCES=/srv/rundesk/build-sources.json
 
 `RUNDESK_BUILD_SOURCES` 指向要使用的完整源列表文件；可先复制发行包中的 `config/build-sources.json`。不设置该变量时，默认源列表首次复制到 `<data>/config/build-sources.json`。Windows 可用 PowerShell 的 `$env:RUNDESK_RECIPES_DIR`、`$env:RUNDESK_BUILD_SOURCES` 设置绝对路径。
 
-显式配方目录有误会报错，不会悄悄使用另一份默认配方。目录内的 Dockerfile、`recipe.json`、工具和 Skills 可直接修改，新构建会读取并冻结当前内容；历史重建继续使用原快照。源列表、构建前选择、Dockerfile 参数与镜像拉取边界见[下载源配置](BUILD-SOURCES.md)。宿主运行构建仍不要求 Python/npm；Docker 镜像中安装工具需要相应软件源。
+显式配方目录有误会报错，不会悄悄使用另一份默认配方。配方的 Dockerfile、`recipe.json`、独有文件及 `recipes/common/` 中明确引用的共享内容可直接修改，新构建会读取并冻结当前内容；历史重建继续使用原快照。部署时保留完整 `recipes/`，导出后则已是自含的普通文件目录。源列表、构建前选择、Dockerfile 参数与镜像拉取边界见[下载源配置](BUILD-SOURCES.md)。宿主运行构建仍不要求 Python/npm；Docker 镜像中安装工具需要相应软件源。
 
 ## 首次初始化
 
@@ -159,7 +159,7 @@ export RUNDESK_TOKEN='替换为足够长的随机密钥'
 
 失败构建可按原冻结配置重试，也可交给已就绪的 Kun 助手诊断：助手读取明确选中的失败快照，在专用工作区导出、修改和打包新的配方，再构建与检查，不覆盖原配方或已有镜像。初始化页在原准备任务卡片内显示交接、修复对话、候选构建及验证结果；重新打开时按原构建恢复持久关联。下载失败则仍处理镜像地址与访问问题，不会自动触发本机构建或 Kun 构建修复。
 
-回执、日志、补丁说明和 offline/smoke 结果保留在任务与经验记录中。Kun 任务 completed 不是镜像已通过验证的证明；以维护记录中明确的 `verifiedBuildId` 和同源 offline/smoke 证据为准。初始化 Kun 的构建任务使用两小时预算，并由服务端限制最多三次镜像构建；长构建使用有界等待工具而非密集轮询，已有其他 Kun 实例保留自己的预算。具体能力见[构建中心](BUILD-CENTER.md)。
+回执、日志、补丁说明和 offline/smoke 结果保留在任务与经验记录中。Kun 任务 completed 不是镜像已通过验证的证明；以维护记录中明确的 `verifiedBuildId` 和同源 offline/smoke 证据为准。初始化 Kun 的构建任务使用两小时预算，并由服务端限制最多三次镜像构建；长构建使用有界等待工具而非密集轮询，已有其他 Kun 实例保留自己的预算。具体能力见[构建中心](BUILD-CENTER.md#build-workbench)。
 
 拉取失败应先核对地址、登录或网络并选择其他实际来源；不会自动退回长时间本机构建，也不会自动把拉取失败交给 Kun 改写配方。
 

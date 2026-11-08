@@ -9,7 +9,7 @@ import (
 	"time"
 
 	p "github.com/your-org/kun/sdk/protocol"
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 // Storage fixture only; actual distillation and execution use the HTTP fixture.

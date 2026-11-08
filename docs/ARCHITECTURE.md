@@ -2,7 +2,7 @@
 
 RunDesk 向应用提供持久任务与可检查的 Agent 执行过程。外部独立项目 Kun 和 Codex 是两个后端；模型 Provider、Kun 内部循环策略和操作系统执行环境分别建模。
 
-平台保持独立，自身接口命名为 **RunDesk Control API（RDCA）**，入口为 `/api/v1`。本源码包也提供固定 UHP `2026-10-19` 的 `/v1` 入口，与 RDCA 复用任务、资源、权限和调试核心，不依赖 HarnessRouter。已实现的入口不等于完整协议兼容；具体覆盖与后端限制见 [UHP 服务](UHP.md) 和 [API 定位与兼容计划](API-STRATEGY.md)。
+平台保持独立，自身接口命名为 **RunDesk Control API（RDCA）**，入口为 `/api/v1`。本源码包也提供固定 UHP `2026-10-19` 的 `/v1` 入口，与 RDCA 复用任务、资源、权限和调试核心，不依赖 HarnessRouter。已实现的入口不等于完整协议兼容；具体覆盖与后端限制见 [UHP 服务](UHP.md) 和 [API 定位与兼容计划](ARCHITECTURE.md#api-position)。
 
 ## 三个使命与职责
 
@@ -13,6 +13,16 @@ RunDesk 向应用提供持久任务与可检查的 Agent 执行过程。外部�
 | Harness 开发者与研究者 | 基于可检查证据进行调试、回放、分叉和对照实验 | 引擎实现实验能力；不支持的能力明确缺失 |
 
 这里的 Harness 指承载 Agent 模型与工具循环的运行系统，当前接入 Codex 与独立 Kun。运行预设绑定经过配置的环境；Skills、MCP、插件和镜像按实际后端能力组合。原生插件在本版只支持检查与来源识别，不承诺自动安装，见 [运行预设](APPLICATION-RUNTIME-PRESETS.md) 和 [插件边界](NATIVE-PLUGINS.md)。
+
+<a id="api-position"></a>
+
+## 平台身份与 API 命名
+
+RunDesk 是独立的 Go 控制平台与调试工作台，不以 HarnessRouter 服务、源码、数据库或运行时为依赖。自身 API 命名为 **RunDesk Control API（RDCA）**，当前版本为 RDCA v1，继续使用 `/api/v1`。这里的 v1 是 RunDesk 自有契约版本，不是 UHP 的版本。
+
+RDCA 覆盖任务、会话、文件、事件、资源配置、执行环境与调试，并继续遵守各接口的身份、作用域和归属限制。现有契约见 [API v1](API-V1.md)；RDCA 命名本身不改变路径、请求字段、响应结构或错误与幂等语义。
+
+[UHP](https://unifiedharnessprotocol.org/) 是固定版本的线协议参考；[HarnessRouter](https://github.com/HarnessRouter/harnessrouter) 是设计参考及迁移客户端的原服务，不是 RunDesk 的第三个必需执行后端。RunDesk 在 `/v1` 提供 UHP 入口，完整兼容仍需补足已记录的语义差异并完成真实客户端回归。
 
 ## 当前分层
 
@@ -45,6 +55,27 @@ flowchart TD
 | 执行环境 | 本机进程、Codex 容器与挂载/租约 | `internal/app/execution.go` 及 environment 文件 |
 | 界面与调试 | 统一工作台、轨迹/模型交互、只读问答工具和 Kun 高级面板 | `internal/web`、`internal/debugapi`、`internal/tracequery` |
 
+<a id="api-core"></a>
+
+## 共享任务核心与两个服务入口
+
+```mermaid
+flowchart TD
+    A["RunDesk 应用与工作台"] --> R["RDCA v1"]
+    B["原接 UHP 服务的客户端"] --> U["UHP 2026-10-19 入口"]
+    R --> C["RunDesk 任务、权限、资源与轨迹核心"]
+    U --> C
+    C --> X["原生 Codex 适配器"]
+    C --> K["原生 Kun 适配器"]
+    C --> E["后续引擎适配器"]
+```
+
+UHP 入口中的 RunDesk 扮演 server；应用是 client。向下如何驱动引擎由 RunDesk 的原生适配器负责。采用 UHP 不要求向 HarnessRouter 发请求，也不把 UHP 当作 Kun 的内部 JSONL 协议。
+
+两个入口复用同一套任务调度、身份与归属校验、执行状态和轨迹存储。幂等提交通过公共任务准入事务保存协议回执；等待和重试响应仍按各自协议实现。协议层负责验证、映射和输出，不能分别维护两套运行循环或终态权威。幂等命名空间绑定调用身份和协议入口：RDCA 保留规范化请求校验，UHP 按同一身份/键查回首次提交，不重新执行新请求体。相同 Key 不表示不同协议中的请求自动等价；客户端应持久保存并复用原请求。
+
+任务提交回执、会话中的一次执行、UHP response 和原生引擎 turn 并非名称替换。实施时需明确 ID 映射、接收与终态、续接、并发、取消竞争和错误语义，并以契约测试验证。已有 RDCA 客户端继续使用自身语义，不为 UHP 改写历史回执。
+
 ## 三类身份
 
 - **Application** 表达业务接入身份，绑定专用 Instance；应用凭据同时约束实例、项目和 scopes。
@@ -63,6 +94,20 @@ flowchart TD
 
 能力目录描述“实现支持”；`setup/environment` 检查已配置实例的本机前置条件；会话 DebugService 进一步区分 supported 与 available。不能把目录中的 step 能力理解为每个后端、每种运行状态均可调用。
 
+<a id="platform-resources-debug"></a>
+
+## 平台资源与调试边界
+
+Skills、MCP、插件、权限、工作区与原生状态的身份、版本及作用域绑定属于 RunDesk 平台服务。v0.52.0 重构版已提供 `resource.Catalog/Bindings/Resolver`、`PolicyService` 和实际运行路径接入。清单投影现有权威配置，Skills/MCP/plugin 标记声明来源与不支持项；不把目录声明当成已加载清单，不公开凭据或主机路径。每次准入记录资源元数据，原生执行仍由独立后端转换配置并回报实际状态。
+
+资源内容版本冻结、统一目录写入管理和所有后端的插件装载仍需后续扩展。当前清单不是完整配置备份；Codex 原生配置与 Skill 目录可由外部工具修改，其版本明确标记为 live。见 [资源契约](RESOURCE-CONTRACTS.md)。
+
+来自 UHP 入口的新运行生成 RunDesk 原生任务与轨迹关联；经过授权，可在工作台或 RDCA 调试接口中查看其工具参数、结果、错误和实际采集到的模型交互。UHP 标准输出与 RunDesk 调试扩展分别表达，不要求标准客户端理解 Kun 专属操作。
+
+调试能力以实际引擎、当前状态、授权和已记录证据为准。没有模型正文采集就不能显示完整模型请求；没有断点、单步、快照或分叉能力就不能宣称支持。Codex HTTP 观测继续是默认关闭的原协议直通采集，不转变为统一模型 API。
+
+当前 Kun 仍拥有模型与工具循环、journal、检查点和分叉。把 Kun 进一步拆成决策内核、由 RunDesk 执行动作，是独立的后续设计，不是 UHP 的既有要求，也不属于本版变更。每次运行只有一个循环负责人；将来若拆分，运行分叉需协调决策状态与平台工作区、记录和副作用边界。
+
 ## 轨迹和调试
 
 共同事件信封为宿主 `id/sessionId/time/direction/method/data`。`data` 保留后端原生载荷；统一投影呈现运行、步骤、审批、异常与统计，不推测模型隐藏推理。宿主事件 ID 与 Kun worker sequence 分别固定，不能互换。缺失证据保持未知。
@@ -73,7 +118,7 @@ Codex 提供宿主记录与原生协议暴露的检查；经过内置直通代�
 
 HTTP 采集默认关闭，`Session.observeHTTP` 保存会话偏好，服务启动参数仅决定新建 Codex 会话的默认值。代理在处理已启用线程时懒启动；关闭路径跳过观测配置发现和路由覆盖。偏好修改不打断当前执行，下一轮提交自动重连并恢复原 thread；保存值、待应用标记和已确认配置代理的状态分开记录。
 
-Hybrid 重算只回放录制工具结果；Live 分叉使用当前工具真实执行。K4 受限快速路径复用审批、预算和账本，守卫失败保留已完成结果后回退。结果未知的副作用不会自动重发，取消不等于回滚。详见 [调试](DEBUG.md)。
+Hybrid 重算只回放录制工具结果；Live 分叉使用当前工具真实执行。K4 受限快速路径复用审批、预算和账本，守卫失败保留已完成结果后回退。结果未知的副作用不会自动重发，取消不等于回滚。详见 [调试](TRACE.md#debug-overview)。
 
 Kun 自然语言诊断使用宿主提供的 `__trace_mcp` 只读证据桥，固定来源与事件上界由宿主约束；Kun 不导入 RunDesk 数据库或轨迹查询实现。SDK 独立版本、协议版本和引擎版本分别管理，详见 [拆分与兼容](KUN-SEPARATION.md)。
 

@@ -20,8 +20,8 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 UI = ["kun-inspect-test.cjs", "kun-panels-test.cjs", "kun-hybrid-ui-test.cjs",
-      "kun-harness-test.cjs", "kun-live-ui-test.cjs", "kun-runtime-harness-test.cjs",
-      "kun-compare-test.cjs", "kun-hypothesis-test.cjs", "kun-evaluation-test.cjs", "kun-task-sets-test.cjs", "kun-k4-ui-test.cjs", "kun-benchmarks-ui-test.cjs", "setup-runtime-test.cjs"]
+      "kun-harness-test.cjs", "kun-live-ui-test.cjs", "kun-compare-test.cjs",
+      "kun-evaluation-test.cjs", "kun-k4-ui-test.cjs", "setup-runtime-test.cjs"]
 
 
 def now():

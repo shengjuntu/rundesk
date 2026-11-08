@@ -143,5 +143,46 @@
     "upstream": {
       "const": "upstream.json"
     }
+  },
+  "$defs": {
+    "contextRelativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*[\\\\:\\u0000-\\u001f\\u007f-\\u009f])[^/]+(?:/[^/]+)*$",
+      "not": {
+        "pattern": "(^|/)\\.{1,2}(/|$)"
+      },
+      "description": "Ordinary relative POSIX path: no absolute path, colon, backslash, control character, empty segment, dot or parent component."
+    },
+    "sharedFiles": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/contextRelativePath"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/contextRelativePath"
+      },
+      "description": "Authoring-only context destination -> file or directory beneath recipes/common. Runtime validation also rejects overlapping destinations, generated metadata targets, links/special files, file/directory conflicts and missing shared inputs. All shared plus local input files fit the combined 4000-file/128-MiB limit. Ordinary same-path local files override shared files; exported contexts materialize real files and omit this field."
+    },
+    "canonicalRecipe": {
+      "title": "RunDesk canonical recipe descriptor",
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "profile"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "profile": {
+          "$ref": "#"
+        },
+        "sharedFiles": {
+          "$ref": "#/$defs/sharedFiles"
+        }
+      },
+      "description": "Use profile.schema.json#/$defs/canonicalRecipe for recipe.json; the document root continues to validate only the nested runtime profile. Existing dependency, selection and upstream declaration fields retain their dedicated runtime validation."
+    }
   }
 }

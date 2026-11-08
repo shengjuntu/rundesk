@@ -5,7 +5,7 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/shengjuntu/rundesk/internal/rpc"
+	"github.com/your-org/rundesk/internal/rpc"
 )
 
 // The server is authoritative. Never invent broader rules or an unadvertised

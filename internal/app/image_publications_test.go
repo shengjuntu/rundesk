@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shengjuntu/rundesk/internal/store"
+	"github.com/your-org/rundesk/internal/store"
 )
 
 type publicationDocker struct {
