@@ -885,7 +885,7 @@ func (m *Manager) runBuildCenterSmoke(parent context.Context, imageID string, sp
 		_, _ = m.docker.Run(cleanup, "rm", "--force", name)
 	}()
 	fmt.Fprintln(out, "在隔离容器中检查 Codex App Server initialize 与配方命令；不发起模型轮次。")
-	err = m.runtimeDockerCommand(ctx, out, "run", "--name", name, "--rm", "--pull=never", "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true", "--user", "1000:1000", "--cpus", "2", "--memory", "2048m", "--memory-swap", "2048m", "--pids-limit", "256", "--tmpfs", "/tmp:rw,nosuid,nodev,size=768m,mode=1777", "--workdir", "/tmp", "--env", "HOME=/tmp", "--env", "CODEX_HOME=/tmp/codex", "--entrypoint", "python3", imageID, "-c", buildCenterSmokeProgram, string(data))
+	err = m.runtimeDockerCommand(ctx, out, "run", "--name", name, "--rm", "--pull=never", "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true", "--user", "1000:1000", "--cpus", "2", "--memory", "2048m", "--memory-swap", "2048m", "--pids-limit", "256", "--tmpfs", imageCheckRenderTmpfs, "--workdir", "/tmp", "--env", "HOME=/tmp", "--env", "CODEX_HOME=/tmp/codex", "--entrypoint", "python3", imageID, "-c", buildCenterSmokeProgram, string(data))
 	if err != nil {
 		return fmt.Errorf("隔离 smoke 检查失败，请查看日志：%w", err)
 	}

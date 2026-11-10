@@ -1,8 +1,10 @@
 # 当前能力与后续工作
 
-**RunDesk 0.67.0 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。三个使命的产品定位见[中文 README](../README.zh-CN.md)。
+**RunDesk 0.67.1 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。三个使命的产品定位见[中文 README](../README.zh-CN.md)。
 
-本版将相关文档、测试整理为完整流程，并将配方共享输入显式归入 `recipes/common/`。每套配方用 `sharedFiles` 声明需要的内容，导出时物化普通文件；本地同名文件覆盖，缺失共享来源明确失败。原始声明不进入冻结锁文件，可再生检查输出继续放在 `build/qa/`。完整旧证据保留在 0.65.0 源码包，详见[验证资料说明](validation/README.md)。已有镜像、实例、会话和冻结构建快照保持原有语义。
+本版修正 video-build 镜像检查容器的临时空间配置。构建成功与 offline/smoke 通过仍分别记录；此修复不修改上游配方、工具二进制、doctor 阈值或已有镜像内容。用户提供的同镜像 17/17 检查结果与本版回归范围分别归档在[验证说明](VALIDATION.md#video-build-tmpfs-investigation-2026-11-08)。
+
+0.67.0 的文档／测试整理和配方共享输入继续保留：公共输入位于 `recipes/common/`，每套配方用 `sharedFiles` 声明需要的内容，导出时物化普通文件；本地同名文件覆盖，缺失共享来源明确失败。原始声明不进入冻结锁文件，可再生检查输出继续放在 `build/qa/`。完整旧证据保留在 0.65.0 源码包，详见[验证资料说明](validation/README.md)。已有镜像、实例、会话和冻结构建快照保持原有语义。
 
 当前界面按“工作区 → 会话”组织日常工作，Codex 执行日常会话与应用任务，Kun 负责受限内部维护和只读轨迹问答。初始化分三步，Docker 可选；每个准备任务关联其失败、Kun 修复及候选验证。构建工作台连接配方、镜像与 Agent，模型发现可读取本机 Docker 发布端口；Codex Provider 与 Kun 配置分别管理。操作见[WebUI](WEBUI.md)、[构建中心](BUILD-CENTER.md#build-workbench)、[模型服务](CODEX-PROVIDERS.md)和[维护](MAINTENANCE.md)。
 

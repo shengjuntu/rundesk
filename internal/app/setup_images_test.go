@@ -3,6 +3,7 @@ package app
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -222,6 +223,98 @@ func TestRuntimeImageWrongProfileAndProbeFailure(t *testing.T) {
 				t.Fatal(v)
 			}
 		})
+	}
+}
+
+func TestRuntimeImageOfflineProbeTemporaryStorage(t *testing.T) {
+	for _, profile := range []string{"video-build", "news2douyin", "people-search", "hyperframes", "video-use", "openmontage"} {
+		t.Run(profile, func(t *testing.T) {
+			m, d := runtimeImageFixture(t)
+			d.imageLabels = map[string]string{
+				"io.rundesk.profile": profile, "io.rundesk.codex.version": "0.144.6",
+				"org.opencontainers.image.version": runtimeProfileVersion(profile), "io.rundesk.agent-reach": "true",
+			}
+			wantMemory, wantPids := "512m", "128"
+			wantTmpfs := "/tmp:rw,nosuid,nodev,size=128m,mode=1777"
+			if profile == "video-build" {
+				d.imageLabels["io.rundesk.agent-reach"] = "false"
+				d.imageLabels["io.rundesk.hyperframes.version"] = "0.8.87"
+				d.imageLabels["io.rundesk.gsap.version"] = "3.15.0"
+				d.imageLabels["io.rundesk.hyperframes.lock"] = runtimeHyperframesLockSHA256
+				d.imageLabels["io.rundesk.video-use.enabled"] = "false"
+				wantMemory, wantPids = "2048m", "256"
+				wantTmpfs = "/tmp:rw,nosuid,nodev,size=2g,mode=1777"
+			} else if independentVideoProfile(profile) {
+				identity, ok := independentRuntimeIdentity(profile)
+				if !ok {
+					t.Fatal("missing reviewed upstream identity", profile)
+				}
+				d.imageLabels["io.rundesk.agent-reach"] = "false"
+				d.imageLabels["io.rundesk.upstream.repository"] = identity.Repository
+				d.imageLabels["io.rundesk.upstream.commit"] = identity.Commit
+				d.imageLabels["io.rundesk.upstream.source.sha256"] = identity.SourceSHA256
+				d.imageLabels["io.rundesk.video-app-media.contract"] = "1"
+				wantMemory, wantPids = "2048m", "256"
+				wantTmpfs = "/tmp:rw,nosuid,nodev,size=768m,mode=1777"
+			}
+			build := ImageBuild{ID: "render-probe", ProfileID: profile, CodexVersion: "0.144.6"}
+			var log bytes.Buffer
+			if err := m.verifyRuntimeImage(context.Background(), build, d.image, &log); err != nil {
+				t.Fatal(err, log.String())
+			}
+			d.mu.Lock()
+			calls := append([][]string{}, d.calls...)
+			d.mu.Unlock()
+			probes := 0
+			for _, args := range calls {
+				if len(args) == 0 || args[0] != "run" {
+					continue
+				}
+				probes++
+				flag := func(name string) string {
+					for index, value := range args {
+						if value == name && index+1 < len(args) {
+							return args[index+1]
+						}
+					}
+					return ""
+				}
+				if flag("--tmpfs") != wantTmpfs || flag("--memory") != wantMemory || flag("--pids-limit") != wantPids {
+					t.Fatal("incorrect profile-specific probe resources", args)
+				}
+				joined := strings.Join(args, " ")
+				for _, restriction := range []string{"--rm", "--pull=never", "--network none", "--read-only", "--cap-drop ALL", "--security-opt no-new-privileges:true", "--user 1000:1000", "--env HOME=/tmp", "--env CODEX_HOME=/tmp/codex", "/opt/rundesk-profile/tools/profile_doctor.py --json"} {
+					if !strings.Contains(joined, restriction) {
+						t.Fatal("probe lost isolation or skipped the doctor", restriction, args)
+					}
+				}
+				if strings.Contains(joined, "--mount") || strings.Contains(joined, "--privileged") || strings.Contains(joined, "docker.sock") {
+					t.Fatal("probe acquired host access", args)
+				}
+			}
+			if probes != 1 {
+				t.Fatal("expected one offline doctor invocation", probes, calls)
+			}
+		})
+	}
+}
+
+func TestRuntimeImageVideoBuildDoctorFailureDoesNotBecomeReady(t *testing.T) {
+	m, d := runtimeImageFixture(t)
+	d.imageLabels = map[string]string{
+		"io.rundesk.profile": "video-build", "io.rundesk.codex.version": "0.144.6",
+		"org.opencontainers.image.version": "1.4.0", "io.rundesk.agent-reach": "false",
+		"io.rundesk.hyperframes.version": "0.8.87", "io.rundesk.gsap.version": "3.15.0",
+		"io.rundesk.hyperframes.lock": runtimeHyperframesLockSHA256, "io.rundesk.video-use.enabled": "false",
+	}
+	d.failProbe = true
+	v, err := m.PrepareRuntimeImage(RuntimeImageInput{ProfileID: "video-build", CodexVersion: "0.144.6", Source: "local", Reference: "example:ready"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	v = waitBuild(t, m, DefaultInstance, v.ID, "failed")
+	if v.OfflineReady || v.Error == "" || v.ImageID != d.image {
+		t.Fatalf("a failed doctor was bypassed or lost the existing image: %+v", v)
 	}
 }
 

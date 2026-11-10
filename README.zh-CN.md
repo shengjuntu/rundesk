@@ -46,9 +46,11 @@ RunDesk 通过 Kun 集成提供模块状态检查和执行循环策略选择。�
 
 ## 当前源码版本
 
-**RunDesk 0.67.0 · 外部 Kun 0.17.0 · worker 协议 16**
+**RunDesk 0.67.1 · 外部 Kun 0.17.0 · worker 协议 16**
 
-0.67.0 将同主题文档和测试整理为完整流程，并通过 `sharedFiles` 显式复用配方公共内容。导出目录全部是普通文件，可独立构建；配方内同名文件可覆盖共享目标。可再生检查结果继续进入 `build/qa/`，早期原始证据保留在此前的 0.65.0 源码包。见[升级说明](docs/UPGRADING.md)与[验证范围](docs/VALIDATION.md)。
+0.67.1 修正 video-build 镜像检查容器的临时空间配置，保留上游配方和 doctor 检查条件；只有实际检查通过才登记就绪状态。用户对同一镜像的隔离验证与本版实际检查分别记录在[验证说明](docs/VALIDATION.md#video-build-tmpfs-investigation-2026-11-08)。按原流程升级宿主后可重新检查已有镜像，此宿主侧修复本身不要求重建镜像。见[升级说明](docs/UPGRADING.md)。
+
+0.67.0 将同主题文档和测试整理为完整流程，并通过 `sharedFiles` 显式复用配方公共内容。导出目录全部是普通文件，可独立构建；配方内同名文件可覆盖共享目标。可再生检查结果继续进入 `build/qa/`，早期原始证据保留在此前的 0.65.0 源码包。
 
 `recipes/` 是唯一可编辑配方来源。公共工具、Skills 和已审阅的本地依赖保存在 `recipes/common/`，各配方显式声明引用；缺失来源明确失败，generic 模板保持自含。生产读取器、应用客户端和部署文件分别位于 `internal/`、`clients/python/`、`deploy/systemd/`。构建快照生成各自的锁文件。news2douyin、people-search 1.1.2 保留已审阅的 Agent-Reach 本地源码及 wheel 打包修复；其他依赖仍需相应下载通道。操作见[配方与 CLI](recipes/README.md)及[启动部署](docs/SETUP.md)。
 

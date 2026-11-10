@@ -1,8 +1,43 @@
 # 验证范围与复验
 
-本页说明当前源码的复验入口，不把历史通过数当作本版结果。RunDesk **0.67.0** 聚焦同主题文档／测试整理及配方共享输入。应复验共享来源物化、本地覆盖、缺失或不安全来源拒绝、冻结锁文件不依赖公共目录，以及历史上下文不变。
+本页说明当前源码的复验入口，不把历史通过数当作本版结果。RunDesk **0.67.1** 修正 video-build 镜像检查容器的临时空间配置。应复验实际 Docker 参数、检查失败／成功状态的登记，以及既有只读根目录、离线网络和普通用户限制；上游配方和 doctor 验收条件保持原样。
 
-本版实际执行、结果及未覆盖范围只记在 [release-067.json](validation/current/release-067.json)。完整历史记录保留在 0.65.0 源码包，来源与摘要见[历史资料说明](validation/README.md)。本版不随源码再次携带历史日志、截图、测试视频或嵌套归档。
+本版实际执行、结果及未覆盖范围只记在 [release-0671.json](validation/current/release-0671.json)。完整历史记录保留在 0.65.0 源码包，来源与摘要见[历史资料说明](validation/README.md)。本版不随源码再次携带历史日志、截图、测试视频或嵌套归档。
+
+0.67.0 的专题文档、测试整理及配方共享输入继续保留。相关回归包括共享来源物化、本地覆盖、缺失或不安全来源拒绝、冻结锁文件不依赖公共目录，以及历史上下文不变；历史通过数不自动转为本版结果。
+
+<a id="video-build-tmpfs-investigation-2026-11-08"></a>
+## video-build 1.4.0 构建失败调查归档（2026-11-08）
+
+以下为用户在部署服务器上完成的调查及对照验证，未在本次宿主开发环境中重新执行真实 Docker 构建或渲染。
+
+| 阶段 | 用户报告的结果 |
+| --- | --- |
+| Docker 构建 | 成功；镜像为 `rundesk-video-build:0.157.1`，约 1.9 GB，所需工具已安装 |
+| 离线工具检查 | `offlineReady: false`，最终构建记录标记 failed |
+| Kun 修复 | 三次同版本重试仍失败，没有通过降级验收条件将镜像标成就绪 |
+| 隔离对照 | 使用同一镜像和同一检查命令，仅将 `/tmp` tmpfs 改为 2 GiB 后，17/17 检查通过 |
+
+旧版 `verifyRuntimeImage` 为 video-build 检查配置了 `size=768m` 的 `/tmp` tmpfs；虽然其内存额度较大，临时空间额度仍沿用了此值。用户观测到 HyperFrames render 预检返回 `Low disk space: 0.7 GB free at /tmp`，随后检查失败。上述同镜像对照支持将本次失败归因为宿主检查容器的临时空间配置，镜像无需仅因此重新构建。它不表明所有部署环境都必然以相同可用空间失败，也不将错误信息中的显示值当成完整磁盘度量。
+
+用户报告通过的范围包括 Codex、Node、FFmpeg、GSAP、HyperFrames 0.8.87、字体、浏览器、渲染契约及 FFmpeg 音视频渲染。该 17/17 是用户实机结果，不等于本包已完成 Docker、模型认证、业务成片质量或全部预设的实机验收。本补丁保留上游工具和 doctor 检查条件，由宿主为检查提供足够临时空间；升级后仍须实际重跑检查，不能直接写入 `offlineReady`。
+
+本补丁的参数范围：宿主 `verifyRuntimeImage` 仅将 video-build 的 `/tmp` 提至 2 GiB，其余研究类 128 MiB、独立视频类 768 MiB 保持原值；构建中心通用 smoke 容器使用 2 GiB，以支持导入配方调用同一 doctor；Python CLI 的 `doctor` 仅将 video-build 从 512 MiB 提至 2 GiB，其他配方仍为 512 MiB。正式会话运行容器的配置不在本补丁范围，检查的其他隔离与资源限制保持原样。
+
+<a id="kun-openmontage-trace-review-2026-11-08"></a>
+## 另附 Kun／OpenMontage 会话轨迹审阅（2026-11-08）
+
+用户附件 `rundesk-events(1).jsonl` 的 SHA-256 为 `c0d9c613e28252c7e6af69edb773fb639990379961196d62ae9a7a2d51407632`。它记录会话 `50bc82bc513520c8c6510a0c` 的 125 条宿主事件（#258–#382）。以下是对已保存证据的只读审阅，本源码不复制完整附件或原始载荷，也未据此在本机重新执行 Docker。
+
+| 证据 | 已记录的事实 |
+| --- | --- |
+| 源构建 #298 | `profileId=openmontage`，OpenMontage 独立上游 1.0.0；构建 ID `ed77479dea01190ee85b3f3e`，镜像引用 `rundesk-openmontage:0.157.1`。失败发生在 `prepare archive upstream-source: context deadline exceeded`，没有生成 ImageID |
+| 下载日志 #318 | 已读日志的下载进度仅到 32 MiB，不能据此认定归档已完整下载或校验通过 |
+| Kun 操作 | 查询文件、日志和下载源列表；该附件未记录 `build_start`、配方修改、打包、导入或候选测试 |
+| 工具别名错误 #360 | 此后模型调用继续，不是最终终止事件 |
+| 终止 #380–#382 | 第十次模型请求于北京时间约 16:12:53 开始，约 120 秒后 #381 报 `context deadline exceeded (Client.Timeout or context cancellation while reading body)`，随后 #382 记录 failed。日志对应时间为 08:12:53–08:14:53 UTC |
+
+该附件对应另一条 OpenMontage 下载失败修复会话，不能作为 video-build `/tmp` 空间根因或三次构建重试的证据。上节 video-build 的 17/17 对照结果来自用户单独提供的实机调查。此补丁仅修正已明确的检查临时空间配置，不调整独立 Kun 或模型请求超时；附件中的超时记录也不单独证明是哪一端或哪个网络环节造成了失败。
 
 ## 基础检查
 

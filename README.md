@@ -46,9 +46,11 @@ The instance-centered WebUI does **not** yet synchronize instance configuration 
 
 ## Current source version
 
-**RunDesk 0.67.0 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.67.1 source · external Kun 0.17.0 · worker protocol 16**
 
-Version 0.67.0 consolidates related guides and test suites, and makes common recipe inputs explicit through `sharedFiles`. Exported contexts contain ordinary files and remain independently buildable; local recipe files can override shared targets. Generated QA results stay under `build/qa/`, and earlier raw evidence remains in the preserved 0.65.0 source package. See [upgrading](docs/UPGRADING.md) and [validation scope](docs/VALIDATION.md).
+Version 0.67.1 corrects the temporary-space allowance used to verify video-build images. It preserves the upstream recipe and doctor checks; an image must still pass verification before it is marked ready. The user's isolated same-image result and this release's actual checks are recorded separately in [validation](docs/VALIDATION.md#video-build-tmpfs-investigation-2026-11-08). Upgrade the host through the normal release process and recheck an existing image; no image rebuild is required solely for this host-side fix. See [upgrading](docs/UPGRADING.md).
+
+Version 0.67.0 introduced the consolidated guides and test suites and explicit shared recipe inputs through `sharedFiles`. Exported contexts contain ordinary files and remain independently buildable; local recipe files can override shared targets. Generated QA results stay under `build/qa/`, and earlier raw evidence remains in the preserved 0.65.0 source package.
 
 `recipes/` is the single editable recipe source. Shared tools, Skills and reviewed local dependencies live under `recipes/common/`; each recipe declares the files it uses. Missing declared sources fail explicitly, while generic templates remain self-contained. Production readers live under `internal/`, application clients under `clients/python/`, and service files under `deploy/systemd/`. Build snapshots generate their own lock files. Reviewed local Agent-Reach sources and the wheel packaging fix remain in news2douyin and people-search 1.1.2; other dependencies still require their download channels. Use the [recipe CLI](recipes/README.md) and [deployment instructions](docs/SETUP.md).
 

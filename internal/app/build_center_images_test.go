@@ -466,7 +466,7 @@ func TestBuildCenterImagesAsyncTestSharesQueueAndFreezesOwnerScope(t *testing.T)
 		}
 		foundRun = true
 		joined := strings.Join(args, " ")
-		for _, required := range []string{"--read-only", "--network none", "--cap-drop ALL", "--user 1000:1000", "--memory-swap 2048m", "--pids-limit 256", "--cpus 2", "rundesk-image-smoke-", "Codex app-server initialize passed"} {
+		for _, required := range []string{"--read-only", "--network none", "--cap-drop ALL", "--user 1000:1000", "--memory-swap 2048m", "--pids-limit 256", "--cpus 2", "--tmpfs /tmp:rw,nosuid,nodev,size=2g,mode=1777", "rundesk-image-smoke-", "Codex app-server initialize passed"} {
 			if !strings.Contains(joined, required) {
 				t.Fatalf("probe lacks restriction %q: %s", required, joined)
 			}
@@ -481,6 +481,38 @@ func TestBuildCenterImagesAsyncTestSharesQueueAndFreezesOwnerScope(t *testing.T)
 	input.RequestID, input.SourceBuildID = store.ID(), foreign.ID
 	_, err = m.StartBuildCenterImageTest(BuildCenterImageKey(v.ImageID), input)
 	expectDockerCode(t, err, "image_test_unavailable")
+}
+
+func TestBuildCenterImageImportedDoctorHasRenderTemporaryStorage(t *testing.T) {
+	m, f, _, _, image := buildCenterTestApp(t)
+	doctor := RecipeSmokeSpec{Command: []string{"python3", "/opt/rundesk-profile/tools/profile_doctor.py", "--json"}, TimeoutSeconds: 300}
+	var output strings.Builder
+	if err := m.runBuildCenterSmoke(context.Background(), image.ImageID, doctor, &output); err != nil {
+		t.Fatal(err)
+	}
+	probes := 0
+	for _, args := range buildCenterFixtureCalls(f) {
+		if len(args) == 0 || args[0] != "run" {
+			continue
+		}
+		probes++
+		joined := strings.Join(args, " ")
+		for _, required := range []string{"--tmpfs /tmp:rw,nosuid,nodev,size=2g,mode=1777", "--memory 2048m", "--memory-swap 2048m", "--read-only", "--network none", "--cap-drop ALL", "--security-opt no-new-privileges:true", "--user 1000:1000", "--pull=never"} {
+			if !strings.Contains(joined, required) {
+				t.Fatal("imported doctor lacks required resources or isolation", required, args)
+			}
+		}
+		var frozen RecipeSmokeSpec
+		if err := json.Unmarshal([]byte(args[len(args)-1]), &frozen); err != nil || strings.Join(frozen.Command, "\x00") != strings.Join(doctor.Command, "\x00") || frozen.TimeoutSeconds != doctor.TimeoutSeconds {
+			t.Fatalf("smoke changed the frozen doctor command: %+v %v", frozen, err)
+		}
+		if strings.Contains(joined, "--mount") || strings.Contains(joined, "--privileged") || strings.Contains(joined, "docker.sock") {
+			t.Fatal("imported doctor acquired host access", args)
+		}
+	}
+	if probes != 1 {
+		t.Fatal("expected one smoke container", probes)
+	}
 }
 
 func TestBuildCenterImagesSmokeFailureAndUnsafeSpecAreNotGreen(t *testing.T) {

@@ -401,6 +401,42 @@ class ProfilesTest(unittest.TestCase):
             result = profiles.doctor(p, "example:tag")
             self.assertFalse(result["ready"]); self.assertEqual(run.call_count, 2)
 
+    def test_doctor_video_build_has_render_tmpfs_and_keeps_isolation(self):
+        for name in profiles.PROFILE_IDS:
+            for runtime_ok in ([True, False] if name == "video-build" else [True]):
+                with self.subTest(profile=name, runtime_ok=runtime_ok):
+                    calls = []
+
+                    def docker_command(argv, timeout=30):
+                        calls.append((list(argv), timeout))
+                        if argv[1:3] == ["image", "inspect"]:
+                            return {"ok": True, "output": name + "\n"}
+                        if argv[1] == "run":
+                            return {"ok": runtime_ok, "exitCode": 0 if runtime_ok else 2,
+                                    "output": "fixture runtime check"}
+                        return {"ok": True, "exitCode": 0}
+
+                    with patch.object(profiles, "docker_prefix", return_value=["docker"]), \
+                         patch.object(profiles, "command", side_effect=docker_command):
+                        result = profiles.doctor(profiles.load_profile(name), "fixture:already-built")
+                    self.assertEqual(result["ready"], runtime_ok)
+                    self.assertFalse(result["modelTested"])
+                    self.assertFalse(result["networkTested"])
+                    run, timeout = next(call for call in calls if call[0][1] == "run")
+                    flag = lambda name: run[run.index(name) + 1]
+                    self.assertEqual(flag("--tmpfs"), "/tmp:rw,nosuid,nodev,size=" + ("2g" if name == "video-build" else "512m") + ",mode=1777")
+                    self.assertEqual(flag("--network"), "none")
+                    self.assertEqual(flag("--user"), "1000:1000")
+                    self.assertEqual(flag("--cap-drop"), "ALL")
+                    self.assertEqual(flag("--security-opt"), "no-new-privileges:true")
+                    self.assertIn("--read-only", run)
+                    self.assertNotIn("--privileged", run)
+                    self.assertNotIn("--mount", run)
+                    self.assertEqual(run[-3:], ["fixture:already-built", "/opt/rundesk-profile/tools/profile_doctor.py", "--json"])
+                    self.assertEqual(timeout, 420)
+                    cleanup = [call[0] for call in calls if call[0][1] == "rm"]
+                    self.assertEqual(cleanup, [["docker", "rm", "--force", flag("--name")]])
+
     def test_agent_reach_runtime_config_is_per_home_and_preserves_existing(self):
         config = module("agent_config", profiles.context_file(ROOT / "recipes", "news2douyin", "tools/agent_reach_config.py"))
         first = self.root / 'first'; second = self.root / 'second'

@@ -399,8 +399,12 @@ def doctor(profile, image=None):
             result.update(ready=False, scope="image identity mismatch; runtime not executed")
             return result
         name = "rundesk-profile-check-" + uuid.uuid4().hex
+        # HyperFrames' render preflight checks available temporary disk space.
+        # Keep the unmodified upstream check and provide a bounded 2 GiB mount
+        # for video-build; other profiles retain their existing probe budget.
+        temporary = "/tmp:rw,nosuid,nodev,size=" + ("2g" if profile["id"] == "video-build" else "512m") + ",mode=1777"
         try:
-            result["checks"].append({"name": "image-runtime", **command(prefix + ["run", "--name", name, "--rm", "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true", "--user", "1000:1000", "--tmpfs", "/tmp:rw,nosuid,nodev,size=512m,mode=1777", "--env", "HOME=/tmp", "--env", "CODEX_HOME=/tmp/codex", "--entrypoint", "python3", image, "/opt/rundesk-profile/tools/profile_doctor.py", "--json"], 420)})
+            result["checks"].append({"name": "image-runtime", **command(prefix + ["run", "--name", name, "--rm", "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true", "--user", "1000:1000", "--tmpfs", temporary, "--env", "HOME=/tmp", "--env", "CODEX_HOME=/tmp/codex", "--entrypoint", "python3", image, "/opt/rundesk-profile/tools/profile_doctor.py", "--json"], 420)})
         finally:
             # Only this invocation's uniquely named probe; also clean up after
             # a client timeout, which alone does not stop a daemon-side container.

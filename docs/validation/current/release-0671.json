@@ -1,0 +1,198 @@
+{
+  "version": "0.67.1",
+  "status": "passed",
+  "date": "2026-11-08",
+  "scope": "Host-side temporary-storage correction for video-build verification and general build-center smoke; no deployed binary, image or upstream recipe modification.",
+  "baseline": {
+    "version": "0.67.0",
+    "archive": "rundesk-v0.67.0-source.zip",
+    "sha256": "3a4eaf08616d38fc650f8c8a691c0f881b09d74184d958b142c887148d14dbe9"
+  },
+  "sourceFiles": 801,
+  "fix": {
+    "runtimeOffline": {
+      "profile": "video-build",
+      "tmpfsBefore": "768m",
+      "tmpfsAfter": "2g",
+      "memoryUnchanged": "2048m",
+      "otherResearchProfiles": "128m unchanged",
+      "otherIndependentVideoProfiles": "768m unchanged"
+    },
+    "buildCenterSmoke": {
+      "tmpfsBefore": "768m",
+      "tmpfsAfter": "2g",
+      "reason": "Imported/custom smoke may call the same rendering doctor; command is frozen and not inferred from names.",
+      "memoryUnchanged": "2048m",
+      "memorySwapUnchanged": "2048m"
+    },
+    "pythonDoctor": {
+      "profile": "video-build",
+      "tmpfsBefore": "512m",
+      "tmpfsAfter": "2g",
+      "otherProfiles": "512m unchanged"
+    },
+    "preserved": [
+      "read-only root",
+      "network none",
+      "unprivileged user",
+      "cap-drop ALL",
+      "no-new-privileges",
+      "existing resource/time limits",
+      "upstream doctor acceptance conditions",
+      "negative checks remain failed/offlineReady false",
+      "production execution environment configuration"
+    ]
+  },
+  "userReportedInvestigation": {
+    "date": "2026-11-08",
+    "profile": "video-build 1.4.0",
+    "image": "rundesk-video-build:0.157.1",
+    "imageSizeReported": "1.9GB",
+    "buildReported": "succeeded",
+    "offlineCheckReported": "failed with offlineReady false and Low disk space: 0.7 GB free at /tmp",
+    "repairAttemptsReported": 3,
+    "controlledComparisonReported": "Same image/check command with /tmp tmpfs 2GB passed 17/17 checks on the user server.",
+    "provenance": "User-provided investigation conclusion; not independently rerun Docker acceptance, and not proven by the separate attached OpenMontage JSONL.",
+    "documentation": "docs/VALIDATION.md#video-build-tmpfs-investigation-2026-11-08"
+  },
+  "separateAttachedTraceReview": {
+    "filename": "rundesk-events(1).jsonl",
+    "bytes": 770475,
+    "sha256": "c0d9c613e28252c7e6af69edb773fb639990379961196d62ae9a7a2d51407632",
+    "sessionId": "50bc82bc513520c8c6510a0c",
+    "hostEvents": 125,
+    "hostRange": [
+      258,
+      382
+    ],
+    "kunSequenceRange": [
+      1,
+      123
+    ],
+    "sourceProfile": "openmontage",
+    "sourceBuildId": "ed77479dea01190ee85b3f3e",
+    "sourceBuildFailure": "prepare archive upstream-source: context deadline exceeded",
+    "sourceBuildEvidence": 298,
+    "downloadLogEvidence": 318,
+    "imageProduced": false,
+    "candidateBuildStartsRecorded": 0,
+    "recipeMutationsRecorded": 0,
+    "terminalEvidence": [
+      380,
+      381,
+      382
+    ],
+    "terminalError": "context deadline exceeded (Client.Timeout or context cancellation while reading body)",
+    "lastModelWaitSeconds": 120.032,
+    "rejectedToolAliasEvidence": 360,
+    "rejectedToolAliasWasTerminal": false,
+    "limits": "Supplied host event/worker-sequence ranges are continuous and include termination, but no complete worker database or raw HTTP transport is provided. This attachment does not document video-build tmpfs failure or three candidate rebuilds.",
+    "documentation": "docs/VALIDATION.md#kun-openmontage-trace-review-2026-11-08"
+  },
+  "checks": [
+    {
+      "command": "go test -p 1 ./...",
+      "result": "passed",
+      "scope": "Complete host suite including final probe regressions."
+    },
+    {
+      "command": "go vet ./...",
+      "result": "passed"
+    },
+    {
+      "command": "cd third_party/kun-sdk && go test ./...",
+      "result": "passed"
+    },
+    {
+      "name": "Linux/amd64 and Windows/amd64 builds",
+      "result": "passed",
+      "CGO_ENABLED": "0"
+    },
+    {
+      "name": "Probe resource regressions",
+      "result": "passed",
+      "scope": "Command-recording subprocess fixtures across six profiles, frozen custom doctor smoke, isolation and failure-readiness boundaries; no Docker daemon."
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_profiles.py",
+      "result": "passed",
+      "tests": 35
+    },
+    {
+      "name": "Actual portable package",
+      "result": "passed",
+      "checks": [
+        "packaging rejects missing declared shared sources before creating the destination",
+        "staged native executable, all resource hashes, preserved license notices and source version agree",
+        "all six recipe exports work without examples, source ancestry, Python, Node or Docker on PATH",
+        "generic template export reads packaged external resources",
+        "shared sources materialize with local overrides; missing inputs, traversal, metadata injection and symlinks fail",
+        "all six fully self-contained legacy recipes export identical files and permissions without common",
+        "external Dockerfile edits affect new exports while imported context bytes stay frozen",
+        "missing packaged recipes fail visibly rather than falling back into a checkout",
+        "recipe reads/imports create no tasks, sessions or image builds",
+        "packaged launcher handles spaces without Python; frozen custom recipes survive restart with common unavailable"
+      ],
+      "scope": "Actual packaged native Go demo server outside the checkout; recipe metadata/export/import only. No real Docker, model or worker execution.",
+      "binarySHA256": "c9fb369c05d3f13c93cb3eed5c1db594d745026325b05f5c2178b19e35ba5b7c"
+    },
+    {
+      "name": "OpenAPI baseline comparison",
+      "result": "passed",
+      "paths": 248,
+      "operations": 299,
+      "onlyChange": "info.version"
+    },
+    {
+      "name": "Unchanged packaged support inputs",
+      "result": "passed",
+      "groups": {
+        "recipes": {
+          "files": 182,
+          "byteIdentical": true
+        },
+        "third_party": {
+          "files": 26,
+          "byteIdentical": true
+        },
+        "config": {
+          "files": 2,
+          "byteIdentical": true
+        },
+        "clients": {
+          "files": 5,
+          "byteIdentical": true
+        },
+        "plugins": {
+          "files": 9,
+          "byteIdentical": true
+        },
+        "deploy": {
+          "files": 3,
+          "byteIdentical": true
+        },
+        "LICENSES": {
+          "files": 2,
+          "byteIdentical": true
+        }
+      }
+    }
+  ],
+  "artifacts": {
+    "rundesk": {
+      "bytes": 26371384,
+      "sha256": "c9fb369c05d3f13c93cb3eed5c1db594d745026325b05f5c2178b19e35ba5b7c"
+    },
+    "rundesk.exe": {
+      "bytes": 26658816,
+      "sha256": "ea3956a27776c8dad1f0dde30b6c345ec79016e5f6cfd925b2effa9b52581fc6"
+    }
+  },
+  "upgrade": "Upgrade the RunDesk host normally, preserve the existing data path and image, then choose video-build / Codex 0.157.1 / existing local image rundesk-video-build:0.157.1 and run a new check. Do not manually rewrite readiness or old failed records.",
+  "limitations": [
+    "No real Docker image build, HyperFrames render, provider authentication, model inference or production Kun worker execution was performed here. The user-reported 17/17 result remains separately attributed.",
+    "Independent Kun engine binaries and model HTTP timeouts were not changed; the separate OpenMontage download/model-read timeout case is archived, not claimed fixed by this patch.",
+    "The complete user JSONL, credentials and raw payloads are not copied into the source release.",
+    "Windows is cross-compiled, not executed natively. Public image distribution and full UHP conformance are not claimed."
+  ]
+}

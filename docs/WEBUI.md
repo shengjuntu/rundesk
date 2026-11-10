@@ -1,6 +1,6 @@
 # WebUI：工作区、会话与 Agent / Workspaces, conversations and Agents
 
-本文描述 RunDesk 0.67.0 的界面与当前后端边界。升级不改变存储布局，也不迁移或删除原有实例、工作区和历史数据。界面将长期保存的“实例”称为 **Agent**；它不等同于 Docker 容器。应用的“应用设置”页展示可用 Agent 环境、默认绑定、凭据授权数量和项目工作区；见[运行预设](APPLICATION-RUNTIME-PRESETS.md)与[项目环境](APPLICATION-PROJECT-ENVIRONMENTS.md)。
+本文描述 RunDesk 0.67.1 的界面与当前后端边界。升级不改变存储布局，也不迁移或删除原有实例、工作区和历史数据。界面将长期保存的“实例”称为 **Agent**；它不等同于 Docker 容器。应用的“应用设置”页展示可用 Agent 环境、默认绑定、凭据授权数量和项目工作区；见[运行预设](APPLICATION-RUNTIME-PRESETS.md)与[项目环境](APPLICATION-PROJECT-ENVIRONMENTS.md)。
 
 RunDesk 的会话按工作区组织：进入工作区后新建会话，由会话选择 Codex 运行环境。同一工作区可以包含多个使用不同 Codex 配置的会话。Kun 不出现在日常 Agent 列表与新建任务选项中，内部维护从“环境设置”和构建中心进入。Agent 管理负责模型、Skills、MCP 和插件配置；应用接入和构建中心分别负责外部调用与运行环境准备，不要求用户先注册应用才能管理实例。
 

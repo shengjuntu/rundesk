@@ -215,6 +215,11 @@ func (m *Manager) runtimeDockerCommand(ctx context.Context, out io.Writer, args 
 
 const runtimeHyperframesLockSHA256 = "b3f48e9687cd27dea097203e928e6e7fd84344b88122ab2bb546d38b48705de1"
 
+// HyperFrames render checks inspect free disk space before writing frames.
+// Keep enough temporary capacity without changing the container memory limit,
+// upstream doctor checks, or read-only/network/user restrictions.
+const imageCheckRenderTmpfs = "/tmp:rw,nosuid,nodev,size=2g,mode=1777"
+
 func runtimeImageMatches(v ImageBuild, image imageInspection) bool {
 	if v.RuntimeIdentity != nil {
 		return frozenRuntimeImageMatches(v, image)
@@ -353,6 +358,9 @@ func (m *Manager) verifyRuntimeImage(parent context.Context, v ImageBuild, id st
 	if v.ProfileID == "video-build" || independentVideoProfile(v.ProfileID) {
 		// The custom builder renders browser frames/audio; independent profiles run their native tool and source checks.
 		timeout, memory, temporary, pids = 8*time.Minute, "2048m", "/tmp:rw,nosuid,nodev,size=768m,mode=1777", "256"
+	}
+	if v.ProfileID == "video-build" {
+		temporary = imageCheckRenderTmpfs
 	}
 	ctx, cancel := context.WithTimeout(parent, timeout)
 	defer cancel()
