@@ -1,16 +1,19 @@
 # Editable independent upstream Dockerfile. Inspect upstream.json and install.sh before building.
 ARG RD_BASE_IMAGE=node:22-bookworm-slim
 FROM ${RD_BASE_IMAGE}
+USER root
 # All managed profiles require the Node runtime and unprivileged node user.
 RUN node -e 'if (Number(process.versions.node.split(".")[0]) < 22) process.exit(1)' && npm --version >/dev/null && id node >/dev/null
 ARG RD_APT_MIRROR=http://deb.debian.org/debian
 ARG RD_APT_SECURITY_MIRROR=http://deb.debian.org/debian-security
 COPY tools/configure-apt.sh /opt/rundesk-profile/tools/configure-apt.sh
-RUN RD_APT_MIRROR="${RD_APT_MIRROR}" RD_APT_SECURITY_MIRROR="${RD_APT_SECURITY_MIRROR}" sh /opt/rundesk-profile/tools/configure-apt.sh && apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=60 update && apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=60 install -y --no-install-recommends ca-certificates chromium curl ffmpeg fontconfig fonts-noto-cjk git python3 python3-venv ripgrep && rm -rf /var/lib/apt/lists/*
+ARG RD_TOOL_BASE_READY=0
+COPY bases/install.sh /opt/rundesk-bases/install.sh
+COPY bases/configure-apt.sh /opt/rundesk-bases/configure-apt.sh
+RUN if [ "${RD_TOOL_BASE_READY}" != "1" ]; then RD_APT_MIRROR="${RD_APT_MIRROR}" RD_APT_SECURITY_MIRROR="${RD_APT_SECURITY_MIRROR}" sh /opt/rundesk-bases/install.sh all-browser; fi
 ARG RD_NPM_REGISTRY=https://registry.npmjs.org
 ARG RD_PIP_INDEX_URL=https://pypi.org/simple
 ENV npm_config_fetch_retries=3 npm_config_fetch_timeout=120000 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
-RUN python3 -m venv /opt/rundesk-python
 ENV PATH="/opt/rundesk-python/bin:${PATH}"
 COPY upstream/ /opt/rundesk-upstream/
 # Reviewed upstream source: https://codeload.github.com/calesthio/OpenMontage/tar.gz/c8066452325cb57c8fc1ba8c2a71b6e8842e6b65
@@ -31,13 +34,13 @@ RUN test -f /opt/upstreams/openmontage/tools/graphics/image_selector.py
 RUN test -f /opt/upstreams/openmontage/tools/video/video_selector.py
 RUN test -f /opt/upstreams/openmontage/remotion-composer/package-lock.json
 RUN test -f /opt/upstreams/openmontage/pipeline_defs/animated-explainer.yaml
-COPY skills/ /etc/codex/skills/
-COPY tools/ /opt/rundesk-profile/tools/
 ARG CODEX_VERSION=0.0.0
 ARG RD_CODEX_MODE=auto
 COPY runtime/ /opt/rundesk-runtime/
 COPY tools/install-codex.sh /opt/rundesk-profile/tools/install-codex.sh
 RUN CODEX_VERSION="${CODEX_VERSION}" RD_CODEX_MODE="${RD_CODEX_MODE}" RD_NPM_REGISTRY="${RD_NPM_REGISTRY}" sh /opt/rundesk-profile/tools/install-codex.sh
+COPY skills/ /etc/codex/skills/
+COPY tools/ /opt/rundesk-profile/tools/
 LABEL org.opencontainers.image.title="RunDesk openmontage"
 LABEL org.opencontainers.image.version="1.0.0"
 LABEL io.rundesk.profile="openmontage"

@@ -32,6 +32,9 @@ for name in ['README.md', 'README.zh-CN.md', 'docs/README.md', 'docs/STATUS.md',
     assert re.search(r'RunDesk '+re.escape(version)+r'\b', text), f'{name}: current version missing'
 assert re.search(r'^## '+re.escape(version)+r'[:：]', (root/'docs/UPGRADING.md').read_text(), re.M), 'current upgrade notes missing'
 maintenance = spec['components']['schemas']
+assert maintenance['ImageBuild']['properties']['baseImages']['$ref'].endswith('/BuildBaseSnapshot')
+assert {'rootImageId','planSha256','layers'} <= set(maintenance['BuildBaseSnapshot']['properties'])
+
 assert maintenance['BuildAssistantRun']['properties']['maintenance']['$ref'].endswith('/BuildMaintenanceView')
 assert 'protocolVersion' in maintenance['BuildAssistantRun']['properties']
 assert 'sourceInstanceId' in maintenance['TraceOrigin']['properties']

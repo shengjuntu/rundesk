@@ -106,6 +106,9 @@ func normalizedBuildSourceTypes(types []BuildSourceType) ([]BuildSourceType, err
 			if !regexp.MustCompile(`^[a-z][A-Za-z0-9]{0,79}$`).MatchString(field.ID) || fields[field.ID] || field.Label == "" || len(field.Label) > 160 || !regexp.MustCompile(`^RD_[A-Z][A-Z0-9_]{0,75}$`).MatchString(field.Argument) || args[field.Argument] {
 				return nil, failure(400, "invalid_source_types", "源字段或构建参数定义无效")
 			}
+			if field.Argument == "RD_TOOL_BASE_READY" {
+				return nil, failure(400, "invalid_source_types", "RD_TOOL_BASE_READY 由基础镜像准备流程管理，不能配置为下载源")
+			}
 			fields[field.ID], args[field.Argument] = true, true
 			if field.Kind == "" {
 				field.Kind = "url"
@@ -404,6 +407,48 @@ func sourceCapabilitiesFor(dockerfile []byte, types []BuildSourceType) BuildSour
 	return out
 }
 
+// Source capabilities belong to an individual Dockerfile. Merge the declared
+// base chain with the leaf without making an ARG in one file authorize an
+// unrelated use in another file.
+func recipeSourceCapabilities(data []byte, dockerfile string, types []BuildSourceType) (BuildSourceCapabilities, error) {
+	leaf, err := recipeDockerfile(data, dockerfile)
+	if err != nil {
+		return BuildSourceCapabilities{}, err
+	}
+	bases, err := buildBaseDockerfiles(data, dockerfile)
+	if err != nil {
+		return BuildSourceCapabilities{}, err
+	}
+	byType := map[string]BuildSourceCapability{}
+	for _, content := range append([][]byte{leaf}, bases...) {
+		for _, capability := range sourceCapabilitiesFor(content, types).Types {
+			previous := byType[capability.Type]
+			previous.Type = capability.Type
+			previous.Detected = previous.Detected || capability.Detected
+			previous.Supported = previous.Supported || capability.Supported
+			known := map[string]bool{}
+			for _, name := range previous.Arguments {
+				known[name] = true
+			}
+			for _, name := range capability.Arguments {
+				if !known[name] {
+					previous.Arguments = append(previous.Arguments, name)
+					known[name] = true
+				}
+			}
+			byType[capability.Type] = previous
+		}
+	}
+	result := BuildSourceCapabilities{Types: []BuildSourceCapability{}}
+	for _, definition := range types {
+		if capability, ok := byType[definition.ID]; ok {
+			sort.Strings(capability.Arguments)
+			result.Types = append(result.Types, capability)
+		}
+	}
+	return result, nil
+}
+
 func recipeDockerfile(data []byte, name string) ([]byte, error) {
 	archive, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
@@ -508,11 +553,10 @@ func (m *Manager) resolveBuildSources(options *BuildSourceOptions, data []byte, 
 	if selectedGroup == nil {
 		return nil, failure(400, "invalid_source_group", "请选择源列表中的分组")
 	}
-	content, err := recipeDockerfile(data, dockerfile)
+	capabilities, err := recipeSourceCapabilities(data, dockerfile, catalog.Types)
 	if err != nil {
 		return nil, err
 	}
-	capabilities := sourceCapabilitiesFor(content, catalog.Types)
 	supported := map[string]bool{}
 	detected := map[string]bool{}
 	for _, capability := range capabilities.Types {
@@ -724,17 +768,13 @@ func (s *Server) buildSourceRoutes(mux *http.ServeMux) {
 			respond(w, nil, err)
 			return
 		}
-		content, err := recipeDockerfile(data, recipe.Dockerfile)
-		if err != nil {
-			respond(w, nil, err)
-			return
-		}
 		catalog, err := m.BuildSources()
 		if err != nil {
 			respond(w, nil, err)
 			return
 		}
-		respond(w, sourceCapabilitiesFor(content, catalog.Types), nil)
+		capabilities, err := recipeSourceCapabilities(data, recipe.Dockerfile, catalog.Types)
+		respond(w, capabilities, err)
 	})
 }
 

@@ -18,6 +18,14 @@
 
 初始化第三步可以下载现成镜像、从配方本机构建，或检查本机已有镜像；Docker 是可选步骤。镜像下载需要真实的已发布地址，随包公开目录尚未提供官方镜像。
 
+v0.68 起，六份托管配方会先自动准备或复用公共基础镜像，再构建所选环境，仍使用同一个构建入口。系统层包含 Node 22、Python venv、Git、curl 和 ripgrep；媒体层增加 FFmpeg 和中文字体；浏览器层增加 Chromium。Codex、业务依赖、Skills 与配置留在具体环境中。
+
+| 配方 | 公共基础层 |
+| --- | --- |
+| people-search | system |
+| news2douyin、video-use | system → media |
+| video-build、hyperframes、openmontage | system → media → browser |
+
 本机构建时选择需要的配方、精确 Codex 版本和下载源。构建、失败、Kun 修复及检查结果保留在对应准备任务内。关闭页面不会取消已提交的任务，重新打开后可查看对应记录。运行环境的认证、Cookie、代理和业务 MCP 在运行时配置。
 
 构建中心可预览 Dockerfile、导出完整上下文 ZIP，再修改或导入为自定义配方。`RUNDESK_RECIPES_DIR` 可以指定另一份配方根目录；显式目录无效时直接报错。来源分组、字段和边界见[下载源配置](../docs/BUILD-SOURCES.md)。
@@ -46,9 +54,13 @@ python3 scripts/recipes.py pack news2douyin --without-agent-reach --codex-versio
 python3 scripts/recipes.py prepare video-build --with-video-use --codex-version X.Y.Z --output ./build/video-legacy-context
 ```
 
+`build` 自动按 `bases/plan.json` 构建所需的公共层，固定每层的实际镜像 ID，再让当前预设继承；后续构建复用相同输入、APT 源、父镜像 ID 与平台的缓存。CLI 将自己的 ID 记录保存在 `${XDG_CACHE_HOME:-~/.cache}/rundesk/build-bases`，可用 `RUNDESK_BUILD_BASE_CACHE` 指定位置。每次 CLI 调用都是新构建；缓存检查确认镜像已被清理时，会从本次固定的父镜像与输入重新准备，随后固定新 ID。Docker 连接错误、身份或标签不匹配、缓存元数据损坏会直接报错。CLI 与服务端各自管理记录，不共享任务历史；服务端历史重建仍要求原来固定的镜像 ID，不能由这条新构建规则替换。
+
+修改 `recipes/common/bases/` 中的 Dockerfile、安装脚本或对应配方的同名覆盖文件可调整公共层；CLI 的 APT 默认源来自该公共层 Dockerfile，构建中心选定的源则由服务端冻结并传入。npm/pip 源与 Codex 版本不进入公共系统层的缓存键。安装脚本被各层共用，修改脚本也会使引用该脚本的层重新构建。
+
 `prepare` 和 `pack` 生成可单独交付的完整上下文，不调用 Docker、模型或业务服务。`build` 和 `doctor` 才需要对应运行条件。`scripts/embed-profiles.py` 保留为非覆盖式检查／导出兼容入口；不再从另一棵源码树反向生成并覆盖 `recipes/`。
 
-共用输入在导出时复制到配方原有的目标位置，`profile.lock.json` 不含 `sharedFiles`；得到的目录或 ZIP 可单独构建。需要只调整某个配方的工具时，在该配方目录创建同名普通文件即可覆盖共用版本；声明的共用来源仍须存在。具体规则见 [共用输入说明](common/README.md)。
+共用输入在导出时复制到配方原有的目标位置，`profile.lock.json` 不含 `sharedFiles`；得到的目录或 ZIP 可单独构建。普通 `docker build` 未传入托管基础层参数时，会使用随上下文提供的安装脚本完成相同的系统工具安装；`generic/` 与不含 `bases/plan.json` 的历史配方沿用原构建流程。服务端显式选择 Codex `base` 来源时保留该兼容路径。需要只调整某个配方的工具时，在该配方目录创建同名普通文件即可覆盖共用版本；声明的共用来源仍须存在。具体规则见 [共用输入说明](common/README.md)。
 
 六份托管配方目录用于编辑来源文件；请通过构建中心或上述 CLI 构建，或先用 `prepare`／`pack` 导出完整上下文后运行 Docker。`generic/` 继续保留完整工具，可直接使用其 `build.sh` 或 Docker 命令。
 

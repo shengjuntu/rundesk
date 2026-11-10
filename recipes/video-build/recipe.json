@@ -164,6 +164,12 @@
   "sharedFiles": {
     "tools/configure-apt.sh": "tools/configure-apt.sh",
     "tools/install-codex.sh": "tools/install-codex.sh",
-    "tools/profile_doctor.py": "tools/research/profile_doctor.py"
+    "tools/profile_doctor.py": "tools/research/profile_doctor.py",
+    "bases/configure-apt.sh": "tools/configure-apt.sh",
+    "bases/install.sh": "bases/install.sh",
+    "bases/system.Dockerfile": "bases/system.Dockerfile",
+    "bases/media.Dockerfile": "bases/media.Dockerfile",
+    "bases/browser.Dockerfile": "bases/browser.Dockerfile",
+    "bases/plan.json": "bases/browser.plan.json"
   }
 }

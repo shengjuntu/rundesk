@@ -1,0 +1,151 @@
+{
+  "version": "0.68.0",
+  "status": "passed",
+  "date": "2026-11-08",
+  "scope": "Automatic content-keyed system/media/browser Docker tool bases, editable recipe inputs, frozen per-build identities, and the existing single build entry.",
+  "baseline": {
+    "version": "0.67.1",
+    "archive": "rundesk-v0.67.1-source.zip",
+    "sha256": "4265e5f06593f68be3de19a94443679b1ab534e482a6d8818474be032b5ab887"
+  },
+  "sourceFiles": 812,
+  "implementation": {
+    "layers": {
+      "system": "Node 22 parent, ca-certificates/curl/git/python3/python3-venv/ripgrep and Python venv",
+      "media": "system plus ffmpeg/fontconfig/fonts-noto-cjk",
+      "browser": "media plus chromium"
+    },
+    "profiles": {
+      "people-search": "system",
+      "news2douyin": "media",
+      "video-use": "media",
+      "video-build": "browser",
+      "hyperframes": "browser",
+      "openmontage": "browser"
+    },
+    "recipeFiles": "recipes/common/bases/ materialized as bases/plan.json, external Dockerfiles and scripts in each complete context",
+    "leafDependencies": "Codex, gh, business pip/npm packages, Skills, MCP seed and profile lock remain in the leaf; final USER node is preserved.",
+    "identity": "Parent image ID, platform, stage input bytes/execute permissions and effective per-stage source arguments determine reuse. Actual IDs are persisted in ImageBuild.baseImages and a separate per-job build-bases.lock.json without rewriting immutable context.zip.",
+    "queue": "Base preparation runs inside the existing serial build job and log; no nested queued job or new UI entry.",
+    "rebuild": "Historical rebuild retains recorded root/layer IDs, including when noCache is requested. Missing frozen IDs fail explicitly. New builds may recreate a confirmed-missing shared cache from their pinned parent and inputs.",
+    "rootRefresh": "Local root image is reused; only confirmed absence triggers pull. New builds/noCache do not refresh remote mutable tags automatically.",
+    "repairCandidate": "Kun RepairOf creates a new candidate context/chain; it may reuse matching cache but does not promise to inherit original actual base IDs. Original failure/context/IDs remain intact.",
+    "compatibility": [
+      "Legacy contexts without a base plan keep their build behavior.",
+      "Standalone docker build uses the complete exported fallback installation.",
+      "Explicit Codex runtime base mode retains its existing frozen Codex parent and standalone tools path.",
+      "Complete-image pull/local acquisition does not build tool layers.",
+      "Managed tool-base builds use normal Docker layer cache rather than a whole-output shortcut with unrelated base provenance."
+    ],
+    "sources": "Capabilities include the declared ancestor Dockerfiles; overrides are routed per layer, npm/pip changes do not enter tool-base keys. RD_TOOL_BASE_READY is reserved from source catalogs.",
+    "ui": "Existing build details expose collapsed pinned base identities; setup preparation cards show completed base count.",
+    "dockerignore": "All six closed allowlists include bases/. Regression validates every actual COPY input across all default/optional variants."
+  },
+  "checks": [
+    {
+      "command": "go test -p 1 ./...",
+      "result": "passed",
+      "scope": "Complete host suite after strict recorded Docker fixture updates; includes real serial queue persistence, acquisition bypass, cancellation, missing-ID and malformed-plan regressions. No Docker daemon."
+    },
+    {
+      "command": "go vet ./...",
+      "result": "passed"
+    },
+    {
+      "name": "Python focused regression suites",
+      "result": "passed",
+      "tests": 73,
+      "modules": [
+        "test_base_images",
+        "test_profiles",
+        "test_upstream_profiles",
+        "test_build_helpers",
+        "test_package_release",
+        "test_source_hygiene"
+      ]
+    },
+    {
+      "name": "Common base Docker command recording tests",
+      "result": "passed",
+      "tests": 10,
+      "scope": "Isolated base context, cross-profile reuse, APT versus npm/Codex changes, fixed identities and labels, daemon failures, cache pruning recovery, plan rejection and Dockerignore COPY visibility; no real Docker."
+    },
+    {
+      "name": "Linux/amd64 native build and Windows/amd64 cross compile",
+      "result": "passed",
+      "CGO_ENABLED": "0"
+    },
+    {
+      "name": "Actual portable package",
+      "result": "passed",
+      "checks": [
+        "packaging rejects missing declared shared sources before creating the destination",
+        "staged native executable, all resource hashes, preserved license notices and source version agree",
+        "all six recipe exports work without examples, source ancestry, Python, Node or Docker on PATH",
+        "generic template export reads packaged external resources",
+        "shared sources materialize with local overrides; missing inputs, traversal, metadata injection and symlinks fail",
+        "all six fully self-contained legacy recipes export identical files and permissions without common",
+        "external Dockerfile edits affect new exports while imported context bytes stay frozen",
+        "missing packaged recipes fail visibly rather than falling back into a checkout",
+        "recipe reads/imports create no tasks, sessions or image builds",
+        "packaged launcher handles spaces without Python; frozen custom recipes survive restart with common unavailable"
+      ],
+      "scope": "Actual packaged native Go demo server outside the checkout; recipe metadata/export/import only. No real Docker, model or worker execution.",
+      "baseCoverage": "Six complete Go exports include all plan/stage/script inputs, hashes and permissions; source checkout, common directory, Python and Docker are not needed for reading frozen exported contexts."
+    },
+    {
+      "name": "Existing setup JS Node DOM fixture",
+      "result": "passed",
+      "scope": "Interaction contracts only; no browser visual-layout acceptance."
+    },
+    {
+      "name": "OpenAPI compatibility",
+      "result": "passed",
+      "paths": 248,
+      "operations": 299,
+      "changes": [
+        "info.version",
+        "optional ImageBuild.baseImages",
+        "BuildBaseLayer and BuildBaseSnapshot schemas"
+      ]
+    },
+    {
+      "name": "Recipe validator, shell and JS syntax, English catalog parity",
+      "result": "passed",
+      "translations": 1800
+    },
+    {
+      "name": "Release source hygiene, local document links and full source SHA256 manifest",
+      "result": "passed"
+    }
+  ],
+  "testFixtureMaintenance": [
+    "Updated the runtimeImageDocker subprocess fixture to model distinct base IDs and key labels; production checks remain strict.",
+    "Codex installation helper tests now point to the canonical recipes/common/tools location from source consolidation."
+  ],
+  "artifacts": {
+    "rundesk": {
+      "bytes": 26506677,
+      "sha256": "76579c83bebae1ca32718c57d27ae59f6adcf3b990cdbd3271bb4d96c17f287f"
+    },
+    "rundesk.exe": {
+      "bytes": 26791936,
+      "sha256": "b54ee3a1a2d81211eecac783ee1940ff4c86bca6c1fafd34dd7ca123943f80eb"
+    }
+  },
+  "upgrade": "Upgrade host source/executable and shipped recipes normally while preserving the existing data/configuration. Existing frozen recipes do not gain bases retroactively; start a new build from the updated managed recipe to use common layers.",
+  "preserved": [
+    "v0.67.1 video-build/check tmpfs correction",
+    "offline/smoke requirements and failed-readiness boundaries",
+    "unprivileged final image user and check isolation",
+    "existing source groups and editable source catalogs",
+    "existing public image catalogue; no invented registry URLs"
+  ],
+  "limitations": [
+    "No real Docker daemon image build, apt download, HyperFrames render, model/provider authentication or production Kun execution was performed here.",
+    "Public base images were not uploaded or published. Shared bases are prepared/reused locally in this release.",
+    "Debian packages and mutable Node references are not fully version-locked; actual built IDs are frozen, not a guarantee of byte-identical rebuild from arbitrary future package servers.",
+    "Windows was cross-compiled, not run natively. Browser visual layout was not tested.",
+    "No deployed server binary/image/data were modified, and previous Kun model-read/download timeout investigation is not claimed fixed by this change."
+  ]
+}

@@ -8,12 +8,15 @@ RunDesk 0.55.0 将构建配方放在磁盘目录中。用户可以修改 Dockerf
 | --- | --- |
 | `recipes/<profile>/` | 各配方的 Dockerfile、声明与独有资源；同名本地普通文件可覆盖共享目标 |
 | `recipes/common/` | 各配方通过 `sharedFiles` 显式引用的公共工具、Skills 与本地依赖 |
+| `recipes/common/bases/` | 公共工具层 Dockerfile、安装脚本及目标计划；导出为独立上下文的 `bases/` |
 | `recipes/generic/` | 初始化页面提供的通用 Docker 模板，同样从文件读取 |
 | `recipes/<profile>/recipe.json` | 唯一配方声明；导出和构建时生成快照内的 `profile.lock.json` |
 | `recipes/<profile>/variants/` | 明确选择的轻量或旧项目兼容变体 |
 | `config/build-sources.json` | 发行包默认源列表 |
 | `<data>/config/build-sources.json` | 首次使用复制的运行列表；页面和文件编辑都作用于这一份 |
 | `<data>/image-builds/<id>/context.zip` | 本次构建已冻结的完整输入；历史重建使用它 |
+| `<data>/image-builds/<id>/build-bases.lock.json` | 本次公共层的输入与实际镜像身份；历史重建复制原记录 |
+| `<data>/image-bases/<key>/image.json` | 本机构建的公共工具层复用记录 |
 
 `RUNDESK_RECIPES_DIR` 指定配方根目录。没有指定时，先查找可执行文件旁的 `recipes/`，再从当前工作目录向上查找。显式目录缺失或无效直接报错，不回退。独立部署时，应同时发布程序、`recipes/` 和 `config/`。
 
@@ -47,7 +50,7 @@ RunDesk 0.55.0 将构建配方放在磁盘目录中。用户可以修改 Dockerf
 
 ## 类型与参数契约
 
-构建中心根据 Dockerfile 的命令和参数识别类型。只有声明并实际引用对应标准参数的配方才支持该项设置；不能仅添加一个列表条目，就使任意脚本自动接受新源。
+构建中心根据 Dockerfile 的命令和参数识别类型。0.68.0 同时检查配方声明的公共基础层 Dockerfile，APT 移到公共层后仍可在原构建页面配置。只有声明并实际引用对应标准参数的配方或基础层才支持该项设置；不能仅添加一个列表条目，就使任意脚本自动接受新源。
 
 | 类型 | 字段 | Dockerfile 参数 |
 | --- | --- | --- |
@@ -86,6 +89,8 @@ RunDesk 0.55.0 将构建配方放在磁盘目录中。用户可以修改 Dockerf
 ## 快照与复验
 
 提交时保存有效源设置、列表 SHA、条目选择和参数，并将非敏感快照写入 `build-sources.lock.json`。它参与上下文摘要，因此换源不会被误认为相同输入而直接复用 RunDesk 的已完成构建记录。Docker 本身仍按层规则复用缓存。
+
+公共基础层只接收自身声明并使用的源参数。例如 APT 主仓／安全仓变化会改变系统工具层的复用身份；pip/npm 配置变化不会仅因此重建没有使用它们的公共工具层。完整源快照仍随主任务保存，基础镜像 ID 和阶段输入另行固定。中国与国际镜像站的包内容不保证相同，源配置与摘要并不承诺两种网络下得到相同 Image ID。
 
 历史重建读取冻结的 ZIP 和参数，不重新解析今天的源列表。Docker daemon、DNS、远程仓库内容仍是外部条件，快照不承诺位级可重复构建。旧记录没有源设置时继续沿用旧输入，不会补上新默认值。
 

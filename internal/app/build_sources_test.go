@@ -27,42 +27,64 @@ func sourceTestContext(t *testing.T) []byte {
 func TestBuildSourceDefaultsAreExplicitAndPreserveUserCatalog(t *testing.T) {
 	m := quietRecipeManager(t)
 	catalog, err := m.BuildSources()
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	catalog.DefaultGroup = "china"
 	for gi := range catalog.Groups {
 		items := []BuildSourceEntry{}
 		for _, item := range catalog.Groups[gi].Sources {
-			if strings.HasPrefix(item.ID,"aliyun-debian") { continue }
-			if item.ID == "tuna-pypi" { item.Values["indexUrl"]="https://company.example/simple" }
-			items=append(items,item)
+			if strings.HasPrefix(item.ID, "aliyun-debian") {
+				continue
+			}
+			if item.ID == "tuna-pypi" {
+				item.Values["indexUrl"] = "https://company.example/simple"
+			}
+			items = append(items, item)
 		}
-		catalog.Groups[gi].Sources=items
+		catalog.Groups[gi].Sources = items
 	}
-	catalog,err=m.SaveBuildSources(catalog)
-	if err != nil { t.Fatal(err) }
-	before,err:=os.ReadFile(filepath.Join(m.Data,"config","build-sources.json"))
-	if err!=nil { t.Fatal(err) }
-	mux:=http.NewServeMux()
-	(&Server{Manager:m}).buildSourceRoutes(mux)
-	rec:=httptest.NewRecorder()
-	mux.ServeHTTP(rec,httptest.NewRequest(http.MethodGet,"/api/build-center/sources/defaults",nil))
-	if rec.Code!=200 || !bytes.Contains(rec.Body.Bytes(),[]byte(`"id":"aliyun-debian"`)) || !bytes.Contains(rec.Body.Bytes(),[]byte(`"id":"archiveUrl"`)) { t.Fatal(rec.Code,rec.Body.String()) }
-	after,err:=os.ReadFile(filepath.Join(m.Data,"config","build-sources.json"))
-	if err!=nil || !bytes.Equal(before,after) { t.Fatal("defaults read overwrote user settings",err) }
-	current,err:=m.BuildSources()
-	if err!=nil || current.Revision!=catalog.Revision || current.DefaultGroup!="china" { t.Fatal(current,err) }
+	catalog, err = m.SaveBuildSources(catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(filepath.Join(m.Data, "config", "build-sources.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mux := http.NewServeMux()
+	(&Server{Manager: m}).buildSourceRoutes(mux)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/build-center/sources/defaults", nil))
+	if rec.Code != 200 || !bytes.Contains(rec.Body.Bytes(), []byte(`"id":"aliyun-debian"`)) || !bytes.Contains(rec.Body.Bytes(), []byte(`"id":"archiveUrl"`)) {
+		t.Fatal(rec.Code, rec.Body.String())
+	}
+	after, err := os.ReadFile(filepath.Join(m.Data, "config", "build-sources.json"))
+	if err != nil || !bytes.Equal(before, after) {
+		t.Fatal("defaults read overwrote user settings", err)
+	}
+	current, err := m.BuildSources()
+	if err != nil || current.Revision != catalog.Revision || current.DefaultGroup != "china" {
+		t.Fatal(current, err)
+	}
 }
 
 func TestBuildSourceCompleteArchiveURLIsFrozenAndRequiresSupport(t *testing.T) {
-	m:=quietRecipeManager(t)
-	full:="https://mirror.example/https://github.com/calesthio/OpenMontage/archive/commit.tar.gz"
-	context:=buildZip(t,map[string]string{"Dockerfile":"FROM scratch\nARG RD_GITHUB_ARCHIVE_URL\nARG RD_GITHUB_ARCHIVE_BASE=https://codeload.github.com\nRUN download \"${RD_GITHUB_ARCHIVE_URL}\" \"${RD_GITHUB_ARCHIVE_BASE}\"\n"})
-	snapshot,err:=m.resolveBuildSources(&BuildSourceOptions{Group:"china",Overrides:map[string]map[string]string{"github":{"archiveUrl":full}}},context,"Dockerfile")
-	if err!=nil || snapshot.Arguments["RD_GITHUB_ARCHIVE_URL"]!=full { t.Fatal(snapshot,err) }
-	args,err:=buildSourceArguments(snapshot)
-	if err!=nil || !strings.Contains(strings.Join(args," "),"RD_GITHUB_ARCHIVE_URL="+full) { t.Fatal(args,err) }
-	old:=buildZip(t,map[string]string{"Dockerfile":"FROM scratch\nARG RD_GITHUB_ARCHIVE_BASE=https://codeload.github.com\nRUN download \"${RD_GITHUB_ARCHIVE_BASE}\"\n"})
-	if _,err:=m.resolveBuildSources(&BuildSourceOptions{Group:"china",Overrides:map[string]map[string]string{"github":{"archiveUrl":full}}},old,"Dockerfile");err==nil { t.Fatal("unsupported complete URL accepted") }
+	m := quietRecipeManager(t)
+	full := "https://mirror.example/https://github.com/calesthio/OpenMontage/archive/commit.tar.gz"
+	context := buildZip(t, map[string]string{"Dockerfile": "FROM scratch\nARG RD_GITHUB_ARCHIVE_URL\nARG RD_GITHUB_ARCHIVE_BASE=https://codeload.github.com\nRUN download \"${RD_GITHUB_ARCHIVE_URL}\" \"${RD_GITHUB_ARCHIVE_BASE}\"\n"})
+	snapshot, err := m.resolveBuildSources(&BuildSourceOptions{Group: "china", Overrides: map[string]map[string]string{"github": {"archiveUrl": full}}}, context, "Dockerfile")
+	if err != nil || snapshot.Arguments["RD_GITHUB_ARCHIVE_URL"] != full {
+		t.Fatal(snapshot, err)
+	}
+	args, err := buildSourceArguments(snapshot)
+	if err != nil || !strings.Contains(strings.Join(args, " "), "RD_GITHUB_ARCHIVE_URL="+full) {
+		t.Fatal(args, err)
+	}
+	old := buildZip(t, map[string]string{"Dockerfile": "FROM scratch\nARG RD_GITHUB_ARCHIVE_BASE=https://codeload.github.com\nRUN download \"${RD_GITHUB_ARCHIVE_BASE}\"\n"})
+	if _, err := m.resolveBuildSources(&BuildSourceOptions{Group: "china", Overrides: map[string]map[string]string{"github": {"archiveUrl": full}}}, old, "Dockerfile"); err == nil {
+		t.Fatal("unsupported complete URL accepted")
+	}
 }
 
 func TestBuildSourceCatalogExternalFileAndHTTP(t *testing.T) {
@@ -325,5 +347,79 @@ func TestBuildSourceCapabilityEndpointAndStaleRecipe(t *testing.T) {
 	}
 	if _, err := m.resolveBuildSources(&BuildSourceOptions{Group: "china", CatalogRevision: catalog.Revision + "bad"}, sourceTestContext(t), "Dockerfile"); err == nil {
 		t.Fatal("stale source catalog accepted")
+	}
+}
+
+func TestBuildSourcesReservePreparedBaseFlag(t *testing.T) {
+	m := quietRecipeManager(t)
+	catalog, err := m.BuildSources()
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog.Types = append(catalog.Types, BuildSourceType{ID: "prepared-base", Name: "prepared", Fields: []BuildSourceField{{ID: "ready", Label: "ready", Argument: "RD_TOOL_BASE_READY", Kind: "image"}}})
+	if _, err := m.SaveBuildSources(catalog); err == nil {
+		t.Fatal("managed base preparation flag accepted as a source")
+	}
+}
+
+func baseSourceTestContext(t *testing.T, leafExtra, baseExtra string) []byte {
+	t.Helper()
+	return buildZip(t, map[string]string{
+		"Dockerfile":              "ARG RD_BASE_IMAGE=node:22-bookworm-slim\nFROM ${RD_BASE_IMAGE}\nARG RD_TOOL_BASE_READY=0\nRUN echo ${RD_TOOL_BASE_READY}\nARG RD_NPM_REGISTRY=https://registry.npmjs.org\nRUN echo ${RD_NPM_REGISTRY}\n" + leafExtra,
+		"bases/plan.json":         `{"schemaVersion":1,"target":"system","stages":[{"id":"system","dockerfile":"bases/system.Dockerfile","parent":"","inputs":[],"arguments":["RD_APT_MIRROR"]}]}`,
+		"bases/system.Dockerfile": "ARG RD_BASE_IMAGE=node:22-bookworm-slim\nFROM ${RD_BASE_IMAGE}\nARG RD_APT_MIRROR=http://deb.debian.org/debian\nRUN echo ${RD_APT_MIRROR}\n" + baseExtra,
+	})
+}
+
+func TestBuildSourceCapabilitiesIncludeDeclaredBaseChain(t *testing.T) {
+	m := quietRecipeManager(t)
+	data := baseSourceTestContext(t, "", "")
+	snapshot, err := m.resolveBuildSources(&BuildSourceOptions{Group: "china"}, data, "Dockerfile")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snapshot.Arguments["RD_APT_MIRROR"] == "" || snapshot.Arguments["RD_NPM_REGISTRY"] != "https://registry.npmmirror.com/" {
+		t.Fatal("base APT source or leaf npm source omitted", snapshot)
+	}
+	manifest := recipeTestManifest()
+	recipe, err := m.ImportBuildRecipe(manifest, bytes.NewReader(data), store.ID(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mux := http.NewServeMux()
+	(&Server{Manager: m}).buildSourceRoutes(mux)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/build-center/recipes/"+recipe.ID+"/sources", nil))
+	if rec.Code != 200 {
+		t.Fatal(rec.Code, rec.Body.String())
+	}
+	var caps BuildSourceCapabilities
+	if err := json.Unmarshal(rec.Body.Bytes(), &caps); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, capability := range caps.Types {
+		if capability.Type == "apt" && capability.Supported {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("source form does not expose base-only APT", rec.Body.String())
+	}
+}
+
+func TestBuildSourceCapabilitiesDoNotAuthorizeAcrossDockerfiles(t *testing.T) {
+	types := []BuildSourceType{{ID: "cross", Name: "Cross-file", Fields: []BuildSourceField{{ID: "url", Label: "URL", Argument: "RD_CROSS_FILE", Kind: "url"}}}}
+	data := baseSourceTestContext(t, "ARG RD_CROSS_FILE=https://example.test\n", "RUN echo ${RD_CROSS_FILE}\n")
+	caps, err := recipeSourceCapabilities(data, "Dockerfile", types)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(caps.Types) != 0 {
+		t.Fatal("declaration in leaf authorized a use only in base", caps)
+	}
+	broken := buildZip(t, map[string]string{"Dockerfile": "FROM scratch\n", "bases/plan.json": `{"schemaVersion":1,"target":"missing","stages":[]}`})
+	if _, err := recipeSourceCapabilities(broken, "Dockerfile", types); err == nil {
+		t.Fatal("invalid dependency plan masked by source form")
 	}
 }

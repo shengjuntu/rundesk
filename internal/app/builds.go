@@ -31,6 +31,7 @@ const buildContextLimit = 128 << 20
 const buildLogLimit = 4 << 20
 
 type ImageBuild struct {
+	BaseImages      *BuildBaseSnapshot    `json:"baseImages,omitempty"`
 	CodexRuntime    *BuildRuntimeSnapshot `json:"codexRuntime,omitempty"`
 	PlatformOS      string                `json:"platformOS,omitempty"`
 	PlatformArch    string                `json:"platformArch,omitempty"`
@@ -334,6 +335,7 @@ func (m *Manager) createBuildWithRecipe(iid, name, dockerfile string, timeout in
 		}
 	}
 	if recipe != nil {
+		v.BaseImages = recipe.BaseImages
 		v.BuildSources = recipe.BuildSources
 		v.CodexRuntime = recipe.CodexRuntime
 		if setup != nil && (setup.Source == "pull" || setup.Source == "local") {
@@ -351,6 +353,15 @@ func (m *Manager) createBuildWithRecipe(iid, name, dockerfile string, timeout in
 	}
 	if e = freezeRuntimeImageIdentity(&v, filepath.Join(tmp, "context")); e != nil {
 		return ImageBuild{}, e
+	}
+	if v.Source == "build" || (v.Source == "" && setup == nil) {
+		contextData, readErr := os.ReadFile(filepath.Join(tmp, "context.zip"))
+		if readErr != nil {
+			return ImageBuild{}, readErr
+		}
+		if e = m.freezeBuildBases(&v, contextData, tmp); e != nil {
+			return ImageBuild{}, e
+		}
 	}
 	if v.PublicImage != nil && (v.RuntimeIdentity == nil || v.RuntimeIdentity.ProfileVersion != v.PublicImage.ProfileVersion) {
 		return ImageBuild{}, failure(409, "public_image_profile_mismatch", "所选公共镜像版本与当前预设配方不匹配，请选择兼容版本")
@@ -606,16 +617,26 @@ func (m *Manager) executeBuild(ctx context.Context, v ImageBuild) (imageID strin
 		}
 		truncated = bounded.truncated || out.Truncated()
 	}()
-	if v.Scope == "setup" && v.Source == "build" && !v.NoCache {
+	if _, sourceErr := buildSourceArguments(v.BuildSources); sourceErr != nil {
+		return "", false, sourceErr
+	}
+	if runtimeErr := m.validateFrozenBuildRuntime(v); runtimeErr != nil {
+		return "", false, runtimeErr
+	}
+	if v.Scope == "setup" && v.Source != "build" {
+		id, err := m.acquireRuntimeImage(ctx, v, out)
+		return id, bounded.truncated, err
+	}
+	baseArgs, baseErr := m.prepareBuildBases(ctx, v, out)
+	if baseErr != nil {
+		return "", false, baseErr
+	}
+	if v.Scope == "setup" && v.Source == "build" && !v.NoCache && v.BaseImages == nil {
 		if id := m.cachedRuntimeImage(v); id != "" {
 			fmt.Fprintln(out, "相同配方的镜像已存在，跳过构建并重新检查工具。")
 			err := m.verifyRuntimeImage(ctx, v, id, out)
 			return id, bounded.truncated, err
 		}
-	}
-	if v.Scope == "setup" && v.Source != "build" {
-		id, err := m.acquireRuntimeImage(ctx, v, out)
-		return id, bounded.truncated, err
 	}
 	runtimeArgs, runtimeErr := m.prepareBuildRuntime(ctx, v, filepath.Join(dir, "context"), out)
 	if runtimeErr != nil {
@@ -636,6 +657,7 @@ func (m *Manager) executeBuild(ctx context.Context, v ImageBuild) (imageID strin
 	}
 	args = append(args, sourceArgs...)
 	args = append(args, runtimeArgs...)
+	args = append(args, baseArgs...)
 	args = append(args, filepath.Join(dir, "context"))
 	cmd := m.docker.Command(args...)
 	cmd.Env = append(cmd.Env, "DOCKER_BUILDKIT=1")

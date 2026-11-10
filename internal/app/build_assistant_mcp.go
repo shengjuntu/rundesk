@@ -353,15 +353,11 @@ func (m *Manager) callBuildAssistantTool(cap buildAssistantCapability, name stri
 			return nil, err
 		}
 		if name == "build_recipe_sources" {
-			text, err := recipeDockerfile(data, recipe.Dockerfile)
-			if err != nil {
-				return nil, err
-			}
 			catalog, err := m.BuildSources()
 			if err != nil {
 				return nil, err
 			}
-			return sourceCapabilitiesFor(text, catalog.Types), nil
+			return recipeSourceCapabilities(data, recipe.Dockerfile, catalog.Types)
 		}
 		if recipe.Kind == "builtin" && args.CodexVersion == "" {
 			return nil, failure(400, "codex_version_required", "导出内置配方需要精确Codex版本")

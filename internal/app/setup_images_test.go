@@ -4,18 +4,36 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"testing"
 )
 
 type runtimeImageDocker struct {
 	*fakeDocker
-	failProbe bool
+	failProbe  bool
+	baseImages map[string]map[string]string
+}
+
+func (d *runtimeImageDocker) Run(ctx context.Context, args ...string) ([]byte, error) {
+	if len(args) >= 3 && args[0] == "image" && args[1] == "inspect" {
+		d.mu.Lock()
+		labels, ok := d.baseImages[args[2]]
+		if ok {
+			d.calls = append(d.calls, append([]string{}, args...))
+			body, err := json.Marshal([]map[string]any{{"Id": args[2], "Os": "linux", "Architecture": runtime.GOARCH, "Config": map[string]any{"Labels": labels}}})
+			d.mu.Unlock()
+			return body, err
+		}
+		d.mu.Unlock()
+	}
+	return d.fakeDocker.Run(ctx, args...)
 }
 
 func (d *runtimeImageDocker) Command(args ...string) *exec.Cmd {
@@ -24,10 +42,24 @@ func (d *runtimeImageDocker) Command(args ...string) *exec.Cmd {
 	if args[0] == "pull" {
 		d.missingImage = ""
 	}
+	imageID := "sha256:" + strings.Repeat("a", 64)
+	if args[0] == "build" {
+		for i, arg := range args {
+			if arg == "--label" && i+1 < len(args) && strings.HasPrefix(args[i+1], "io.rundesk.base.key=") {
+				key := strings.TrimPrefix(args[i+1], "io.rundesk.base.key=")
+				sum := sha256.Sum256([]byte(key))
+				imageID = fmt.Sprintf("sha256:%x", sum)
+				if d.baseImages == nil {
+					d.baseImages = map[string]map[string]string{}
+				}
+				d.baseImages[imageID] = map[string]string{"io.rundesk.base.key": key}
+			}
+		}
+	}
 	d.mu.Unlock()
 	exe, _ := os.Executable()
 	cmd := exec.Command(exe, append([]string{"-test.run=^TestRuntimeImageProcess$", "--"}, args...)...)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("RUNDESK_RUNTIME_IMAGE_HELPER=%t", d.failProbe))
+	cmd.Env = append(os.Environ(), fmt.Sprintf("RUNDESK_RUNTIME_IMAGE_HELPER=%t", d.failProbe), "RUNDESK_RUNTIME_IMAGE_ID="+imageID)
 	return cmd
 }
 
@@ -39,7 +71,7 @@ func TestRuntimeImageProcess(t *testing.T) {
 	args := os.Args
 	for n, arg := range args {
 		if arg == "--iidfile" {
-			if err := os.WriteFile(args[n+1], []byte("sha256:"+strings.Repeat("a", 64)), 0600); err != nil {
+			if err := os.WriteFile(args[n+1], []byte(os.Getenv("RUNDESK_RUNTIME_IMAGE_ID")), 0600); err != nil {
 				os.Exit(3)
 			}
 		}
@@ -179,15 +211,19 @@ func TestRuntimeImageQueueBeforeApplicationRegistration(t *testing.T) {
 				}
 				waitBuild(t, m, DefaultInstance, next.ID, "succeeded")
 				d.mu.Lock()
-				builds := 0
+				builds, bases := 0, 0
 				for _, args := range d.calls {
 					if args[0] == "build" {
-						builds++
+						if strings.Contains(strings.Join(args, " "), "rundesk-base/") {
+							bases++
+						} else {
+							builds++
+						}
 					}
 				}
 				d.mu.Unlock()
-				if builds != 1 {
-					t.Fatal("rebuilt identical recipe", builds)
+				if builds != 2 || bases != 2 {
+					t.Fatal("expected two preset submissions to reuse system/media bases", builds, bases)
 				}
 			}
 		})

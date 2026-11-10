@@ -1,5 +1,7 @@
 **
 !Dockerfile
+!bases/
+!bases/**
 !runtime/
 !runtime/**
 !build-downloads.json

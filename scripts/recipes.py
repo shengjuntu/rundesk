@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import uuid
 import zipfile
 
@@ -17,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "recipe_tools"))
 import upstream_profiles
 import dockerfile_files
 import shared_inputs
+import base_images
 
 ROOT = Path(__file__).resolve().parents[1] / "recipes"
 VERSION = "1.4.0"
@@ -355,6 +357,7 @@ def render(profile, selection, codex_version, base_image, destination):
     if video_use:
         labels.update({"io.rundesk.video-use.commit": video_use["commit"], "io.rundesk.video-use.adapter": "2"})
     dockerfile_files.render(ROOT, profile, selection, codex_version, base_image, destination, write, labels)
+    base_images.plan(destination)
     write(destination / "profile.lock.json", json.dumps(resolved, ensure_ascii=False, indent=2) + "\n")
     files, total = _snapshot_files(destination)
     manifest = "".join(hashlib.sha256(p.read_bytes()).hexdigest() + "  " + p.relative_to(destination).as_posix() + "\n" for p in files)
@@ -489,10 +492,21 @@ def main(argv=None, default_profile=None):
             prefix = docker_prefix()
             if not command(prefix + ["info"], 15)["ok"]:
                 raise ProfileError("Docker Engine is unavailable")
+            # Build/reuse isolated common layers before the preset in this same invocation.
+            # The leaf inherits an immutable ID; standalone `docker build` still has
+            # the shared installer fallback when these build arguments are absent.
+            base_started = time.monotonic()
+            bases, base_args = base_images.prepare(context, prefix, args.timeout)
+            remaining = args.timeout - (time.monotonic() - base_started)
+            if bases:
+                files, _ = _snapshot_files(context)
+                write(context / "SHA256SUMS", "".join(hashlib.sha256(p.read_bytes()).hexdigest() + "  " + p.relative_to(context).as_posix() + "\n" for p in files if p != context / "SHA256SUMS"))
+            if remaining <= 0:
+                raise ProfileError("Build timed out while preparing common bases")
             # Stream build output to stderr and track the immutable image ID.
             iidfile = Path(tmp) / "image.id"
             try:
-                p = subprocess.run(prefix + ["build", "--iidfile", str(iidfile), "-t", image, str(context)], stdout=sys.stderr, stderr=sys.stderr, timeout=args.timeout)
+                p = subprocess.run(prefix + ["build", "--iidfile", str(iidfile), "-t", image] + base_args + [str(context)], stdout=sys.stderr, stderr=sys.stderr, timeout=remaining)
             except subprocess.TimeoutExpired:
                 raise ProfileError("Build timed out; Docker daemon may retain work/cache. Inspect before retrying.")
             if p.returncode or not iidfile.exists():
@@ -501,7 +515,7 @@ def main(argv=None, default_profile=None):
             if not re.fullmatch(r"sha256:[0-9a-f]{64}", iid):
                 raise ProfileError("Docker returned an invalid image ID")
             checks = doctor(profile, iid)
-            dump({"schemaVersion": 1, "profileId": profile["id"], "image": image, "imageId": iid, "built": True, "activated": False, "doctor": checks})
+            dump({"schemaVersion": 1, "profileId": profile["id"], "image": image, "imageId": iid, "built": True, "activated": False, "bases": bases, "doctor": checks})
             return 0 if checks["ready"] else 1
     except (ProfileError, OSError, ValueError, KeyError, TypeError) as e:
         print(json.dumps({"schemaVersion": 1, "error": str(e)}, ensure_ascii=False), file=sys.stderr)

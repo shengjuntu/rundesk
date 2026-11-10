@@ -1,16 +1,19 @@
 # Editable RunDesk Dockerfile. Author metadata in recipe.json; profile.lock.json is generated in each build snapshot.
 ARG RD_BASE_IMAGE=node:22-bookworm-slim
 FROM ${RD_BASE_IMAGE}
+USER root
 # All managed profiles require the Node runtime and unprivileged node user.
 RUN node -e 'if (Number(process.versions.node.split(".")[0]) < 22) process.exit(1)' && npm --version >/dev/null && id node >/dev/null
 ARG RD_APT_MIRROR=http://deb.debian.org/debian
 ARG RD_APT_SECURITY_MIRROR=http://deb.debian.org/debian-security
 COPY tools/configure-apt.sh /opt/rundesk-profile/tools/configure-apt.sh
-RUN RD_APT_MIRROR="${RD_APT_MIRROR}" RD_APT_SECURITY_MIRROR="${RD_APT_SECURITY_MIRROR}" sh /opt/rundesk-profile/tools/configure-apt.sh && apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=60 update && apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=60 install -y --no-install-recommends ca-certificates chromium curl ffmpeg fontconfig fonts-noto-cjk git python3 python3-venv ripgrep && rm -rf /var/lib/apt/lists/*
+ARG RD_TOOL_BASE_READY=0
+COPY bases/install.sh /opt/rundesk-bases/install.sh
+COPY bases/configure-apt.sh /opt/rundesk-bases/configure-apt.sh
+RUN if [ "${RD_TOOL_BASE_READY}" != "1" ]; then RD_APT_MIRROR="${RD_APT_MIRROR}" RD_APT_SECURITY_MIRROR="${RD_APT_SECURITY_MIRROR}" sh /opt/rundesk-bases/install.sh all-browser; fi
 ARG RD_NPM_REGISTRY=https://registry.npmjs.org
 ARG RD_PIP_INDEX_URL=https://pypi.org/simple
 ENV npm_config_fetch_retries=3 npm_config_fetch_timeout=120000
-RUN python3 -m venv /opt/rundesk-python
 ENV PATH="/opt/rundesk-python/bin:${PATH}" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 COPY requirements.txt /opt/rundesk-profile/requirements.txt
 RUN PIP_INDEX_URL="${RD_PIP_INDEX_URL}" python3 -m pip install --retries 3 --timeout 60 --no-cache-dir --no-deps -r /opt/rundesk-profile/requirements.txt && python3 -m pip check

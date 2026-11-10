@@ -608,11 +608,10 @@ func (m *Manager) StartRecipeBuild(id string, in RecipeBuildInput) (ImageBuild, 
 		if _, err = buildSourceArguments(sources); err != nil {
 			return v, err
 		}
-		text, err := recipeDockerfile(data, r.Dockerfile)
+		caps, err := recipeSourceCapabilities(data, r.Dockerfile, sources.Definitions)
 		if err != nil {
 			return v, err
 		}
-		caps := sourceCapabilitiesFor(text, sources.Definitions)
 		supported := map[string]bool{}
 		for _, c := range caps.Types {
 			for _, name := range c.Arguments {

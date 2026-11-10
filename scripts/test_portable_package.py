@@ -117,6 +117,19 @@ def verify_context(payload, profile):
         dockerfile = archive.read("Dockerfile").decode()
         assert "ARG CODEX_VERSION=" + CODEX_VERSION in dockerfile
         assert 'LABEL io.rundesk.codex.version="' + CODEX_VERSION + '"' in dockerfile
+        # The packaged Go exporter must materialize editable common base inputs
+        # even when neither the checkout nor Python is available at runtime.
+        plan = json.loads(archive.read("bases/plan.json"))
+        expected = {"people-search": "system", "news2douyin": "media", "video-use": "media"}.get(profile, "browser")
+        assert plan["schemaVersion"] == 1 and plan["target"] == expected
+        stages = {item["id"]: item for item in plan["stages"]}
+        assert set(stages) == {"system", "media", "browser"}
+        for stage in stages.values():
+            assert stage["dockerfile"] in names
+            for path in stage["inputs"]:
+                assert path in names, "packaged base dependency missing: " + path
+        assert "ARG RD_TOOL_BASE_READY=0" in dockerfile
+        assert "USER root" in dockerfile and "USER node" in dockerfile
         manifest = {}
         for line in archive.read("SHA256SUMS").decode().splitlines():
             digest, relative = line.split("  ", 1)

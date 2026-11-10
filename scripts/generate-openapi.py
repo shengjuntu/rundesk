@@ -1037,6 +1037,11 @@ schemas['BuildSourceOptions']=obj({'group':st(),'catalogRevision':st(),'selectio
 schemas['BuildSourceSnapshot']=obj({'definitions':arr(ref('BuildSourceType')),'group':st(),'catalogSHA':st(),'selections':string_map,'values':source_values,'arguments':string_map,'unconfigured':arr(st())},['group','catalogSHA','selections','values','arguments'])
 schemas['BuildSourceCapability']=obj({'type':st(),'detected':bool_,'supported':bool_,'arguments':arr(st())},['type','detected','supported','arguments'])
 schemas['ImageBuild']['properties']['buildSources']=ref('BuildSourceSnapshot')
+# Tool bases are prepared inside the same job; IDs appear as stages complete.
+schemas['BuildBaseLayer']=obj({'id':st(),'inputSha256':st(),'arguments':string_map,'key':st(),'parentImageId':st(),'imageId':st()},['id','inputSha256','arguments'])
+schemas['BuildBaseSnapshot']=obj({'schemaVersion':{'const':1},'platform':st(),'target':st(),'planSha256':st(),'rootReference':st(),'rootImageId':st(),'layers':arr(ref('BuildBaseLayer'))},['schemaVersion','platform','target','planSha256','rootReference','layers'])
+schemas['ImageBuild']['properties']['baseImages']=ref('BuildBaseSnapshot')
+
 schemas['RuntimeImageIdentity']=obj({'profileVersion':st(),'agentReach':bool_,'upstream':obj(extra=True),'toolLabels':string_map},['profileVersion','agentReach'])
 schemas['ImageBuild']['properties']['runtimeIdentity']=ref('RuntimeImageIdentity')
 schemas['BuildRuntimeOptions']=obj({'mode':st(enum=['auto','native','base','npm'],description='auto优先复用同版本受管Linux安装，无匹配安装则npm；native/base显式选择失败不静默回退'),'reference':st(description='base模式的完整本地镜像引用，需包含Node22+/npm/node用户及精确Codex')})

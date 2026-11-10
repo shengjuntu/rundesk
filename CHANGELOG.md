@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.68.0 — 2026-11-08
+
+Build the six managed recipes on reusable tool bases: system packages and a Python virtual environment, then media tools and fonts, then Chromium where needed. Codex and domain-specific Python/npm dependencies stay in the recipe. Base Dockerfiles and their manifest are ordinary editable files, materialized with exported contexts; a direct standalone Docker build retains its installation path.
+
+The existing build job prepares the required base stages before the recipe and records their progress in the same log. Reuse binds the parent image identity, platform, stage files and effective source arguments. Historical rebuilds retain frozen base identities and fail explicitly when a required frozen image is unavailable. Source capability detection includes declared base Dockerfiles, so APT settings remain available after extraction. No separate build entry or public registry is introduced.
+
+Existing frozen/imported recipes keep their original inputs. The 0.67.1 temporary-space fix, offline/smoke checks, unprivileged recipe runtime and separate Codex runtime selection remain. External Kun stays at 0.17.0 with worker protocol 16. See [runtime reuse](docs/BUILD-RUNTIME.md), [upgrading](docs/UPGRADING.md) and [validation](docs/VALIDATION.md) for current checks and target-machine limits.
+
 ## 0.67.1 — 2026-11-08
 
 Correct the temporary-space allowance used by the host's video-build image verification. A successfully built image could fail the offline HyperFrames precheck under the previous 768 MiB `/tmp` limit. The recipe, upstream binaries, doctor thresholds and offline/smoke acceptance conditions remain unchanged. Existing images can be rechecked after a normal host upgrade; readiness is recorded only after the checks pass.

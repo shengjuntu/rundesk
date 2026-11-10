@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-TOOLS = ROOT / "recipes/news2douyin/tools"
+TOOLS = ROOT / "recipes/common/tools"
 DOWNLOAD_HELPER = ROOT / "recipes/openmontage/tools/download-archive.sh"
 
 

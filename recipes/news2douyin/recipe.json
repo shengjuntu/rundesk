@@ -164,6 +164,12 @@
     "tools/read_web.py": "tools/research/read_web.py",
     "vendor/agent-reach": "vendor/agent-reach-cf70302e",
     "vendor/agent-reach-wheel.patch": "vendor/agent-reach-wheel.patch",
-    "vendor/agent-reach.sha256": "vendor/agent-reach.sha256"
+    "vendor/agent-reach.sha256": "vendor/agent-reach.sha256",
+    "bases/configure-apt.sh": "tools/configure-apt.sh",
+    "bases/install.sh": "bases/install.sh",
+    "bases/system.Dockerfile": "bases/system.Dockerfile",
+    "bases/media.Dockerfile": "bases/media.Dockerfile",
+    "bases/browser.Dockerfile": "bases/browser.Dockerfile",
+    "bases/plan.json": "bases/media.plan.json"
   }
 }

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "target": "media",
+  "stages": [
+    {
+      "id": "system",
+      "dockerfile": "bases/system.Dockerfile",
+      "parent": "",
+      "inputs": [
+        "bases/configure-apt.sh",
+        "bases/install.sh"
+      ],
+      "arguments": [
+        "RD_APT_MIRROR",
+        "RD_APT_SECURITY_MIRROR"
+      ]
+    },
+    {
+      "id": "media",
+      "dockerfile": "bases/media.Dockerfile",
+      "parent": "system",
+      "inputs": [
+        "bases/configure-apt.sh",
+        "bases/install.sh"
+      ],
+      "arguments": [
+        "RD_APT_MIRROR",
+        "RD_APT_SECURITY_MIRROR"
+      ]
+    },
+    {
+      "id": "browser",
+      "dockerfile": "bases/browser.Dockerfile",
+      "parent": "media",
+      "inputs": [
+        "bases/configure-apt.sh",
+        "bases/install.sh"
+      ],
+      "arguments": [
+        "RD_APT_MIRROR",
+        "RD_APT_SECURITY_MIRROR"
+      ]
+    }
+  ]
+}

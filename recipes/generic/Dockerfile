@@ -1,4 +1,4 @@
-# RunDesk base runtime. Build context: examples/docker (see README.md).
+# RunDesk base runtime. Build context: recipes/generic (see README.md).
 ARG BASE_IMAGE=node:22-bookworm-slim
 ARG RD_BASE_IMAGE=${BASE_IMAGE}
 FROM ${RD_BASE_IMAGE}
@@ -20,7 +20,7 @@ LABEL org.opencontainers.image.version="${IMAGE_VERSION}" \
       org.opencontainers.image.source="${SOURCE_URL}" \
       org.opencontainers.image.revision="${SOURCE_REVISION}" \
       org.opencontainers.image.created="${BUILD_DATE}" \
-      io.rundesk.build.dockerfile="examples/docker/Dockerfile" \
+      io.rundesk.build.dockerfile="recipes/generic/Dockerfile" \
       io.rundesk.build.url="${BUILD_URL}" \
       io.rundesk.codex.version="${CODEX_VERSION}" \
       io.rundesk.capabilities.tools="Node.js, Python 3, Git, curl, ripgrep"
