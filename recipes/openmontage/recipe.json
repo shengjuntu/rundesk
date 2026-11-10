@@ -3,7 +3,7 @@
   "generatorVersion": "1.4.0",
   "profile": {
     "schemaVersion": 1,
-    "version": "1.0.0",
+    "version": "1.1.0",
     "runtime": "codex-docker",
     "id": "openmontage",
     "title": "OpenMontage（独立上游）",
@@ -61,8 +61,7 @@
     "schemaVersion": 1,
     "repository": "https://github.com/calesthio/OpenMontage",
     "commit": "c8066452325cb57c8fc1ba8c2a71b6e8842e6b65",
-    "sourceURL": "https://codeload.github.com/calesthio/OpenMontage/tar.gz/c8066452325cb57c8fc1ba8c2a71b6e8842e6b65",
-    "sourceSHA256": "dff7cd1cdf2cb0522398e00b3f0b75f32336b695a8be34ac8e6b6913055aab25",
+    "sourceSHA256": "3d6ddce72b077bdcaed2ccc30aa61f80ec41869a55228ca1ceb0fe5d81be2ca5",
     "license": "AGPL-3.0",
     "installScript": "install.sh",
     "buildFiles": [
@@ -78,7 +77,9 @@
       "overlays/video_app_image.py",
       "overlays/video_app_video.py",
       "launch.py",
-      "patch_runtime.py"
+      "patch_runtime.py",
+      "install-dependencies.sh",
+      "source-bundle.json"
     ],
     "skillDirectories": [],
     "requiredFiles": [
@@ -92,7 +93,9 @@
       "tools/video/video_selector.py",
       "remotion-composer/package-lock.json",
       "pipeline_defs/animated-explainer.yaml"
-    ]
+    ],
+    "sourceArchive": "vendor/source.tar.gz",
+    "sourceScope": "runtime-without-demo-media"
   },
   "validation": {
     "imageBuilt": false,

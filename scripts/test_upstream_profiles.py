@@ -3,6 +3,7 @@
 import hashlib
 import io
 import json
+import shutil
 from pathlib import Path
 import sys
 import tarfile
@@ -126,12 +127,25 @@ class SourceBoundaryTest(unittest.TestCase):
 
 
 class ActualRecipeTest(unittest.TestCase):
+    def test_openmontage_rejects_provenance_for_other_bundle(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for name in ("common", "openmontage"):
+                shutil.copytree(ROOT / "recipes" / name, root / name)
+            profile = profiles.load_profile("openmontage")
+            provenance = root / "openmontage/upstream/source-bundle.json"
+            value = json.loads(provenance.read_text())
+            value["bundleSHA256"] = "0" * 64
+            provenance.write_text(json.dumps(value))
+            with self.assertRaisesRegex(ValueError, "provenance"):
+                upstream_profiles.load(root, profile)
+
     def test_three_independent_native_contexts_and_runtime_only_mcp(self):
         import tomllib
         for name in ("hyperframes", "video-use", "openmontage"):
             with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
                 profile = profiles.load_profile(name)
-                self.assertEqual(profile["version"], "1.0.0")
+                self.assertEqual(profile["version"], "1.1.0" if name == "openmontage" else "1.0.0")
                 destination = Path(tmp)
                 lock = profiles.render(profile, profiles.resolve(profile), "0.144.6", "node:22-bookworm-slim", destination)
                 self.assertEqual(lock["selection"]["nativeUpstream"], name)
@@ -146,17 +160,15 @@ class ActualRecipeTest(unittest.TestCase):
                 self.assertEqual(mcp["env_vars"], ["VIDEO_APP_MCP_URL", "VIDEO_APP_TOKEN", "VIDEO_APP_PROJECT_ID"])
                 self.assertNotIn("env", mcp)
                 self.assertEqual(mcp["args"][-1], "serve-mcp")
+                self.assertEqual(hashlib.sha256((destination / "vendor/source.tar.gz").read_bytes()).hexdigest(), lock["upstream"]["sourceSHA256"])
                 if name == "openmontage":
-                    self.assertIn(lock["upstream"]["sourceURL"], docker)
-                    self.assertIn("ARG RD_GITHUB_ARCHIVE_BASE=https://codeload.github.com", docker)
-                    self.assertIn("ARG RD_GITHUB_ARCHIVE_URL=", docker)
-                    self.assertIn("download-archive.sh", docker)
-                    self.assertIn(lock["upstream"]["commit"], docker)
+                    self.assertNotIn("sourceURL", lock["upstream"])
+                    self.assertNotIn("RD_GITHUB_ARCHIVE", docker)
+                    self.assertNotIn("download-archive.sh", docker)
+                    self.assertFalse((destination / "build-downloads.json").exists())
+                    self.assertEqual(lock["upstream"]["sourceScope"], "runtime-without-demo-media")
                     self.assertIn(lock["upstream"]["sourceSHA256"] + "  /opt/rundesk-upstream/source.tar.gz", docker)
-                    self.assertNotIn("sourceArchive", lock["upstream"])
-                    self.assertFalse((destination / "vendor" / "source.tar.gz").exists())
-                else:
-                    self.assertEqual(hashlib.sha256((destination / "vendor/source.tar.gz").read_bytes()).hexdigest(), lock["upstream"]["sourceSHA256"])
+                    self.assertLess(docker.index("sh /opt/rundesk-upstream/install-dependencies.sh"), docker.index("COPY upstream/ /opt/rundesk-upstream/"))
                 for row in (destination / "SHA256SUMS").read_text().splitlines():
                     digest, filename = row.split("  ", 1)
                     self.assertEqual(hashlib.sha256((destination / filename).read_bytes()).hexdigest(), digest)

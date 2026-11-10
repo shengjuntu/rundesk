@@ -211,7 +211,8 @@ class ProfilesTest(unittest.TestCase):
                 if name in ("news2douyin", "people-search", "video-build"):
                     self.assertIn('PIP_INDEX_URL="${RD_PIP_INDEX_URL}" python3 -m pip install', docker)
                 else:
-                    self.assertIn('npm_config_registry="${RD_NPM_REGISTRY}" PIP_INDEX_URL="${RD_PIP_INDEX_URL}" sh /opt/rundesk-upstream/install.sh', docker)
+                    helper = "install-dependencies.sh" if name == "openmontage" else "install.sh"
+                    self.assertIn('npm_config_registry="${RD_NPM_REGISTRY}" PIP_INDEX_URL="${RD_PIP_INDEX_URL}" sh /opt/rundesk-upstream/' + helper, docker)
 
     def test_debian_apt_source_override_preserves_format_and_signature(self):
         root = self.root / "apt-root"

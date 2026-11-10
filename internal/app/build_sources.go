@@ -366,10 +366,17 @@ var sourceARG = regexp.MustCompile(`(?im)^\s*ARG\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s
 
 func sourceCapabilitiesFor(dockerfile []byte, types []BuildSourceType) BuildSourceCapabilities {
 	text := string(dockerfile)
-	// Comments are excluded so a documentation example cannot claim support.
+	// Comments and provenance labels do not perform downloads. A repository
+	// label must not expose a GitHub source picker for a fully bundled recipe.
 	lines := strings.Split(text, "\n")
+	labelContinuation := false
 	for n, line := range lines {
 		if strings.HasPrefix(strings.TrimSpace(line), "#") {
+			lines[n] = ""
+			continue
+		}
+		if labelContinuation || regexp.MustCompile(`(?i)^\s*LABEL\s`).MatchString(line) {
+			labelContinuation = strings.HasSuffix(strings.TrimSpace(line), `\`)
 			lines[n] = ""
 		}
 	}

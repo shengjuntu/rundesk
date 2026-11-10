@@ -46,9 +46,9 @@ RunDesk 通过 Kun 集成提供模块状态检查和执行循环策略选择。�
 
 ## 当前源码版本
 
-**RunDesk 0.68.0 · 外部 Kun 0.17.0 · worker 协议 16**
+**RunDesk 0.69.0 · 外部 Kun 0.17.0 · worker 协议 16**
 
-0.68.0 构建六套内置配方时，自动准备并复用系统、媒体、浏览器三层公共基础镜像，再安装各配方自己的 Codex 和领域依赖。沿用现有构建入口，同一日志显示全部阶段；Dockerfile 继续保存在可编辑文件中。源设置与实际镜像身份参与复用和历史重建。见[构建运行时复用](docs/BUILD-RUNTIME.md)与[升级说明](docs/UPGRADING.md)。
+0.69.0 将固定版本 OpenMontage 的运行源码随配方打包，只省去已审阅的演示媒体，并保留来源和许可。新 OpenMontage 构建不再从 GitHub 下载整个仓库归档；旧配方仍需下载归档时，支持断点续传和进度信息，并在完整下载后校验摘要。系统／媒体／浏览器公共基础层、可编辑 Dockerfile 与原构建入口继续保留。Python/npm 依赖下载和真实镜像验收仍需分别完成。见[构建源](docs/BUILD-SOURCES.md)与[升级说明](docs/UPGRADING.md)。
 
 0.67.1 的 video-build 临时空间修复继续保留：检查使用 2 GiB `/tmp`，上游 doctor 检查条件不变。用户对同一镜像的隔离验证与本版实际检查分别记录在[验证说明](docs/VALIDATION.md#video-build-tmpfs-investigation-2026-11-08)；只有实际检查通过才登记就绪状态。
 

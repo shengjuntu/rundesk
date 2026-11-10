@@ -423,3 +423,15 @@ func TestBuildSourceCapabilitiesDoNotAuthorizeAcrossDockerfiles(t *testing.T) {
 		t.Fatal("invalid dependency plan masked by source form")
 	}
 }
+
+func TestBuildSourceProvenanceLabelsDoNotClaimDownloadSupport(t *testing.T) {
+	definitions := []BuildSourceType{{ID: "github", Name: "GitHub", DetectPattern: `(?i)github\.com`, Fields: []BuildSourceField{{ID: "archiveUrl", Label: "Archive", Argument: "RD_GITHUB_ARCHIVE_URL", Kind: "url"}}}}
+	caps := sourceCapabilitiesFor([]byte("FROM scratch\nLABEL org.opencontainers.image.source=\"https://github.com/owner/repo\"\n"), definitions)
+	if len(caps.Types) != 0 {
+		t.Fatal("repository metadata exposed an unused download source", caps)
+	}
+	caps = sourceCapabilitiesFor([]byte("FROM scratch\nARG RD_GITHUB_ARCHIVE_URL=https://github.com/owner/repo/archive/pin.tar.gz\nRUN curl \"${RD_GITHUB_ARCHIVE_URL}\"\n"), definitions)
+	if len(caps.Types) != 1 || !caps.Types[0].Supported {
+		t.Fatal("real GitHub download support omitted", caps)
+	}
+}

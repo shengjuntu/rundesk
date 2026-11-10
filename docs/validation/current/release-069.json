@@ -1,0 +1,186 @@
+{
+  "version": "0.69.0",
+  "status": "passed",
+  "date": "2026-11-08",
+  "scope": "OpenMontage1.1.0 reviewed bundled source, dependency cache boundaries and safe resumable host archive preparation for legacy/custom recipes.",
+  "baseline": {
+    "version": "0.68.0",
+    "archive": "rundesk-v0.68.0-source.zip",
+    "sha256": "11edaa7f111d16a1b7d21d89e5b50da36bd9bf592c3eb60dcd209bfbf3d092f0"
+  },
+  "sourceFiles": 816,
+  "openmontage": {
+    "profileVersion": "1.1.0",
+    "repository": "https://github.com/calesthio/OpenMontage",
+    "commit": "c8066452325cb57c8fc1ba8c2a71b6e8842e6b65",
+    "originalArchive": {
+      "bytes": 75957235,
+      "sha256": "dff7cd1cdf2cb0522398e00b3f0b75f32336b695a8be34ac8e6b6913055aab25",
+      "files": 2171
+    },
+    "bundledArchive": {
+      "path": "recipes/openmontage/vendor/source.tar.gz",
+      "bytes": 17846107,
+      "sha256": "3d6ddce72b077bdcaed2ccc30aa61f80ec41869a55228ca1ceb0fe5d81be2ca5",
+      "files": 2168,
+      "uncompressedBytes": 30759768
+    },
+    "compressedSizeReductionPercent": 76.505,
+    "omittedFiles": [
+      {
+        "path": "assets/signal-from-tomorrow-demo.mp4",
+        "bytes": 20897137,
+        "sha256": "47d46d729e0881d37ea87e49a0d1cfb8277434bb58d66e0d51ac5163fd020dac",
+        "reason": "Upstream demonstration video; no retained UTF-8 source references its basename."
+      },
+      {
+        "path": ".agents/skills/hyperframes-animation/examples/assets/hyperframes-showcase-hypecard.mp4",
+        "bytes": 20792681,
+        "sha256": "59894d108c5634cce855f4b9593d48ee0884955b1607e0f1c1c4e973e2eb101e",
+        "reason": "Upstream demonstration video; no retained UTF-8 source references its basename."
+      },
+      {
+        "path": ".agents/skills/hyperframes-animation/examples/assets/background-tech-data-flow.mp4",
+        "bytes": 16701555,
+        "sha256": "f5d7c64dffda80b3b15bd116e4f2fda2231ae5d7997f2753ba01051aa243ce79",
+        "reason": "Upstream demonstration video; no retained UTF-8 source references its basename."
+      }
+    ],
+    "preserved": "All other2168files retain original bytes and executable permission semantics, including code, Skills, guides, tests, runtime templates/fonts/icons, license and dependency inputs. No hardlink deduplication.",
+    "provenance": "recipes/openmontage/upstream/source-bundle.json includes each retained file SHA256/bytes/mode; original archive URL/SHA and exact omitted file list are separate from the shipped bundle hash.",
+    "defaultBuild": "Source archive is supplied in the context, SHA-verified and extracted without downloading the OpenMontage repository. No build-downloads.json or GitHub archive fetch instruction in the new default recipe.",
+    "dependencyCache": "pip/Remotion/HyperFrames installation runs before integration overlays, Skills and provenance are copied. Dependency inputs still invalidate that layer; source groups remain applied to package installation.",
+    "reproduction": "scripts/package_openmontage_source.py reads an original local archive with its exact original SHA, rejects unsafe/linked/duplicate entries and occupied outputs, and deterministically reproduces the bundle plus provenance.",
+    "standaloneAndSize": "The complete exported context remains below the32MiB import limit and supports normal standalone docker build. The bundle is shipped beside the executable in recipes/, not embedded into the Go binary.",
+    "licensing": "Original AGPL license and all retained source files accompany the bundle; local and root third-party notices identify omissions and archive provenance."
+  },
+  "legacyArchiveDownloads": {
+    "partialPath": "<data>/build-download-cache/sha256/<sha>.archive.part",
+    "metadataPath": "<sha>.archive.part.json",
+    "binding": "Original URL SHA256 plus expected archive SHA256; changing selected mirror cannot append to another URL partial.",
+    "resume": "Range with validated offsets/total; strong ETag or Last-Modified also sends If-Range. Same-URL pinned-SHA transfers without validators remain subject to full final SHA verification.",
+    "fallback": "HTTP200 truncates/restarts safely. Invalid206/416, oversized or mixed/wrong bytes never become usable cache.",
+    "commit": "Only a complete file with expected SHA256 is atomically promoted. Cancellation/transport failures may retain recoverable partials; integrity failures purge them.",
+    "limits": {
+      "headerTimeoutSeconds": 30,
+      "bodyIdleTimeoutSeconds": 120,
+      "maxArchiveBytes": 134217728,
+      "attempts": 3,
+      "overall": "Existing parent build deadline; fixed15minute download deadline removed."
+    },
+    "progress": "Bytes/total/percentage/rate and resume offset in the existing bounded/redacted build log.",
+    "scope": "Does not change Kun model request timeout, default model limits or provider authentication."
+  },
+  "checks": [
+    {
+      "command": "go test -p 1 ./...",
+      "result": "passed"
+    },
+    {
+      "command": "go vet ./...",
+      "result": "passed"
+    },
+    {
+      "name": "Focused archive local-HTTP regressions",
+      "result": "passed",
+      "testFunctions": 16,
+      "coverage": [
+        "interrupted response with/without validators",
+        "cross-invocation cancellation/resume",
+        "HTTP200 fallback",
+        "invalid206/416",
+        "changed mirror",
+        "complete partial without network",
+        "SHA/size/symlink guards",
+        "idle timeout and active transfer reset",
+        "progress",
+        "Last-Modified and changed content"
+      ]
+    },
+    {
+      "command": "go test -race ./internal/app -run TestBuildDownload -count=1",
+      "result": "passed",
+      "provenance": "Executed and reported by the implementation agent; independent reviewer also ran the focused HTTP suite."
+    },
+    {
+      "name": "Python focused regressions",
+      "result": "passed",
+      "tests": 79,
+      "modules": [
+        "test_base_images",
+        "test_profiles",
+        "test_upstream_profiles",
+        "test_build_helpers",
+        "test_package_release",
+        "test_source_hygiene",
+        "test_package_openmontage_source"
+      ]
+    },
+    {
+      "name": "Actual pinned-source audit",
+      "result": "passed",
+      "scope": "Fetched original pinned archive and verified exact originalSHA; compared all2168retained files; GNUtar actual extraction/content/modes;10required files;3existing native runtime patches apply and resulting Python parses. No Docker/render."
+    },
+    {
+      "name": "Actual portable package",
+      "result": "passed",
+      "checks": [
+        "packaging rejects missing declared shared sources before creating the destination",
+        "staged native executable, all resource hashes, preserved license notices and source version agree",
+        "all six recipe exports work without examples, source ancestry, Python, Node or Docker on PATH",
+        "generic template export reads packaged external resources",
+        "shared sources materialize with local overrides; missing inputs, traversal, metadata injection and symlinks fail",
+        "all six fully self-contained legacy recipes export identical files and permissions without common",
+        "external Dockerfile edits affect new exports while imported context bytes stay frozen",
+        "missing packaged recipes fail visibly rather than falling back into a checkout",
+        "recipe reads/imports create no tasks, sessions or image builds",
+        "packaged launcher handles spaces without Python; frozen custom recipes survive restart with common unavailable"
+      ],
+      "scope": "Actual packaged native Go demo server outside the checkout; recipe metadata/export/import only. No real Docker, model or worker execution.",
+      "openmontage": "Complete bundled archive and provenance export/import without source ancestry; frozen context bytes survive external edits/restart."
+    },
+    {
+      "name": "Native Linux/amd64 and Windows/amd64 builds",
+      "result": "passed",
+      "CGO_ENABLED": "0"
+    },
+    {
+      "name": "OpenAPI compatibility",
+      "result": "passed",
+      "paths": 248,
+      "operations": 299,
+      "onlyChange": "info.version"
+    },
+    {
+      "name": "Recipe validator, dependency script shell syntax, document links, English catalog and release source manifest",
+      "result": "passed",
+      "translations": 1800
+    }
+  ],
+  "artifacts": {
+    "rundesk": {
+      "bytes": 26530504,
+      "sha256": "d6d743f96e0a2b0eb0ebb4c94e5053e6ffda07bb4e241aa507e3b02e13015b07"
+    },
+    "rundesk.exe": {
+      "bytes": 26819072,
+      "sha256": "be2830ca07a74d4ccc406066d58cd997c5b088eaf8f98bddf8582f59938d83fb"
+    }
+  },
+  "upgrade": "UpgradeRunDesk0.69.0 and the external recipes directory while preserving existing data/config. Start a new build from OpenMontage1.1.0. Existing frozen/custom recipes retain their original bytes and do not gain the bundled source retroactively; their host archive downloads gain safe recovery.",
+  "preserved": [
+    "0.68common system/media/browser image reuse and frozen baseIDs",
+    "0.67.1video-build/check tmpfs correction",
+    "existing offline/smoke requirements and negative-readiness behavior",
+    "Codex daily sessions and Kun maintenance roles",
+    "source group configuration and final unprivileged user"
+  ],
+  "limitations": [
+    "No realDocker image build, pip/npm package installation, media render, production model request or complete OpenMontage pipeline was executed here.",
+    "Measured76.505% is compressed source archive size reduction, not a measured end-to-end build speedup.",
+    "pip/npm packages, base image and first-time system layer preparation may still require configured network sources.",
+    "HTTPresume requires serverRange support; HTTP200 safely restarts. There is no unverified-source or arbitrary-mirror fallback.",
+    "Public images were not published and no existing server binary/image/data were modified.",
+    "Source/portable packages grow by the shipped compressed bundle, avoiding construction-time repository downloads and thousands of loose vendored files. Windows was cross-compiled, not run natively."
+  ]
+}

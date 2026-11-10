@@ -3,7 +3,9 @@ package app
 import (
 	"archive/zip"
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -21,10 +23,14 @@ func TestIndependentUpstreamRuntimeContextsAndExactImageIdentity(t *testing.T) {
 				t.Fatal(err)
 			}
 			var lock map[string]any
+			var bundledSHA string
 			for _, file := range archive.File {
 				reader, _ := file.Open()
 				body, _ := io.ReadAll(reader)
 				reader.Close()
+				if file.Name == "vendor/source.tar.gz" {
+					bundledSHA = fmt.Sprintf("%x", sha256.Sum256(body))
+				}
 				if file.Name == "profile.lock.json" {
 					if json.Unmarshal(body, &lock) != nil || lock["codexVersion"] != "0.144.6" {
 						t.Fatal(string(body))
@@ -38,11 +44,21 @@ func TestIndependentUpstreamRuntimeContextsAndExactImageIdentity(t *testing.T) {
 				t.Fatal("missing source lock")
 			}
 			identity, ok := independentRuntimeIdentity(profile)
-			if !ok || identity.Version != "1.0.0" {
+			wantVersion := "1.0.0"
+			if profile == "openmontage" {
+				wantVersion = "1.1.0"
+			}
+			if !ok || identity.Version != wantVersion {
 				t.Fatal(identity, ok)
 			}
+			if profile == "openmontage" {
+				manifest, err := readBuildDownloadManifest(data)
+				if err != nil || manifest != nil || len(data) > buildUploadLimit || bundledSHA != identity.SourceSHA256 {
+					t.Fatal("OpenMontage must be a complete importable local-source context", len(data), bundledSHA, manifest, err)
+				}
+			}
 			labels := map[string]string{
-				"io.rundesk.profile": profile, "org.opencontainers.image.version": "1.0.0", "io.rundesk.agent-reach": "false",
+				"io.rundesk.profile": profile, "org.opencontainers.image.version": wantVersion, "io.rundesk.agent-reach": "false",
 				"io.rundesk.codex.version": "0.144.6", "io.rundesk.upstream.repository": identity.Repository,
 				"io.rundesk.upstream.commit": identity.Commit, "io.rundesk.upstream.source.sha256": identity.SourceSHA256,
 				"io.rundesk.video-app-media.contract": "1",

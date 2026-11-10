@@ -38,6 +38,46 @@ RunDesk 0.55.0 将构建配方放在磁盘目录中。用户可以修改 Dockerf
 
 共享 Agent-Reach 仍是已审阅的完整本地源码，保留去除重复 wheel 包含项的补丁；镜像通过本地路径安装，不重新下载该 GitHub 源码。共享并不意味着 APT、pip/npm 运行依赖也已离线。
 
+<a id="openmontage-bundled-source"></a>
+
+## OpenMontage 随包源码
+
+0.69.0 的 OpenMontage 配方版本为 **1.1.0**，仍固定上游提交 `c8066452325cb57c8fc1ba8c2a71b6e8842e6b65`。`vendor/source.tar.gz` 随配方提供，Docker 构建校验其固定 SHA-256 后直接解包，不再请求 GitHub 完整仓库归档。来源、原完整归档摘要、打包规则及省略项保存在 `upstream/source-bundle.json`；`sourceScope` 明确为 `runtime-without-demo-media`，并非将精简包标成完整原归档。
+
+| 审阅对象 | 压缩大小 | 普通文件数 |
+| --- | ---: | ---: |
+| 原完整归档 | 75,957,235 字节（约 76.0 MB） | 2,171 |
+| 随配方运行源码归档 | 17,846,107 字节（约 17.8 MB） | 2,168 |
+
+压缩归档体积减少约 **76.5%**。仅省略三个未被其余文本引用的演示视频：
+
+- `assets/signal-from-tomorrow-demo.mp4`
+- `.agents/skills/hyperframes-animation/examples/assets/hyperframes-showcase-hypecard.mp4`
+- `.agents/skills/hyperframes-animation/examples/assets/background-tech-data-flow.mp4`
+
+其余运行代码、原生 Skills、指南、pipelines、模板、字体、图标、测试与媒体文件保持原字节，许可文件随源码保留。源码发布包因此增加约 17.8 MB 的归档；部署后，首次构建也无需从 GitHub 单独获取这份 OpenMontage 源码。此度量是固定源码归档的字节比较，不是 Docker 构建耗时、成品镜像大小或业务渲染性能的测试。
+
+维护者可使用[重打包工具](../scripts/package_openmontage_source.py)复现随包归档。该工具不联网，只接受与原固定 SHA-256 相符的完整上游归档，并要求新的输出路径；不会覆盖已有配方：
+
+```sh
+python3 scripts/package_openmontage_source.py \
+  --source /path/to/original.tar.gz \
+  --output /new/vendor/source.tar.gz \
+  --manifest /new/upstream/source-bundle.json
+```
+
+Dockerfile 先复制、校验并解包源码，再单独复制依赖安装脚本及 npm 锁文件，安装 Python、Remotion 与 HyperFrames 依赖；最后复制并应用 Video App 接入 overlays 和来源记录。修改 overlays、Skills 或来源说明不会仅因此重做业务依赖安装层；修改源码、依赖安装脚本或对应锁文件仍会影响缓存。实际命中取决于 Docker 缓存是否保留，不代表所有依赖都已在离线包中。
+
+导出、`prepare` 和 `pack` 都携带同一归档，普通独立 Docker 构建也可读取它。缺失或摘要不符应恢复正确配方文件，不静默回退下载另一个源。Python/npm、APT、基础镜像及模型服务仍可能需要网络；源列表继续配置实际使用的下载通道。
+
+## 仍需联网的归档
+
+旧 OpenMontage 冻结配方及其他声明 `build-downloads.json` 的配方继续使用它们原来的 URL、SHA-256 和目标路径。宿主先检查随上下文提供的归档，再检查 `<data>/build-download-cache/sha256/<SHA>.archive`；仅完整校验通过的文件可以进入构建目录。
+
+0.69.0 将可恢复的中间传输保存在同一缓存目录的 `<SHA>.archive.part` 和 `<SHA>.archive.part.json`。记录绑定预期摘要及原 URL 的摘要；同 URL 重试可请求 `Range`，有强 ETag 或有效 Last-Modified 时附带 `If-Range`。服务器正确返回匹配的 `206` 才追加；忽略 Range 返回 `200` 时安全重头下载，不把两个响应拼在一起。换 URL／镜像通道会丢弃不匹配的中间记录，服务器不支持 Range 时也不能保证续传。
+
+下载日志约每十秒显示已收字节、已知总量时的百分比及传输速率。下载不再额外受固定十五分钟总限时截断，但仍受外层构建任务期限、30 秒响应头等待和 120 秒持续无新字节的空闲限时约束。取消或传输中断可以保留受限中间文件供后续恢复；最终完整文件必须重新通过固定 SHA-256 才会原子转成可用缓存。摘要、大小或协议不匹配不会修改配方的预期摘要来迁就错误内容。这些设置只作用于归档传输，不改变 Kun 模型请求超时。
+
 ## 构建前操作
 
 1. 在构建中心打开“下载源设置”，维护源列表 JSON。页面保存携带列表 revision；另一处已修改时会拒绝覆盖，应重新读取后合并。
@@ -63,7 +103,7 @@ RunDesk 0.55.0 将构建配方放在磁盘目录中。用户可以修改 Dockerf
 | Hugging Face | `endpoint` | `RD_HF_ENDPOINT` |
 | GitHub | `archiveBase`、`rawBase`、`releaseBase`、`gitBase`、`apiBase` | 对应 `RD_GITHUB_ARCHIVE_BASE`、`RD_GITHUB_RAW_BASE`、`RD_GITHUB_RELEASE_BASE`、`RD_GITHUB_GIT_BASE`、`RD_GITHUB_API_BASE` |
 
-六套默认配方使用 Node/Debian 基础镜像，提供基础镜像、Debian APT、npm 和 pip 参数。内置 APT 应用脚本针对 Debian；将基础镜像换成其他发行版时，不会盲目写入 Debian 仓库配置。OpenMontage 还实际使用 `RD_GITHUB_ARCHIVE_BASE` 下载其固定源码并校验 SHA。conda、YUM/DNF、Hugging Face 与其他 GitHub 参数由使用它们的配方声明并引用。
+六套默认配方使用 Node/Debian 基础镜像，提供基础镜像、Debian APT、npm 和 pip 参数。内置 APT 应用脚本针对 Debian；将基础镜像换成其他发行版时，不会盲目写入 Debian 仓库配置。OpenMontage 1.1.0 的运行源码已随配方提供，不再使用 GitHub 归档参数；旧版或自定义配方若仍声明下载，可继续使用它实际支持的参数。conda、YUM/DNF、Hugging Face 与其他 GitHub 参数由使用它们的配方声明并引用。
 
 自定义配方仍是普通 Docker 上下文。Dockerfile 可以直接使用标准 ARG、自己的配置文件或脚本。未声明标准参数的自定义配方保留原始行为；可以下载完整 ZIP，修改 Dockerfile 后重新导入。界面目前提供内容预览和导出，不是完整文件编辑器。
 

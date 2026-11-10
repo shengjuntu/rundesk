@@ -4,7 +4,6 @@
 !bases/**
 !runtime/
 !runtime/**
-!build-downloads.json
 !profile.lock.json
 !THIRD_PARTY.md
 !seed/

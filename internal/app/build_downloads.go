@@ -14,7 +14,9 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -151,11 +153,206 @@ func buildDownloadHTTPClient() *http.Client {
 	}}
 }
 
-// Download atomically. Retry transient transport/status failures only; a digest
-// mismatch is an integrity failure and never updates the expected recipe hash.
+// Partial bytes are auxiliary cache data, never recipe inputs. The original URL
+// and frozen SHA bind a partial to its request even without HTTP validators.
+// A strong validator additionally enables If-Range; only the complete SHA can
+// authorize promotion into the content-addressed, verified archive cache.
+type buildDownloadPartial struct {
+	SchemaVersion int    `json:"schemaVersion"`
+	URLSHA256     string `json:"urlSha256"`
+	SHA256        string `json:"sha256"`
+	ETag          string `json:"etag,omitempty"`
+	LastModified  string `json:"lastModified,omitempty"`
+	Total         int64  `json:"total,omitempty"`
+}
+
+type buildDownloadPolicy struct {
+	Idle      time.Duration
+	RetryBase time.Duration
+}
+
+func buildDownloadStrongETag(value string) bool {
+	if len(value) < 2 || len(value) > 512 || value[0] != '"' || value[len(value)-1] != '"' {
+		return false
+	}
+	for _, b := range []byte(value[1 : len(value)-1]) {
+		if b != 0x21 && (b < 0x23 || b > 0x7e) && b < 0x80 {
+			return false
+		}
+	}
+	return true
+}
+func buildDownloadRemovePartial(part string) {
+	_ = os.Remove(part)
+	_ = os.Remove(part + ".json")
+}
+func buildDownloadReadPartial(part, address, expected string) (buildDownloadPartial, int64, error) {
+	fresh := buildDownloadPartial{SchemaVersion: 1, URLSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte(address))), SHA256: expected}
+	info, err := os.Lstat(part)
+	if errors.Is(err, os.ErrNotExist) {
+		// Removing a stale sidecar never follows a link into another file.
+		_ = os.Remove(part + ".json")
+		return fresh, 0, nil
+	}
+	if err != nil {
+		return fresh, 0, err
+	}
+	if !info.Mode().IsRegular() {
+		return fresh, 0, fmt.Errorf("archive partial must be a regular file")
+	}
+	side, err := os.Lstat(part + ".json")
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fresh, 0, err
+	}
+	if err == nil && !side.Mode().IsRegular() {
+		return fresh, 0, fmt.Errorf("archive partial metadata must be a regular file")
+	}
+	if err != nil || side.Size() > 4096 || info.Size() <= 0 || info.Size() > buildDownloadMaxBytes {
+		buildDownloadRemovePartial(part)
+		return fresh, 0, nil
+	}
+	body, err := os.ReadFile(part + ".json")
+	if err != nil {
+		return fresh, 0, err
+	}
+	var old buildDownloadPartial
+	d := json.NewDecoder(bytes.NewReader(body))
+	d.DisallowUnknownFields()
+	valid := d.Decode(&old) == nil && d.Decode(new(any)) == io.EOF
+	valid = valid && old.SchemaVersion == 1 && old.URLSHA256 == fresh.URLSHA256 && old.SHA256 == expected && old.Total >= 0 && old.Total <= buildDownloadMaxBytes && (old.Total == 0 || info.Size() <= old.Total)
+	if old.ETag != "" {
+		valid = valid && buildDownloadStrongETag(old.ETag)
+	}
+	if old.LastModified != "" {
+		_, e := http.ParseTime(old.LastModified)
+		valid = valid && len(old.LastModified) <= 128 && e == nil
+	}
+	if !valid {
+		buildDownloadRemovePartial(part)
+		return fresh, 0, nil
+	}
+	return old, info.Size(), nil
+}
+
+// Verify the opened inode before truncating an existing partial. A changed
+// path or symlink cannot redirect a restart into a different local file.
+func buildDownloadOpenPartial(part string, offset int64) (*os.File, error) {
+	prior, err := os.Lstat(part)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	if err == nil && !prior.Mode().IsRegular() {
+		return nil, fmt.Errorf("archive partial must be a regular file")
+	}
+	flags := os.O_WRONLY
+	if prior == nil {
+		flags |= os.O_CREATE | os.O_EXCL
+	}
+	file, err := os.OpenFile(part, flags, 0600)
+	if err != nil {
+		return nil, err
+	}
+	current, err := file.Stat()
+	if err != nil || !current.Mode().IsRegular() || (prior != nil && !os.SameFile(prior, current)) || (offset > 0 && current.Size() != offset) {
+		file.Close()
+		return nil, fmt.Errorf("archive partial changed before transfer")
+	}
+	if offset == 0 {
+		err = file.Truncate(0)
+	}
+	if err == nil {
+		_, err = file.Seek(offset, io.SeekStart)
+	}
+	if err != nil {
+		file.Close()
+		return nil, err
+	}
+	return file, nil
+}
+func buildDownloadWritePartial(part string, value buildDownloadPartial) error {
+	body, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	file, err := os.CreateTemp(filepath.Dir(part), ".partial-metadata-")
+	if err != nil {
+		return err
+	}
+	name := file.Name()
+	defer os.Remove(name)
+	if _, err = file.Write(append(body, '\n')); err == nil {
+		err = file.Sync()
+	}
+	if e := file.Close(); err == nil {
+		err = e
+	}
+	if err != nil {
+		return err
+	}
+	return os.Rename(name, part+".json")
+}
+func buildDownloadResponsePartial(old buildDownloadPartial, response *http.Response, total int64) buildDownloadPartial {
+	old.ETag, old.LastModified, old.Total = "", "", total
+	if etag := response.Header.Get("ETag"); buildDownloadStrongETag(etag) {
+		old.ETag = etag
+	}
+	if modified := response.Header.Get("Last-Modified"); len(modified) <= 128 {
+		if _, err := http.ParseTime(modified); err == nil {
+			old.LastModified = modified
+		}
+	}
+	return old
+}
+func buildDownloadValidatorMatches(old buildDownloadPartial, response *http.Response) bool {
+	if old.ETag != "" {
+		return response.Header.Get("ETag") == old.ETag
+	}
+	if old.LastModified != "" {
+		return response.Header.Get("Last-Modified") == old.LastModified
+	}
+	return true // Same URL and final frozen SHA remain authoritative.
+}
+func buildDownloadRange(header string) (start, end, total int64, err error) {
+	match := regexp.MustCompile(`^bytes ([0-9]+)-([0-9]+)/([0-9]+)$`).FindStringSubmatch(header)
+	if len(match) != 4 {
+		return 0, 0, 0, fmt.Errorf("invalid archive Content-Range")
+	}
+	start, err = strconv.ParseInt(match[1], 10, 64)
+	if err == nil {
+		end, err = strconv.ParseInt(match[2], 10, 64)
+	}
+	if err == nil {
+		total, err = strconv.ParseInt(match[3], 10, 64)
+	}
+	if err != nil || start < 0 || end < start || total <= end || total > buildDownloadMaxBytes {
+		return 0, 0, 0, fmt.Errorf("invalid archive Content-Range or 128 MiB size limit")
+	}
+	return start, end, total, nil
+}
+func buildDownloadPromote(part, cachePath, expected string) (int64, error) {
+	n, ok := verifiedDownloadFile(part, expected)
+	if !ok {
+		buildDownloadRemovePartial(part)
+		return 0, fmt.Errorf("archive SHA256 mismatch or size limit exceeded; expected hash was not changed")
+	}
+	if err := os.Rename(part, cachePath); err != nil {
+		return 0, err
+	}
+	_ = os.Remove(part + ".json")
+	return n, nil
+}
+
+// The enclosing build job supplies the overall deadline. Successful, slow
+// transfers are not cut off after an arbitrary 15 minutes. Headers still have
+// a transport deadline, and a body that stops delivering bytes is canceled.
 func downloadBuildArchive(ctx context.Context, client *http.Client, address, expected, cachePath string, out io.Writer) (int64, error) {
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Minute)
-	defer cancel()
+	return downloadBuildArchiveWithPolicy(ctx, client, address, expected, cachePath, out, buildDownloadPolicy{Idle: 120 * time.Second, RetryBase: time.Second})
+}
+func downloadBuildArchiveWithPolicy(ctx context.Context, client *http.Client, address, expected, cachePath string, out io.Writer, policy buildDownloadPolicy) (int64, error) {
+	part := cachePath + ".part"
+	if !buildDownloadSHA.MatchString(expected) {
+		return 0, fmt.Errorf("invalid expected archive SHA256")
+	}
 	for attempt := 1; attempt <= 3; attempt++ {
 		if err := ctx.Err(); err != nil {
 			return 0, err
@@ -164,79 +361,180 @@ func downloadBuildArchive(ctx context.Context, client *http.Client, address, exp
 			select {
 			case <-ctx.Done():
 				return 0, ctx.Err()
-			case <-time.After(time.Duration(attempt-1) * time.Second):
+			case <-time.After(time.Duration(attempt-1) * policy.RetryBase):
 			}
 		}
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, address, nil)
+		saved, offset, err := buildDownloadReadPartial(part, address, expected)
 		if err != nil {
 			return 0, err
 		}
+		if offset > 0 {
+			if _, valid := verifiedDownloadFile(part, expected); valid {
+				return buildDownloadPromote(part, cachePath, expected)
+			}
+			if saved.Total > 0 && saved.Total == offset {
+				return buildDownloadPromote(part, cachePath, expected)
+			}
+			fmt.Fprintf(out, "Archive resume: retaining %.1f MiB (%d bytes); attempt %d/3.\n", float64(offset)/(1<<20), offset, attempt)
+		}
+		requestCtx, cancel := context.WithCancel(ctx)
+		req, err := http.NewRequestWithContext(requestCtx, http.MethodGet, address, nil)
+		if err != nil {
+			cancel()
+			return 0, err
+		}
+		req.Header.Set("Accept-Encoding", "identity")
+		if offset > 0 {
+			req.Header.Set("Range", fmt.Sprintf("bytes=%d-", offset))
+			if saved.ETag != "" {
+				req.Header.Set("If-Range", saved.ETag)
+			} else if saved.LastModified != "" {
+				req.Header.Set("If-Range", saved.LastModified)
+			}
+		}
 		response, err := client.Do(req)
 		if err != nil {
-			if attempt < 3 && ctx.Err() == nil {
-				fmt.Fprintf(out, "Archive connection failed; retry %d/3.\n", attempt+1)
+			cancel()
+			if ctx.Err() != nil {
+				return 0, ctx.Err()
+			}
+			if attempt < 3 {
+				fmt.Fprintf(out, "Archive connection failed; retry %d/3, saved bytes retained.\n", attempt+1)
 				continue
 			}
 			return 0, fmt.Errorf("archive request failed: %w", err)
 		}
-		if response.StatusCode != http.StatusOK {
-			response.Body.Close()
+		closeResponse := func() { cancel(); response.Body.Close() }
+		if response.StatusCode == http.StatusRequestedRangeNotSatisfiable && offset > 0 {
+			closeResponse()
+			size, parseErr := strconv.ParseInt(strings.TrimPrefix(response.Header.Get("Content-Range"), "bytes */"), 10, 64)
+			if strings.HasPrefix(response.Header.Get("Content-Range"), "bytes */") && parseErr == nil && size == offset && size <= buildDownloadMaxBytes {
+				return buildDownloadPromote(part, cachePath, expected)
+			}
+			buildDownloadRemovePartial(part)
+			return 0, fmt.Errorf("invalid unsatisfied archive range; partial discarded")
+		}
+		if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusPartialContent {
+			closeResponse()
 			if attempt < 3 && (response.StatusCode == 408 || response.StatusCode == 429 || response.StatusCode >= 500) {
-				fmt.Fprintf(out, "Archive HTTP %d; retry %d/3.\n", response.StatusCode, attempt+1)
+				fmt.Fprintf(out, "Archive HTTP %d; retry %d/3, saved bytes retained.\n", response.StatusCode, attempt+1)
 				continue
 			}
 			return 0, fmt.Errorf("archive download returned HTTP %d", response.StatusCode)
 		}
-		if response.ContentLength > buildDownloadMaxBytes {
-			response.Body.Close()
+		if encoding := response.Header.Get("Content-Encoding"); encoding != "" && !strings.EqualFold(encoding, "identity") {
+			closeResponse()
+			buildDownloadRemovePartial(part)
+			return 0, fmt.Errorf("archive response must preserve identity byte encoding")
+		}
+		total, segment := response.ContentLength, response.ContentLength
+		if total < 0 {
+			total = 0
+		}
+		if response.StatusCode == http.StatusPartialContent {
+			start, end, size, rangeErr := buildDownloadRange(response.Header.Get("Content-Range"))
+			if rangeErr != nil || offset == 0 || start != offset || (segment >= 0 && segment != end-start+1) || (saved.Total > 0 && saved.Total != size) || !buildDownloadValidatorMatches(saved, response) {
+				closeResponse()
+				buildDownloadRemovePartial(part)
+				return 0, fmt.Errorf("invalid archive resume range/validator; partial discarded")
+			}
+			total, segment = size, end-start+1
+		} else if offset > 0 {
+			fmt.Fprintln(out, "Archive server returned a full response; restarting safely from byte zero.")
+			offset = 0
+		}
+		if total > buildDownloadMaxBytes {
+			closeResponse()
+			buildDownloadRemovePartial(part)
 			return 0, fmt.Errorf("archive exceeds 128 MiB limit")
 		}
-		tmp, err := os.CreateTemp(filepath.Dir(cachePath), ".archive-")
+		if offset == 0 {
+			saved = buildDownloadResponsePartial(saved, response, total)
+		} else {
+			saved.Total = total
+		}
+		file, err := buildDownloadOpenPartial(part, offset)
 		if err != nil {
-			response.Body.Close()
+			closeResponse()
 			return 0, err
 		}
-		h := sha256.New()
-		progress := &buildDownloadProgress{out: out, last: time.Now()}
-		n, copyErr := io.Copy(io.MultiWriter(tmp, h, progress), io.LimitReader(response.Body, buildDownloadMaxBytes+1))
-		response.Body.Close()
-		if copyErr == nil {
-			copyErr = tmp.Sync()
+		if err = buildDownloadWritePartial(part, saved); err != nil {
+			file.Close()
+			closeResponse()
+			return 0, err
 		}
-		if closeErr := tmp.Close(); copyErr == nil {
+		var idle atomic.Bool
+		timer := time.AfterFunc(policy.Idle, func() { idle.Store(true); cancel() })
+		progress := &buildDownloadProgress{out: out, base: offset, total: total, last: time.Now(), started: time.Now(), received: func() { timer.Reset(policy.Idle) }}
+		readLimit := buildDownloadMaxBytes - offset + 1
+		if segment >= 0 && segment+1 < readLimit {
+			readLimit = segment + 1
+		}
+		n, copyErr := io.Copy(io.MultiWriter(file, progress), io.LimitReader(response.Body, readLimit))
+		timer.Stop()
+		closeResponse()
+		if syncErr := file.Sync(); copyErr == nil {
+			copyErr = syncErr
+		}
+		if closeErr := file.Close(); copyErr == nil {
 			copyErr = closeErr
 		}
+		if offset+n > buildDownloadMaxBytes {
+			buildDownloadRemovePartial(part)
+			return 0, fmt.Errorf("archive exceeds 128 MiB limit")
+		}
+		if segment >= 0 && n > segment {
+			buildDownloadRemovePartial(part)
+			return 0, fmt.Errorf("archive response exceeded its declared byte range")
+		}
+		if ctx.Err() != nil {
+			return 0, ctx.Err()
+		}
+		if idle.Load() {
+			copyErr = fmt.Errorf("archive transfer stopped receiving bytes for %s", policy.Idle)
+		}
+		if copyErr == nil && ((segment >= 0 && n != segment) || (total > 0 && offset+n != total)) {
+			copyErr = io.ErrUnexpectedEOF
+		}
 		if copyErr != nil {
-			os.Remove(tmp.Name())
-			if attempt < 3 && ctx.Err() == nil {
-				fmt.Fprintf(out, "Archive transfer interrupted; retry %d/3.\n", attempt+1)
+			var diskError *os.PathError
+			if attempt < 3 && !errors.As(copyErr, &diskError) {
+				fmt.Fprintf(out, "Archive transfer interrupted after %d bytes; retry %d/3 without discarding progress.\n", offset+n, attempt+1)
 				continue
 			}
 			return 0, copyErr
 		}
-		if n > buildDownloadMaxBytes || hex.EncodeToString(h.Sum(nil)) != expected {
-			os.Remove(tmp.Name())
-			return 0, fmt.Errorf("archive SHA256 mismatch or size limit exceeded; expected hash was not changed")
+		n, err = buildDownloadPromote(part, cachePath, expected)
+		if err == nil {
+			fmt.Fprintf(out, "Archive complete: %.1f MiB; SHA256 verified.\n", float64(n)/(1<<20))
 		}
-		if err := os.Rename(tmp.Name(), cachePath); err != nil {
-			os.Remove(tmp.Name())
-			return 0, err
-		}
-		return n, nil
+		return n, err
 	}
 	return 0, fmt.Errorf("archive download attempts exhausted")
 }
 
 type buildDownloadProgress struct {
-	out   io.Writer
-	bytes int64
-	last  time.Time
+	out      io.Writer
+	bytes    int64
+	base     int64
+	total    int64
+	last     time.Time
+	started  time.Time
+	received func()
 }
 
 func (p *buildDownloadProgress) Write(data []byte) (int, error) {
 	p.bytes += int64(len(data))
+	if len(data) > 0 && p.received != nil {
+		p.received()
+	}
 	if time.Since(p.last) >= 10*time.Second {
-		fmt.Fprintf(p.out, "Archive downloaded %d MiB; verifying SHA256 before use.\n", p.bytes>>20)
+		speed := float64(p.bytes) / (1 << 10) / time.Since(p.started).Seconds()
+		if p.total > 0 {
+			fmt.Fprintf(p.out, "Archive downloaded %.1f/%.1f MiB (%.1f%%), %.1f KiB/s; SHA256 verification pending.\n", float64(p.base+p.bytes)/(1<<20), float64(p.total)/(1<<20), 100*float64(p.base+p.bytes)/float64(p.total), speed)
+		} else {
+			fmt.Fprintf(p.out, "Archive downloaded %.1f MiB, %.1f KiB/s; SHA256 verification pending.\n", float64(p.base+p.bytes)/(1<<20), speed)
+		}
 		p.last = time.Now()
 	}
 	return len(data), nil

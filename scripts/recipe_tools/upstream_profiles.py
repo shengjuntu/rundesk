@@ -109,8 +109,10 @@ def load(root, profile, inputs=None):
         raise ValueError("Upstream source needs an exact SHA-256")
     if not isinstance(value["license"], str) or not re.fullmatch(r"[A-Za-z0-9.+-]{1,64}", value["license"]):
         raise ValueError("Invalid upstream license identifier")
-    if value.get("sourceScope", "complete-repository") not in ("complete-repository", "native-skills-and-metadata"):
+    if value.get("sourceScope", "complete-repository") not in ("complete-repository", "native-skills-and-metadata", "runtime-without-demo-media"):
         raise ValueError("Unknown upstream source scope")
+    if value.get("sourceScope") == "runtime-without-demo-media" and (name != "openmontage" or "sourceArchive" not in value):
+        raise ValueError("Reviewed runtime source bundle requires local OpenMontage archive")
     members = None
     if "sourceArchive" in value:
         path = file(value["sourceArchive"])
@@ -124,6 +126,17 @@ def load(root, profile, inputs=None):
         expected = "https://codeload.github.com/" + value["repository"].removeprefix("https://github.com/") + "/tar.gz/" + value["commit"]
         if value["sourceURL"] != expected:
             raise ValueError("Upstream source URL must be the exact reviewed codeload commit")
+    if value.get("sourceScope") == "runtime-without-demo-media":
+        provenance = json.loads(file("upstream/source-bundle.json").read_text(encoding="utf-8"), object_pairs_hook=shared_inputs.unique_object)
+        if (provenance.get("schemaVersion") != 1 or provenance.get("scope") != value["sourceScope"]
+                or provenance.get("repository") != value["repository"] or provenance.get("commit") != value["commit"]
+                or provenance.get("bundlePath") != value["sourceArchive"] or provenance.get("bundleSHA256") != value["sourceSHA256"]
+                or provenance.get("bundleBytes") != file(value["sourceArchive"]).stat().st_size
+                or provenance.get("bundleFiles") != len(members)
+                or not isinstance(provenance.get("preservedFiles"), dict) or set(provenance["preservedFiles"]) != members
+                or not re.fullmatch(r"[0-9a-f]{64}", str(provenance.get("sourceSHA256", "")))
+                or "source-bundle.json" not in value["buildFiles"]):
+            raise ValueError("OpenMontage source bundle provenance does not match its pinned archive")
     build_files = value["buildFiles"]
     if not isinstance(build_files, list) or not 1 <= len(build_files) <= 128 or len(set(build_files)) != len(build_files):
         raise ValueError("Invalid upstream build file list")

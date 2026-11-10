@@ -15,15 +15,15 @@ ARG RD_NPM_REGISTRY=https://registry.npmjs.org
 ARG RD_PIP_INDEX_URL=https://pypi.org/simple
 ENV npm_config_fetch_retries=3 npm_config_fetch_timeout=120000 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 ENV PATH="/opt/rundesk-python/bin:${PATH}"
+# Reviewed upstream commit; source bytes and omitted demo media are recorded in source-bundle.json.
+COPY vendor/source.tar.gz /opt/rundesk-upstream/source.tar.gz
+RUN echo '3d6ddce72b077bdcaed2ccc30aa61f80ec41869a55228ca1ceb0fe5d81be2ca5  /opt/rundesk-upstream/source.tar.gz' | sha256sum -c - && mkdir -p /opt/upstreams/openmontage && tar -xzf /opt/rundesk-upstream/source.tar.gz --strip-components=1 -C /opt/upstreams/openmontage
+# Keep dependency installation ahead of the integration overlays and metadata.
+COPY upstream/install-dependencies.sh /opt/rundesk-upstream/install-dependencies.sh
+COPY upstream/npm/ /opt/rundesk-upstream/npm/
+RUN npm_config_registry="${RD_NPM_REGISTRY}" PIP_INDEX_URL="${RD_PIP_INDEX_URL}" sh /opt/rundesk-upstream/install-dependencies.sh
 COPY upstream/ /opt/rundesk-upstream/
-# Reviewed upstream source: https://codeload.github.com/calesthio/OpenMontage/tar.gz/c8066452325cb57c8fc1ba8c2a71b6e8842e6b65
-ARG RD_GITHUB_ARCHIVE_BASE=https://codeload.github.com
-ARG RD_GITHUB_ARCHIVE_URL=
-COPY vendor/ /opt/rundesk-upstream/
-COPY tools/download-archive.sh /opt/rundesk-profile/tools/download-archive.sh
-RUN RD_GITHUB_ARCHIVE_URL="${RD_GITHUB_ARCHIVE_URL}" RD_GITHUB_ARCHIVE_BASE="${RD_GITHUB_ARCHIVE_BASE}" sh /opt/rundesk-profile/tools/download-archive.sh dff7cd1cdf2cb0522398e00b3f0b75f32336b695a8be34ac8e6b6913055aab25 /opt/rundesk-upstream/source.tar.gz https://codeload.github.com/calesthio/OpenMontage/tar.gz/c8066452325cb57c8fc1ba8c2a71b6e8842e6b65 /calesthio/OpenMontage/tar.gz/c8066452325cb57c8fc1ba8c2a71b6e8842e6b65
-RUN echo 'dff7cd1cdf2cb0522398e00b3f0b75f32336b695a8be34ac8e6b6913055aab25  /opt/rundesk-upstream/source.tar.gz' | sha256sum -c - && mkdir -p /opt/upstreams/openmontage && tar -xzf /opt/rundesk-upstream/source.tar.gz --strip-components=1 -C /opt/upstreams/openmontage
-RUN npm_config_registry="${RD_NPM_REGISTRY}" PIP_INDEX_URL="${RD_PIP_INDEX_URL}" sh /opt/rundesk-upstream/install.sh
+RUN RD_OPENMONTAGE_DEPS_READY=1 sh /opt/rundesk-upstream/install.sh
 RUN test -f /opt/upstreams/openmontage/LICENSE
 RUN test -f /opt/upstreams/openmontage/AGENTS.md
 RUN test -f /opt/upstreams/openmontage/AGENT_GUIDE.md
@@ -42,14 +42,14 @@ RUN CODEX_VERSION="${CODEX_VERSION}" RD_CODEX_MODE="${RD_CODEX_MODE}" RD_NPM_REG
 COPY skills/ /etc/codex/skills/
 COPY tools/ /opt/rundesk-profile/tools/
 LABEL org.opencontainers.image.title="RunDesk openmontage"
-LABEL org.opencontainers.image.version="1.0.0"
+LABEL org.opencontainers.image.version="1.1.0"
 LABEL io.rundesk.profile="openmontage"
 LABEL io.rundesk.profile.schema="1"
 LABEL io.rundesk.codex.version="0.0.0"
 LABEL io.rundesk.agent-reach="false"
 LABEL io.rundesk.upstream.repository="https://github.com/calesthio/OpenMontage"
 LABEL io.rundesk.upstream.commit="c8066452325cb57c8fc1ba8c2a71b6e8842e6b65"
-LABEL io.rundesk.upstream.source.sha256="dff7cd1cdf2cb0522398e00b3f0b75f32336b695a8be34ac8e6b6913055aab25"
+LABEL io.rundesk.upstream.source.sha256="3d6ddce72b077bdcaed2ccc30aa61f80ec41869a55228ca1ceb0fe5d81be2ca5"
 LABEL io.rundesk.video-app-media.contract="1"
 LABEL io.rundesk.capabilities.skills="use-openmontage"
 LABEL io.rundesk.capabilities.tools="Python 3.11+, OpenMontage native pipelines, OpenMontage provider registry, Remotion, HyperFrames 0.8.87, GSAP 3.15.0, FFmpeg, Chromium, Video App media MCP bridge"

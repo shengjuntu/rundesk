@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.69.0 — 2026-11-08
+
+Package the pinned OpenMontage runtime source with its recipe instead of downloading the complete upstream repository archive during every cold build. Retain runtime code, required assets, upstream guides and licenses; omit only reviewed demonstration media with recorded provenance and archive identities. OpenMontage remains an independent recipe, and Python/npm dependencies still use their configured sources.
+
+Archive downloads retained by existing frozen recipes can preserve validated partial transfers, resume when the server supports the required protocol, and report progress. Unverified or mismatched bytes never become usable cached archives. Shared base reuse, historical build identities and offline/smoke acceptance remain unchanged; no new build entry or public registry is introduced. See [build sources](docs/BUILD-SOURCES.md), [upgrading](docs/UPGRADING.md) and [validation](docs/VALIDATION.md).
+
 ## 0.68.0 — 2026-11-08
 
 Build the six managed recipes on reusable tool bases: system packages and a Python virtual environment, then media tools and fonts, then Chromium where needed. Codex and domain-specific Python/npm dependencies stay in the recipe. Base Dockerfiles and their manifest are ordinary editable files, materialized with exported contexts; a direct standalone Docker build retains its installation path.
