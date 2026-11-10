@@ -2,6 +2,7 @@
 import hashlib
 import dockerfile_files
 import json
+import lzma
 from pathlib import Path, PurePosixPath
 import re
 import shutil
@@ -47,7 +48,7 @@ def source_digest(path):
 
 def archive_members(path):
     """Validate the strip-components=1 contract without extracting arbitrary paths."""
-    with tarfile.open(path, "r:gz") as archive:
+    with tarfile.open(path, "r:*") as archive:
         members = archive.getmembers()
     if not members or len(members) > 100000:
         raise ValueError("Invalid upstream source archive size")
@@ -120,7 +121,7 @@ def load(root, profile, inputs=None):
             raise ValueError("Upstream source archive digest mismatch")
         try:
             members = archive_members(path)
-        except (tarfile.TarError, EOFError) as error:
+        except (tarfile.TarError, EOFError, lzma.LZMAError) as error:
             raise ValueError("Invalid upstream source archive") from error
     else:
         expected = "https://codeload.github.com/" + value["repository"].removeprefix("https://github.com/") + "/tar.gz/" + value["commit"]

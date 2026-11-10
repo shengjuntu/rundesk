@@ -1,6 +1,6 @@
 # RunDesk Control API（RDCA）v1
 
-RunDesk 自身 API 的名称为 **RunDesk Control API（RDCA）**。本文对应 RunDesk 0.69.0 的契约。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
+RunDesk 自身 API 的名称为 **RunDesk Control API（RDCA）**。本文对应 RunDesk 0.69.1 的契约。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
 
 RunDesk 不依赖 HarnessRouter。附加 UHP 服务已在 `/v1` 提供入口，与 RDCA 共用任务核心和资源服务；各协议的授权与幂等细节分别定义。本版目标协议为 `2026-10-19`，不声明完整规范兼容，详见 [API 定位](ARCHITECTURE.md#api-position) 和 [UHP 服务与限制](UHP.md)。
 

@@ -1,10 +1,10 @@
 # 当前能力与后续工作
 
-**RunDesk 0.69.0 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。三个使命的产品定位见[中文 README](../README.zh-CN.md)。
+**RunDesk 0.69.1 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。三个使命的产品定位见[中文 README](../README.zh-CN.md)。
 
 本版为六套内置配方增加自动准备与复用的系统、媒体和浏览器公共层，沿用现有构建入口和日志。源参数、阶段输入、平台及实际镜像身份决定复用；Codex 与业务依赖继续在配方中安装。旧冻结上下文不改写，历史重建不使用后来移动的同名镜像。0.67.1 的 video-build 临时空间修复继续保留，构建成功与 offline/smoke 通过仍分别记录。用户提供的同镜像 17/17 检查结果与本版回归范围分别归档在[验证说明](VALIDATION.md#video-build-tmpfs-investigation-2026-11-08)。
 
-0.69.0 为 OpenMontage 1.1.0 提供固定运行源码归档，仅省略审阅过的三份演示视频；新配方构建无需再次下载完整 GitHub 源码。仍需联网的归档增加中断恢复和进度信息，Python/npm 依赖与真实业务验收仍分别处理。范围见[构建源](BUILD-SOURCES.md#openmontage-bundled-source)。
+0.69.1 继续精简 OpenMontage 1.1.1 的固定运行源码归档，剥离审阅过的文档预览图及未引用的示例 Logo，保留原生制作依赖；新配方构建无需再次下载完整 GitHub 源码。仍需联网的归档增加中断恢复和进度信息，Python/npm 依赖与真实业务验收仍分别处理。范围见[构建源](BUILD-SOURCES.md#openmontage-bundled-source)。
 
 0.67.0 的文档／测试整理和配方共享输入继续保留：公共输入位于 `recipes/common/`，每套配方用 `sharedFiles` 声明需要的内容，导出时物化普通文件；本地同名文件覆盖，缺失共享来源明确失败。原始声明不进入冻结锁文件，可再生检查输出继续放在 `build/qa/`。完整旧证据保留在 0.65.0 源码包，详见[验证资料说明](validation/README.md)。已有镜像、实例、会话和冻结构建快照保持原有语义。
 

@@ -46,9 +46,9 @@ The instance-centered WebUI does **not** yet synchronize instance configuration 
 
 ## Current source version
 
-**RunDesk 0.69.0 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.69.1 source · external Kun 0.17.0 · worker protocol 16**
 
-Version 0.69.0 ships the pinned OpenMontage runtime source with its recipe, omitting reviewed demonstration media while preserving source provenance and licenses. New OpenMontage builds no longer fetch the full repository archive from GitHub. Archive downloads still used by older recipes gain resume and progress reporting, with full-file digest verification before use. Shared system/media/browser bases, editable Dockerfiles and the existing build entry remain. Python/npm dependencies still need their configured download channels; actual image and business-task acceptance remain separate. See [build sources](docs/BUILD-SOURCES.md) and [upgrading](docs/UPGRADING.md).
+Version 0.69.1 further reduces the bundled OpenMontage source while retaining code, Skills and assets used by native templates. The bundle excludes reviewed documentation previews and an unreferenced example logo, and records their paths and hashes. New builds use the supplied archive; Python/npm dependencies still use their configured download channels. Shared bases, editable Dockerfiles and the existing build entry remain. See [build sources](docs/BUILD-SOURCES.md) and [upgrading](docs/UPGRADING.md).
 
 The 0.67.1 video-build temporary-space fix remains: verification uses a 2 GiB `/tmp` allowance while preserving the upstream doctor checks. The user's same-image result and this release's checks are recorded separately in [validation](docs/VALIDATION.md#video-build-tmpfs-investigation-2026-11-08). An image must still pass verification before it is marked ready.
 

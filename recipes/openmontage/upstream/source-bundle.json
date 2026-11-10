@@ -8,29 +8,62 @@
   "sourceBytes": 75957235,
   "sourceFiles": 2171,
   "sourceUncompressedBytes": 89151141,
-  "bundlePath": "vendor/source.tar.gz",
-  "bundleSHA256": "3d6ddce72b077bdcaed2ccc30aa61f80ec41869a55228ca1ceb0fe5d81be2ca5",
-  "bundleBytes": 17846107,
-  "bundleFiles": 2168,
-  "bundleUncompressedBytes": 30759768,
+  "bundlePath": "vendor/source.tar.xz",
+  "bundleCompression": "xz",
+  "bundleDictionaryBytes": 33554432,
+  "bundleCheck": "crc64",
+  "bundleSHA256": "a46a636050a56fd86975d4429a0ea51c7ea4c164349e7e848f3ff6aa974c233d",
+  "bundleBytes": 10296296,
+  "bundleFiles": 2163,
+  "bundleUncompressedBytes": 26569475,
   "omittedFiles": [
     {
       "path": "assets/signal-from-tomorrow-demo.mp4",
       "bytes": 20897137,
       "sha256": "47d46d729e0881d37ea87e49a0d1cfb8277434bb58d66e0d51ac5163fd020dac",
-      "reason": "Upstream demonstration video; no retained UTF-8 source references its basename."
+      "reason": "Demonstration media; no retained UTF-8 source references its basename."
     },
     {
       "path": ".agents/skills/hyperframes-animation/examples/assets/hyperframes-showcase-hypecard.mp4",
       "bytes": 20792681,
       "sha256": "59894d108c5634cce855f4b9593d48ee0884955b1607e0f1c1c4e973e2eb101e",
-      "reason": "Upstream demonstration video; no retained UTF-8 source references its basename."
+      "reason": "Demonstration media; no retained UTF-8 source references its basename."
     },
     {
       "path": ".agents/skills/hyperframes-animation/examples/assets/background-tech-data-flow.mp4",
       "bytes": 16701555,
       "sha256": "f5d7c64dffda80b3b15bd116e4f2fda2231ae5d7997f2753ba01051aa243ce79",
-      "reason": "Upstream demonstration video; no retained UTF-8 source references its basename."
+      "reason": "Demonstration media; no retained UTF-8 source references its basename."
+    },
+    {
+      "path": ".agents/skills/hyperframes-animation/examples/assets/logo-hyperframes.png",
+      "bytes": 1404783,
+      "sha256": "2eba7073c4d8016e7b74013e7a12cb3142c5c73d71768fc02cab70ae9202aedd",
+      "reason": "Demonstration media; no retained UTF-8 source references its basename."
+    },
+    {
+      "path": "docs/images/backlot/board-live.png",
+      "bytes": 805454,
+      "sha256": "f19526819e4704f93b921a53ccaa2d3acc965606169698404a67fe178ac6657b",
+      "reason": "Prebuilt README presentation screenshot; README image links retain their upstream text. The screenshot producer recreates the output directory and does not read this image."
+    },
+    {
+      "path": "docs/images/backlot/library.png",
+      "bytes": 302519,
+      "sha256": "92e9b057e682e52e06bf1254412564bba9cf139c65f11044a3a54ad14472b65f",
+      "reason": "Prebuilt README presentation screenshot; README image links retain their upstream text. The screenshot producer recreates the output directory and does not read this image."
+    },
+    {
+      "path": "docs/images/backlot/script-gate.png",
+      "bytes": 633093,
+      "sha256": "8b711cd92563b8d40b8f021e504baf61795749f1888cdd39f832cc40256afcbd",
+      "reason": "Prebuilt README presentation screenshot; README image links retain their upstream text. The screenshot producer recreates the output directory and does not read this image."
+    },
+    {
+      "path": "docs/images/backlot/storyboard.png",
+      "bytes": 1044444,
+      "sha256": "e02b4027651b641d52f4d582abafc617ed736691c3efc9f8fd269cf6823dfb21",
+      "reason": "Prebuilt README presentation screenshot; README image links retain their upstream text. The screenshot producer recreates the output directory and does not read this image."
     }
   ],
   "preservedFiles": {
@@ -842,11 +875,6 @@
     ".agents/skills/hyperframes-animation/examples/assets/brands/zoominfo.avif": {
       "sha256": "35eb77247c08c15b0b84aaa882c85397be3a4d5c2ed9da98137a7545a90da3e7",
       "bytes": 1791,
-      "mode": 420
-    },
-    ".agents/skills/hyperframes-animation/examples/assets/logo-hyperframes.png": {
-      "sha256": "2eba7073c4d8016e7b74013e7a12cb3142c5c73d71768fc02cab70ae9202aedd",
-      "bytes": 1404783,
       "mode": 420
     },
     ".agents/skills/hyperframes-animation/examples/brand-reveal-assemble-zoom.html": {
@@ -7487,26 +7515,6 @@
     "docs/comfyui-adapter-plan.md": {
       "sha256": "23c6aa8bac5d5b79aaa174f4a73f1ce2ed63fd4530adf8ec512cf88beff75581",
       "bytes": 24452,
-      "mode": 420
-    },
-    "docs/images/backlot/board-live.png": {
-      "sha256": "f19526819e4704f93b921a53ccaa2d3acc965606169698404a67fe178ac6657b",
-      "bytes": 805454,
-      "mode": 420
-    },
-    "docs/images/backlot/library.png": {
-      "sha256": "92e9b057e682e52e06bf1254412564bba9cf139c65f11044a3a54ad14472b65f",
-      "bytes": 302519,
-      "mode": 420
-    },
-    "docs/images/backlot/script-gate.png": {
-      "sha256": "8b711cd92563b8d40b8f021e504baf61795749f1888cdd39f832cc40256afcbd",
-      "bytes": 633093,
-      "mode": 420
-    },
-    "docs/images/backlot/storyboard.png": {
-      "sha256": "e02b4027651b641d52f4d582abafc617ed736691c3efc9f8fd269cf6823dfb21",
-      "bytes": 1044444,
       "mode": 420
     },
     "docs/provider-update-plan-2026-10-03.md": {

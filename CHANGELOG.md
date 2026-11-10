@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.69.1 — 2026-11-08
+
+Further reduce the bundled OpenMontage source by excluding reviewed documentation-preview images and an unreferenced example logo. Record the exact omission list and retain the source bytes, paths and executable permission semantics of the remaining code, Skills, templates, fonts, audio and tests. No native template dependency is removed merely because it has a duplicate copy.
+
+The shipped archive changes from gzip to XZ using a 32 MiB dictionary, reducing 17,846,107 bytes to 10,296,296 bytes while leaving 2,163 retained files unchanged. Extraction uses the existing Python standard library and needs no extra xz system package. The OpenMontage recipe becomes 1.1.1. Existing imported recipes, frozen contexts and images keep their original inputs; start a new build from the updated recipe to use the smaller bundle. Source preparation and package checks remain separate from actual Docker and business-task acceptance. See [build sources](docs/BUILD-SOURCES.md), [upgrading](docs/UPGRADING.md) and [validation](docs/VALIDATION.md).
+
 ## 0.69.0 — 2026-11-08
 
 Package the pinned OpenMontage runtime source with its recipe instead of downloading the complete upstream repository archive during every cold build. Retain runtime code, required assets, upstream guides and licenses; omit only reviewed demonstration media with recorded provenance and archive identities. OpenMontage remains an independent recipe, and Python/npm dependencies still use their configured sources.

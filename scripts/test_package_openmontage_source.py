@@ -5,6 +5,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import lzma
 from pathlib import Path
 import tarfile
 import tempfile
@@ -23,7 +24,7 @@ class PackageOpenMontageSourceTest(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
 
-    def archive(self, *, extra=(), missing_demo=False, reference=False):
+    def archive(self, *, extra=(), missing_demo=False, reference=False, preview_referrer=None):
         files = [(name, ("demo " + str(n)).encode(), 0o644) for n, name in enumerate(bundle.OMITTED)]
         if missing_demo:
             files.pop()
@@ -32,6 +33,8 @@ class PackageOpenMontageSourceTest(unittest.TestCase):
                   ("scripts/run.sh", b"#!/bin/sh\necho fixture\n", 0o755)]
         if reference:
             files += [("README.md", ("Use " + Path(bundle.OMITTED[0]).name).encode(), 0o644)]
+        if preview_referrer:
+            files += [(preview_referrer, ("Preview " + Path(bundle.DOCUMENT_PREVIEWS[0]).name).encode(), 0o644)]
         output = io.BytesIO()
         with tarfile.open(fileobj=output, mode="w:gz") as archive:
             for name, data, mode in files:
@@ -50,9 +53,9 @@ class PackageOpenMontageSourceTest(unittest.TestCase):
         source.write_bytes(output.getvalue())
         return source, {name: (data, mode) for name, data, mode in files}
 
-    def package(self, source, suffix=""):
+    def package(self, source, suffix="", extension=".tar.gz"):
         with patch.object(bundle, "SOURCE_SHA256", hashlib.sha256(source.read_bytes()).hexdigest()):
-            return bundle.package(source, self.root / ("bundle" + suffix + ".tar.gz"),
+            return bundle.package(source, self.root / ("bundle" + suffix + extension),
                                   self.root / ("manifest" + suffix + ".json"))
 
     def test_determinism_preserves_code_license_paths_bytes_and_exec_permissions(self):
@@ -80,6 +83,39 @@ class PackageOpenMontageSourceTest(unittest.TestCase):
         self.assertEqual(one["bundleFiles"], len(expected))
         self.assertEqual({item["path"] for item in one["omittedFiles"]}, set(bundle.OMITTED))
         self.assertEqual(one["bundleSHA256"], hashlib.sha256(first).hexdigest())
+
+    def test_xz_is_deterministic_with_bounded_dictionary_and_independent_files(self):
+        source, original = self.archive()
+        one = self.package(source, "-one", ".tar.xz")
+        two = self.package(source, "-two", ".tar.xz")
+        first = (self.root / "bundle-one.tar.xz").read_bytes()
+        self.assertEqual(first, (self.root / "bundle-two.tar.xz").read_bytes())
+        self.assertEqual(one, two)
+        self.assertEqual(one["bundlePath"], "vendor/source.tar.xz")
+        self.assertEqual(one["bundleCompression"], "xz")
+        self.assertEqual(one["bundleDictionaryBytes"], 32 << 20)
+        self.assertEqual(one["bundleCheck"], "crc64")
+        decoder = lzma.LZMADecompressor(format=lzma.FORMAT_XZ, memlimit=40 << 20)
+        raw = decoder.decompress(first)
+        self.assertTrue(decoder.eof)
+        with tarfile.open(fileobj=io.BytesIO(raw), mode="r:") as archive:
+            expected = set(original) - set(bundle.OMITTED)
+            self.assertEqual({m.name.split("/", 1)[1] for m in archive}, expected)
+            for member in archive.getmembers():
+                name = member.name.split("/", 1)[1]
+                self.assertTrue(member.isfile())
+                self.assertEqual(archive.extractfile(member).read(), original[name][0])
+
+    def test_document_preview_references_only_remain_in_reviewed_readme(self):
+        source, original = self.archive(preview_referrer="README.md")
+        record = self.package(source, "-readme")
+        self.assertIn("README.md", record["preservedFiles"])
+        self.assertNotIn(bundle.DOCUMENT_PREVIEWS[0], record["preservedFiles"])
+        self.assertEqual({item["path"] for item in record["omittedFiles"]}, set(bundle.OMITTED))
+        source, _ = self.archive(preview_referrer="tools/runtime.py")
+        with self.assertRaisesRegex(ValueError, "references a removed preview asset"):
+            self.package(source, "-runtime")
+        self.assertFalse((self.root / "bundle-runtime.tar.gz").exists())
 
     def test_unknown_archive_is_rejected_before_creating_destinations(self):
         source, _ = self.archive()
@@ -119,10 +155,10 @@ class PackageOpenMontageSourceTest(unittest.TestCase):
 
     def test_only_reviewed_unreferenced_demo_files_may_be_removed(self):
         source, _ = self.archive(missing_demo=True)
-        with self.assertRaisesRegex(ValueError, "Reviewed demo files are missing"):
+        with self.assertRaisesRegex(ValueError, "Reviewed omitted files are missing"):
             self.package(source)
         source, _ = self.archive(reference=True)
-        with self.assertRaisesRegex(ValueError, "references a removed demo"):
+        with self.assertRaisesRegex(ValueError, "references a removed preview asset"):
             self.package(source)
         self.assertFalse((self.root / "bundle.tar.gz").exists())
 

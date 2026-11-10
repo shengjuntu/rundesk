@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Repack the reviewed local OpenMontage archive without three demo videos.
+"""Repack the reviewed local OpenMontage source without prebuilt preview media.
 
-No network access is performed. Every retained path, byte and executable bit is
-preserved; reproducible gzip/tar metadata is independent of local file times.
+No network access is performed. Retained paths, bytes and executable bits stay
+unchanged. Deterministic XZ compression shares repeated bytes without changing
+independent source/asset paths. Gzip output remains available for local tooling.
 """
 from __future__ import annotations
 
@@ -11,6 +12,7 @@ import gzip
 import hashlib
 import io
 import json
+import lzma
 import os
 from pathlib import Path, PurePosixPath
 import stat
@@ -24,12 +26,24 @@ SOURCE_SHA256 = "dff7cd1cdf2cb0522398e00b3f0b75f32336b695a8be34ac8e6b6913055aab2
 PREFIX = "OpenMontage-" + COMMIT
 MAX_ARCHIVE = 128 << 20
 MAX_CONTENT = 512 << 20
-OMITTED = (
+UNREFERENCED_MEDIA = (
     "assets/signal-from-tomorrow-demo.mp4",
     ".agents/skills/hyperframes-animation/examples/assets/hyperframes-showcase-hypecard.mp4",
     ".agents/skills/hyperframes-animation/examples/assets/background-tech-data-flow.mp4",
+    ".agents/skills/hyperframes-animation/examples/assets/logo-hyperframes.png",
 )
-OMISSION_REASON = "Upstream demonstration video; no retained UTF-8 source references its basename."
+DOCUMENT_PREVIEWS = (
+    "docs/images/backlot/board-live.png",
+    "docs/images/backlot/library.png",
+    "docs/images/backlot/script-gate.png",
+    "docs/images/backlot/storyboard.png",
+)
+OMITTED = UNREFERENCED_MEDIA + DOCUMENT_PREVIEWS
+UNREFERENCED_REASON = "Demonstration media; no retained UTF-8 source references its basename."
+PREVIEW_REASON = ("Prebuilt README presentation screenshot; README image links retain their upstream text. "
+                  "The screenshot producer recreates the output directory and does not read this image.")
+XZ_PRESET = 8
+XZ_DICTIONARY_BYTES = 32 << 20
 
 
 def digest(data: bytes) -> str:
@@ -83,10 +97,10 @@ def source_files(payload: bytes) -> dict[str, tuple[bytes, int]]:
             files[relative] = (data, 0o755 if member.mode & 0o111 else 0o644)
     missing = set(OMITTED) - files.keys()
     if missing:
-        raise ValueError("Reviewed demo files are missing: " + ", ".join(sorted(missing)))
-    # This check documents the reviewed omission boundary. A referenced sample
-    # cannot be removed even if this tool is explicitly adapted to another pin.
-    names = tuple(PurePosixPath(name).name for name in OMITTED)
+        raise ValueError("Reviewed omitted files are missing: " + ", ".join(sorted(missing)))
+    # Only the already-reviewed README links may reference removed screenshots.
+    # Code, templates and all other retained files must not depend on omissions.
+    names = {PurePosixPath(name).name: name for name in OMITTED}
     for relative, (data, _) in files.items():
         if relative in OMITTED:
             continue
@@ -94,14 +108,30 @@ def source_files(payload: bytes) -> dict[str, tuple[bytes, int]]:
             text = data.decode("utf-8")
         except UnicodeDecodeError:
             continue
-        if any(name in text for name in names):
-            raise ValueError("Retained source references a removed demo: " + relative)
+        for basename, omitted in names.items():
+            if basename in text and not (omitted in DOCUMENT_PREVIEWS and relative == "README.md"):
+                raise ValueError("Retained source references a removed preview asset: " + relative)
     return files
 
 
-def write_bundle(path: Path, files: dict[str, tuple[bytes, int]]) -> None:
+def compression_for(path: Path) -> str:
+    if path.name.endswith(".tar.xz"):
+        return "xz"
+    if path.name.endswith(".tar.gz"):
+        return "gzip"
+    raise ValueError("Bundle output must end with .tar.xz or .tar.gz")
+
+
+def write_bundle(path: Path, files: dict[str, tuple[bytes, int]], compression: str) -> None:
     with path.open("wb") as output:
-        with gzip.GzipFile(filename="", mode="wb", fileobj=output, compresslevel=9, mtime=0) as compressed:
+        if compression == "xz":
+            stream = lzma.LZMAFile(output, mode="wb", format=lzma.FORMAT_XZ,
+                                   check=lzma.CHECK_CRC64, preset=XZ_PRESET)
+        elif compression == "gzip":
+            stream = gzip.GzipFile(filename="", mode="wb", fileobj=output, compresslevel=9, mtime=0)
+        else:
+            raise ValueError("Unsupported bundle compression")
+        with stream as compressed:
             with tarfile.open(fileobj=compressed, mode="w|", format=tarfile.PAX_FORMAT) as archive:
                 for relative in sorted(files):
                     if relative in OMITTED:
@@ -119,6 +149,7 @@ def package(source: Path, output: Path, manifest: Path) -> dict:
     source = ordinary_path(source, existing=True)
     output = ordinary_path(output, existing=False)
     manifest = ordinary_path(manifest, existing=False)
+    compression = compression_for(output)
     if len({source, output, manifest}) != 3:
         raise ValueError("Source, bundle and manifest paths must be distinct")
     with source.open("rb") as stream:
@@ -134,7 +165,7 @@ def package(source: Path, output: Path, manifest: Path) -> dict:
     os.close(record_fd)
     temporary_bundle, temporary_record = Path(bundle_name), Path(record_name)
     try:
-        write_bundle(temporary_bundle, files)
+        write_bundle(temporary_bundle, files, compression)
         content = temporary_bundle.read_bytes()
         kept = {name: {"sha256": digest(data), "bytes": len(data), "mode": mode}
                 for name, (data, mode) in sorted(files.items()) if name not in OMITTED}
@@ -148,13 +179,16 @@ def package(source: Path, output: Path, manifest: Path) -> dict:
             "sourceBytes": len(payload),
             "sourceFiles": len(files),
             "sourceUncompressedBytes": sum(len(data) for data, _ in files.values()),
-            "bundlePath": "vendor/source.tar.gz",
+            "bundlePath": "vendor/source.tar.xz" if compression == "xz" else "vendor/source.tar.gz",
+            "bundleCompression": compression,
+            "bundleDictionaryBytes": XZ_DICTIONARY_BYTES if compression == "xz" else 32768,
+            "bundleCheck": "crc64" if compression == "xz" else "crc32",
             "bundleSHA256": digest(content),
             "bundleBytes": len(content),
             "bundleFiles": len(kept),
             "bundleUncompressedBytes": sum(item["bytes"] for item in kept.values()),
             "omittedFiles": [{"path": name, "bytes": len(files[name][0]), "sha256": digest(files[name][0]),
-                              "reason": OMISSION_REASON} for name in OMITTED],
+                              "reason": PREVIEW_REASON if name in DOCUMENT_PREVIEWS else UNREFERENCED_REASON} for name in OMITTED],
             "preservedFiles": kept,
         }
         temporary_record.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -178,7 +212,7 @@ def package(source: Path, output: Path, manifest: Path) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, required=True, help="Original local codeload tar.gz; exact SHA256 is required")
-    parser.add_argument("--output", type=Path, required=True, help="New bundle filename, usually vendor/source.tar.gz")
+    parser.add_argument("--output", type=Path, required=True, help="New bundle filename, usually vendor/source.tar.xz; .tar.gz is also accepted")
     parser.add_argument("--manifest", type=Path, required=True, help="New provenance filename, usually upstream/source-bundle.json")
     args = parser.parse_args()
     try:

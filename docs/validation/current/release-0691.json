@@ -1,0 +1,209 @@
+{
+  "version": "0.69.1",
+  "status": "passed",
+  "date": "2026-11-08",
+  "scope": "Further slim OpenMontage source delivery with reviewed preview omissions and XZ compression while preserving every retained path and byte.",
+  "baseline": {
+    "version": "0.69.0",
+    "archive": "rundesk-v0.69.0-source.zip",
+    "sha256": "5ecef64dd0df63d1001ce100df4e4489438adfc4786eb4734ffb75b6bc69e44e"
+  },
+  "sourceFiles": 818,
+  "openmontage": {
+    "profileVersion": "1.1.1",
+    "commit": "c8066452325cb57c8fc1ba8c2a71b6e8842e6b65",
+    "repository": "https://github.com/calesthio/OpenMontage",
+    "originalArchive": {
+      "bytes": 75957235,
+      "sha256": "dff7cd1cdf2cb0522398e00b3f0b75f32336b695a8be34ac8e6b6913055aab25",
+      "files": 2171
+    },
+    "previousBundle": {
+      "bytes": 17846107,
+      "sha256": "3d6ddce72b077bdcaed2ccc30aa61f80ec41869a55228ca1ceb0fe5d81be2ca5",
+      "format": "tar.gz",
+      "files": 2168
+    },
+    "currentBundle": {
+      "path": "recipes/openmontage/vendor/source.tar.xz",
+      "bytes": 10296296,
+      "sha256": "a46a636050a56fd86975d4429a0ea51c7ea4c164349e7e848f3ff6aa974c233d",
+      "files": 2163,
+      "uncompressedBytes": 26569475,
+      "format": "tar.xz",
+      "dictionaryBytes": 33554432,
+      "preset": 8,
+      "check": "CRC64"
+    },
+    "reductionVersusPreviousPercent": 42.305,
+    "reductionVersusOriginalPercent": 86.445,
+    "omittedFiles": [
+      {
+        "path": "assets/signal-from-tomorrow-demo.mp4",
+        "bytes": 20897137,
+        "sha256": "47d46d729e0881d37ea87e49a0d1cfb8277434bb58d66e0d51ac5163fd020dac",
+        "reason": "Demonstration media; no retained UTF-8 source references its basename."
+      },
+      {
+        "path": ".agents/skills/hyperframes-animation/examples/assets/hyperframes-showcase-hypecard.mp4",
+        "bytes": 20792681,
+        "sha256": "59894d108c5634cce855f4b9593d48ee0884955b1607e0f1c1c4e973e2eb101e",
+        "reason": "Demonstration media; no retained UTF-8 source references its basename."
+      },
+      {
+        "path": ".agents/skills/hyperframes-animation/examples/assets/background-tech-data-flow.mp4",
+        "bytes": 16701555,
+        "sha256": "f5d7c64dffda80b3b15bd116e4f2fda2231ae5d7997f2753ba01051aa243ce79",
+        "reason": "Demonstration media; no retained UTF-8 source references its basename."
+      },
+      {
+        "path": ".agents/skills/hyperframes-animation/examples/assets/logo-hyperframes.png",
+        "bytes": 1404783,
+        "sha256": "2eba7073c4d8016e7b74013e7a12cb3142c5c73d71768fc02cab70ae9202aedd",
+        "reason": "Demonstration media; no retained UTF-8 source references its basename."
+      },
+      {
+        "path": "docs/images/backlot/board-live.png",
+        "bytes": 805454,
+        "sha256": "f19526819e4704f93b921a53ccaa2d3acc965606169698404a67fe178ac6657b",
+        "reason": "Prebuilt README presentation screenshot; README image links retain their upstream text. The screenshot producer recreates the output directory and does not read this image."
+      },
+      {
+        "path": "docs/images/backlot/library.png",
+        "bytes": 302519,
+        "sha256": "92e9b057e682e52e06bf1254412564bba9cf139c65f11044a3a54ad14472b65f",
+        "reason": "Prebuilt README presentation screenshot; README image links retain their upstream text. The screenshot producer recreates the output directory and does not read this image."
+      },
+      {
+        "path": "docs/images/backlot/script-gate.png",
+        "bytes": 633093,
+        "sha256": "8b711cd92563b8d40b8f021e504baf61795749f1888cdd39f832cc40256afcbd",
+        "reason": "Prebuilt README presentation screenshot; README image links retain their upstream text. The screenshot producer recreates the output directory and does not read this image."
+      },
+      {
+        "path": "docs/images/backlot/storyboard.png",
+        "bytes": 1044444,
+        "sha256": "e02b4027651b641d52f4d582abafc617ed736691c3efc9f8fd269cf6823dfb21",
+        "reason": "Prebuilt README presentation screenshot; README image links retain their upstream text. The screenshot producer recreates the output directory and does not read this image."
+      }
+    ],
+    "newOmissions": "Four README preview screenshots under docs/images/backlot and one unreferenced example Logo; the three previously omitted demonstration MP4 files remain omitted.",
+    "retained": "All2163 remaining paths, bytes and executable permission semantics match the original pinned source. Runtime code, Skills, templates, audio, textures, fonts, examples and tests remain; duplicate assets keep independent regular-file paths without symlinks/hardlinks.",
+    "documentationBoundary": "Retained upstream README files may still reference intentionally omitted preview PNGs. Their original source is identified in provenance; runtime code does not consume these preview files.",
+    "compression": "XZ uses a32MiB dictionary to compress repeated bytes without deleting duplicated skill/audio paths or changing write semantics. Local gzip-versus-XZ measurements do not establish universal build/render speed.",
+    "extraction": "External Pythonstdlib helper verifies compressed SHA and128MiB limit, complete compressed stream CRC/footer,64MiB XZ decoder memory cap,512MiB unpacked-content and100k-entry limits, a single expected root, ordinary files/directories and safe nonaliased paths before installing a private staged tree with readable0755 directories. gzip compatibility remains.",
+    "dependencies": "No xz system executable or extra APT download is introduced. Python already exists in the common tool base. Existing pip/Remotion/HyperFrames dependencies remain ahead of integration overlays in Docker layers.",
+    "provenance": "upstream/source-bundle.json retains original archive pin, every preserved file hash/size/mode, compression parameters and exact omission reasons; local-only repacker reproduces the shipped bundle."
+  },
+  "checks": [
+    {
+      "command": "go test -p 1 ./...",
+      "result": "passed"
+    },
+    {
+      "command": "go vet ./...",
+      "result": "passed"
+    },
+    {
+      "name": "Python focused regression suites",
+      "result": "passed",
+      "tests": 88,
+      "modules": [
+        "test_base_images",
+        "test_profiles",
+        "test_upstream_profiles",
+        "test_build_helpers",
+        "test_package_release",
+        "test_source_hygiene",
+        "test_package_openmontage_source",
+        "test_extract_openmontage_source"
+      ]
+    },
+    {
+      "name": "Repacker boundary",
+      "result": "passed",
+      "tests": 7,
+      "scope": "Deterministic gzip/XZ, byte/path/exec preservation, documentation-only references, unsafe/archive/hash/occupied-output rejection."
+    },
+    {
+      "name": "Extractor and independent source boundary",
+      "result": "passed",
+      "extractorTests": 7,
+      "upstreamTests": 9,
+      "scope": "Focused tests independently rerun by reviewer; no Docker."
+    },
+    {
+      "name": "Actual original-source parity",
+      "result": "passed",
+      "files": 2163,
+      "scope": "Every retained file compared with the full SHA-verified original archive; only eight declared omissions. All duplicated-content paths remain independent regular files."
+    },
+    {
+      "name": "Actual final helper extraction and runtime patches",
+      "result": "passed",
+      "scope": "Final extractor actually unpacks shipped XZ; all2163 files/modes match provenance, directories readable; existing three native runtime patches apply and patched Python parses. No dependency installation or rendering."
+    },
+    {
+      "name": "Native Linux/amd64 and Windows/amd64 builds",
+      "result": "passed",
+      "CGO_ENABLED": "0"
+    },
+    {
+      "name": "Actual portable package",
+      "result": "passed",
+      "checks": [
+        "packaging rejects missing declared shared sources before creating the destination",
+        "staged native executable, all resource hashes, preserved license notices and source version agree",
+        "all six recipe exports work without examples, source ancestry, Python, Node or Docker on PATH",
+        "generic template export reads packaged external resources",
+        "shared sources materialize with local overrides; missing inputs, traversal, metadata injection and symlinks fail",
+        "all six fully self-contained legacy recipes export identical files and permissions without common",
+        "external Dockerfile edits affect new exports while imported context bytes stay frozen",
+        "missing packaged recipes fail visibly rather than falling back into a checkout",
+        "recipe reads/imports create no tasks, sessions or image builds",
+        "packaged launcher handles spaces without Python; frozen custom recipes survive restart with common unavailable"
+      ],
+      "scope": "Actual packaged native Go demo server outside the checkout; recipe metadata/export/import only. No real Docker, model or worker execution.",
+      "archive": "Complete bundled XZ exports/imports with matching sourceArchive pin; frozen custom context remains stable without source ancestry."
+    },
+    {
+      "name": "OpenAPI compatibility",
+      "result": "passed",
+      "paths": 248,
+      "operations": 299,
+      "onlyChange": "info.version"
+    },
+    {
+      "name": "Local document links, recipe validator, English catalog, script syntax and release source manifest",
+      "result": "passed",
+      "translations": 1800
+    }
+  ],
+  "artifacts": {
+    "rundesk": {
+      "bytes": 26530512,
+      "sha256": "71c170b7f0306da7f7fdb8e83a768beba8468c1eac5fb938969414f3a3563388"
+    },
+    "rundesk.exe": {
+      "bytes": 26819072,
+      "sha256": "820fe3c76208b1489900754f1d24c19f6f6e7f348a932a29b226c6e82e41b23d"
+    }
+  },
+  "upgrade": "Upgrade the host and external recipes together, preserve existing data/configuration, then start a new build from OpenMontage1.1.1. Existing frozen/custom recipes keep their original archive path, Dockerfile and digest; they are not silently rewritten.",
+  "advancedParentCompatibility": "The new extractor refuses an existing /opt/upstreams/openmontage tree rather than merging stale source. An advanced explicit Codex parent that already includes an older OpenMontage tree must be replaced with a clean compatible Codex parent or the default source path; standard tool bases are unaffected.",
+  "preserved": [
+    "0.69 validated legacy archive download resume and source bindings",
+    "0.68 common tool-base reuse and frozen image identities",
+    "0.67.1 video-build/check tmpfs correction",
+    "offline/smoke requirements and unprivileged final user",
+    "Codex daily sessions and Kun maintenance roles",
+    "selected package source groups and historical frozen contexts"
+  ],
+  "limitations": [
+    "No real Docker image build, apt/pip/npm dependency installation, media render, production model call or complete OpenMontage pipeline was executed here.",
+    "The42.3% reduction is a measured compressed source archive size change, not an end-to-end build performance claim.",
+    "Package installation and first-time tool-base preparation can still need network sources. The OpenMontage repository archive itself remains bundled.",
+    "Retained upstream README preview references may be unavailable offline; runtime assets referenced by templates and tools remain present.",
+    "Windows was cross-compiled, not executed natively; no public image was published and no deployed binary/image/data was modified."
+  ]
+}

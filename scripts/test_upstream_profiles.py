@@ -145,7 +145,7 @@ class ActualRecipeTest(unittest.TestCase):
         for name in ("hyperframes", "video-use", "openmontage"):
             with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
                 profile = profiles.load_profile(name)
-                self.assertEqual(profile["version"], "1.1.0" if name == "openmontage" else "1.0.0")
+                self.assertEqual(profile["version"], "1.1.1" if name == "openmontage" else "1.0.0")
                 destination = Path(tmp)
                 lock = profiles.render(profile, profiles.resolve(profile), "0.144.6", "node:22-bookworm-slim", destination)
                 self.assertEqual(lock["selection"]["nativeUpstream"], name)
@@ -160,14 +160,17 @@ class ActualRecipeTest(unittest.TestCase):
                 self.assertEqual(mcp["env_vars"], ["VIDEO_APP_MCP_URL", "VIDEO_APP_TOKEN", "VIDEO_APP_PROJECT_ID"])
                 self.assertNotIn("env", mcp)
                 self.assertEqual(mcp["args"][-1], "serve-mcp")
-                self.assertEqual(hashlib.sha256((destination / "vendor/source.tar.gz").read_bytes()).hexdigest(), lock["upstream"]["sourceSHA256"])
+                self.assertEqual(hashlib.sha256((destination / lock["upstream"]["sourceArchive"]).read_bytes()).hexdigest(), lock["upstream"]["sourceSHA256"])
                 if name == "openmontage":
                     self.assertNotIn("sourceURL", lock["upstream"])
                     self.assertNotIn("RD_GITHUB_ARCHIVE", docker)
                     self.assertNotIn("download-archive.sh", docker)
                     self.assertFalse((destination / "build-downloads.json").exists())
                     self.assertEqual(lock["upstream"]["sourceScope"], "runtime-without-demo-media")
-                    self.assertIn(lock["upstream"]["sourceSHA256"] + "  /opt/rundesk-upstream/source.tar.gz", docker)
+                    self.assertEqual(lock["upstream"]["sourceArchive"], "vendor/source.tar.xz")
+                    self.assertIn("--sha256 " + lock["upstream"]["sourceSHA256"], docker)
+                    self.assertIn("COPY upstream/extract-source.py", docker)
+                    self.assertNotIn("tar -xJ", docker)
                     self.assertLess(docker.index("sh /opt/rundesk-upstream/install-dependencies.sh"), docker.index("COPY upstream/ /opt/rundesk-upstream/"))
                 for row in (destination / "SHA256SUMS").read_text().splitlines():
                     digest, filename = row.split("  ", 1)

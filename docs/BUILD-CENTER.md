@@ -33,7 +33,7 @@ Agent 创建时可显式继承当前默认 Codex 模型服务，也可保留原�
 
 打开左侧“构建中心”，选择已有配方构建，或导入自己的 manifest 与 Docker context ZIP。“查看配方”可预览 Dockerfile 并下载完整构建目录；“下载源设置”维护国际/中国镜像源列表，构建前按配方支持逐项选择或修改。内置六项为 news2douyin、people-search、video-build、HyperFrames、video-use、OpenMontage。构建在后台排队，可以查看日志、取消和重建。已有 setup/应用构建也在全局列表中显示；原有入口继续工作。
 
-0.69.0 的 OpenMontage 1.1.0 将固定运行源码随完整配方提供，省略审阅过的三份演示视频，首次构建也不再下载整个 GitHub 归档。原入口、源选择和最终检查保留；旧导入配方与历史构建不会自动换源或改包。源码包范围及仍需联网的依赖见[OpenMontage 随包源码](BUILD-SOURCES.md#openmontage-bundled-source)。
+0.69.1 的 OpenMontage 1.1.1 将进一步精简的固定运行源码随完整配方提供，省略审阅过的演示媒体、文档预览图及未引用的示例 Logo；首次构建也不再下载整个 GitHub 归档。原入口、源选择和最终检查保留；旧导入配方与历史构建不会自动换源或改包。源码包范围及仍需联网的依赖见[OpenMontage 随包源码](BUILD-SOURCES.md#openmontage-bundled-source)。
 
 本机构建的 Codex 来源与网络配置分别选择：自动复用匹配的受管 Linux 原生包、明确使用受管包、指定兼容的本地基础镜像，或通过 npm 安装。原生包摘要与基础镜像身份随任务冻结，失败不会通过修改版本或降低 smoke 来规避。具体条件见[构建运行时复用](BUILD-RUNTIME.md)。预构建镜像下载不需要选择这些构建参数。
 

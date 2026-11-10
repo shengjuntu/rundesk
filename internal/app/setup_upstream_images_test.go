@@ -28,7 +28,7 @@ func TestIndependentUpstreamRuntimeContextsAndExactImageIdentity(t *testing.T) {
 				reader, _ := file.Open()
 				body, _ := io.ReadAll(reader)
 				reader.Close()
-				if file.Name == "vendor/source.tar.gz" {
+				if file.Name == "vendor/source.tar.gz" || file.Name == "vendor/source.tar.xz" {
 					bundledSHA = fmt.Sprintf("%x", sha256.Sum256(body))
 				}
 				if file.Name == "profile.lock.json" {
@@ -46,7 +46,7 @@ func TestIndependentUpstreamRuntimeContextsAndExactImageIdentity(t *testing.T) {
 			identity, ok := independentRuntimeIdentity(profile)
 			wantVersion := "1.0.0"
 			if profile == "openmontage" {
-				wantVersion = "1.1.0"
+				wantVersion = "1.1.1"
 			}
 			if !ok || identity.Version != wantVersion {
 				t.Fatal(identity, ok)

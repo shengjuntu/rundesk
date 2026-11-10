@@ -42,33 +42,45 @@ RunDesk 0.55.0 将构建配方放在磁盘目录中。用户可以修改 Dockerf
 
 ## OpenMontage 随包源码
 
-0.69.0 的 OpenMontage 配方版本为 **1.1.0**，仍固定上游提交 `c8066452325cb57c8fc1ba8c2a71b6e8842e6b65`。`vendor/source.tar.gz` 随配方提供，Docker 构建校验其固定 SHA-256 后直接解包，不再请求 GitHub 完整仓库归档。来源、原完整归档摘要、打包规则及省略项保存在 `upstream/source-bundle.json`；`sourceScope` 明确为 `runtime-without-demo-media`，并非将精简包标成完整原归档。
+0.69.1 的 OpenMontage 配方版本为 **1.1.1**，仍固定上游提交 `c8066452325cb57c8fc1ba8c2a71b6e8842e6b65`。`vendor/source.tar.xz` 随配方提供，构建先核对固定 SHA-256，再使用已有 Python 3 标准库解包，不再请求 GitHub 完整仓库归档，也不需要新增 `xz` 命令行工具或对应 APT 下载。来源、原完整归档摘要、压缩方式及省略项保存在 `upstream/source-bundle.json`；`sourceScope` 继续明确为 `runtime-without-demo-media`。
 
 | 审阅对象 | 压缩大小 | 普通文件数 |
 | --- | ---: | ---: |
 | 原完整归档 | 75,957,235 字节（约 76.0 MB） | 2,171 |
-| 随配方运行源码归档 | 17,846,107 字节（约 17.8 MB） | 2,168 |
+| 0.69.0 随包 gzip 归档 | 17,846,107 字节（约 17.8 MB） | 2,168 |
+| 0.69.1 随包 XZ 归档 | 10,296,296 字节（约 10.3 MB） | 2,163 |
 
-压缩归档体积减少约 **76.5%**。仅省略三个未被其余文本引用的演示视频：
+本版比 0.69.0 的归档再减少约 **42.3%**，比原完整归档减少约 **86.4%**。这同时来自更明确的预览素材省略范围和 XZ 压缩；32 MiB 字典可利用跨文件重复字节，重复 Skills、音效与模板仍各自保留原路径，未改为硬链接或符号链接。
+
+省略范围精确到以下八个文件：
 
 - `assets/signal-from-tomorrow-demo.mp4`
 - `.agents/skills/hyperframes-animation/examples/assets/hyperframes-showcase-hypecard.mp4`
 - `.agents/skills/hyperframes-animation/examples/assets/background-tech-data-flow.mp4`
+- `docs/images/backlot/board-live.png`
+- `docs/images/backlot/library.png`
+- `docs/images/backlot/script-gate.png`
+- `docs/images/backlot/storyboard.png`
+- `.agents/skills/hyperframes-animation/examples/assets/logo-hyperframes.png`
 
-其余运行代码、原生 Skills、指南、pipelines、模板、字体、图标、测试与媒体文件保持原字节，许可文件随源码保留。源码发布包因此增加约 17.8 MB 的归档；部署后，首次构建也无需从 GitHub 单独获取这份 OpenMontage 源码。此度量是固定源码归档的字节比较，不是 Docker 构建耗时、成品镜像大小或业务渲染性能的测试。
+前三项为上版已省略的演示视频，四张 Backlot 图片用于文档展示，最后一项是未被其余源码引用的示例 Logo。其余 **2,163 个普通文件**的内容、路径和可执行权限语义保持一致，包含代码、Skills、指南、pipelines、纹理、音效、字体、图标和测试；许可文件保留。原文档字节不改写，因此其中仍可能引用已省略的预览图；这些预览可从记录的原归档获取，不属于运行依赖。
+
+当前发布包只携带这一份约 10.3 MB 的运行源码归档。首次构建也无需从 GitHub 单独获取它。上述度量是归档的字节比较，不是 Docker 构建耗时、成品镜像大小或业务渲染性能的测试。
+
+解包入口为配方内的 [`upstream/extract-source.py`](../recipes/openmontage/upstream/extract-source.py)。它在解码前校验固定压缩文件摘要和 128 MiB 文件上限，限制 XZ 解码内存为 64 MiB，并核对流结束及校验信息；解压内容上限为 512 MiB、100,000 项。只接受规范的单一源码根目录和普通文件／目录，拒绝链接、特殊文件、重复／大小写别名及路径穿越。解包使用私有暂存目录，完成后才形成新的目标源码目录；已有目标不会被混合覆盖。
 
 维护者可使用[重打包工具](../scripts/package_openmontage_source.py)复现随包归档。该工具不联网，只接受与原固定 SHA-256 相符的完整上游归档，并要求新的输出路径；不会覆盖已有配方：
 
 ```sh
 python3 scripts/package_openmontage_source.py \
   --source /path/to/original.tar.gz \
-  --output /new/vendor/source.tar.gz \
+  --output /new/vendor/source.tar.xz \
   --manifest /new/upstream/source-bundle.json
 ```
 
-Dockerfile 先复制、校验并解包源码，再单独复制依赖安装脚本及 npm 锁文件，安装 Python、Remotion 与 HyperFrames 依赖；最后复制并应用 Video App 接入 overlays 和来源记录。修改 overlays、Skills 或来源说明不会仅因此重做业务依赖安装层；修改源码、依赖安装脚本或对应锁文件仍会影响缓存。实际命中取决于 Docker 缓存是否保留，不代表所有依赖都已在离线包中。
+Dockerfile 先复制、校验并解包源码，再单独复制依赖安装脚本及 npm 锁文件，安装 Python、Remotion 与 HyperFrames 依赖；最后复制并应用 Video App 接入 overlays 和来源记录。修改 overlays、Skills 或来源说明不会仅因此重做业务依赖安装层；修改源码、解包／依赖安装脚本或对应锁文件仍会影响缓存。实际命中取决于 Docker 缓存是否保留，不代表所有依赖都已在离线包中。
 
-导出、`prepare` 和 `pack` 都携带同一归档，普通独立 Docker 构建也可读取它。缺失或摘要不符应恢复正确配方文件，不静默回退下载另一个源。Python/npm、APT、基础镜像及模型服务仍可能需要网络；源列表继续配置实际使用的下载通道。
+导出、`prepare` 和 `pack` 都携带同一归档和解包脚本，普通独立 Docker 构建也可读取它。部署时应一并更新完整 `recipes/`。旧的 gzip 冻结配方仍保持原文件、摘要和指令，不会被改名或静默替换。缺失或摘要不符应恢复正确配方输入，不回退到不同的源码。Python/npm、APT、基础镜像及模型服务仍可能需要网络；源列表继续配置实际使用的下载通道。
 
 ## 仍需联网的归档
 
@@ -103,7 +115,7 @@ Dockerfile 先复制、校验并解包源码，再单独复制依赖安装脚本
 | Hugging Face | `endpoint` | `RD_HF_ENDPOINT` |
 | GitHub | `archiveBase`、`rawBase`、`releaseBase`、`gitBase`、`apiBase` | 对应 `RD_GITHUB_ARCHIVE_BASE`、`RD_GITHUB_RAW_BASE`、`RD_GITHUB_RELEASE_BASE`、`RD_GITHUB_GIT_BASE`、`RD_GITHUB_API_BASE` |
 
-六套默认配方使用 Node/Debian 基础镜像，提供基础镜像、Debian APT、npm 和 pip 参数。内置 APT 应用脚本针对 Debian；将基础镜像换成其他发行版时，不会盲目写入 Debian 仓库配置。OpenMontage 1.1.0 的运行源码已随配方提供，不再使用 GitHub 归档参数；旧版或自定义配方若仍声明下载，可继续使用它实际支持的参数。conda、YUM/DNF、Hugging Face 与其他 GitHub 参数由使用它们的配方声明并引用。
+六套默认配方使用 Node/Debian 基础镜像，提供基础镜像、Debian APT、npm 和 pip 参数。内置 APT 应用脚本针对 Debian；将基础镜像换成其他发行版时，不会盲目写入 Debian 仓库配置。OpenMontage 1.1.1 的运行源码已随配方提供，不再使用 GitHub 归档参数；旧版或自定义配方若仍声明下载，可继续使用它实际支持的参数。conda、YUM/DNF、Hugging Face 与其他 GitHub 参数由使用它们的配方声明并引用。
 
 自定义配方仍是普通 Docker 上下文。Dockerfile 可以直接使用标准 ARG、自己的配置文件或脚本。未声明标准参数的自定义配方保留原始行为；可以下载完整 ZIP，修改 Dockerfile 后重新导入。界面目前提供内容预览和导出，不是完整文件编辑器。
 
