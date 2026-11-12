@@ -1,7 +1,13 @@
 "use strict";
 function applicationBindings(a){return [{appId:a.appId,name:a.name,instanceId:a.instanceId,workspaceId:a.workspaceId,presetId:""},...(a.runtimePresets||[]).map(p=>({appId:a.appId,name:a.name+" · "+p.name,instanceId:p.instanceId,workspaceId:p.workspaceId,presetId:p.id,presetName:p.name,enabled:p.enabled}))];}
 function applicationForInstance(id){return state.applications.find(a=>applicationBindings(a).some(b=>b.instanceId===id));}
-function currentApplication(){return applicationForInstance(instance()?.id);}
+function currentApplication(){
+ if(state.view==="application"){
+  const match=/^#application\/([^/?]+)/.exec(location.hash);
+  if(match)return state.applications.find(a=>a.appId===decodeURIComponent(match[1]));
+ }
+ return applicationForInstance(instance()?.id);
+}
 function currentApplicationBinding(){const a=currentApplication();return a?applicationBindings(a).find(b=>b.instanceId===instance()?.id&&(!b.presetId||b.workspaceId===ws()?.id)):null;}
 function applicationBindingRoute(a){return "#application/"+encodeURIComponent(a.appId)+(a.presetId?"/preset/"+encodeURIComponent(a.presetId):"");}
 function contextTitle(){return instance()?.name||rdText("Agent");}
@@ -10,25 +16,25 @@ function draftKey(){return instance()?.id+":"+ws()?.id+":"+(state.session?.id||"
 function stashProductDraft(){if(!state.draftContext||state.view!=="conversation")return;state.drafts.set(state.draftContext,{text:$("#prompt").value,uploads:[...state.uploads],skills:[...state.chosenSkills]});}
 function restoreProductDraft(){state.draftContext=draftKey();const d=state.drafts.get(state.draftContext);if(d){$("#prompt").value=d.text;state.uploads=[...d.uploads];state.chosenSkills=[...d.skills];renderAttachments();}}
 function updateProductNavigation(){
- const view=state.view,conversation=view==="conversation",apps=["applications","application","users"].includes(view);
- for(const [id,on] of [["nav-instances",["instances","instance"].includes(view)],["nav-users",view==="users"],["nav-build-center",view==="build-center"],["nav-assistant",conversation],["nav-applications",["applications","application"].includes(view)],["nav-tasks",view==="tasks"]]){
+ const view=state.view,conversation=view==="conversation";
+ for(const [id,on] of [["nav-users",view==="users"],["nav-build-center",view==="build-center"],["nav-assistant",conversation],["nav-applications",["applications","application"].includes(view)],["nav-tasks",view==="tasks"]]){
   const node=$("#"+id);if(!node)continue;node.classList.toggle("selected",on);if(on)node.setAttribute("aria-current","page");else node.removeAttribute("aria-current");
  }
  $("#application-count").textContent=state.applications.length||"";
- $("#page-label").textContent=({instances:rdText("Agents"),"build-center":rdText("构建中心"),users:rdText("用户与授权"),tasks:rdText("任务"),applications:rdText("应用接入")})[view]||(conversation?rdText("会话"):contextTitle());
+ $("#page-label").textContent=({"build-center":rdText("构建中心"),users:rdText("用户与授权"),tasks:rdText("任务"),applications:rdText("应用接入")})[view]||(conversation?rdText("会话"):contextTitle());
  $("#history-label").textContent=contextTitle();
- $("#settings-button").textContent=rdText("Agent 设置");$("#settings-button").classList.toggle("hidden",!["conversation","instance"].includes(view)||!ws()||!!state.instanceResolving);
+ $("#settings-button").textContent=rdText("会话设置");$("#settings-button").classList.toggle("hidden",!conversation||!ws()||!instance());
  $("#new-session").classList.toggle("hidden",!conversation);
- $("#back-applications").classList.toggle("hidden",!["instance","application"].includes(view));
- $("#back-applications").textContent=apps?rdText("应用 /"):rdText("Agents /");
- $("#back-applications").setAttribute("aria-label",apps?rdText("返回应用"):rdText("返回 Agent"));
+ $("#back-applications").classList.toggle("hidden",view!=="application");
+ $("#back-applications").textContent=rdText("应用 /");
+ $("#back-applications").setAttribute("aria-label",rdText("返回应用"));
  const fixed=window.RunDeskInstances?.binding(instance()?.id)?.presetId;
  $("#workspace").disabled=!!fixed;$("#add-workspace").disabled=false;
  for(const q of ["#trace-button","#debug-button","#workspace-name",".breadcrumb-divider",".session-filters","#session-list","#sidebar-toggle"])$(q)?.classList.toggle("hidden",!conversation);
 }
 function setProductPage(view){
- state.view=view;document.body.dataset.view=view;if(!["instances","instance"].includes(view))state.instanceResolving=false;
- for(const [selector,shown] of [["#tasks-page",view==="tasks"],[".main-row",view==="conversation"],["#instances-page",["instances","instance"].includes(view)],["#applications-page",["applications","application","users"].includes(view)],["#build-center-page",view==="build-center"]])$(selector)?.classList.toggle("hidden",!shown);
+ state.view=view;document.body.dataset.view=view;
+ for(const [selector,shown] of [["#tasks-page",view==="tasks"],[".main-row",view==="conversation"],["#applications-page",["applications","application","users"].includes(view)],["#build-center-page",view==="build-center"]])$(selector)?.classList.toggle("hidden",!shown);
  updateProductNavigation();closeConversationSidebar();window.RunDeskLayout?.setView(view);
 }
 async function refreshApplicationCatalog(){const selection=state.selection;const [a,i,s]=await Promise.all([api("/applications"),api("/instances"),api("/sessions")]);if(selection!==state.selection)return;const id=instance()?.id||"default";state.applications=a;state.instances=i;state.sessions=s;renderInstanceOptions(id);}
@@ -39,11 +45,25 @@ function applicationLink(a){if(!a.entryUrl)return null;try{const u=new URL(a.ent
 function renderApplications(){
  const grid=el("div",{class:"application-grid"});for(const a of state.applications)grid.append(el("article",{class:"application-card","data-app-id":a.appId},el("div",{class:"app-card-top"},applicationMark(a.name),el("span",{class:"app-state"+(a.activeCount?" busy":"")},a.activeCount?rdFormat("${0} 项运行中",a.activeCount):a.sessionCount?rdText("任务已同步"):rdText("已登记"))),el("h2",{},a.name),el("p",{class:"app-description"},a.description||rdText("在专用应用中操作，在这里查看任务与管理能力。")),el("div",{class:"app-metadata"},rdFormat("${0} 条任务记录",a.sessionCount),el("span",{},a.lastActivity?new Date(a.lastActivity).toLocaleDateString():rdText("等待首次任务"))),el("div",{class:"app-card-actions"},button(rdText("查看任务"),()=>showApplication(a.appId),"primary"),button(rdText("设置"),()=>showApplication(a.appId,"","settings"),"quiet"),applicationLink(a))));
  if(!state.applications.length)grid.append(el("div",{class:"application-empty"},applicationMark("A"),el("h2",{},rdText("把专用应用接进来")),el("p",{},rdText("新闻研究、视频制作等应用接入后，会在这里集中展示。通用助手可直接使用。")),el("p",{class:"help"},rdText("请在新闻研究或视频应用中连接 RunDesk，应用会自动出现在这里。"))));
- $("#applications-page").replaceChildren(el("div",{class:"page-intro"},el("div",{},el("p",{class:"eyebrow"},"YOUR APPLICATIONS"),el("h1",{},rdText("应用接入")),el("p",{},rdText("应用连接已配置的实例，提交任务并获取制品。模型和能力在实例中管理。"))),el("div",{class:"actions"},button(rdText("刷新"),showApplications,"quiet"))),grid,applicationAdvanced());updateProductNavigation();
+ $("#applications-page").replaceChildren(el("div",{class:"page-intro"},el("div",{},el("p",{class:"eyebrow"},"YOUR APPLICATIONS"),el("h1",{},rdText("应用接入")),el("p",{},rdText("应用通过已绑定的制作环境提交任务和获取制品。"))),el("div",{class:"actions"},button(rdText("刷新"),showApplications,"quiet"))),grid,applicationAdvanced());updateProductNavigation();
+}
+// Old records can lack an application source. Attribute them only when a
+// dedicated environment has a single owner; the native default is shared.
+function applicationHistory(a,presetId){
+ const bindings=applicationBindings(a);
+ return state.sessions.filter(s=>{
+  if(s.source?.appId){
+   return s.source.appId===a.appId && (!presetId || (s.source.presetId||"__default__")===presetId);
+  }
+  if(s.instanceId==="default")return false;
+  const owners=state.applications.filter(app=>applicationBindings(app).some(b=>b.instanceId===s.instanceId));
+  if(owners.length!==1||owners[0].appId!==a.appId)return false;
+  return bindings.some(b=>b.instanceId===s.instanceId&&(!presetId||(b.presetId||"__default__")===presetId));
+ });
 }
 function taskRow(s){const b=button("",()=>selectSession(s.id),"application-task");b.append(el("div",{},el("strong",{},s.title),el("small",{},(state.workspaces.find(w=>w.id===s.workspaceId)?.name||rdText("项目"))+" · "+new Date(s.updated||s.created).toLocaleString())),el("span",{class:"badge"},(s.archived?rdText("已归档 · "):"")+(statusLabel[s.status]||s.status)));return b;}
 function applicationAdvanced(){
- const assigned=new Set(state.applications.flatMap(a=>applicationBindings(a).map(b=>b.instanceId))),orphan=state.instances.filter(i=>i.id!=="default"&&!assigned.has(i.id)),legacy=state.sessions.filter(s=>s.instanceId==="default"&&s.source?.kind==="application");
+ const assigned=new Set(state.applications.flatMap(a=>applicationBindings(a).map(b=>b.instanceId))),orphan=state.instances.filter(i=>i.id!=="default"&&i.agentRuntime?.kind!=="kun"&&!assigned.has(i.id)&&state.sessions.some(s=>s.instanceId===i.id&&s.source?.kind==="application")),legacy=state.sessions.filter(s=>s.instanceId==="default"&&s.source?.kind==="application");
  const d=el("details",{id:"application-advanced",class:"advanced-applications"},el("summary",{},rdText("接入说明与历史配置")),el("p",{class:"help"},rdText("旧版应用提交带来源的首条任务后自动归类。没有任务或归属有冲突的配置保留在这里，历史数据不会移动。")),el("details",{class:"integration-notes"},el("summary",{},rdText("开发者接入")),el("p",{},rdText("应用调用 POST /api/v1/applications/{appId}/connect 自动注册并获得绑定。管理员在这里优化配置，无须手动创建实例。")),el("a",{href:"/api/v1/openapi.json",target:"_blank",rel:"noopener"},rdText("查看 API 定义"))));
  for(const i of orphan)d.append(el("div",{class:"legacy-application"},el("div",{},el("strong",{},i.name),el("p",{class:"help"},rdFormat("${0} 条历史对话 · 尚未归类",state.sessions.filter(s=>s.instanceId===i.id).length))),button(rdText("查看"),()=>showLegacyApplication(i.id)),button(rdText("登记为应用"),()=>registerApplicationDialog(i.id))));
  if(legacy.length)d.append(el("h3",{},rdText("默认配置中的历史应用任务")),el("p",{class:"help"},rdText("这些任务仍沿用通用助手配置。新应用应使用专用配置。")),...legacy.map(taskRow));
@@ -60,7 +80,7 @@ async function renderApplicationProjects(a,target){
  }catch(error){target.append(el("p",{class:"error",role:"status"},error.message));}
 }
 async function showApplication(id,presetId="",section="tasks"){
- const a=state.applications.find(a=>a.appId===id);if(!a)throw Error(rdText("应用不存在，请刷新列表"));const bindings=applicationBindings(a);if(presetId&&presetId!=="__default__"&&!bindings.some(b=>b.presetId===presetId))throw Error(rdText("制作环境预设不存在，请刷新列表"));const binding=bindings.find(b=>b.presetId===presetId)||bindings[0],ids=new Set(bindings.map(b=>b.instanceId));resetConversation();const selection=state.selection;renderInstanceOptions(binding.instanceId);const ss=state.sessions.filter(s=>ids.has(s.instanceId)&&(!presetId||s.instanceId===binding.instanceId));const wid=binding.workspaceId||ss[0]?.workspaceId||state.workspaces[0]?.id;if(wid)$("#workspace").value=wid;setProductPage("application");updateWorkspaceLabel();history.replaceState(null,"",applicationBindingRoute(binding)+(section==="settings"?"/settings":""));
+ const a=state.applications.find(a=>a.appId===id);if(!a)throw Error(rdText("应用不存在，请刷新列表"));const bindings=applicationBindings(a);if(presetId&&presetId!=="__default__"&&!bindings.some(b=>b.presetId===presetId))throw Error(rdText("制作环境预设不存在，请刷新列表"));const binding=bindings.find(b=>b.presetId===presetId)||bindings[0];resetConversation();const selection=state.selection;renderInstanceOptions(binding.instanceId);const ss=applicationHistory(a,presetId);const wid=binding.workspaceId||ss[0]?.workspaceId||state.workspaces[0]?.id;if(wid)$("#workspace").value=wid;setProductPage("application");updateWorkspaceLabel();history.replaceState(null,"",applicationBindingRoute(binding)+(section==="settings"?"/settings":""));
  $("#applications-page").replaceChildren(el("div",{class:"page-intro application-heading"},el("div",{},applicationMark(a.name),el("h1",{},a.name),el("p",{},a.description||rdText("查看任务和配置应用环境"))),el("div",{class:"actions"},applicationLink(a))),el("section",{class:"application-image-summary",id:"application-image-summary","aria-label":rdText("应用镜像")},rdText("正在读取镜像信息…")),applicationConnection({...a,...binding}),el("div",{class:"task-section-heading"},el("h2",{},rdText("任务记录")),el("span",{class:"muted"},rdFormat("${0} 条",ss.length))),el("div",{class:"application-tasks"},...(ss.length?ss.map(taskRow):[el("div",{class:"application-empty compact"},el("h3",{},rdText("还没有任务")),el("p",{},rdText("从应用发起业务操作后，运行记录会出现在这里。")))])));
  const summary=$("#application-image-summary");if(summary){if(binding.presetId)summary.replaceChildren(el("strong",{},binding.presetName),el("p",{},state.instances.find(i=>i.id===binding.instanceId)?.execution?.image||rdText("镜像待配置")));else await RunDeskImages.overview(a,summary);}
  if(selection!==state.selection)return;const page=$("#applications-page"),connection=page.querySelector('.application-connection');
@@ -73,7 +93,7 @@ async function showApplication(id,presetId="",section="tasks"){
  const tabs=el("nav",{class:"application-section-tabs","aria-label":rdText("应用页面")},button(rdText("任务记录"),()=>showApplication(a.appId,presetId),"application-section-tab"+(section==="settings"?"":" selected")),button(rdText("应用设置"),()=>showApplication(a.appId,presetId,"settings"),"application-section-tab"+(section==="settings"?" selected":"")));
  page.querySelector(".application-heading").after(tabs,settingsPanel,tasksPanel);
 }
-async function showLegacyApplication(iid,wid){return RunDeskInstances.show(iid,wid);}
+async function showLegacyApplication(iid,wid){return RunDeskInstances.legacy(iid,wid);}
 async function registerApplicationDialog(iid,existing=null){
  const fresh=!iid,i=state.instances.find(x=>x.id===iid)||{name:"",description:""},d=el("dialog",{class:"application-register"});const id=el("input",{id:"register-app-id",value:existing?.appId||"",placeholder:rdText("例如 news2douyin"),required:true,pattern:"[A-Za-z0-9][A-Za-z0-9_.:-]{0,79}",disabled:!!existing});const name=el("input",{id:"register-app-name",value:existing?.name||i.name,required:true,maxlength:160}),description=el("textarea",{rows:2,maxlength:4096},existing?.description||i.description),url=el("input",{type:"url",value:existing?.entryUrl||"",placeholder:"http://127.0.0.1:18080"}),work=el("select",{},...state.workspaces.map(w=>el("option",{value:w.id},w.name)));work.value=existing?.workspaceId||ws()?.id;let createdWorkspaceID="";if(fresh){work.prepend(el("option",{value:"__new__"},rdText("新建独立项目（推荐）")));work.value="__new__";}
  const runtime=el("select",{id:"register-runtime"},el("option",{value:"docker"},rdText("Docker 应用环境")),el("option",{value:"local"},rdText("本机 Codex（兼容已有应用）"))),image=el("input",{id:"register-image",placeholder:rdText("例如 rundesk-news:1.0")}),runtimeFields=el("div",{},el("label",{},rdText("运行方式"),runtime),el("label",{},rdText("应用镜像"),image));image.required=fresh;runtime.onchange=()=>{image.required=fresh&&runtime.value==="docker";image.disabled=runtime.value!=="docker";};
@@ -84,16 +104,16 @@ async function renderAssistantSettings(target){
  const requested=instance(),work=ws(),selection=state.selection;
  const resolved=await RunDeskEnvironments.effective(requested,work);if(!target.isConnected||selection!==state.selection||instance()?.id!==requested.id||ws()?.id!==work.id)return;
  const current=resolved.instance,cp=configPath(work.id,current.id),model=el("input",{id:"assistant-model",type:"text",value:current.defaultModel,list:"models",placeholder:rdText("留空沿用 Codex 配置")}),permissions=permissionEditor(current),account=el("pre",{id:"assistant-account"},rdText("点击读取登录状态，检查这个助手或应用使用的账户。")),quote=v=>"'"+v.replaceAll("'","'\\''")+"'",ps=v=>"'"+v.replaceAll("'","''")+"'";
- target.replaceChildren(el("section",{class:"card model-settings"},el("h3",{},rdText("默认模型")),el("p",{},rdText("用于新建对话或应用任务。已有会话保留原来选择的模型。")),el("label",{for:"assistant-model"},rdText("模型名称")),model,button(rdText("读取可用模型"),async()=>{const raw=await api(cp("/models"));$("#models").replaceChildren(...(raw.data||[]).map(m=>el("option",{value:m.id||m.model},m.displayName||m.id||m.model)));toast(rdText("模型列表已更新"));},"quiet"),el("details",{class:"advanced-permissions"},el("summary",{},rdText("高级运行权限")),permissions.node),button(rdText("保存配置"),async()=>{await api("/instances/"+current.id,{method:"PATCH",body:{defaultModel:model.value,permissions:permissions.value(),revision:current.revision}});const selected=instance()?.id;state.instances=await api("/instances");renderInstanceOptions(selected);updateWorkspaceLabel();renderStatus();toast(rdText("已保存：默认模型用于新会话，权限在下一轮生效"));await renderSettings();},"primary")),el("section",{class:"card authentication-settings"},el("h3",{},rdText("账户与认证")),el("p",{},resolved.environment?rdText("当前项目环境使用独立认证，下方提供容器登录命令。"):rdText("首次接入需在运行 RunDesk 的电脑上完成 Codex 登录。")),el("div",{class:"actions"},button(rdText("读取登录状态"),async()=>account.textContent=json(await api(cp("/account")))),button(rdText("重新加载"),async()=>{const r=await api("/instances/"+current.id+"/reload",{method:"POST"});toast(rdFormat("已重载 ${0} 个空闲连接，保留 ${1} 个运行中连接",r.closedConnections,r.busyConnections));account.textContent=json(await api(cp("/account")));},"quiet")),account,RunDeskEnvironments.loginDetails(current,resolved.environment)));
- if(window.RunDeskCodexProvider&&current.agentRuntime?.kind!=="kun")target.prepend(RunDeskCodexProvider.settings({instanceId:current.id,workspaceId:work.id}));
+ target.replaceChildren(el("section",{class:"card model-settings"},el("h3",{},rdText("默认模型")),el("p",{},rdText("此环境的默认模型和权限适用于所有关联工作区。已有会话保留原来选择的模型。")),el("label",{for:"assistant-model"},rdText("模型名称")),model,button(rdText("读取可用模型"),async()=>{const raw=await api(cp("/models"));$("#models").replaceChildren(...(raw.data||[]).map(m=>el("option",{value:m.id||m.model},m.displayName||m.id||m.model)));toast(rdText("模型列表已更新"));},"quiet"),el("details",{class:"advanced-permissions"},el("summary",{},rdText("高级运行权限")),permissions.node),button(rdText("保存配置"),async()=>{await api("/instances/"+current.id,{method:"PATCH",body:{defaultModel:model.value,permissions:permissions.value(),revision:current.revision}});const selected=instance()?.id;state.instances=await api("/instances");renderInstanceOptions(selected);updateWorkspaceLabel();renderStatus();toast(rdText("已保存：默认模型用于新会话，权限在下一轮生效"));await renderSettings();},"primary")),el("section",{class:"card authentication-settings"},el("h3",{},rdText("账户与认证")),el("p",{},resolved.environment?rdText("当前项目环境使用独立认证，下方提供容器登录命令。"):rdText("首次接入需在运行 RunDesk 的电脑上完成 Codex 登录。")),el("div",{class:"actions"},button(rdText("读取登录状态"),async()=>account.textContent=json(await api(cp("/account")))),button(rdText("重新加载"),async()=>{const r=await api("/instances/"+current.id+"/reload",{method:"POST"});toast(rdFormat("已重载 ${0} 个空闲连接，保留 ${1} 个运行中连接",r.closedConnections,r.busyConnections));account.textContent=json(await api(cp("/account")));},"quiet")),account,RunDeskEnvironments.loginDetails(current,resolved.environment)));
+ if(window.RunDeskCodexProvider&&(current.agentRuntime?.kind||"codex")==="codex")target.prepend(RunDeskCodexProvider.settings({instanceId:current.id,workspaceId:work.id}));
 }
 function contextRoute(){
  if(state.session&&state.view==="conversation")return "#session/"+encodeURIComponent(state.session.id);
- if(["instances","instance"].includes(state.view)||location.hash.startsWith("#instance/"))return location.hash||"#instances";
+ if(state.view==="build-center")return location.hash || "#build-center/workbench";
  if(state.view==="applications")return "#applications";
  if(state.view==="application"&&currentApplicationBinding())return location.hash.startsWith("#application/")?location.hash:applicationBindingRoute(currentApplicationBinding());
  if(state.view==="conversation")return ws()?"#workspace/"+encodeURIComponent(ws().id):"#conversations";
- return window.RunDeskInstances?RunDeskInstances.route(instance()?.id||"default",ws()?.id):"#assistant";
+ return "#conversations";
 }
 async function showCapabilityPage(tab){
  return openSettings(tab);
@@ -105,14 +125,13 @@ async function restoreProductRoute(){
  const [route,query=""]=location.hash.slice(1).split("?");const params=new URLSearchParams(query),parts=route.split("/");let id;try{id=decodeURIComponent(parts[1]||"");}catch{return false;}
  if(parts[0]==="conversations"){await RunDeskConversations.open();return true;}
  if(parts[0]==="workspace"){await RunDeskConversations.open(id,{fresh:params.get("new")==="1"});return true;}
- if(parts[0]==="instances"){await RunDeskInstances.open();return true;}
+ if(parts[0]==="instances"){await RunDeskBuildCenter.open("workbench");return true;}
  if(parts[0]==="instance"){
-  const wid=params.get("workspace")||undefined;
-  if(parts[2]==="conversation")await RunDeskInstances.conversation(id,wid);
-  else {const context=await RunDeskInstances.show(id,wid);if(!context?.workspace)return true;
-   if(parts[2]==="settings"&&["plugins","skills","mcp"].includes(parts[3]))await showCapabilityPage(parts[3]);
-   if(parts[2]==="environments")await RunDeskEnvironments.open({...RunDeskInstances.binding(id),instanceId:id,name:instance().name,workspaceId:ws().id,instanceContext:true});
-  }return true;
+  await RunDeskInstances.legacy(id,params.get("workspace")||undefined,parts[2],parts[3]);return true;
+ }
+ if(parts[0]==="build-center"&&parts[1]==="environment"){
+  const iid=decodeURIComponent(parts[2]||"");
+  await RunDeskBuildCenter.openEnvironment(iid,params.get("workspace")||undefined,params.get("tab")||"instances");return true;
  }
  if(parts[0]==="assistant"&&!parts[1]){await enterAssistant();return true;}
  if(parts[0]==="build-center"){let selected="";try{selected=decodeURIComponent(parts[2]||"");}catch{return false;}await RunDeskBuildCenter.open(parts[1]||"workbench",selected,parts[3]==="test");return true;}
@@ -120,15 +139,13 @@ async function restoreProductRoute(){
  if(parts[0]==="trace"){const sid=sessionStorage.getItem("rundesk-trace-session")||localStorage.getItem("rundesk-session");if(state.sessions.some(s=>s.id===sid)){await selectSession(sid);window.RunDeskTraceUI?.open();return true;}}
  if(parts[0]==="assistant"&&parts[1]==="settings"&&["plugins","skills","mcp"].includes(parts[2])){await enterAssistant();await showCapabilityPage(parts[2]);return true;}
  if(parts[0]==="users"){await RunDeskUsers.open();return true;}if(parts[0]==="applications"){await showApplications();return true;}
- if(parts[0]==="application"&&state.applications.some(a=>a.appId===id)){let presetId="";if(parts[2]==="preset"){try{presetId=decodeURIComponent(parts[3]||"");}catch{return false;}}const tail=parts[2]==="preset"?parts.slice(4):parts.slice(2);await showApplication(id,presetId,tail[0]==="settings"?"settings":"tasks");const binding={...state.applications.find(a=>a.appId===id),...currentApplicationBinding()};if(tail[0]==="builds"){await RunDeskBuilds.open(state.applications.find(a=>a.appId===id));return true;}if(tail[0]==="images"){await RunDeskImages.open(state.applications.find(a=>a.appId===id));return true;}if(tail[0]==="environments"){await RunDeskEnvironments.open({...binding,returnToSettings:params.get("from")==="settings"});return true;}if(tail[0]==="settings"&&["plugins","skills","mcp"].includes(tail[1]))await showCapabilityPage(tail[1]);return true;}
- if(parts[0]==="legacy"&&state.instances.some(i=>i.id===id)){if(id==="default")await enterAssistant();else await showLegacyApplication(id);if(parts[2]==="settings"&&["plugins","skills","mcp"].includes(parts[3]))await showCapabilityPage(parts[3]);return true;}
+ if(parts[0]==="application"&&state.applications.some(a=>a.appId===id)){let presetId="";if(parts[2]==="preset"){try{presetId=decodeURIComponent(parts[3]||"");}catch{return false;}}const tail=parts[2]==="preset"?parts.slice(4):parts.slice(2);await showApplication(id,presetId,tail[0]==="settings"?"settings":"tasks");const binding={...state.applications.find(a=>a.appId===id),...currentApplicationBinding()};if(["builds","images"].includes(tail[0])){await RunDeskBuildCenter.open(tail[0]);return true;}if(tail[0]==="environments"){await RunDeskEnvironments.open({...binding,returnToSettings:params.get("from")==="settings"});return true;}if(tail[0]==="settings"&&["plugins","skills","mcp"].includes(tail[1]))await showCapabilityPage(tail[1]);return true;}
+ if(parts[0]==="legacy"&&state.instances.some(i=>i.id===id)){await RunDeskInstances.legacy(id,params.get("workspace")||undefined,parts[2],parts[3]);return true;}
  if(parts[0]==="session"&&state.sessions.some(s=>s.id===id)){await selectSession(id);return true;}return false;
 }
-$("#nav-instances").onclick=()=>safe(()=>RunDeskInstances.open());
 $("#nav-assistant").onclick=()=>safe(()=>RunDeskConversations.open());
 $("#nav-applications").onclick=()=>safe(showApplications);
-$("#back-applications").onclick=()=>safe(()=>state.view==="application"?showApplications():RunDeskInstances.open());
-$("#assistant-settings").onclick=()=>safe(()=>openSettings());
+$("#back-applications").onclick=()=>safe(showApplications);
 window.addEventListener("hashchange",()=>{if(state.booted)safe(restoreProductRoute);});
 
 async function chooseApplicationCapabilities(a){
@@ -150,7 +167,20 @@ window.RunDeskRuntimePresets=(()=>{
  function remember(a,value){try{if(value)sessionStorage.setItem(draftKey(a),JSON.stringify(value));else sessionStorage.removeItem(draftKey(a));}catch{}}
  async function load(a){const rows=await api(endpoint(a));a.runtimePresets=rows;const stored=state.applications.find(v=>v.appId===a.appId);if(stored)stored.runtimePresets=rows;return rows;}
  function binding(a,p){return {...a,appId:a.appId,name:a.name+" · "+p.name,presetId:p.id,presetName:p.name,instanceId:p.instanceId,workspaceId:p.workspaceId};}
- async function select(a,p){resetConversation();state.workspaces=await api("/workspaces");$("#workspace").replaceChildren(...state.workspaces.map(w=>el("option",{value:w.id},w.name)));renderInstanceOptions(p.instanceId);$("#workspace").value=p.workspaceId;updateWorkspaceLabel();return binding(a,p);}
+ async function select(a,p){
+   resetConversation();
+   const request=state.selection;
+   const workspaces=await api("/workspaces");
+   if(request!==state.selection||state.view!=="application")return null;
+   const target=p?binding(a,p):{...a,returnToSettings:true};
+   if(!state.instances.some(i=>i.id===target.instanceId)||!workspaces.some(w=>w.id===target.workspaceId))throw Error(rdText("未找到此预设的运行环境或工作区。"));
+   state.workspaces=workspaces;
+   $("#workspace").replaceChildren(...workspaces.map(w=>el("option",{value:w.id},w.name)));
+   renderInstanceOptions(target.instanceId);
+   $("#workspace").value=target.workspaceId;
+   updateWorkspaceLabel();
+   return target;
+ }
  function ownership(){const all=state.applications.flatMap(applicationBindings);return {instances:new Set(all.map(v=>v.instanceId)),workspaces:new Set(all.map(v=>v.workspaceId).filter(Boolean))};}
  async function persist(a,id,value){
   try{return await api(endpoint(a)+"/"+encodeURIComponent(id),{method:"PUT",body:value});}
@@ -164,11 +194,12 @@ window.RunDeskRuntimePresets=(()=>{
  async function render(a,target,initialPresetId=""){
   const section=el("section",{class:"runtime-presets",id:"runtime-presets","aria-label":rdText("应用预设绑定")});target.append(section);
   let highlightedId=initialPresetId;
-  async function selectDefault(){
-   resetConversation();state.workspaces=await api("/workspaces");
-   $("#workspace").replaceChildren(...state.workspaces.map(w=>el("option",{value:w.id},w.name)));
-   renderInstanceOptions(a.instanceId);$("#workspace").value=a.workspaceId;updateWorkspaceLabel();
-   return {...a,returnToSettings:true};
+  async function configure(p){
+   if(await select(a,p))await openSettings("instances");
+  }
+  async function containers(p){
+   const target=await select(a,p);
+   if(target)await RunDeskEnvironments.open({...target,returnToSettings:true});
   }
   async function refresh(addedId){
    if(typeof addedId==="string")highlightedId=addedId;
@@ -186,13 +217,13 @@ window.RunDeskRuntimePresets=(()=>{
       el("div",{class:"environment-card-heading"},el("h3",{},p.name),el("span",{class:"runtime-preset-status "+(p.enabled?"enabled":"disabled")},p.enabled?rdText("已启用"):rdText("已停用 · 保留历史"))),
       el("p",{class:"runtime-preset-description"},p.description||rdText("可为此预设添加用途说明。")),
       p.enabled&&!keyError?el("p",{class:"help runtime-key-status","data-key-count":count},count?rdFormat("${0} 个应用凭据已授权",count):rdText("尚无凭据授权；请在下方“接入信息与高级操作”签发包含此预设的凭据。")):null,
-      el("div",{class:"actions"},button(rdText("配置能力"),async()=>{await select(a,p);await openSettings("instances");},"runtime-configure"),button(rdText("说明与启停"),()=>edit(a,p,refresh),"runtime-edit")),
-      el("details",{class:"runtime-advanced"},el("summary",{},rdText("容器与技术信息")),el("p",{class:"help"},rdFormat("Agent：${0} · 镜像：${1}",agent?.name||p.instanceId,agent?.execution?.image||rdText("待配置"))),el("p",{class:"help"},rdFormat("预设编号：${0}",p.id)),button(rdText("管理容器"),async()=>RunDeskEnvironments.open({...await select(a,p),returnToSettings:true}),"runtime-edit")));
+      el("div",{class:"actions"},button(rdText("配置能力"),()=>configure(p),"runtime-configure"),button(rdText("说明与启停"),()=>edit(a,p,refresh),"runtime-edit")),
+      el("details",{class:"runtime-advanced"},el("summary",{},rdText("容器与技术信息")),el("p",{class:"help"},rdFormat("制作环境：${0} · 镜像：${1}",agent?.name||p.instanceId,agent?.execution?.image||rdText("待配置"))),el("p",{class:"help"},rdFormat("预设编号：${0}",p.id)),button(rdText("管理容器"),()=>containers(p),"runtime-edit")));
      list.append(card);
     }
     section.append(list);
-    if(!rows.length)section.append(el("p",{class:"runtime-presets-empty"},rdText("还没有额外预设。点击“添加预设”，选择已准备好的镜像或 Agent。")));
-    section.append(el("details",{class:"runtime-default-card"},el("summary",{},rdText("默认环境 · 未指定预设的任务使用")),el("p",{class:"help"},rdText("默认环境独立保留，不占用预设名额。")),el("p",{class:"help"},rdFormat("Agent：${0}",state.instances.find(i=>i.id===a.instanceId)?.name||a.instanceId)),el("div",{class:"actions"},button(rdText("配置能力"),async()=>{await selectDefault();await openSettings("instances");},"runtime-configure")),el("details",{class:"runtime-advanced"},el("summary",{},rdText("容器与技术信息")),button(rdText("管理容器"),async()=>RunDeskEnvironments.open(await selectDefault()),"runtime-edit"))));
+    if(!rows.length)section.append(el("p",{class:"runtime-presets-empty"},rdText("还没有额外预设。点击“添加预设”，选择已准备好的镜像或制作环境。")));
+    section.append(el("details",{class:"runtime-default-card"},el("summary",{},rdText("默认环境 · 未指定预设的任务使用")),el("p",{class:"help"},rdText("默认环境独立保留，不占用预设名额。")),el("p",{class:"help"},rdFormat("制作环境：${0}",state.instances.find(i=>i.id===a.instanceId)?.name||a.instanceId)),el("div",{class:"actions"},button(rdText("配置能力"),()=>configure(null),"runtime-configure")),el("details",{class:"runtime-advanced"},el("summary",{},rdText("容器与技术信息")),button(rdText("管理容器"),()=>containers(null),"runtime-edit"))));
     if(keyError)section.append(el("p",{class:"error",role:"status"},rdText("暂时无法读取应用凭据：")+keyError));
    }catch(error){section.append(el("p",{class:"error",role:"status"},error.message),button(rdText("重试读取预设"),refresh,"runtime-edit"));}
   }
@@ -204,9 +235,9 @@ window.RunDeskRuntimePresets=(()=>{
   let built=[],catalogError="";if(!existing)try{const catalog=await api("/build-center/images");built=(catalog.items||[]).filter(v=>!["deleted","missing"].includes(v.availability)).map(v=>{const source=(v.sources||[]).find(s=>s.profileId||s.recipeId),ref=(v.references||[]).find(r=>!r.startsWith("sha256:"));const base=source?.profileId||source?.recipeId?.replace(/^builtin-/,"")||ref?.split("/").pop()?.split(":")[0]||"";return ref?{key:v.imageId,name:source?.name||base||ref,id:base||ref,image:ref}:null;}).filter(Boolean);}catch(error){catalogError=error.message;}
   const slug=value=>(value||"agent").toLowerCase().replace(/[^a-z0-9_.-]+/g,"-").replace(/^[^a-z0-9]+|[^a-z0-9]+$/g,"").slice(0,110)||"agent";
   const uniqueID=value=>{const base=slug(value),used=new Set((a.runtimePresets||[]).map(p=>p.id));let id=base,n=2;while(used.has(id))id=base+"-"+n++;return id;};
-  const d=el("dialog",{class:"application-register runtime-preset-dialog","aria-labelledby":"runtime-preset-title"}),id=el("input",{id:"preset-id",readonly:true,value:existing?.id||saved?.id||""}),name=el("select",{id:"preset-name",required:true,autofocus:true}),description=el("textarea",{id:"preset-description",rows:2,maxlength:4096},existing?.description||saved?.description||""),enabled=el("input",{id:"preset-enabled",type:"checkbox",checked:existing?existing.enabled:saved?saved.enabled:true}),mode=el("select",{id:"preset-mode"},el("option",{value:"new",disabled:!built.length},rdText("从已构建镜像新建环境")),el("option",{value:"existing",disabled:!available.length},rdText("绑定未占用的 Docker Agent"))),image=el("input",{id:"preset-image",readonly:true,value:saved?.image||""});
+  const d=el("dialog",{class:"application-register runtime-preset-dialog","aria-labelledby":"runtime-preset-title"}),id=el("input",{id:"preset-id",readonly:true,value:existing?.id||saved?.id||""}),name=el("select",{id:"preset-name",required:true,autofocus:true}),description=el("textarea",{id:"preset-description",rows:2,maxlength:4096},existing?.description||saved?.description||""),enabled=el("input",{id:"preset-enabled",type:"checkbox",checked:existing?existing.enabled:saved?saved.enabled:true}),mode=el("select",{id:"preset-mode"},el("option",{value:"new",disabled:!built.length},rdText("从已构建镜像新建环境")),el("option",{value:"existing",disabled:!available.length},rdText("绑定已有制作环境"))),image=el("input",{id:"preset-image",readonly:true,value:saved?.image||""});
   mode.value=saved?.mode||(!built.length&&available.length?"existing":"new");
-  const newFields=el("p",{class:"help"},rdText("使用已构建镜像创建专用 Agent，工作目录自动准备。")),existingFields=el("p",{class:"help"},rdText("使用此 Agent，并自动创建独立工作目录。")),error=el("p",{class:"error runtime-preset-error",role:"alert"}),progress=el("p",{class:"runtime-preset-progress",role:"status"}),submit=el("button",{id:"preset-submit",type:"submit",class:"primary"},existing?rdText("保存更改"):saved?rdText("重试添加"):rdText("添加预设"));
+  const newFields=el("p",{class:"help"},rdText("使用已构建镜像准备专用制作环境和工作目录。")),existingFields=el("p",{class:"help"},rdText("复用此制作环境，并自动创建独立工作目录。")),error=el("p",{class:"error runtime-preset-error",role:"alert"}),progress=el("p",{class:"runtime-preset-progress",role:"status"}),submit=el("button",{id:"preset-submit",type:"submit",class:"primary"},existing?rdText("保存更改"):saved?rdText("重试添加"):rdText("添加预设"));
   let pending=false,plan=saved;
   const choices=()=>mode.value==="new"?built:available.map(i=>({key:i.id,name:i.name,id:i.name,image:i.execution.image}));
   const selected=()=>choices().find(c=>c.key===name.value);
@@ -237,7 +268,7 @@ window.RunDeskRuntimePresets=(()=>{
    try{
     if(existing){await persist(a,existing.id,{name:existing.name,description:description.value,enabled:enabled.checked,instanceId:existing.instanceId,workspaceId:existing.workspaceId,revision:existing.revision});}
     else{
-     if(!plan){const c=selected();if(!c)throw Error(rdText("请先选择已构建镜像或未占用的 Docker Agent"));plan={id:uniqueID(c.id),name:c.name,description:description.value,enabled:enabled.checked,mode:mode.value,image:c.image,instanceId:mode.value==="existing"?c.key:"",workspaceId:"",executionSaved:mode.value==="existing"};id.value=plan.id;remember(a,plan);freeze();}
+     if(!plan){const c=selected();if(!c)throw Error(rdText("请先选择已构建镜像或可用的制作环境"));plan={id:uniqueID(c.id),name:c.name,description:description.value,enabled:enabled.checked,mode:mode.value,image:c.image,instanceId:mode.value==="existing"?c.key:"",workspaceId:"",executionSaved:mode.value==="existing"};id.value=plan.id;remember(a,plan);freeze();}
      if(!plan.instanceId){plan.instanceId=(await api("/instances",{method:"POST",body:{name:plan.name,description:plan.description}})).id;remember(a,plan);}
      if(!plan.executionSaved){const current=(await api("/instances")).find(v=>v.id===plan.instanceId);if(!current)throw Error(rdText("创建的实例尚未读到，请重试"));if(current.execution?.mode!=="docker"||current.execution?.image!==plan.image)await api("/instances/"+plan.instanceId+"/execution",{method:"PUT",body:{revision:current.revision,spec:{mode:"docker",image:plan.image}}});plan.executionSaved=true;remember(a,plan);}
      if(!plan.workspaceId){plan.workspaceId=(await api("/workspaces",{method:"POST",body:{name:plan.name}})).id;remember(a,plan);}

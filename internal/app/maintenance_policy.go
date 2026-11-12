@@ -29,10 +29,14 @@ func (m *Manager) requireDailyInstance(iid string) error {
 	if err != nil {
 		return err
 	}
-	if runtimeKind(i.AgentRuntime.Kind) != "codex" {
+	switch runtimeKind(i.AgentRuntime.Kind) {
+	case "codex":
+		return nil
+	case "kun":
 		return failure(409, "kun_maintenance_only", "Kun 仅用于内部维护和轨迹分析；日常会话与应用任务请选择 Codex 环境")
+	default:
+		return failure(409, "backend_unsupported", "此环境的引擎尚未注册，无法开始会话")
 	}
-	return nil
 }
 
 func (m *Manager) requireDailySession(sid string) error {

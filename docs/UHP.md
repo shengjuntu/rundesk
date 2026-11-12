@@ -216,7 +216,7 @@ scripts/test-uhp-conformance.sh \
   --base-url http://127.0.0.1:3210 \
   --class extended \
   --model demo-fixture \
-  --label 'RunDesk v0.69.1 UHP / native demo fixture' \
+  --label 'RunDesk v0.72.0 UHP / native demo fixture' \
   --json build/qa/uhp-conformance/report.json \
   --plain
 ```

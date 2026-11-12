@@ -36,19 +36,17 @@ RunDesk's Kun integration supports module-state inspection and loop-policy selec
 
 Start with [Harness controls](docs/KUN-HARNESS.md). The [runtime fork](docs/KUN-FORKS.md#runtime-forks) and [repeated comparison](docs/KUN-EVALUATION.md#repeated-benchmarks) documents describe retained research APIs and historical workflows, not current navigation entries.
 
-## Work with instances
+## Conversations and production environments
 
-A **workspace** organizes conversations and files. Each conversation selects a Codex environment; multiple conversations in the same workspace may use different Codex configurations. An **instance** stores the model, tools and runtime settings behind an environment. Kun maintenance is configured separately in **Environment setup**. The build center turns a build preset into an image; an image can support multiple independent instances. Application registration remains a separate integration step and is not required to manage an instance.
+Open a workspace and start a conversation with the default Codex. Applications use their authorized runtime presets. Build Center manages recipes, images and reusable production environments. Model, Skills, MCP and plugin settings apply to the environment and workspace shown in the editor.
 
-Version 0.54.0 removes the Kun forks, evaluation task sets, K4 Skill workbench, and offline experiment launchers from everyday navigation. Their APIs and stored data remain, as does inspection of existing fork previews. K4's parameterized tool flows are distinct from ordinary `SKILL.md` management.
-
-The instance-centered WebUI does **not** yet synchronize instance configuration across workspaces. Docker configuration still lives in separate instance/workspace environments. Automatic collection into a shared capability catalog and translation between Agent configuration formats are also pending. See [WebUI behavior and limits](docs/WEBUI.md).
+An execution instance still has a persistent ID for authorization, configuration and audit. Users can start everyday conversations directly from their workspace. See the [storage contract](docs/STORAGE.md) and [WebUI guide](docs/WEBUI.md).
 
 ## Current source version
 
-**RunDesk 0.69.1 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.72.0 source · external Kun 0.17.0 · worker protocol 16**
 
-Version 0.69.1 further reduces the bundled OpenMontage source while retaining code, Skills and assets used by native templates. The bundle excludes reviewed documentation previews and an unreferenced example logo, and records their paths and hashes. New builds use the supplied archive; Python/npm dependencies still use their configured download channels. Shared bases, editable Dockerfiles and the existing build entry remain. See [build sources](docs/BUILD-SOURCES.md) and [upgrading](docs/UPGRADING.md).
+Version 0.72.0 records the configuration declarations and execution identity at admission and ties generated file records to their producing run when evidence is available. Inspect a selected run in the trace view to see what RunDesk recorded at that time. Existing workspaces, session IDs, native histories and application preset bindings remain available. The [upgrade guide](docs/UPGRADING.md) explains compatibility with older records.
 
 The 0.67.1 video-build temporary-space fix remains: verification uses a 2 GiB `/tmp` allowance while preserving the upstream doctor checks. The user's same-image result and this release's checks are recorded separately in [validation](docs/VALIDATION.md#video-build-tmpfs-investigation-2026-11-08). An image must still pass verification before it is marked ready.
 
@@ -58,9 +56,9 @@ Version 0.67.0 introduced the consolidated guides and test suites and explicit s
 
 New installations use a three-step guide: **find and configure LLM → configure and install Codex → prepare Docker environments**. Docker is optional and setup can be reopened from **Environment setup**. Downloading a ready image, building locally and checking an existing image are distinct choices. A preparation task keeps its failure, Kun repair, candidate builds and verification together; repair completion alone does not prove an image is verified.
 
-Daily conversations and application tasks use Codex; Kun handles installation and recipe repair plus read-only trace questions. Skill extraction and MCP optimization remain future work. Workspaces organize conversations, each with its own Codex environment. Applications may bind several approved environments and create isolated project workspaces. See [WebUI](docs/WEBUI.md), [internal maintenance](docs/MAINTENANCE.md) and [application presets](docs/APPLICATION-RUNTIME-PRESETS.md).
+Daily conversations and application tasks use Codex; Kun handles installation and recipe repair plus read-only trace questions. Skill extraction and MCP optimization remain future work. Workspaces organize conversations. Ordinary new conversations use the default Codex. Applications may bind several approved environments and create isolated project workspaces. See [WebUI](docs/WEBUI.md), [internal maintenance](docs/MAINTENANCE.md) and [application presets](docs/APPLICATION-RUNTIME-PRESETS.md).
 
-Build Center connects **recipe → image → Agent**. Dockerfiles and source lists are editable files, with international and China mirror groups covering pip, conda, npm, Docker, APT, YUM/DNF, Hugging Face and GitHub; each recipe must declare the arguments it supports. Builds freeze their inputs and can reuse matching managed Codex runtimes. Codex provider settings are separate from Kun model discovery and apply to the selected Agent/workspace environment. See [Build Center](docs/BUILD-CENTER.md#build-workbench), [build sources](docs/BUILD-SOURCES.md) and [model providers](docs/CODEX-PROVIDERS.md).
+Build Center connects **recipe → image → production environment**. Dockerfiles and source lists are editable files, with international and China mirror groups covering pip, conda, npm, Docker, APT, YUM/DNF, Hugging Face and GitHub; each recipe must declare the arguments it supports. Builds freeze their inputs and can reuse matching managed Codex runtimes. Codex provider settings are separate from Kun model discovery and apply to the selected Agent/workspace environment. See [Build Center](docs/BUILD-CENTER.md#build-workbench), [build sources](docs/BUILD-SOURCES.md) and [model providers](docs/CODEX-PROVIDERS.md).
 
 Publishers can distribute fixed image digests after matching offline and smoke checks. **The bundled public-image catalog is empty until real images are published**; no official image namespace or anonymous-download acceptance is implied. See [image distribution](docs/IMAGE-DISTRIBUTION.md).
 

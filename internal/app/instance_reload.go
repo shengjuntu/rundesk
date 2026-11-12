@@ -7,6 +7,7 @@ func (m *Manager) ReloadInstance(id string) (any, error) {
 	if _, e := m.Instance(id); e != nil {
 		return nil, e
 	}
+	m.invalidateConfigSnapshots()
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	closed, busy := 0, 0

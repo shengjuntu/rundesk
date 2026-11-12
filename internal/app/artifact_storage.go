@@ -118,7 +118,7 @@ func personalDigest(f *os.File) (int64, string, error) {
 	return n, hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func (m *Manager) savePersonalReferenceLocked(owner, name, kind, sid, key string, source resource.FileSource, expectedHash string) (PersonalFile, error) {
+func (m *Manager) savePersonalReferenceLocked(owner, name, kind, sid, runID, key string, source resource.FileSource, expectedHash string) (PersonalFile, error) {
 	if key != "" {
 		var link libraryLink
 		if err := m.Store.Get("library-capture", key, &link); err == nil {
@@ -146,7 +146,7 @@ func (m *Manager) savePersonalReferenceLocked(owner, name, kind, sid, key string
 	if used+size > 10<<30 {
 		return PersonalFile{}, failure(413, "personal_file_limit", "个人库超过 10 GiB")
 	}
-	f := PersonalFile{ID: store.ID(), Owner: owner, Name: cleanPersonalName(name), Size: size, SHA256: hash, Created: store.Now(), Kind: kind, SessionID: sid, Storage: resource.Reference, Source: &source}
+	f := PersonalFile{ID: store.ID(), Owner: owner, Name: cleanPersonalName(name), Size: size, SHA256: hash, Created: store.Now(), Kind: kind, SessionID: sid, RunID: runID, Storage: resource.Reference, Source: &source}
 	link := libraryLink{FileID: f.ID, WorkspaceID: source.WorkspaceID, Path: source.Path, Original: true}
 	records := []store.Record{
 		{Kind: "personal-file", ID: f.ID, Value: f},

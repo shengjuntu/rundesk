@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -129,6 +130,7 @@ func TestBaseBuildProcess(t *testing.T) {
 		return
 	}
 	if mode == "wait" {
+		fmt.Fprintln(os.Stdout, "fixture media stage waiting")
 		for {
 			time.Sleep(time.Second)
 		}
@@ -293,14 +295,30 @@ func TestToolBaseFailureAndCancellationKeepPartialIdentity(t *testing.T) {
 			}
 			v := baseFixtureBuild(t, m, "browser", false)
 			ctx := context.Background()
-			cancel := func() {}
+			var out io.Writer = io.Discard
 			if mode == "cancel" {
-				ctx, cancel = context.WithTimeout(ctx, 100*time.Millisecond)
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+				defer cancel()
+				reader, writer := io.Pipe()
+				defer writer.Close()
+				out = writer
+				go func() {
+					defer reader.Close()
+					lines := bufio.NewScanner(reader)
+					for lines.Scan() {
+						if lines.Text() == "fixture media stage waiting" {
+							cancel()
+						}
+					}
+				}()
 			}
-			defer cancel()
-			_, err := m.prepareBuildBases(ctx, v, io.Discard)
+			_, err := m.prepareBuildBases(ctx, v, out)
 			if err == nil {
 				t.Fatal("failed stage accepted")
+			}
+			if mode == "cancel" && !errors.Is(ctx.Err(), context.Canceled) {
+				t.Fatal("media stage did not signal readiness for cancellation", err)
 			}
 			v = loadBaseBuild(t, m, v)
 			if v.BaseImages.RootImageID == "" || v.BaseImages.Layers[0].ImageID == "" || v.BaseImages.Layers[1].ImageID != "" || d.baseCommands() != 2 {

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"os"
@@ -15,15 +16,16 @@ import (
 // references. Configuration is the current binding, not a claim that a past run
 // executed with today's instance settings. Original bytes stay with their owner.
 type TaskResourceView struct {
-	Schema             int               `json:"schema"`
-	ObservedAt         string            `json:"observedAt"`
-	StateSource        string            `json:"stateSource"`
-	Availability       string            `json:"availability"`
-	UnavailableReason  string            `json:"unavailableReason,omitempty"`
-	ConfigurationBasis string            `json:"configurationBasis"`
-	Task               TaskStateView     `json:"task"`
-	Runtime            *TaskRuntimeView  `json:"runtime,omitempty"`
-	Resources          resource.Manifest `json:"resources"`
+	Schema             int                  `json:"schema"`
+	ObservedAt         string               `json:"observedAt"`
+	StateSource        string               `json:"stateSource"`
+	Availability       string               `json:"availability"`
+	UnavailableReason  string               `json:"unavailableReason,omitempty"`
+	ConfigurationBasis string               `json:"configurationBasis"`
+	Task               TaskStateView        `json:"task"`
+	Runtime            *TaskRuntimeView     `json:"runtime,omitempty"`
+	Resources          resource.Manifest    `json:"resources"`
+	Artifacts          *RunArtifactManifest `json:"artifacts,omitempty"`
 }
 
 type TaskStateView struct {
@@ -81,6 +83,19 @@ func (m *Manager) TaskResources(id string) (TaskResourceView, error) {
 				SessionID: t.SessionID, TaskID: t.ID},
 			Resources: []resource.Descriptor{}, Bindings: []resource.Binding{},
 		},
+	}
+	// Serve only versions observed at this run's completion. A legacy task,
+	// unfinished capture, or cold-restart scan has no historical manifest.
+	if t.RunID != "" {
+		var run libraryRun
+		captureErr := m.Store.Get("library-run", t.RunID, &run)
+		if captureErr != nil && !errors.Is(captureErr, sql.ErrNoRows) {
+			return TaskResourceView{}, captureErr
+		}
+		artifacts := run.Artifacts
+		if artifacts != nil && artifacts.Basis == "changed_outputs_at_completion" && artifacts.WorkspaceID == t.Spec.WorkspaceID && artifacts.SessionID == t.SessionID && artifacts.RunID == t.RunID {
+			view.Artifacts = artifacts
+		}
 	}
 	if err != nil {
 		var unavailable *apiError

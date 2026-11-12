@@ -1,10 +1,39 @@
 package store
 
-import "encoding/json"
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+)
 
 type Record struct {
 	Kind, ID string
 	Value    any
+}
+
+// PutImmutable creates a content-addressed object once. Repeated admissions
+// reuse its row. A different value under the same identity is a storage error.
+func (s *Store) PutImmutable(kind, id string, value any) error {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	result, err := s.db.Exec("INSERT INTO objects VALUES(?,?,?) ON CONFLICT(kind,id) DO NOTHING", kind, id, data)
+	if err != nil {
+		return err
+	}
+	n, err := result.RowsAffected()
+	if err != nil || n == 1 {
+		return err
+	}
+	var previous []byte
+	if err := s.db.QueryRow("SELECT data FROM objects WHERE kind=? AND id=?", kind, id).Scan(&previous); err != nil {
+		return err
+	}
+	if !bytes.Equal(previous, data) {
+		return errors.New("immutable object identity has different content")
+	}
+	return nil
 }
 
 func (s *Store) PutMany(records ...Record) error {

@@ -33,7 +33,7 @@ function fields(spec){const f=w.RunDeskTasks.taskFields(spec);holder.replaceChil
 const change=(id,value)=>{$('#'+id).value=value;$('#'+id).onchange()};
 const normalize=value=>JSON.parse(JSON.stringify(value));
 (async()=>{
- let f=fields();assert.equal($('#task-instance').options.length,6);
+ $('#instance').value='free';let f=fields();assert.equal(f.value().instanceId,'default');assert(!$('#task-instance').closest('details').open);assert.equal($('#task-instance').options.length,6);$('#instance').value='default';
  change('task-instance','free');let value=f.value();assert.equal(value.instanceId,'free');assert.equal(value.workspaceId,'free-w');assert.deepEqual(normalize(value.source),{kind:'human'});
  assert(![...$('#task-workspace').options].some(o=>['preset-w','disabled-w','foreign-w'].includes(o.value)),'reserved workspace offered to independent Docker instance');
  assert(![...$('#task-instance').options].some(o=>o.value==='kun'));

@@ -75,6 +75,7 @@ w.RunDeskDiagnostics = {recent:() => null,request:async (url, options = {}) => {
     if (/^\/build-center\/recipes\/[^/]+\/dockerfile/.test(route)) return {path:'Dockerfile',template:!route.includes('codexVersion='),dockerfile:'FROM node:22-bookworm-slim\nARG CODEX_VERSION='+(route.includes('codexVersion=')?'0.157.1':'0.0.0')};
     if (route === '/instances') return copy(db.instances);
     if (route === '/workspaces') return copy(db.workspaces);
+    if (route === '/environments') return copy(db.environments || []);
     if (route === '/sessions' || route === '/applications') return [];
     if (route === '/build-center/recipes') { if (recipeGate) return recipeGate.promise; return {items:copy(db.recipes)}; }
     if (route === '/build-center/images') {if(imageCatalogLag>0){imageCatalogLag--;return {items:copy(db.images.slice(1))};}return {items:copy(db.images)};}
@@ -128,7 +129,7 @@ w.RunDeskDiagnostics = {recent:() => null,request:async (url, options = {}) => {
   if (method === 'POST' && route === '/plugins/inspect') { assert(body.get('file')); return {readOnly:true,installSupported:false,format:'agent-plugin',manifestPath:'.agents/plugin.json',manifest:{name:'Editor',version:'1'},components:[{kind:'skill',name:'cut',path:'skills/cut'}],dependencies:[],unknownFields:[],warnings:[]}; }
   throw Error('Unexpected mutation '+method+' '+route);
 }};
-for (const name of ['applications.js','plugins.js','build-center.js']) vm.runInContext(fs.readFileSync(path.join(root,name),'utf8'),ctx);
+for (const name of ['applications.js','instances.js','plugins.js','build-center.js']) vm.runInContext(fs.readFileSync(path.join(root,name),'utf8'),ctx);
 const manage = fs.readFileSync(path.join(root,'manage.js'),'utf8'); vm.runInContext(manage.slice(manage.indexOf('async function renderSkills('),manage.indexOf('async function renderMCP(')),ctx);
 Object.assign(state,{instances:copy(db.instances),workspaces:copy(db.workspaces)}); w.renderInstanceOptions('default'); $('#workspace').append(...db.workspaces.map(row => {const node=w.document.createElement('option');node.value=row.id;return node;})); $('#workspace').value='workspace';
 const flush = () => new Promise(resolve => setImmediate(resolve)); async function until(check) { for(let n=0;n<500;n++){if(check())return;await new Promise(resolve=>setTimeout(resolve,5));}assert(check(),'UI did not settle'); }
@@ -139,7 +140,7 @@ function deferred() { let resolve; const promise=new Promise(done=>{resolve=done
 (async()=>{
   assert($('#nav-build-center'),'permanent navigation is missing');
   await w.RunDeskBuildCenter.open(); assert($('#build-workbench'));assert.equal($('#workbench-recipe').value,'builtin-news2douyin');assert(!$('#build-center-page>nav.build-center-tabs'));assert(!requests.some(row=>row.method==='POST'),'viewing workbench started runtime work');
-  $('#workbench-recipe').value='builtin-video-build';$('#workbench-recipe').onchange();assert.equal($$('[data-workbench-image]').length,2);assert($('[data-workbench-build="builtin-video-build"]'));assert($('#workbench-agent-step').textContent.includes('创建 Agent'));
+  $('#workbench-recipe').value='builtin-video-build';$('#workbench-recipe').onchange();assert.equal($$('[data-workbench-image]').length,2);assert($('[data-workbench-build="builtin-video-build"]'));assert($('#workbench-agent-step').textContent.includes('制作环境'));
   const firstPick=$('[data-workbench-image="'+db.images[0].key+'"]');firstPick.click();await until(()=>!!$('[data-workbench-create-agent="'+db.images[0].key+'"]'));assert(firstPick.textContent.includes('video-build'));assert(!firstPick.textContent.includes('sha256:'));
   $('#workbench-recipe').value='';$('#workbench-recipe').onchange();assert.equal($$('[data-workbench-image]').length,2,'existing-image path forced a build');
   assert.equal(w.RunDeskBuildCenter.imageIdentity({sources:[],references:['imported:1']},[]).name,'来源未知的镜像');
@@ -150,7 +151,7 @@ function deferred() { let resolve; const promise=new Promise(done=>{resolve=done
   await until(()=>!!$('#workbench-build-log'));assert($('#workbench-catalog-status').textContent.includes('等待镜像登记'));assert(!$('[data-workbench-create-agent="'+db.images[0].key+'"]'));const catalogTimer=[...timers].find(([,value])=>value.delay===2000);assert(catalogTimer,'successful build stopped before its image appeared');timers.delete(catalogTimer[0]);await catalogTimer[1].fn();assert(!$('#workbench-catalog-status'));assert(w.location.hash.startsWith('#build-center/workbench/'));assert($('#workbench-build-log').textContent.includes('real frozen build log'));assert($('[data-workbench-create-agent="'+db.images[0].key+'"]'));
   let providerRevision=7;w.RunDeskCodexProvider={launchFields:async()=>({value:()=>({providerMode:'inherit-default',providerRevision})})};
   launchError=true;$('[data-workbench-create-agent="'+db.images[0].key+'"]').click();await until(()=>!!$('#center-launch-name')&&!$('.build-center-dialog button[type=submit]').disabled);$('#center-launch-name').value='Workbench Agent';await submit($('#center-launch-name'));assert($('.build-center-dialog .error').textContent.includes('partial-instance'));$('.build-center-dialog').close();
-  providerRevision=8;launchError=false;$('[data-workbench-create-agent="'+db.images[0].key+'"]').click();await until(()=>!!$('#center-launch-name')&&!$('.build-center-dialog button[type=submit]').disabled);await submit($('#center-launch-name'));assert($('.build-center-dialog').textContent.includes('Agent 已创建'));
+  providerRevision=8;launchError=false;$('[data-workbench-create-agent="'+db.images[0].key+'"]').click();await until(()=>!!$('#center-launch-name')&&!$('.build-center-dialog button[type=submit]').disabled);await submit($('#center-launch-name'));assert($('.build-center-dialog').textContent.includes('制作环境已创建'));
   const flowLaunches=requests.filter(row=>row.route.endsWith('/launch')).slice(-2);assert.equal(flowLaunches[0].body.requestId,flowLaunches[1].body.requestId);assert.equal(flowLaunches[1].body.providerRevision,7,'retry adopted a changed provider default');assert.equal(flowLaunches[1].body.providerMode,'inherit-default');$('.build-center-dialog').close();delete w.RunDeskCodexProvider;launchCount=0;
   // Image registration retries are bounded, and a user's alternative image
   // selection survives both the delayed catalog and an explicit recovery.
@@ -217,8 +218,11 @@ function deferred() { let resolve; const promise=new Promise(done=>{resolve=done
   const sourceBuild=requests.filter(r=>r.route.endsWith('/build')&&r.method==='POST').at(-1).body.buildSources;assert.equal(sourceBuild.overrides.huggingface.endpoint,'https://models.company.example');assert(sourceBuild.overrides.conda.channels.includes('conda-forge'));assert(!('rawBase' in sourceBuild.overrides.github));
   db.catalog=oldCatalog;sourceCapability.types=oldCapabilities;
   await w.RunDeskBuildCenter.open('images',db.images[0].key); const beforeCheck=findButton($('.image-detail'),'核对镜像'); beforeCheck.click(); await until(()=>checkCount===1&&!beforeCheck.isConnected&&!!$('[data-center-action="launch"]'));
-  $('[data-center-action="launch"]').click(); await until(()=>!!$('#center-launch-name')); await submit($('#center-launch-name')); assert.equal(launchCount,1); assert($('.build-center-dialog').textContent.includes('dedicated-work')); assert($('.build-center-dialog').textContent.includes('exited')); assert($('.build-center-dialog').textContent.includes('container exited'),'actual failed/exited runtime must remain visible'); $('.build-center-dialog').close();
-  launchError=true; $('[data-center-action="launch"]').click(); await until(()=>!!$('#center-launch-name')); $('#center-launch-name').value='Uncertain instance'; await submit($('#center-launch-name')); assert($('.build-center-dialog .error').textContent.includes('partial-instance')); $('.build-center-dialog').close(); $('[data-center-action="launch"]').click(); await until(()=>!!$('#center-launch-name')); assert.equal($('#center-launch-name').value,'Uncertain instance'); assert($('#center-launch-name').disabled); await submit($('#center-launch-name')); const uncertain=requests.filter(row=>row.route.endsWith('/launch')).slice(-2); assert.equal(uncertain[0].body.requestId,uncertain[1].body.requestId,'409 unconfirmed launch lost its receipt'); findButton($('.build-center-dialog'),'开始另一实例请求').click(); await until(()=>!$('#center-launch-name').disabled); $('.build-center-dialog').close(); launchError=false;
+  $('[data-center-action="launch"]').click(); await until(()=>!!$('[data-workbench-create-agent]')); assert.equal(w.location.hash,'#build-center/workbench');
+  const createFromImage=()=>$('[data-workbench-create-agent="'+db.images[0].key+'"]').click();
+  createFromImage(); await until(()=>!!$('#center-launch-name')); await submit($('#center-launch-name')); assert.equal(launchCount,1); assert($('.build-center-dialog').textContent.includes('dedicated-work')); assert($('.build-center-dialog').textContent.includes('exited')); assert($('.build-center-dialog').textContent.includes('container exited'),'actual failed/exited runtime must remain visible'); $('.build-center-dialog').close();
+  launchError=true; createFromImage(); await until(()=>!!$('#center-launch-name')); $('#center-launch-name').value='Uncertain instance'; await submit($('#center-launch-name')); assert($('.build-center-dialog .error').textContent.includes('partial-instance')); $('.build-center-dialog').close(); createFromImage(); await until(()=>!!$('#center-launch-name')); assert.equal($('#center-launch-name').value,'Uncertain instance'); assert($('#center-launch-name').disabled); await submit($('#center-launch-name')); const uncertain=requests.filter(row=>row.route.endsWith('/launch')).slice(-2); assert.equal(uncertain[0].body.requestId,uncertain[1].body.requestId,'409 unconfirmed launch lost its receipt'); findButton($('.build-center-dialog'),'开始另一创建请求').click(); await until(()=>!$('#center-launch-name').disabled); $('.build-center-dialog').close(); launchError=false;
+  await w.RunDeskBuildCenter.open('images',db.images[0].key);
   $('[data-center-test="smoke"]').click(); await until(()=>!!$('#center-build-log')&&$('#build-center-page').textContent.includes('declared command failed')); assert($('#build-center-page').textContent.includes('失败'));
   await w.RunDeskBuildCenter.open('images',db.images[0].key); $('[data-center-test="offline"]').click(); await until(()=>!!$('#center-build-log')&&$('#build-center-page').textContent.includes('Offline：'));
   // Public catalog keeps edits on CAS conflict and never invents published addresses.
@@ -263,5 +267,38 @@ function deferred() { let resolve; const promise=new Promise(done=>{resolve=done
   pluginGate=deferred(); state.settingsTab='plugins'; const host=w.document.createElement('div'); $('#settings-content').replaceChildren(host); const old=w.RunDeskNativePlugins.render(host); state.settingsTab='skills'; pluginGate.resolve({backend:'codex',plugins:[{id:'stale'}],warnings:[]}); await old; assert.equal(host.children.length,0); pluginGate=null;
   assert(!requests.some(row=>/plugin\/(list|install|uninstall)|\/plugins\/(install|uninstall)/.test(row.route)));
   assert(!fs.readFileSync(path.join(root,'build-center.js'),'utf8').includes('workflowId'));
+  // An environment may predate the image catalog and have separate workspace
+  // homes. Both its editor and its container controls must keep the chosen pair.
+  if ($('#settings').open) $('#settings').close();
+  vm.runInContext(fs.readFileSync(path.join(root,'workspace-conversations.js'),'utf8'),ctx);
+  vm.runInContext(fs.readFileSync(path.join(root,'environments.js'),'utf8'),ctx);
+  w.RunDeskImages={needsUpdate:()=>false,short:id=>id || ''};
+  w.permissionEditor=()=>({node:w.document.createElement('div'),value:()=>({})});
+  const orphan={id:'imported-env',name:'外部镜像环境',revision:1,codexHome:'/tmp/test',agentRuntime:{kind:'codex'},execution:{mode:'docker',image:'fixture/external:1'}};
+  db.instances.push(orphan,{...orphan,id:"future-engine",agentRuntime:{kind:"future"}});
+  db.workspaces.push({id:'first-home',name:'工作区 A',path:'/tmp/a'},{id:'second-home',name:'工作区 B',path:'/tmp/b'});
+  db.environments=['first-home','second-home'].map(workspaceId=>({id:'env-'+workspaceId,instanceId:orphan.id,workspaceId,spec:orphan.execution,state:'exited',activeConnections:0,containerName:'test-'+workspaceId}));
+  const originalAPI=w.api;
+  w.api=(url,options)=>url.includes('/instances/imported-env/configuration?')?Promise.resolve({instance:orphan,environment:db.environments.find(e=>url.includes(e.workspaceId))}):originalAPI(url,options);
+  await w.RunDeskBuildCenter.open('workbench','builtin-video-build');
+  if ($('#workbench-environment-filter')) { $('#workbench-environment-filter').value='all';$('#workbench-environment-filter').onchange(); }
+  assert(!w.document.querySelector('[data-workbench-agent="future-engine"]'), 'unregistered engine offered Codex controls');
+  const row=$('[data-workbench-agent="imported-env"] [data-environment-workspace="second-home"]'); assert(row, 'Docker identity with unregistered image must remain manageable');
+  assert.equal($$('[data-workbench-agent="imported-env"] [data-environment-workspace]').length,2);
+  const writes=requests.filter(r=>r.method!=='GET').length;
+  findButton(row,'配置环境').click();
+  await until(()=>$('#settings').open && $('#assistant-model'));
+  assert.equal($('#instance').value,orphan.id);assert.equal($('#workspace').value,'second-home');assert.equal(state.view,'build-center');assert.match(w.location.hash,/^#build-center\/environment\/imported-env\?tab=instances&workspace=second-home$/);
+  $('#settings').close();assert.match(w.location.hash,/^#build-center\/workbench/);
+  findButton(row,'管理容器').click();await until(()=>!!$('[data-environment-id="env-second-home"]'));
+  assert.equal(state.view,'build-center');assert(!w.document.querySelector('[data-environment-id="env-first-home"]'),'wrong project exposed in scoped container manager');
+  assert.equal(requests.filter(r=>r.method!=='GET').length,writes,'opening environment management started a container or changed an environment');
+  await w.RunDeskBuildCenter.openEnvironment(orphan.id,'deleted-workspace');
+  assert(!$('#settings').open);assert($('#build-center-page [data-center-error]').textContent.includes('工作区'),'invalid scope should fail in the workbench');
+  const startUnknown=requests.length;
+  await w.RunDeskBuildCenter.openEnvironment('future-engine','second-home','containers');
+  assert(!$('#settings').open && !$('#execution-mode'));
+  assert($('#build-center-page [data-center-error]').textContent.includes('Docker Codex'));
+  assert(!requests.slice(startUnknown).some(r=>r.method!=='GET'||/\/configuration|\/config\?|\/actions/.test(r.route)), 'unknown engine started a Codex operation');
   console.log('build center / native plugin shipped JS behavior: passed');
 })().catch(error=>{console.error(error);console.error(requests.slice(-8).map(row=>({route:row.route,method:row.method})));console.error($('#toast').textContent);process.exitCode=1;}).finally(()=>dom.window.close());

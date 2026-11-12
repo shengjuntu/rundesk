@@ -60,7 +60,7 @@ w.RunDeskDiagnostics={recent:()=>null,request:async(url,options)=>{
 w.renderInstanceOptions=id=>{$('#instance').replaceChildren(...state.instances.map(i=>w.document.createElement('option')).map((o,n)=>{o.value=state.instances[n].id;o.textContent=state.instances[n].name;return o}));$('#instance').value=id};
 w.resetConversation=()=>{state.session=null;state.selection++};w.updateWorkspaceLabel=()=>{};w.closeConversationSidebar=()=>{};w.openSettings=async tab=>{w.lastSettings={tab,instanceId:$('#instance').value,workspaceId:$('#workspace').value}};w.selectSession=async()=>{};
 w.RunDeskImages={overview:async(a,n)=>{n.textContent='default image'},short:s=>s,needsUpdate:()=>false};w.RunDeskSetup={open:async()=>{}};
-for(const file of ['applications.js','environments.js','application-keys.js','tasks.js','users.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx);
+for(const file of ['applications.js','instances.js','workspace-conversations.js','environments.js','application-keys.js','tasks.js','users.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx);
 function sync(){Object.assign(state,{applications:clone(db.applications),instances:clone(db.instances),workspaces:clone(db.workspaces),sessions:clone(db.sessions)});$('#workspace').replaceChildren(...state.workspaces.map(v=>{const o=w.document.createElement('option');o.value=v.id;o.textContent=v.name;return o}));$('#workspace').value='base-w';w.renderInstanceOptions('base-i')}
 const button=(scope,text)=>[...scope.querySelectorAll('button')].find(b=>b.textContent===text);
 const flush=()=>new Promise(resolve=>setImmediate(resolve));async function until(check){for(let i=0;i<100;i++){if(check())return;await flush()}assert(check(),'async UI did not settle')}
@@ -89,9 +89,9 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));async function until
  assert(w.location.hash.includes('/preset/disabled'),'preset route was lost');assert.equal(vm.runInContext('currentApplication().appId',ctx),'video');
  await w.showApplication('video','video-use','settings');
  const enabled=$('[data-preset-id="video-use"]');button(enabled,'配置能力').click();await until(()=>w.lastSettings?.tab==='instances');assert.deepEqual(w.lastSettings,{tab:'instances',instanceId:'preset-i',workspaceId:'preset-w'});
- button(enabled,'管理容器').click();await until(()=>!!$('#environment-project'));
+ button(enabled,'管理容器').click();await until(()=>!!$('#execution-mode'));
  assert(w.location.hash.includes('from=settings'),'container management lost its settings return route');
- assert.equal($('#environment-project').options.length,1,'preset environment offered another workspace');assert.equal($('#environment-project').value,'preset-w');assert($('#execution-mode').disabled,'preset offered local runtime');assert(!requests.some(r=>r.route.includes('/actions')),'opening preset changed container state');
+ assert(!$('#environment-project'),'fixed preset exposed a workspace chooser');assert.equal($$('.environment-card').length,1);assert($('.environment-card').textContent.includes('preset-w'));assert($('#execution-mode').disabled,'preset offered local runtime');assert(!requests.some(r=>r.route.includes('/actions')),'opening preset changed container state');
  button($('#applications-page'),'← 返回应用设置').click();await until(()=>w.location.hash.endsWith('/settings')&&!!$('.application-settings-panel'));
  assert(!$('.application-settings-panel').classList.contains('hidden'),'return from container management opened tasks');
  // Bind an unoccupied Codex Docker Agent with one selection and a new private workspace.

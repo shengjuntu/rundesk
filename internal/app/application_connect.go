@@ -138,7 +138,7 @@ func (m *Manager) ConnectApplication(id string, in ApplicationConnect) (Applicat
 		if e = os.MkdirAll(i.CodexHome, 0700); e != nil {
 			return out, e
 		}
-		if e = m.Store.Put("instance", i.ID, i); e != nil {
+		if e = m.Store.Put("instance", i.ID, persistedInstance(i)); e != nil {
 			return out, e
 		}
 		m.mu.Lock()

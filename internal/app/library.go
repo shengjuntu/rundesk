@@ -31,6 +31,7 @@ type PersonalFile struct {
 	Created    string               `json:"created"`
 	Kind       string               `json:"kind"`
 	SessionID  string               `json:"sessionId,omitempty"`
+	RunID      string               `json:"runId,omitempty"`
 	Deleted    bool                 `json:"deleted"`
 	Storage    resource.Storage     `json:"storage"`
 	Source     *resource.FileSource `json:"source,omitempty"`
@@ -45,11 +46,27 @@ type libraryLink struct {
 	Original bool `json:"original,omitempty"`
 }
 type libraryRun struct {
-	Owner     string            `json:"owner"`
-	SessionID string            `json:"sessionId"`
-	RunID     string            `json:"runId"`
-	Before    map[string]string `json:"before"`
-	Done      bool              `json:"done"`
+	Owner       string               `json:"owner"`
+	SessionID   string               `json:"sessionId"`
+	RunID       string               `json:"runId"`
+	WorkspaceID string               `json:"workspaceId,omitempty"`
+	Before      map[string]string    `json:"before"`
+	Artifacts   *RunArtifactManifest `json:"artifacts,omitempty"`
+	Done        bool                 `json:"done"`
+}
+
+// This is historical evidence about changed output bytes, not a download
+// capability. The run ID refers to that run's recorded execution binding.
+type RunArtifactManifest struct {
+	SessionID   string        `json:"sessionId"`
+	RunID       string        `json:"runId"`
+	WorkspaceID string        `json:"workspaceId"`
+	Basis       string        `json:"basis"`
+	Files       []RunArtifact `json:"files"`
+}
+type RunArtifact struct {
+	Path   string `json:"path"`
+	SHA256 string `json:"sha256"`
 }
 
 func personalOwner(r *http.Request) string {
@@ -177,7 +194,7 @@ func (m *Manager) savePersonalLocked(owner, name, kind, sid, key string, src io.
 func (m *Manager) saveUploaded(owner, wid, p, name string) (PersonalFile, error) {
 	m.libraryMu.Lock()
 	defer m.libraryMu.Unlock()
-	return m.savePersonalReferenceLocked(owner, name, "upload", "", "", resource.FileSource{WorkspaceID: wid, Path: p}, "")
+	return m.savePersonalReferenceLocked(owner, name, "upload", "", "", "", resource.FileSource{WorkspaceID: wid, Path: p}, "")
 }
 func (m *Manager) AttachPersonal(owner, id, wid string) (map[string]any, error) {
 	m.libraryMu.Lock()
@@ -269,7 +286,7 @@ func (m *Manager) DeletePersonal(owner, id string) error {
 	}
 	return nil
 }
-func (m *Manager) outputHashes(s Session) (map[string]string, error) {
+func (m *Manager) outputHashes(s Session, optional bool) (map[string]string, error) {
 	ws, e := m.Workspace(s.WorkspaceID)
 	if e != nil {
 		return nil, e
@@ -281,6 +298,19 @@ func (m *Manager) outputHashes(s Session) (map[string]string, error) {
 	defer root.Close()
 	out := map[string]string{}
 	prefix := "outputs/" + s.ID
+	for _, dir := range []string{"outputs", prefix} {
+		st, err := root.Lstat(dir)
+		if os.IsNotExist(err) {
+			return out, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 {
+			return nil, errors.New("产物目录无效")
+		}
+	}
+	var total int64
 	e = fs.WalkDir(root.FS(), prefix, func(p string, d fs.DirEntry, e error) error {
 		if errors.Is(e, fs.ErrNotExist) && p == prefix {
 			return nil
@@ -307,59 +337,102 @@ func (m *Manager) outputHashes(s Session) (map[string]string, error) {
 		if info.Size() > personalFileLimit {
 			return failure(413, "personal_file_limit", "产物超过 512 MiB，未自动入库："+d.Name())
 		}
+		total += info.Size()
+		if optional && total > personalFileLimit {
+			return failure(413, "output_scan_limit", "产物超出本轮版本采集范围")
+		}
 		f, e := root.Open(p)
 		if e != nil {
 			return e
 		}
-		h := sha256.New()
-		_, e = io.Copy(h, io.LimitReader(f, personalFileLimit+1))
+		_, digest, e := personalDigest(f)
 		f.Close()
 		if e != nil {
 			return e
 		}
-		out[p] = hex.EncodeToString(h.Sum(nil))
+		out[p] = digest
 		return nil
 	})
 	return out, e
 }
 func (m *Manager) preparePersonalRun(s Session, run, owner string) error {
-	if owner == "" {
-		return nil
+	m.libraryMu.Lock()
+	defer m.libraryMu.Unlock()
+	var previous libraryRun
+	if err := m.Store.Get("library-run", run, &previous); err == nil {
+		if previous.RunID != run || previous.SessionID != s.ID || previous.Owner != owner || (previous.WorkspaceID != "" && previous.WorkspaceID != s.WorkspaceID) {
+			return failure(409, "artifact_run_mismatch", "产物记录属于另一个运行范围")
+		}
+		return nil // an admission retry must preserve the original baseline and captured versions
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		return err
 	}
-	before, e := m.outputHashes(s)
-	if e != nil {
-		return e
+	before, err := m.outputHashes(s, owner == "")
+	if err != nil && owner != "" {
+		return err
 	}
-	return m.Store.Put("library-run", run, libraryRun{Owner: owner, SessionID: s.ID, RunID: run, Before: before})
+	// An application with an unavailable baseline can still run; retries
+	// keep that unknown origin instead of attributing later bytes to it.
+	return m.Store.Put("library-run", run, libraryRun{Owner: owner, SessionID: s.ID, RunID: run, WorkspaceID: s.WorkspaceID, Before: before, Done: err != nil})
 }
 func (m *Manager) capturePersonalRun(s Session) {
+	m.captureOutputVersions(s, true)
+}
+func (m *Manager) captureOutputVersions(s Session, atCompletion bool) {
 	m.libraryMu.Lock()
 	defer m.libraryMu.Unlock()
 	var r libraryRun
-	if e := m.Store.Get("library-run", s.RunID, &r); e != nil || r.Done {
+	if e := m.Store.Get("library-run", s.RunID, &r); e != nil || r.Done || r.RunID != s.RunID || r.SessionID != s.ID || (r.WorkspaceID != "" && r.WorkspaceID != s.WorkspaceID) {
 		return
 	}
 	fail := func(e error) {
 		m.event(s.ID, "internal", "library/error", map[string]string{"runId": s.RunID, "error": "文件自动保存失败：" + e.Error()})
 	}
-	hashes, e := m.outputHashes(s)
-	if e != nil {
-		fail(e)
-		return
-	}
-	for p, hash := range hashes {
-		if r.Before[p] == hash {
-			continue
+	if r.Artifacts == nil {
+		if r.Before == nil {
+			return // No baseline to distinguish existing files from new outputs.
 		}
-		key := libraryLinkID(r.Owner, s.RunID+"/"+p+"/"+hash)
-		_, e := m.savePersonalReferenceLocked(r.Owner, filepath.Base(p), "generated", s.ID, key, resource.FileSource{WorkspaceID: s.WorkspaceID, Path: p}, hash)
-		if e != nil {
-			fail(e)
+		hashes, err := m.outputHashes(s, r.Owner == "")
+		if err != nil {
+			fail(err)
+			return
+		}
+		files := []RunArtifact{}
+		for path, hash := range hashes {
+			if r.Before[path] != hash {
+				files = append(files, RunArtifact{Path: path, SHA256: hash})
+			}
+		}
+		sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })
+		basis := "changed_outputs_at_completion"
+		if !atCompletion {
+			basis = "recovery_scan"
+		}
+		r.Artifacts = &RunArtifactManifest{SessionID: s.ID, RunID: s.RunID, WorkspaceID: s.WorkspaceID, Basis: basis, Files: files}
+		r.Before = nil
+		// Freeze the versions before attempting any personal reference. A
+		// quota error or later retry cannot assign replacement bytes to this run.
+		if err = m.Store.Put("library-run", r.RunID, r); err != nil {
+			fail(err)
 			return
 		}
 	}
+	if r.Owner != "" {
+		runID := ""
+		if r.Artifacts.Basis == "changed_outputs_at_completion" {
+			runID = r.RunID
+		}
+		for _, file := range r.Artifacts.Files {
+			key := libraryLinkID(r.Owner, s.RunID+"/"+file.Path+"/"+file.SHA256)
+			_, err := m.savePersonalReferenceLocked(r.Owner, filepath.Base(file.Path), "generated", s.ID, runID, key, resource.FileSource{WorkspaceID: s.WorkspaceID, Path: file.Path}, file.SHA256)
+			if err != nil {
+				fail(err)
+				return
+			}
+		}
+	}
 	r.Done = true
-	if e = m.Store.Put("library-run", s.RunID, r); e != nil {
+	if e := m.Store.Put("library-run", s.RunID, r); e != nil {
 		fail(e)
 	}
 }
@@ -375,7 +448,7 @@ func (m *Manager) capturePendingPersonal() {
 		}
 		s, e := m.Session(r.SessionID)
 		if e == nil && s.RunID == r.RunID && !active(s.Status) {
-			m.capturePersonalRun(s)
+			m.captureOutputVersions(s, false)
 		}
 	}
 }

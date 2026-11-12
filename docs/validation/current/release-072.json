@@ -1,0 +1,130 @@
+{
+  "version": "0.72.0",
+  "status": "passed",
+  "date": "2026-11-08",
+  "baseline": {
+    "version": "0.71.0",
+    "sourceSHA256": "4f4257a91b7d2f6edc8fb673fd7acbaa143dc68d9d9ff99c6bc13b9749dfb1f8"
+  },
+  "sourceFiles": 832,
+  "scope": "Workspace-first conversations, application preset binding, reusable production environments and versioned run/configuration/participation/artifact evidence.",
+  "checks": [
+    {
+      "check": "Host Go test -p 1 ./...",
+      "result": "passed"
+    },
+    {
+      "check": "Every host package with Go race detector",
+      "result": "passed",
+      "appTests": 541,
+      "appShardSizes": [
+        136,
+        135,
+        135,
+        135
+      ],
+      "note": "Two earlier attempts exposed timing assumptions in Docker fixtures. The cancellation fixture now waits for the media build to start. The duplicate submission fixture keeps the original preparation active until submission. Both corrected cases passed three targeted race rounds. All app tests then ran in four disjoint shards; other host packages ran separately. atexit_sleep_ms=0 avoids artificial exit waits for the many subprocess fixtures."
+    },
+    {
+      "check": "Final focused race regression for new storage paths and prior configuration snapshot behavior",
+      "result": "passed"
+    },
+    {
+      "check": "Host go vet ./... and separate Kun SDK go test -race ./...",
+      "result": "passed"
+    },
+    {
+      "check": "Shipped UI interaction and layout contract suites",
+      "passed": true,
+      "scripts": [
+        "internal/web/tests/instances.cjs",
+        "internal/web/tests/workspace-conversations.cjs",
+        "internal/web/tests/setup-onboarding.cjs",
+        "internal/web/tests/runtime-presets.cjs",
+        "internal/web/tests/build-center.cjs",
+        "internal/web/tests/trace-timing.cjs",
+        "internal/web/tests/instance-tasks.cjs",
+        "internal/web/tests/layout.cjs",
+        "internal/web/tests/codex-provider.cjs",
+        "internal/web/tests/setup-docker-flow.cjs",
+        "internal/web/tests/conversation-rounds.cjs",
+        "scripts/config-read-ui-test.cjs"
+      ]
+    },
+    {
+      "check": "Real two-version upgrade and restart using compiled binaries in demo mode",
+      "checks": [
+        "0.71 binary creates a real demo session, native thread and schema1 display snapshot",
+        "existing default instance retains its ID and acquires versioned engine options",
+        "disk-only read accepts 0.71 snapshot without converting the file",
+        "0.71 run retains its evidence without a manufactured configuration revision",
+        "0.72 admits a new versioned run and resumes the same confirmed 0.71 native thread",
+        "fixed cursor before the acknowledgment hides later native evidence",
+        "explicit synchronization updates the display file to the new engine envelope",
+        "restart retains native ownership, deduplicates unchanged declarations and distinguishes runs"
+      ]
+    },
+    {
+      "check": "Two Codex demo executors under a single logical ID",
+      "result": "passed",
+      "scope": "Internal A→B→A ownership test records three intervals and reuses A's confirmed native thread. Does not exercise a public handoff API or a different harness."
+    },
+    {
+      "check": "Application artifact permissions, rescan limits, frozen changed file digests, retry and legacy unknown origin",
+      "result": "passed"
+    },
+    {
+      "check": "Actual Linux package outside checkout",
+      "checks": [
+        "packaging rejects missing declared shared sources before creating the destination",
+        "staged native executable, all resource hashes, preserved license notices and source version agree",
+        "all six recipe exports work without examples, source ancestry, Python, Node or Docker on PATH",
+        "generic template export reads packaged external resources",
+        "shared sources materialize with local overrides; missing inputs, traversal, metadata injection and symlinks fail",
+        "all six fully self-contained legacy recipes export identical files and permissions without common",
+        "external Dockerfile edits affect new exports while imported context bytes stay frozen",
+        "missing packaged recipes fail visibly rather than falling back into a checkout",
+        "recipe reads/imports create no tasks, sessions or image builds",
+        "packaged launcher handles spaces without Python; frozen custom recipes survive restart with common unavailable"
+      ],
+      "result": "passed"
+    },
+    {
+      "check": "Linux and Windows amd64 compile; documentation, recipe validation, i18n parity, release manifest, ZIP CRC and coverage",
+      "result": "passed"
+    }
+  ],
+  "nativeQABinaries": {
+    "rundesk": {
+      "bytes": 26692952,
+      "sha256": "6405d0afcb30798919e7471bd7d7daa73f431436bbf8c20da6ed28ceaa8950d0"
+    },
+    "rundesk.exe": {
+      "bytes": 26977280,
+      "sha256": "e68042d6068759db0c79e082485947d77e2eb58d7b770c92f12f35c0312273b9"
+    }
+  },
+  "resourceGroupsByteIdenticalTo071": {
+    "recipes": 192,
+    "config": 2,
+    "third_party": 26,
+    "clients": 5,
+    "plugins": 9,
+    "deploy": 3,
+    "LICENSES": 2
+  },
+  "api": {
+    "paths": 248,
+    "operations": 299,
+    "changedRouteContracts": [
+      "/sessions/{sid}/configuration",
+      "/tasks/{tid}/resources"
+    ]
+  },
+  "limitations": [
+    "Only Codex is a daily execution adapter; Kun is used for maintenance. No Claude Code, Pi, cross-engine tool translation, or end-user handoff was implemented.",
+    "Persisted configuration revisions are platform declarations and live source references, not complete captured native configurations.",
+    "New origin fields are evidence-based; legacy history can lack configuration or native execution records. Optional artifact scans may be unavailable for large folders.",
+    "No real model/provider, live Docker build or target-server verification. Windows was cross-compiled only. UI interactions were exercised in jsdom; native Chromium was unable to launch in this runtime."
+  ]
+}

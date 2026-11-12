@@ -4,7 +4,7 @@
 
 RunDesk 的三个使命：为 Agent 落地提供调试工作台、连接领域应用与 Agent Harness、为 Harness 研究提供实验场。文档按完整任务组织；界面操作、对应契约与限制在同一专题查阅。
 
-当前源码：**RunDesk 0.69.1 / 独立 Kun 0.17.0 / worker 协议 16**。新安装先进入[初始化](SETUP.md#首次初始化)；日常会话与应用由 Codex 执行，Kun 用于[内部维护](MAINTENANCE.md)与只读轨迹问答。配方声明引用的共享内容来自 `recipes/common/`，导出时物化为普通文件；操作见[下载源与配方文件](BUILD-SOURCES.md)及[升级说明](UPGRADING.md)。
+当前源码：**RunDesk 0.72.0 / 独立 Kun 0.17.0 / worker 协议 16**。新安装先进入[初始化](SETUP.md#首次初始化)；日常会话与应用由 Codex 执行，Kun 用于[内部维护](MAINTENANCE.md)与只读轨迹问答。配方声明引用的共享内容来自 `recipes/common/`，导出时物化为普通文件；操作见[下载源与配方文件](BUILD-SOURCES.md)及[升级说明](UPGRADING.md)。
 
 ## 1. Agent 落地与调试 / Agent debugging
 
@@ -23,7 +23,7 @@ RunDesk 的三个使命：为 Agent 落地提供调试工作台、连接领域�
 | 注册应用并授权 | [应用连接](APPLICATION-CONNECT.md)、[应用凭据](APPLICATION-CREDENTIALS.md)、[用户授权](USERS.md) |
 | 提交任务、跟踪进度、获取制品 | [RDCA v1](API-V1.md)、[队列](QUEUE.md)、[定时任务](SCHEDULES.md)、[文件与产物](PERSONAL-FILES.md) |
 | 选择应用可用环境及项目隔离 | [运行预设](APPLICATION-RUNTIME-PRESETS.md)、[项目环境](APPLICATION-PROJECT-ENVIRONMENTS.md) |
-| 从配方准备镜像，再创建 Agent | [构建中心完整指南](BUILD-CENTER.md)、[配方 CLI](../recipes/README.md) |
+| 从配方准备镜像，再创建制作环境 | [构建中心完整指南](BUILD-CENTER.md)、[配方 CLI](../recipes/README.md) |
 | 修改配方与下载源、复用 Codex | [配方与源设置](BUILD-SOURCES.md)、[构建运行时](BUILD-RUNTIME.md) |
 | 下载或发布预构建镜像 | [镜像分发](IMAGE-DISTRIBUTION.md) |
 | 配置容器、模型与插件 | [Docker 环境](DOCKER-ENVIRONMENTS.md)、[Codex 模型服务](CODEX-PROVIDERS.md)、[插件边界](NATIVE-PLUGINS.md) |
@@ -47,7 +47,7 @@ RDCA `/api/v1` 与 UHP `/v1` 共用任务核心；平台定位和协议边界见
 ## 部署与维护 / Operations and development
 
 - [启动与部署](SETUP.md)、[升级](UPGRADING.md)、[当前能力与缺口](STATUS.md)、[内部维护](MAINTENANCE.md)。
-- [系统架构](ARCHITECTURE.md)、[后端能力](BACKENDS.md)、[资源契约](RESOURCE-CONTRACTS.md)、[任务资源视图](TASK-RESOURCES.md)。
+- [系统架构](ARCHITECTURE.md)、[后端能力](BACKENDS.md)、[存储契约与实施计划](STORAGE.md)、[资源契约](RESOURCE-CONTRACTS.md)、[任务资源视图](TASK-RESOURCES.md)。
 - [WebUI 与会话](WEBUI.md)、[协作预览](COLLABORATION.md)。
 - [验证与复验](VALIDATION.md)、[版本变更](../CHANGELOG.md)、[上游来源](UPSTREAM.md)、[安全](../SECURITY.md)。
 

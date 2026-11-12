@@ -89,7 +89,7 @@ type handle struct {
 	instanceID         string
 	permissionsKey     string
 	observationEnabled bool
-	op                 sync.Mutex
+	op                 sync.RWMutex
 	admission          sync.Mutex
 	mu                 sync.Mutex
 	client             *rpc.Client
@@ -98,8 +98,17 @@ type handle struct {
 	canceled           bool
 	last               time.Time
 	requests           map[string]Approval
+	nativeOwner        string
+	configWriters      int
+	configRetiring     *rpc.Client
+	configIdentity     string
+	configReads        map[configReadKey]*configReadFlight
 }
 type Manager struct {
+	configSnapshotMu     sync.Mutex
+	configSnapshotCycle  sync.Mutex
+	configSnapshotEpoch  uint64
+	configSnapshotPairs  map[configSnapshotPair]bool
 	uhpMu                sync.Mutex
 	observationMu        sync.RWMutex
 	observation          *observeproxy.Proxy
@@ -292,6 +301,8 @@ func New(data, codex string, demo bool) (*Manager, error) {
 		}
 	}()
 	m.startSetupAutoRepairs()
+	m.wg.Add(1)
+	go m.configSnapshotLoop()
 	return m, nil
 }
 func active(s string) bool {
@@ -527,7 +538,12 @@ func (m *Manager) command(w Workspace, i Instance) *exec.Cmd {
 
 // Caller holds h.op. A connection is reused across turns.
 func (m *Manager) connect(id string, w Workspace, h *handle, ids ...string) (*rpc.Client, error) {
-	m.executionMu.RLock()
+	return m.connectContext(m.ctx, id, w, h, ids...)
+}
+func (m *Manager) connectContext(parent context.Context, id string, w Workspace, h *handle, ids ...string) (*rpc.Client, error) {
+	if err := lockRPCMutex(parent, &m.executionMu, false); err != nil {
+		return nil, err
+	}
 	defer m.executionMu.RUnlock()
 	if s, e := m.Session(id); e == nil {
 		// Only accepted runs call connect with a real session ID. Disabling a
@@ -575,6 +591,11 @@ func (m *Manager) connect(id string, w Workspace, h *handle, ids ...string) (*rp
 		return nil, e
 	}
 	i = effective
+	if err := parent.Err(); err != nil {
+		cleanup()
+		m.loaded.Add(-1)
+		return nil, err
+	}
 	runtimeKey := m.beginRuntime(id, w, i)
 	c, e = rpc.Start(cmd, func(msg rpc.Message) { m.onMessage(id, h, msg) }, func(dir string, msg rpc.Message) {
 		m.event(id, dir, msg.Method, msg)
@@ -592,7 +613,7 @@ func (m *Manager) connect(id string, w Workspace, h *handle, ids ...string) (*rp
 	h.client = c
 	h.thread = ""
 	h.mu.Unlock()
-	ctx, cancel := context.WithTimeout(m.ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(parent, 30*time.Second)
 	defer cancel()
 	if e = c.Initialize(ctx); e != nil {
 		h.mu.Lock()
@@ -873,6 +894,10 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 		return s, e
 	}
 	resourceObservedAt := store.Now()
+	configurationRevision, e := m.captureConfigurationRevision(s, resourceManifest)
+	if e != nil {
+		return s, e
+	}
 	// The reservation guard applies even to sessions prepared before a preset
 	// was registered. Disabling and final admission share one lock.
 	m.applicationMu.Lock()
@@ -964,6 +989,10 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 			m.unreserveProcess(id)
 		}
 	}()
+	participation, e := m.sessionParticipation(s)
+	if e != nil {
+		return s, e
+	}
 	h.mu.Lock()
 	h.canceled = false
 	h.previousTurn = s.TurnID
@@ -990,8 +1019,8 @@ func (m *Manager) start(id string, in Input, recovery *RecoveryPlan, queued ...s
 		return s, e
 	}
 	s, _ = m.Session(id)
-	instanceAtSubmit, _ := m.Instance(s.InstanceID)
-	record := map[string]any{"taskId": taskID, "instanceRevision": instanceAtSubmit.Revision, "runId": s.RunID, "input": in, "notes": w.Notes, "notesRevision": w.Revision, "cwd": w.Path, "instanceId": s.InstanceID, "model": s.Model}
+	record := map[string]any{"taskId": taskID, "instanceRevision": configurationRevision.InstanceRevision, "runId": s.RunID, "input": in, "notes": w.Notes, "notesRevision": w.Revision, "cwd": w.Path, "instanceId": s.InstanceID, "model": s.Model}
+	record["execution"] = admittedRunExecution(s, taskID, participation.ID, configurationRevision)
 	record["resources"] = resourceManifest
 	record["resourceBasis"] = "declared_at_admission"
 	record["resourceObservedAt"] = resourceObservedAt
@@ -1197,48 +1226,7 @@ func (m *Manager) Approve(id, aid string, decision any, answers map[string]any, 
 	m.event(id, "internal", "approval/resolved", map[string]any{"id": aid, "decision": decision, "scope": scope, "resolvedAt": a.ResolvedAt})
 	return nil
 }
-func (m *Manager) ConfigCall(wid, method string, params any, ids ...string) (json.RawMessage, error) {
-	w, e := m.Workspace(wid)
-	if e != nil {
-		return nil, e
-	}
-	i, e := m.Instance(ids...)
-	if e != nil {
-		return nil, e
-	}
-	if i.AgentRuntime.Kind == "kun" {
-		return nil, failure(400, "kun_config_endpoint", "Kun 使用 Agent 引擎配置和独立 MCP 配置接口")
-	}
-	id := "config-" + i.ID + "-" + wid
-	h, e := m.getHandle(id)
-	if e != nil {
-		return nil, e
-	}
-	h.op.Lock()
-	defer h.op.Unlock()
-	c, e := m.connect(id, w, h, i.ID)
-	if e != nil {
-		return nil, e
-	}
-	ctx, cancel := context.WithTimeout(m.ctx, 45*time.Second)
-	defer cancel()
-	raw, err := c.Call(ctx, method, params)
-	if err != nil {
-		var transport *rpc.TransportError
-		if errors.As(err, &transport) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-			h.mu.Lock()
-			if h.client == c {
-				h.client = nil
-				h.thread = ""
-			}
-			h.mu.Unlock()
-			c.Close()
-			<-c.Done()
-		}
-		return nil, fmt.Errorf("Codex %s: %w", method, err)
-	}
-	return raw, nil
-}
+
 func (m *Manager) reap() {
 	m.mu.Lock()
 	defer m.mu.Unlock()

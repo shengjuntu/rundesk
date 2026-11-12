@@ -52,9 +52,50 @@ window.RunDeskDebug=(()=>{
    }catch(err){if(alive(e))error.textContent=err.message;}
    finally{if(alive(e)&&requested===runOffset){runsPrev.disabled=runOffset===0;runsNext.disabled=!runMore;}}
   }
+  function runExecutionDetails(runId, cursor) {
+    const body = el('div', {'aria-live':'polite'});
+    const section = el('details', {class:'debug-run-execution'},
+      el('summary', {}, rdText('本轮执行记录')), body);
+    let loading = false;
+    let loaded = false;
+    section.ontoggle = async () => {
+      if (!section.open || loading || loaded) return;
+      loading = true;
+      const inScope = () => section.isConnected && !closed && through === cursor && selectedRun === runId;
+      body.textContent = rdText('正在读取本轮记录…');
+      try {
+        const query = new URLSearchParams({runId, through:String(cursor)});
+        const value = await api('/sessions/' + encodeURIComponent(sid) + '/configuration?' + query);
+        if (!inScope()) return;
+        const run = value.run;
+        const fields = [
+          ['执行引擎', run.engine], ['执行环境编号', run.instanceId],
+          ['参与段序号', run.participation?.ordinal],
+          ['配置声明版本', run.configurationRevisionId],
+          ['原生线程', run.native?.nativeSessionId], ['原生轮次', run.native?.nativeRunId],
+        ];
+        const facts = el('dl', {class:'debug-run-facts'});
+        for (const [label, field] of fields) {
+          facts.append(el('dt', {}, rdText(label)), el('dd', {}, field || rdText('未记录')));
+        }
+        body.replaceChildren(facts);
+        if (value.configurationRevision) {
+          body.append(el('details', {}, el('summary', {}, rdText('准入时的资源声明')),
+            el('pre', {}, txt(value.configurationRevision))));
+        }
+        loaded = true;
+      } catch (err) {
+        if (inScope()) body.textContent = err.message;
+      } finally {
+        loading = false;
+      }
+    };
+    return section;
+  }
   function renderTiming(value){
    const timingData=value?.timing;
    timing.replaceChildren(el('h3',{},'步骤耗时概览'));
+   if(selectedRun && through > 0) timing.append(runExecutionDetails(selectedRun, through));
    if(!timingData){timing.append(el('p',{class:'help'},'当前记录未提供耗时汇总；可在下方查看已知步骤时长。'));return;}
    const frozen={epoch,through,runId:selectedRun},run=(timingData.runs||[]).find(row=>row.runId===selectedRun);
    let wall='未知',wallLabel='本轮总耗时',wallNote='请选择一个轮次查看完整总耗时；不同轮次不合并为一个总时长。';

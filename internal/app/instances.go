@@ -16,17 +16,18 @@ const DefaultInstance = "default"
 
 // An instance is a persistent configuration identity, not a single process.
 type Instance struct {
-	AgentRuntime p.Config      `json:"agentRuntime"`
-	Execution    ExecutionSpec `json:"execution"`
-	ID           string        `json:"id"`
-	Name         string        `json:"name"`
-	Description  string        `json:"description"`
-	DefaultModel string        `json:"defaultModel"`
-	Permissions  Permissions   `json:"permissions"`
-	CodexHome    string        `json:"codexHome"`
-	Managed      bool          `json:"managed"`
-	Revision     int           `json:"revision"`
-	Created      string        `json:"created"`
+	AgentRuntime   p.Config      `json:"agentRuntime"`
+	Execution      ExecutionSpec `json:"execution"`
+	ID             string        `json:"id"`
+	Name           string        `json:"name"`
+	Description    string        `json:"description"`
+	DefaultModel   string        `json:"defaultModel"`
+	Permissions    Permissions   `json:"permissions"`
+	CodexHome      string        `json:"codexHome"`
+	Managed        bool          `json:"managed"`
+	Revision       int           `json:"revision"`
+	Created        string        `json:"created"`
+	restoredEngine restoredEngine
 }
 type InstancePatch struct {
 	Name         string       `json:"name"`
@@ -48,13 +49,22 @@ func (m *Manager) loadInstances() error {
 		return err
 	}
 	for _, b := range rows {
-		var v Instance
-		if err := json.Unmarshal(b, &v); err != nil {
+		var record persistedInstance
+		if err := json.Unmarshal(b, &record); err != nil {
 			return err
 		}
+		v := Instance(record)
 		v.Permissions = v.Permissions.normalized()
 		v.Execution = v.Execution.normalized()
 		m.instances[v.ID] = &v
+	}
+	v := m.instances[DefaultInstance]
+	if v != nil {
+		// A newer adapter may have registered its own default state home.
+		// Keep it inspectable without repointing that home at a Codex directory.
+		if _, err := agentBackend(runtimeKind(v.AgentRuntime.Kind)); err != nil {
+			return nil
+		}
 	}
 	home := os.Getenv("CODEX_HOME")
 	if home == "" {
@@ -72,7 +82,6 @@ func (m *Manager) loadInstances() error {
 		return err
 	}
 	// The default follows the service's existing environment, including on upgrades.
-	v := m.instances[DefaultInstance]
 	if v == nil {
 		v = &Instance{ID: DefaultInstance, Name: "默认实例", Created: store.Now()}
 	}
@@ -83,7 +92,7 @@ func (m *Manager) loadInstances() error {
 	if err := os.MkdirAll(home, 0700); err != nil {
 		return err
 	}
-	return m.Store.Put("instance", v.ID, v)
+	return m.Store.Put("instance", v.ID, persistedInstance(*v))
 }
 func (m *Manager) Instances() []Instance {
 	m.mu.Lock()
@@ -137,7 +146,7 @@ func (m *Manager) CreateInstance(p InstancePatch) (Instance, error) {
 	if err := os.MkdirAll(v.CodexHome, 0700); err != nil {
 		return Instance{}, err
 	}
-	if err := m.Store.Put("instance", id, v); err != nil {
+	if err := m.Store.Put("instance", id, persistedInstance(v)); err != nil {
 		return Instance{}, err
 	}
 	m.mu.Lock()
@@ -166,7 +175,7 @@ func (m *Manager) PatchInstance(id string, p InstancePatch) (Instance, error) {
 		next.Permissions = p.Permissions.normalized()
 	}
 	next.Revision++
-	if err := m.Store.Put("instance", id, next); err != nil {
+	if err := m.Store.Put("instance", id, persistedInstance(next)); err != nil {
 		return Instance{}, err
 	}
 	*v = next
@@ -181,6 +190,9 @@ func (m *Manager) skillRoot(wid string, opts []string) (string, string, error) {
 	}
 	i, err := m.Instance(instanceID(opts))
 	if err != nil {
+		return "", "", err
+	}
+	if _, err = agentBackend(runtimeKind(i.AgentRuntime.Kind)); err != nil {
 		return "", "", err
 	}
 	i, _, err = m.effectiveInstance(i, w)

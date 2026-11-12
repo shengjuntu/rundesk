@@ -81,6 +81,9 @@ func (s *Server) queueRoutes(mux *http.ServeMux) {
 	})
 	mux.HandleFunc("GET /api/tasks/{tid}/resources", func(w http.ResponseWriter, r *http.Request) {
 		v, e := resources.TaskResources(r.PathValue("tid"))
+		if key := principal(r); human(r) != nil || (key != nil && !key.scope("files")) {
+			v.Artifacts = nil
+		}
 		respond(w, v, e)
 	})
 	mux.HandleFunc("POST /api/tasks/{tid}/resources/export", func(w http.ResponseWriter, r *http.Request) {

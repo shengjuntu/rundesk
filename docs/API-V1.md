@@ -1,6 +1,6 @@
 # RunDesk Control API（RDCA）v1
 
-RunDesk 自身 API 的名称为 **RunDesk Control API（RDCA）**。本文对应 RunDesk 0.69.1 的契约。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
+RunDesk 自身 API 的名称为 **RunDesk Control API（RDCA）**。本文对应 RunDesk 0.72.0 的契约。基础路径 `/api/v1`；机器可读定义为 `GET /api/v1/openapi.json`，源码为 `internal/app/openapi.json`，由 `scripts/generate-openapi.py` 生成。既有 `/api` 入口保留兼容，新应用使用 v1。
 
 RunDesk 不依赖 HarnessRouter。附加 UHP 服务已在 `/v1` 提供入口，与 RDCA 共用任务核心和资源服务；各协议的授权与幂等细节分别定义。本版目标协议为 `2026-10-19`，不声明完整规范兼容，详见 [API 定位](ARCHITECTURE.md#api-position) 和 [UHP 服务与限制](UHP.md)。
 
@@ -17,6 +17,14 @@ RunDesk 不依赖 HarnessRouter。附加 UHP 服务已在 `/v1` 提供入口，�
 `Session.observeHTTP` 表示保存的 Codex HTTP 采集偏好，默认关闭。`PATCH /sessions/{sid}` 可传 `{"observeHTTP":true}` 或 `false`；沿用会话写入权限和归属校验，应用凭据需 `read` + `run`。修改不打断当前任务，下一轮提交时重连并恢复原 thread 应用。`observation.pending` 表示偏好待应用，`observation.appliedEnabled` 表示原生线程已确认配置代理；开启偏好但不支持接入时后者仍为 false。保存值不等于采集已发生。Kun 拒绝开启此 Codex 专用设置。完整配置与覆盖边界见 [统一调试](UNIFIED_DEBUGGING.md)。
 
 OpenAPI 同时包含应用和管理接口。`x-administrator-only=true` 为管理操作；`x-application-scopes` 列出应用所需 scopes，此外仍受应用、实例、项目和资源归属约束。不能将所有列出的路径都视为应用授权。
+
+## 配置显示快照
+
+查询某一轮的历史配置使用 `GET /api/v1/sessions/{sid}/configuration?runId={rid}&through={cursor}`。响应中的 `run` 给出准入记录与有证据的原生回执，`configurationRevision` 是当时保存的声明版本。固定游标早于原生回执时，该响应不包含该回执。旧版记录可以返回 `basis=legacy_evidence` 和空的配置版本。省略 `runId` 仍按原接口检查当前配置。详见[存储契约](STORAGE.md)。
+
+管理员读取 `GET /api/v1/workspaces/{wid}/config?instanceId=...` 时，不附加参数仍即时查询 Codex 原生有效配置。`view=snapshot` 只读取按 Agent／工作区隔离的本地脱敏快照；无快照时返回未同步状态，不隐式查询 Codex。再加 `refresh=true` 才主动重新读取并更新快照，可能需要初始化配置连接，遵守原有超时与环境准备规则。返回的配置内容须连同 `snapshot` 同步元数据一起判断，旧快照不等于当前原生读取成功。
+
+后台每五分钟只刷新已有健康配置连接对应的快照，不为此启动空闲容器。此选项不改变配置管理权限、MCP 写入的即时读取与版本校验，也不复制 Skills、插件或登录凭据；详见[配置界面与边界](WEBUI.md#codex-effective-configuration)。
 
 ## 认证和归属
 

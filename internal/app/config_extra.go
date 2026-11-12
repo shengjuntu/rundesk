@@ -238,6 +238,9 @@ func (m *Manager) Diagnostics(wid string, ids ...string) (any, error) {
 	if e != nil {
 		return nil, e
 	}
+	if e = requireCodexExecutionAdapter(i); e != nil {
+		return nil, e
+	}
 	w, e := m.Workspace(wid)
 	if e != nil {
 		return nil, e

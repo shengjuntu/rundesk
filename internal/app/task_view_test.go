@@ -1,6 +1,8 @@
 package app
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -162,11 +164,60 @@ func TestTaskResourceRoutesRespectOwnershipAndExportPrivilege(t *testing.T) {
 	if err := json.Unmarshal(r.Body.Bytes(), &task); err != nil {
 		t.Fatal(err)
 	}
+	task.RunID, task.Status = "output-version", "completed"
+	m.queueMu.Lock()
+	err := m.saveTaskLocked(task)
+	m.queueMu.Unlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	session, err := m.Session(task.SessionID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	session.RunID = task.RunID
+	workspace, _ := m.Workspace(session.WorkspaceID)
+	dir := filepath.Join(workspace.Path, "outputs", session.ID)
+	if err = os.MkdirAll(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(filepath.Join(dir, "old.txt"), []byte("existing input"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err = m.preparePersonalRun(session, task.RunID, ""); err != nil {
+		t.Fatal(err)
+	}
+	output := filepath.Join(dir, "private-result.txt")
+	if err = os.WriteFile(output, []byte("version one"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	m.capturePersonalRun(session)
+	if err = os.WriteFile(output, []byte("replacement in a later turn"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err = m.preparePersonalRun(session, task.RunID, ""); err != nil {
+		t.Fatal(err)
+	}
+	m.capturePersonalRun(session) // retry reads the frozen version
+	_, filesToken, err := m.CreateApplicationKey("resource-owner", KeyInput{Name: "outputs", WorkspaceIDs: []string{wid}, Scopes: []string{"read", "files"}})
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, prefix := range []string{"/api/v1", "/api"} {
 		path := prefix + "/tasks/" + task.ID + "/resources"
 		r = appRequest(h, "GET", path, "", own, "")
-		if r.Code != 200 || strings.Contains(r.Body.String(), m.Data) {
+		if r.Code != 200 || strings.Contains(r.Body.String(), m.Data) || strings.Contains(r.Body.String(), "private-result.txt") {
 			t.Fatalf("owner view: %d %s", r.Code, r.Body.String())
+		}
+		r = appRequest(h, "GET", path, "", filesToken, "")
+		var view TaskResourceView
+		if r.Code != 200 || json.Unmarshal(r.Body.Bytes(), &view) != nil || view.Artifacts == nil || len(view.Artifacts.Files) != 1 {
+			t.Fatalf("file-scoped owner: %d %s", r.Code, r.Body.String())
+		}
+		item := view.Artifacts.Files[0]
+		digest := sha256.Sum256([]byte("version one"))
+		if view.Artifacts.SessionID != session.ID || view.Artifacts.RunID != task.RunID || view.Artifacts.WorkspaceID != wid || filepath.Base(item.Path) != "private-result.txt" || item.SHA256 != hex.EncodeToString(digest[:]) {
+			t.Fatal("incorrect file origin or newer content attributed to earlier run", view.Artifacts)
 		}
 		r = appRequest(h, "GET", path, "", foreign, "")
 		if r.Code != 403 {

@@ -39,6 +39,8 @@ type RuntimeSessionService interface {
 	Context() context.Context
 	Session(string) (Session, error)
 	Update(string, func(*Session)) error
+	NativeBinding(Session, string) (nativeSessionBinding, error)
+	ConfirmNativeBinding(Session, nativeSessionBinding, string) error
 	Finish(id, status, message string)
 	Event(id, direction, method string, value any) error
 	Go(func())

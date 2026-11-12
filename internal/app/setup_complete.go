@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -27,12 +28,43 @@ func (m *Manager) completeSetup(in SetupCompleteInput) (SetupState, error) {
 		return saved, failure(409, "revision_conflict", "初始化设置已变化，请刷新后重试")
 	}
 	wid := in.WorkspaceID
-	if wid == "" {
-		wid = saved.WorkspaceID
-	}
-	if wid == "" {
-		if all := m.Workspaces(); len(all) > 0 {
-			wid = all[0].ID
+	if wid != "" {
+		// An explicit workspace remains strict; never silently switch an
+		// application or maintenance request into another directory.
+		if err = m.requireDailyWorkspace(wid); err != nil {
+			return saved, err
+		}
+	} else {
+		choices := []Workspace{}
+		for _, workspace := range m.Workspaces() {
+			if workspace.Purpose != "maintenance" {
+				choices = append(choices, workspace)
+			}
+		}
+		sort.Slice(choices, func(i, j int) bool {
+			if (choices[i].Name == "默认工作区") != (choices[j].Name == "默认工作区") {
+				return choices[i].Name == "默认工作区"
+			}
+			if choices[i].Name != choices[j].Name {
+				return choices[i].Name < choices[j].Name
+			}
+			return choices[i].ID < choices[j].ID
+		})
+		for _, workspace := range choices {
+			if workspace.ID == saved.WorkspaceID {
+				wid = workspace.ID
+				break
+			}
+		}
+		if wid == "" && len(choices) > 0 {
+			wid = choices[0].ID
+		}
+		if wid == "" {
+			workspace, createErr := m.CreateWorkspace("默认工作区", "")
+			if createErr != nil {
+				return saved, createErr
+			}
+			wid = workspace.ID
 		}
 	}
 	workspace, err := m.Workspace(wid)

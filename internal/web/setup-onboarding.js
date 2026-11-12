@@ -177,7 +177,6 @@ window.RunDeskOnboarding = (() => {
   async function saveKun(c) {
     c.kun=await api("/setup/kun",{method:"POST",body:{endpoint:c.endpoint,model:c.model,apiKeyEnv:c.keyEnv,kunPath:c.kunPath,...(c.kun?.revision!=null?{expectedRevision:c.kun.revision}:{})}});
     c.kunPath=c.kun.kunPath||c.kunPath;saveDraft(c);updateSteps(c);
-    if(c.kun.ready){preferredInstance=c.kun.instanceId;localStorage.setItem("rundesk-instance",preferredInstance);}
   }
   function codex(c) {
     header(c,"配置和安装 Codex","Configure and install Codex","自动发现已有安装；需要安装时，下载指定版本到 RunDesk 自己的目录。原生安装不要求预先安装 Node.js 或 npm。","Reuse a discovered installation, or download an exact release into RunDesk's own directory. Native installation does not require Node.js or npm.");
@@ -743,6 +742,10 @@ window.RunDeskOnboarding = (() => {
     const text=previous.text+(value.text||"");
     c.logs[id]={next:value.next,text:text.length>131072?tr("[显示日志末尾]\n","[Showing the end of the log]\n")+text.slice(-131072):text};
   }
+  function dailyWorkspace(c) {
+    const choices=state.workspaces.filter(value=>value.purpose!=="maintenance");
+    return choices.find(value=>value.id===c.workspaceId)||choices.find(value=>value.id===c.setup.settings.workspaceId)||choices[0];
+  }
   function finish(c) {
     const {ready:succeeded,running}=preparationCounts(c);
     const summary=el("details",{class:"ob-setup-summary"},el("summary",{},tr("查看三步初始化结果","Review the three setup steps")),
@@ -752,19 +755,28 @@ window.RunDeskOnboarding = (() => {
       summaryRow(tr("Docker 镜像","Docker images"),succeeded+tr(" 个准备成功"," ready")+(running?" · "+running+tr(" 个进行中"," running"):"")));
     summary.lastElementChild.lastElementChild.id="onboarding-docker-summary";
     c.main.append(summary);
-    const work=el("select",{id:"onboarding-workspace"},...state.workspaces.map(value=>el("option",{value:value.id},value.name)));work.value=c.workspaceId||state.workspaces[0]?.id||"";work.onchange=()=>{c.workspaceId=work.value;};
+    const work=el("select",{id:"onboarding-workspace"},...state.workspaces.filter(value=>value.purpose!=="maintenance").map(value=>el("option",{value:value.id},value.name)));work.value=dailyWorkspace(c)?.id||"";work.onchange=()=>{c.workspaceId=work.value;};
     c.completeButton=action(c,tr("完成并进入 RunDesk","Finish and enter RunDesk"),()=>completeSetup(c),"primary",{id:"onboarding-complete"});
     c.main.append(card(tr("完成初始化","Finish setup"),el("label",{},tr("默认工作区","Default workspace"),work),note("点击下方“完成并进入 RunDesk”保存配置。Docker 环境可以稍后准备；已经提交的安装、拉取、构建和修复任务会继续在后台运行。","Finish and enter RunDesk below to save your configuration. Docker preparation is optional; submitted installation, pull, build and repair tasks continue in the background.")));
     const examples=card(tr("积累的修复经验","Repair experience"),el("div",{id:"onboarding-experiences"}));c.main.append(examples);renderExperiences(c);
   }
   async function completeSetup(c,imageKey="") {
-    const workspaceId=c.workspaceId||state.workspaces[0]?.id||"";
+    let workspaceId=dailyWorkspace(c)?.id||"";
     const saved=await api("/setup/complete",{method:"POST",body:{workspaceId,revision:c.setup.settings.revision,...(c.codexPath?{codex:c.codexPath}:{}),completed:true}});
-    c.setup.settings=saved.settings||saved;sessionStorage.removeItem("rundesk-setup-dismissed");
+    c.setup.settings=saved.settings||saved;workspaceId=c.setup.settings.workspaceId||workspaceId;
+    if(workspaceId&&!state.workspaces.some(value=>value.id===workspaceId)){
+      state.workspaces=await api("/workspaces");
+      $("#workspace").replaceChildren(...state.workspaces.map(value=>el("option",{value:value.id},value.name)));
+    }
+    sessionStorage.removeItem("rundesk-setup-dismissed");
     if(Object.values(c.autoAuthorizations).every(value=>value.state==="registered"))sessionStorage.removeItem("rundesk-onboarding-draft");else saveDraft(c);
-    if(readyKun(c)){preferredInstance=c.kun.instanceId;localStorage.setItem("rundesk-instance",preferredInstance);}
+    // The maintenance model is never the default for everyday conversations.
+    const selected=state.instances.find(value=>value.id===$("#instance")?.value&&(value.agentRuntime?.kind||"codex")==="codex");
+    preferredInstance=selected?.id||"default";localStorage.setItem("rundesk-instance",preferredInstance);
+    localStorage.setItem("rundesk-conversation-workspace",workspaceId);
     localStorage.setItem("rundesk-assistant-workspace",workspaceId);if($("#workspace"))$("#workspace").value=workspaceId;
     if(imageKey)history.replaceState(null,"","#build-center/images/"+enc(imageKey));
+    else if(c.initial&&(!c.returnHash||c.setupRoute))c.returnHash="#conversations";
     close(c,true);
     if(imageKey&&!c.initial)await RunDeskBuildCenter.open("images",imageKey);
   }
@@ -852,7 +864,7 @@ window.RunDeskOnboarding = (() => {
   }
   async function open(options={}) {
     if(current){current.page.focus();return current.promise;}
-    const saved=draft(),requestedStep=options.step||/^#setup\/(llm|codex|docker)$/.exec(location.hash)?.[1],c={step:Math.max(0,steps.findIndex(value=>value[0]===requestedStep)),returnHash:location.hash.startsWith("#setup/")?"#instances":location.hash,closed:false,initial:!!options.initial,setup:options.setup||await api("/setup"),discovery:null,scanning:false,kun:null,installJobs:[],builds:[],logs:{},repairs:[],experiences:[],recipes:[],capabilities:{},catalog:null,publicCatalog:null,publicCatalogError:"",runtimeProfiles:null,dockerMode:["pull","build","local"].includes(saved.dockerMode)?saved.dockerMode:"pull",runtimeDrafts:saved.runtimeDrafts||{},codexRuntime:saved.codexRuntime||{mode:"auto"},dockerCheck:null,receipts:saved.receipts||{},sourceDrafts:saved.sourceDrafts||{},autoRepair:saved.autoRepair!==false,autoAuthorizations:saved.autoAuthorizations||{},autoRows:[],installAdoptRequestId:saved.installAdoptRequestId||"",installAdopted:!!saved.installAdopted,selected:new Set(saved.selected||[]),endpoint:saved.endpoint||"",model:saved.model||"",keyEnv:saved.keyEnv||"",kunPath:saved.kunPath||"",codexPath:saved.codexPath||"",version:saved.version||"0.157.1",group:saved.group||""};
+    const saved=draft(),requestedStep=options.step||/^#setup\/(llm|codex|docker)$/.exec(location.hash)?.[1],c={step:Math.max(0,steps.findIndex(value=>value[0]===requestedStep)),returnHash:location.hash.startsWith("#setup/")?"#conversations":location.hash,setupRoute:location.hash.startsWith("#setup/"),closed:false,initial:!!options.initial,setup:options.setup||await api("/setup"),discovery:null,scanning:false,kun:null,installJobs:[],builds:[],logs:{},repairs:[],experiences:[],recipes:[],capabilities:{},catalog:null,publicCatalog:null,publicCatalogError:"",runtimeProfiles:null,dockerMode:["pull","build","local"].includes(saved.dockerMode)?saved.dockerMode:"pull",runtimeDrafts:saved.runtimeDrafts||{},codexRuntime:saved.codexRuntime||{mode:"auto"},dockerCheck:null,receipts:saved.receipts||{},sourceDrafts:saved.sourceDrafts||{},autoRepair:saved.autoRepair!==false,autoAuthorizations:saved.autoAuthorizations||{},autoRows:[],installAdoptRequestId:saved.installAdoptRequestId||"",installAdopted:!!saved.installAdopted,selected:new Set(saved.selected||[]),endpoint:saved.endpoint||"",model:saved.model||"",keyEnv:saved.keyEnv||"",kunPath:saved.kunPath||"",codexPath:saved.codexPath||"",version:saved.version||"0.157.1",group:saved.group||""};
     c.workspaceId=c.setup.settings.workspaceId||ws()?.id||state.workspaces[0]?.id||"";
     if(!c.codexPath&&c.setup.settings.codex)c.codexPath=c.setup.settings.codex;
     c.promise=new Promise(resolve=>{c.resolve=resolve;});current=c;

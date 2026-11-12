@@ -256,13 +256,16 @@ func (m *Manager) saveSetupKun(ctx context.Context, in SetupKunInput) (SetupKunS
 	if existing := m.instances[setupKunInstanceID]; existing != nil {
 		instance.Revision = existing.Revision + 1
 		instance.Created = existing.Created
+		if runtimeKind(existing.AgentRuntime.Kind) == "kun" {
+			instance.restoredEngine = existing.restoredEngine
+		}
 	}
 	workspace := Workspace{ID: next.WorkspaceID, Name: "RunDesk 初始化", Path: workPath}
 	if existing := m.workspaces[next.WorkspaceID]; existing != nil && existing.Path != workPath {
 		m.mu.Unlock()
 		return SetupKunStatus{}, failure(409, "setup_path_changed", "Initialization workspace identity changed")
 	}
-	if err = m.Store.PutMany(store.Record{Kind: "instance", ID: instance.ID, Value: instance}, store.Record{Kind: "workspace", ID: workspace.ID, Value: workspace}, store.Record{Kind: "system", ID: "setup-kun", Value: next}); err != nil {
+	if err = m.Store.PutMany(store.Record{Kind: "instance", ID: instance.ID, Value: persistedInstance(instance)}, store.Record{Kind: "workspace", ID: workspace.ID, Value: workspace}, store.Record{Kind: "system", ID: "setup-kun", Value: next}); err != nil {
 		m.mu.Unlock()
 		return SetupKunStatus{}, err
 	}

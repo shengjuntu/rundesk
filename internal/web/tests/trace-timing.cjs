@@ -17,6 +17,11 @@ let hold=null;
 w.api=async(url,options={})=>{requests.push({url,method:options.method||'GET'});const u=new URL(url,'http://rundesk.test'),q=u.searchParams,kind=q.get('kind');
  if(u.pathname==='/sessions/fixture')return clone(w.state.session);
  if(u.pathname.endsWith('/capabilities'))return {backend:'codex',queries:[]};
+ if(u.pathname.endsWith('/configuration')){
+  assert.equal(q.get('runId'),'run-1');
+  assert.equal(q.get('through'),'17');
+  return {run:{engine:'codex',instanceId:'default',configurationRevisionId:'fixture-revision'},configurationRevision:{bindings:[]}};
+ }
  if(kind==='events')return {data:{through:17,events:[]}};
  if(kind==='runs')return {data:{runs:[{id:'run-1',question:'First round',status:'completed'},{id:'run-2',question:'Open round',status:'running'},{id:'run-3',question:'Native interval',status:'completed'},{id:'run-4',question:'Worker interval',status:'completed'}],total:4,nextOffset:4,hasMore:false}};
  if(kind==='statistics'){
@@ -40,6 +45,11 @@ const change=async(selector,value)=>{const node=$(selector);node.value=value;awa
  $('[data-panel=steps]').click();await until(()=>$('[data-timing-wall]'));
  assert.equal($('[data-timing-wall]').textContent,'未知','all runs were aggregated into one wall time');
  await change('[aria-label="调试轮次"]','run-1');assert.equal($('[data-timing-wall]').textContent,'2 s');assert.equal($('[data-timing-work]').textContent,'6 s');
+ const history=$('.debug-run-execution');
+ assert(!requests.some(r=>r.url.includes('/configuration?')), 'closed execution details caused a history lookup');
+ history.open=true;
+ await history.ontoggle();
+ assert(history.textContent.includes('fixture-revision') && history.textContent.includes('未记录'));
  assert($('.debug-timing-note').textContent.includes('累计时长不等于本轮总耗时'));assert($('.debug-timing-note').textContent.includes('不叠加 HTTP'));assert(!w.document.querySelector('img,script'));
  await change('[aria-label="步骤排序"]','duration_desc');assert.equal($('.debug-step').dataset.stepId,'step-21');assert(requests.some(r=>new URL(r.url,'http://rundesk.test').searchParams.get('sort')==='duration_desc'));
  button('下一页').click();await until(()=>$('.debug-step')?.dataset.stepId==='step-1');assert($('.debug-step-list').textContent.includes('完整耗时未知'));

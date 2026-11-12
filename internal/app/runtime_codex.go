@@ -40,6 +40,17 @@ func (b codexBackend) Run(run RuntimeRun) {
 		return
 	}
 	w.Path = workspace.Path
+	nativeState, e := b.resources.Resolve(s, resource.RoleRuntimeState)
+	if e != nil {
+		fail(e)
+		return
+	}
+	binding, e := b.state.NativeBinding(s, nativeState.Path)
+	if e != nil {
+		fail(e)
+		return
+	}
+	s.ThreadID = binding.NativeSessionID
 	outputs, e := b.resources.Resolve(s, resource.RoleOutputs)
 	if e != nil {
 		fail(e)
@@ -60,7 +71,7 @@ func (b codexBackend) Run(run RuntimeRun) {
 	}
 	h.mu.Lock()
 	old := h.client
-	changed := old != nil && (h.permissionsKey != "" && h.permissionsKey != permissions.key() || h.thread != "" && h.observationEnabled != s.ObserveHTTP)
+	changed := old != nil && (h.nativeOwner != binding.OwnerID || h.permissionsKey != "" && h.permissionsKey != permissions.key() || h.thread != "" && h.observationEnabled != s.ObserveHTTP)
 	if changed {
 		h.client = nil
 		h.thread = ""
@@ -79,6 +90,7 @@ func (b codexBackend) Run(run RuntimeRun) {
 	defer cancel()
 	h.mu.Lock()
 	canceled := h.canceled
+	h.nativeOwner = binding.OwnerID
 	h.mu.Unlock()
 	if canceled {
 		b.state.Finish(s.ID, "interrupted", "")
@@ -125,11 +137,11 @@ func (b codexBackend) Run(run RuntimeRun) {
 			fail(errors.New("thread/start/resume 未返回 thread.id"))
 			return
 		}
-		s.ThreadID = res.Thread.ID
-		if e = b.state.Update(s.ID, func(v *Session) { v.ThreadID = s.ThreadID }); e != nil {
+		if e = b.state.ConfirmNativeBinding(s, binding, res.Thread.ID); e != nil {
 			fail(e)
 			return
 		}
+		s.ThreadID = res.Thread.ID
 		h.mu.Lock()
 		h.thread = s.ThreadID
 		h.permissionsKey = permissions.key()

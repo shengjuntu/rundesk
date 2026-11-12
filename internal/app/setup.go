@@ -332,6 +332,9 @@ func (m *Manager) saveSetup(in SetupInput) (SetupState, error) {
 				return old, failure(409, "instance_busy", "Finish active tasks before changing engine setup")
 			}
 		}
+		if runtimeKind(next.AgentRuntime.Kind) != cfg.Kind {
+			next.restoredEngine = restoredEngine{}
+		}
 		next.AgentRuntime = cfg
 	}
 	kind := runtimeKind(next.AgentRuntime.Kind)
@@ -371,7 +374,7 @@ func (m *Manager) saveSetup(in SetupInput) (SetupState, error) {
 	}
 	next.Revision++
 	saved := SetupState{ApplicationsOnly: in.ApplicationsOnly, Completed: in.Completed || old.Completed, Codex: codex, WorkspaceID: in.WorkspaceID, Revision: old.Revision + 1, RuntimeKind: kind}
-	if err = m.Store.PutMany(store.Record{Kind: "instance", ID: next.ID, Value: next}, store.Record{Kind: "system", ID: "setup", Value: saved}); err != nil {
+	if err = m.Store.PutMany(store.Record{Kind: "instance", ID: next.ID, Value: persistedInstance(next)}, store.Record{Kind: "system", ID: "setup", Value: saved}); err != nil {
 		return old, err
 	}
 	*current = next

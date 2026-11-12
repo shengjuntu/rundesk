@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Control API (RDCA)",
-    "version": "0.69.1",
+    "version": "0.72.0",
     "description": "RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter；附加 UHP /v1 入口共用任务核心，具体范围与限制见 docs/UHP.md，不声明完整规范兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。0.61.0 起日常会话与应用任务仅接受 Codex，Kun 用于维护、轨迹问答及保留的研究 API；普通 Kun 提交返回 kun_maintenance_only。当前应用接入、错误、幂等及示例见 docs/API-V1.md。"
   },
   "servers": [
@@ -289,6 +289,24 @@
               "type": "string"
             },
             "description": "可选关联编号；响应回传有效编号，否则由服务器生成。"
+          },
+          {
+            "name": "runId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 256
+            },
+            "description": "选择此会话中已记录的执行"
+          },
+          {
+            "name": "through",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "省略时读取最新证据；显式 0 表示空历史。超过会话最大游标返回 400"
           }
         ],
         "responses": {
@@ -297,7 +315,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Configuration"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Configuration"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RunConfigurationView"
+                    }
+                  ]
                 }
               }
             },
@@ -338,7 +363,8 @@
             }
           }
         },
-        "x-administrator-only": true
+        "x-administrator-only": true,
+        "description": "省略 runId 时检查当前配置。提供 runId 时仅查询本会话的历史准入声明和已确认的原生事件，不探测当前引擎。旧记录中缺失的数据保持未知。"
       }
     },
     "/applications/{appId}/available-capabilities": {
@@ -8658,6 +8684,32 @@
             }
           },
           {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "snapshot"
+              ],
+              "description": "省略时读取原生配置；snapshot 仅读取按 Agent 与工作区隔离的脱敏本地快照，缺少快照时返回 not_synced，不启动 Codex"
+            }
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "default": "false",
+              "description": "仅 view=snapshot 时有效；true 强制同步原生配置，失败可返回带 stale/errorCode 的旧快照"
+            }
+          },
+          {
             "name": "X-Request-ID",
             "in": "header",
             "schema": {
@@ -8672,7 +8724,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NativeObject"
+                  "$ref": "#/components/schemas/ConfigView"
                 }
               }
             },
@@ -11259,7 +11311,7 @@
           }
         },
         "x-administrator-only": false,
-        "description": "读取平台任务状态与当前资源绑定，不启动引擎、不复制原始文件、不修改任务。配置标记 current_bindings；不是历史生效配置。已删除会话返回保留的 Task 状态和 unavailable，不虚构原生身份。 应用凭据必须拥有该 Task。响应不包含主机绝对路径、凭据或任务正文。",
+        "description": "读取平台任务状态与当前资源绑定，不启动引擎、不复制原始文件、不修改任务。配置标记 current_bindings；不是历史生效配置。已删除会话返回保留的 Task 状态和 unavailable，不虚构原生身份。 应用凭据必须拥有该 Task。有 files 权限并有本轮产物记录时返回 artifacts。响应不包含主机绝对路径、凭据或任务正文。",
         "x-application-scopes": [
           "read"
         ]
@@ -26135,6 +26187,100 @@
         "required": [],
         "additionalProperties": true
       },
+      "ConfigSnapshotStatus": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "snapshot",
+              "live"
+            ]
+          },
+          "syncedAt": {
+            "type": "string",
+            "description": "最近成功同步的 RFC3339 时间；尚未同步时为空"
+          },
+          "lastAttemptAt": {
+            "type": "string",
+            "description": "最近同步尝试的 RFC3339 时间；尚未尝试时为空"
+          },
+          "stale": {
+            "type": "boolean"
+          },
+          "errorCode": {
+            "type": "string",
+            "description": "快照状态或同步错误分类；not_synced 表示尚无快照，不含原始配置或凭据"
+          },
+          "refreshIntervalSeconds": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "source",
+          "syncedAt",
+          "lastAttemptAt",
+          "stale",
+          "refreshIntervalSeconds"
+        ],
+        "additionalProperties": false
+      },
+      "ConfigView": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "layers": {
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": true
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "origins": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/ConfigSnapshotStatus"
+          }
+        },
+        "required": [
+          "config",
+          "layers",
+          "origins"
+        ],
+        "additionalProperties": true
+      },
       "TaskSpec": {
         "type": "object",
         "properties": {
@@ -31154,6 +31300,298 @@
         ],
         "additionalProperties": false
       },
+      "ConfigurationRevision": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "schemaVersion": {
+            "const": 1
+          },
+          "basis": {
+            "type": "string",
+            "const": "declared_at_admission"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "instanceRevision": {
+            "type": "integer"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "engine": {
+            "type": "string"
+          },
+          "defaultModel": {
+            "type": "string"
+          },
+          "environment": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "revision": {
+                "type": "integer"
+              },
+              "spec": {
+                "$ref": "#/components/schemas/ExecutionSpec"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "additionalProperties": false
+          },
+          "provider": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string"
+              },
+              "revision": {
+                "type": "integer"
+              },
+              "state": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "wireAPI": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "source",
+              "state"
+            ],
+            "additionalProperties": false
+          },
+          "bindings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "role": {
+                  "type": "string"
+                },
+                "access": {
+                  "type": "string",
+                  "enum": [
+                    "read",
+                    "write"
+                  ]
+                },
+                "resource": {
+                  "$ref": "#/components/schemas/ResourceDescriptor"
+                }
+              },
+              "required": [
+                "role",
+                "access",
+                "resource"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "schemaVersion",
+          "basis",
+          "instanceId",
+          "instanceRevision",
+          "workspaceId",
+          "engine",
+          "environment",
+          "provider",
+          "bindings"
+        ],
+        "additionalProperties": false
+      },
+      "RunAttribution": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "taskId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "engine": {
+            "type": "string"
+          },
+          "requestedModel": {
+            "type": "string"
+          },
+          "executionMode": {
+            "type": "string"
+          },
+          "environmentId": {
+            "type": "string"
+          },
+          "participationId": {
+            "type": "string"
+          },
+          "configurationRevisionId": {
+            "type": "string"
+          },
+          "schemaVersion": {
+            "type": "integer"
+          },
+          "instanceRevision": {
+            "type": "integer"
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "declared_at_admission",
+              "legacy_evidence"
+            ]
+          },
+          "inputEventId": {
+            "type": "integer"
+          },
+          "admittedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "participation": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "ordinal": {
+                "type": "integer"
+              },
+              "previousId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "ordinal"
+            ],
+            "additionalProperties": false
+          },
+          "native": {
+            "type": "object",
+            "properties": {
+              "nativeSessionId": {
+                "type": "string"
+              },
+              "nativeRunId": {
+                "type": "string"
+              },
+              "sourceEventId": {
+                "type": "integer"
+              },
+              "source": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "nativeSessionId",
+              "nativeRunId",
+              "sourceEventId",
+              "source"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "sessionId",
+          "runId",
+          "basis",
+          "inputEventId",
+          "admittedAt"
+        ],
+        "additionalProperties": false
+      },
+      "RunConfigurationView": {
+        "type": "object",
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/RunAttribution"
+          },
+          "configurationRevision": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ConfigurationRevision"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "run",
+          "configurationRevision"
+        ],
+        "additionalProperties": false
+      },
+      "RunArtifacts": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "basis": {
+            "type": "string",
+            "const": "changed_outputs_at_completion"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              },
+              "required": [
+                "path",
+                "sha256"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "sessionId",
+          "runId",
+          "workspaceId",
+          "basis",
+          "files"
+        ],
+        "additionalProperties": false
+      },
       "TaskStateView": {
         "type": "object",
         "properties": {
@@ -31271,6 +31709,9 @@
           "runtime": {
             "$ref": "#/components/schemas/TaskRuntimeView"
           },
+          "artifacts": {
+            "$ref": "#/components/schemas/RunArtifacts"
+          },
           "resources": {
             "$ref": "#/components/schemas/ResourceManifest"
           }
@@ -31353,6 +31794,9 @@
             ]
           },
           "sessionId": {
+            "type": "string"
+          },
+          "runId": {
             "type": "string"
           },
           "deleted": {

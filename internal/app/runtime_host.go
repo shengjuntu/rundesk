@@ -157,10 +157,20 @@ func (s kunJournalHost) Import(id string, ev p.Event) (bool, error) {
 		Command p.Control `json:"command"`
 	}
 	_ = json.Unmarshal(ev.Data, &data)
+	// Keep the next run from modifying the output directory while the
+	// previous run's committed terminal event is being captured.
+	if ev.Type == "kun/run.finished" {
+		h, err := s.m.getHandle(id)
+		if err != nil {
+			return false, err
+		}
+		h.admission.Lock()
+		defer h.admission.Unlock()
+	}
 	s.m.mu.Lock()
-	defer s.m.mu.Unlock()
 	current := s.m.sessions[id]
 	if current == nil {
+		s.m.mu.Unlock()
 		return false, fmt.Errorf("session removed")
 	}
 	next := *current
@@ -169,6 +179,14 @@ func (s kunJournalHost) Import(id string, ev p.Event) (bool, error) {
 	if ev.RunID == next.RunID {
 		switch ev.Type {
 		case "kun/run.started":
+			if next.RuntimeKind == "kun" {
+				bindings, err := s.m.kunBindingRecords(next)
+				if err != nil {
+					s.m.mu.Unlock()
+					return false, err
+				}
+				records = append(records, bindings...)
+			}
 			if next.Status != "stopping" {
 				next.Status = "running"
 			}
@@ -192,6 +210,10 @@ func (s kunJournalHost) Import(id string, ev p.Event) (bool, error) {
 	ok, err := s.m.Store.ImportKun(id, ev.Sequence, ev.Time, ev.Type, redact(ev), records...)
 	if err == nil && ok && ev.RunID == next.RunID {
 		*current = next
+	}
+	s.m.mu.Unlock()
+	if finished && ok && err == nil {
+		s.m.capturePersonalRun(next)
 	}
 	return finished, err
 }

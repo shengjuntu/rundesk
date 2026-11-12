@@ -15,6 +15,7 @@ const setup={settings:{completed:false,revision:0,workspaceId:"work"},codex:"cod
 state.instances=[copy(setup.instance)];state.workspaces=[{id:"work",name:"工作区",path:"/work"}];$("#workspace").append(new w.Option("工作区","work"));$("#instance").append(new w.Option("Codex","default"));
 const sources={schemaVersion:1,revision:"catalog-1",defaultGroup:"china",types:[{id:"npm",name:"npm",fields:[{id:"registry",label:"npm registry",argument:"RD_NPM_REGISTRY"}]}],groups:[{id:"international",name:"国际源",sources:[{id:"npm-us",type:"npm",name:"npm official",values:{registry:"https://registry.npmjs.org/"}}]},{id:"china",name:"中国镜像",sources:[{id:"npm-cn",type:"npm",name:"npm mirror",values:{registry:"https://registry.npmmirror.com/"}}]}]};
 const recipes=["news2douyin","people-search"].map(id=>({id:"builtin-"+id,name:id,profileId:id,kind:"builtin",revision:1,recipeSha:"sha-"+id,version:"1.1.2",description:"可复用工具环境"}));
+let generatedWorkspace=null;
 let modelTools=false,dockerOK=false,failInstallResponse=true,failAutoResponse=true,failRuntimeResponse=true,discoveryGate=null,modelTestGate=null;
 let discoveryServices=[{endpoint:"http://127.0.0.1:8000/v1",source:"loopback",status:"listed",authRequired:false,inferenceTested:false,models:[{id:"Qwen3-Coder"}]}],discoveryContainers=[];
 const publicImages={schemaVersion:1,revision:"public-1",items:[]};
@@ -26,6 +27,7 @@ w.api=async(route,options={})=>{
   const method=options.method||"GET",body=options.body;calls.push({route,method,body:body&&copy(body)});
   if(route==="/setup")return copy(setup);
   if(method==="GET"){
+    if(route==="/workspaces")return copy([...state.workspaces,...(generatedWorkspace?[generatedWorkspace]:[])]);
     if(route==="/setup/kun")return copy(db.kun);
     if(route==="/setup/public-images")return copy(publicImages);
     if(route==="/setup/runtime-profiles")return copy(runtimeProfiles);
@@ -80,7 +82,7 @@ w.api=async(route,options={})=>{
   if(method==="POST"&&route==="/build-center/assistant-runs"){
     assert.equal(body.instanceId,"setup-kun");assert(body.sourceBuildId);const value={id:"build-repair",sourceBuildId:body.sourceBuildId,status:"queued",sessionId:"build-repair-session"};db.repairs.push(value);return copy(value);
   }
-  if(method==="POST"&&route==="/setup/complete"){assert.equal(body.revision,setup.settings.revision);assert.equal(body.completed,true);setup.settings.completed=true;setup.settings.revision++;return {settings:copy(setup.settings)};}
+  if(method==="POST"&&route==="/setup/complete"){assert.equal(body.revision,setup.settings.revision);assert.equal(body.completed,true);setup.settings.completed=true;if(!body.workspaceId)generatedWorkspace={id:"generated-work",name:"默认工作区",path:"/managed/work"};setup.settings.workspaceId=body.workspaceId||generatedWorkspace.id;setup.settings.revision++;return {settings:copy(setup.settings)};}
   throw Error("Unexpected request "+method+" "+route);
 };
 w.setProductPage=()=>{};w.stashProductDraft=()=>{};
@@ -142,7 +144,7 @@ const chooseDockerMode=mode=>{const node=$('[name="onboarding-docker-mode"][valu
   edit("#onboarding-model","Qwen3-Coder");
   await click("#onboarding-enable-kun");await until(()=>$("#onboarding-error").textContent.includes("No tool call"));
   assert(!db.kun.ready,"inference alone must not enable repairs");
-  modelTools=true;await click("#onboarding-enable-kun");await until(()=>db.kun.ready);assert.equal(w.RunDeskOnboarding.preferredInstance,"setup-kun");
+  modelTools=true;await click("#onboarding-enable-kun");await until(()=>db.kun.ready);assert.notEqual(w.RunDeskOnboarding.preferredInstance,"setup-kun","maintenance setup stole the daily Agent preference");assert.notEqual(w.localStorage.getItem("rundesk-instance"),"setup-kun");
   await click("[data-ob-next]");assert.equal($('[aria-current="step"]').dataset.setupStep,"codex","the next action must go directly from LLM to Codex");assert.equal($("#onboarding-install-group").value,"china");assert($("#onboarding-install-auto-repair").checked);assert(!$("#onboarding-install-auto-repair").disabled);
   await click("#onboarding-install-codex");await until(()=>$("#onboarding-error").textContent.includes("response lost"));
   await click("#onboarding-install-codex");await until(()=>!!$('[data-install-id="install-1"]'));
@@ -224,6 +226,40 @@ const chooseDockerMode=mode=>{const node=$('[name="onboarding-docker-mode"][valu
   await click("#onboarding-dismiss");assert.equal(await reopened,false);
   w.history.replaceState(null,"","#setup/docker");const linked=w.RunDeskOnboarding.open({setup});
   await until(()=>!!$("#onboarding-complete"));assert.equal($('[aria-current="step"]').dataset.setupStep,"docker");
-  await click("#onboarding-dismiss");assert.equal(await linked,false);assert.equal(w.location.hash,"#instances");
-  console.log(JSON.stringify({version:fs.readFileSync(path.resolve(root,"../app/api_v1.go"),"utf8").match(/const Version = "([^"]+)"/)[1],passed:true,checks:["three-page setup with optional Docker and manual reopening","basic completion after Codex restores the original route","Docker can be opened directly","all existing installation, download, repair, source and image flows","Docker provenance and unpublished-container inventory","failed explicit/Docker candidates remain visible with retry reason","rescan preserves edits made while the request is pending","Kun maintenance discovery is distinct from Codex provider configuration","stale inference test cannot enable an edited connection"]}));
+  await click("#onboarding-dismiss");assert.equal(await linked,false);assert.equal(w.location.hash,"#conversations");
+  // Old versions saved the private maintenance workspace and Agent as defaults.
+  // Finishing initial setup now selects an ordinary Codex workspace and opens
+  // conversations, including completion directly from the Codex step.
+  state.instances.push({id:"setup-kun",name:"Kun maintenance",agentRuntime:{kind:"kun"}},{id:"docker-ready",name:"Docker Codex",agentRuntime:{kind:"codex"},execution:{mode:"docker"}});
+  state.workspaces.unshift({id:"kun-work",name:"Private repair",purpose:"maintenance"});
+  $("#instance").append(new w.Option("Kun","setup-kun"),new w.Option("Docker","docker-ready"));$("#instance").value="setup-kun";
+  $("#workspace").append(new w.Option("Private repair","kun-work"));$("#workspace").value="kun-work";
+  setup.settings.workspaceId="kun-work";setup.settings.completed=false;
+  w.localStorage.setItem("rundesk-instance","setup-kun");w.localStorage.setItem("rundesk-conversation-workspace","kun-work");
+  w.history.replaceState(null,"","/#setup/codex");
+  const fresh=w.RunDeskOnboarding.open({initial:true,setup,step:"codex"});await until(()=>!!$("[data-ob-skip-docker]"));
+  await click("[data-ob-skip-docker]");assert.equal(await fresh,true);
+  assert.equal(calls.filter(row=>row.route==="/setup/complete").at(-1).body.workspaceId,"work");
+  assert.equal(w.RunDeskOnboarding.preferredInstance,"default");assert.equal(w.localStorage.getItem("rundesk-instance"),"default");
+  assert.equal(w.localStorage.getItem("rundesk-conversation-workspace"),"work");assert.equal(w.location.hash,"#conversations");
+  // A deliberate Codex environment survives manual maintenance configuration.
+  $("#instance").value="docker-ready";
+  const manualCodex=w.RunDeskOnboarding.open({setup,step:"codex"});await until(()=>!!$("[data-ob-skip-docker]"));
+  await click("[data-ob-skip-docker]");assert.equal(await manualCodex,true);
+  assert.equal(w.RunDeskOnboarding.preferredInstance,"docker-ready");assert.equal(w.localStorage.getItem("rundesk-instance"),"docker-ready");
+  // Explicit deep links retain their target even when initial setup runs.
+  w.history.replaceState(null,"","/#workspace/work");
+  const deepInitial=w.RunDeskOnboarding.open({initial:true,setup,step:"codex"});await until(()=>!!$("[data-ob-skip-docker]"));
+  await click("[data-ob-skip-docker]");assert.equal(await deepInitial,true);assert.equal(w.location.hash,"#workspace/work");
+  // A server-created ordinary workspace is adopted after a maintenance-only
+  // installation; the client does not keep its empty submitted workspace ID.
+  state.workspaces=state.workspaces.filter(value=>value.purpose==="maintenance");
+  setup.settings.workspaceId="kun-work";setup.settings.completed=false;
+  $("#workspace").replaceChildren(new w.Option("Private repair","kun-work"));$("#instance").value="setup-kun";
+  const generated=w.RunDeskOnboarding.open({initial:true,setup,step:"codex"});await until(()=>!!$("[data-ob-skip-docker]"));
+  await click("[data-ob-skip-docker]");assert.equal(await generated,true);
+  assert.equal(calls.filter(row=>row.route==="/setup/complete").at(-1).body.workspaceId,"");
+  assert(calls.some(row=>row.route==="/workspaces"));assert.equal($("#workspace").value,"generated-work");
+  assert.equal(w.localStorage.getItem("rundesk-conversation-workspace"),"generated-work");assert.equal(w.RunDeskOnboarding.preferredInstance,"default");
+  console.log(JSON.stringify({version:fs.readFileSync(path.resolve(root,"../app/api_v1.go"),"utf8").match(/const Version = "([^"]+)"/)[1],passed:true,checks:["three-page setup with optional Docker and manual reopening","initial completion restores ordinary Codex defaults while manual setup preserves selected Docker Codex","basic completion after Codex restores the original route","Docker can be opened directly","all existing installation, download, repair, source and image flows","Docker provenance and unpublished-container inventory","failed explicit/Docker candidates remain visible with retry reason","rescan preserves edits made while the request is pending","Kun maintenance discovery is distinct from Codex provider configuration","stale inference test cannot enable an edited connection"]}));
 })().catch(error=>{console.error(error);process.exitCode=1;});

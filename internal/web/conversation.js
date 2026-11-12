@@ -206,8 +206,6 @@ function closeConversationSidebar(){
   const main=document.querySelector("main");if(main)main.inert=false;
 }
 window.addEventListener("DOMContentLoaded",()=>{
-  document.querySelector("#manage-instances").replaceChildren(conversationIcon("settings"));
-  document.querySelector("#manage-instances").setAttribute("aria-label",rdText("管理实例"));
   const toggle=document.querySelector("#sidebar-toggle");toggle?.append(conversationIcon("menu"));
 
 });

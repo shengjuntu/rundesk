@@ -866,9 +866,49 @@ async function renderMCP(target) {
 }
 
 async function renderRuntime(target) {
-  const cp = configPath(ws().id, instance().id);
+  const iid=instance().id, wid=ws().id, selection=state.selection, settingsTab=state.settingsTab;
+  const cp = configPath(wid, iid);
+  const useSnapshot=instance().agentRuntime?.kind!=="kun";
+  const configLabel=(zh,en)=>document.documentElement.lang==="en"?en:zh;
+  const sameConfigContext=()=>target.isConnected&&selection===state.selection&&settingsTab===state.settingsTab&&iid===instance()?.id&&wid===ws()?.id;
   const result = el("div", { class: "runtime-checks" }),
-    raw = el("pre", {}, rdText("点击下方按钮读取。"));
+    raw = el("pre", {id:"runtime-config-value","aria-live":"polite"}, rdText("点击下方按钮读取。")),
+    configStatus=el("p",{id:"runtime-config-status",class:"help","aria-live":"polite"});
+  let readingConfig=false,hasConfig=false;
+  const snapshotStatus=meta=>{
+    if(meta?.errorCode==="not_synced")return configLabel("暂无配置快照，点击“立即同步”读取。","No configuration snapshot yet. Select Synchronize now to read it.");
+    if(meta?.errorCode==="snapshot_save_failed")return configLabel("已读取当前配置，但本地快照保存失败；请稍后重试。","The current configuration was read, but the local snapshot could not be saved. Please try again later.");
+    const date=new Date(meta?.syncedAt),syncedAt=Number.isNaN(date.getTime())?"":date.toLocaleString();
+    const time=syncedAt?configLabel("上次同步：","Last synchronized: ")+syncedAt:configLabel("同步时间未知。","Synchronization time is unknown.");
+    if(meta?.errorCode)return configLabel("同步失败，显示上次保存的配置。","Synchronization failed; showing the last saved configuration. ")+time;
+    if(meta?.stale)return configLabel("本地快照待更新。","The local snapshot needs updating. ")+time;
+    return configLabel("本地配置快照 · ","Local configuration snapshot · ")+time;
+  };
+  async function loadConfig(refresh=false){
+    if(readingConfig||!sameConfigContext())return;
+    readingConfig=true;readConfig.disabled=true;
+    configStatus.className="help";
+    configStatus.textContent=useSnapshot?(refresh?configLabel("正在同步 Codex 配置…","Synchronizing Codex configuration…"):configLabel("正在读取本地配置快照…","Reading the local configuration snapshot…")):"";
+    if(!hasConfig)raw.textContent=useSnapshot&&!refresh?configLabel("正在读取本地配置快照…","Reading the local configuration snapshot…"):rdText("正在读取 Codex 配置…");
+    try{
+      const value=await api(cp("/config")+(useSnapshot?"&view=snapshot"+(refresh?"&refresh=true":""):""));
+      if(sameConfigContext()){
+        const {snapshot,...config}=value;
+        hasConfig=!useSnapshot||snapshot?.errorCode!=="not_synced";
+        raw.textContent=hasConfig?json(useSnapshot?config:value):"";
+        configStatus.textContent=useSnapshot?snapshotStatus(snapshot):"";
+        configStatus.className="help"+(snapshot?.errorCode&&snapshot.errorCode!=="not_synced"?" error":"");
+      }
+    }catch(error){
+      if(sameConfigContext()){
+        const message=useSnapshot?(hasConfig?configLabel("同步失败，保留上次显示的配置。可点击“立即同步”重试：","Synchronization failed; keeping the previous configuration. Select Synchronize now to retry: "):configLabel("读取失败，可点击“立即同步”重试：","Could not read configuration. Select Synchronize now to retry: ")):configLabel("读取失败，可点击“读取配置”重试：","Could not read configuration. Select Read configuration to retry: ");
+        configStatus.textContent=message+error.message;configStatus.className="help error";
+        if(!hasConfig)raw.textContent="";
+      }
+    }finally{readingConfig=false;readConfig.disabled=false;}
+  }
+  const readConfig=button(useSnapshot?configLabel("立即同步","Synchronize now"):rdText("读取配置"),()=>loadConfig(true));
+  readConfig.id="runtime-config-read";
   const check = button(
     rdText("运行连接诊断"),
     async () => {
@@ -982,12 +1022,13 @@ async function renderRuntime(target) {
       "details",
       { class: "card" },
       el("summary", {}, rdText("Codex 有效配置")),
-      button(rdText("读取配置"), async () => {
-        raw.textContent = json(await api(cp("/config")));
-      }),
+      el("p",{class:"help"},useSnapshot?configLabel("打开此页只读取 RunDesk 保存的脱敏快照；后台每 5 分钟尝试同步已连接的 Codex。点击“立即同步”会连接 Codex，可能需要准备 Docker 环境。","Opening this page only reads the sanitized snapshot saved by RunDesk. Background synchronization runs every 5 minutes for connected Codex instances. Synchronize now connects to Codex and may need to prepare a Docker environment."):configLabel("按需读取当前配置。","Read the current configuration when needed.")),
+      readConfig,
+      configStatus,
       raw,
     ),
   );
+  if(useSnapshot)void loadConfig();
 }
 
 $("#session-search").oninput = renderSessions;
@@ -1057,191 +1098,4 @@ function renderInstanceOptions(selected) {
   $("#instance").value = state.instances.some((i) => i.id === selected)
     ? selected
     : "default";
-}
-async function switchInstance() {
-  resetConversation();
-  state.skills = [];
-  $("#models").replaceChildren();
-  updateWorkspaceLabel();
-  renderSessions();
-  if(instance().id==="default")await enterAssistant();
-  else if(currentApplication())await showApplication(currentApplication().appId,currentApplicationBinding()?.presetId||"");
-  else await showLegacyApplication(instance().id);
-}
-$("#instance").onchange = () => safe(()=>window.RunDeskConversations?RunDeskConversations.changeEngine($("#instance").value):RunDeskInstances.conversation($("#instance").value));
-$("#manage-instances").onclick = () => safe(() => openSettings("overview"));
-
-async function renderInstances(target) {
-  const current = instance(),
-    cp = configPath(ws().id, current.id);
-  const select = el(
-    "select",
-    { id: "settings-instance" },
-    ...state.instances.filter(i=>i.agentRuntime?.kind!=="kun"||i.id===current.id).map((i) => el("option", { value: i.id }, i.name)),
-  );
-  select.value = current.id;
-  select.onchange = () =>
-    safe(async () => {
-      $("#instance").value = select.value;
-      await switchInstance();
-      await renderSettings();
-    });
-  const name = el("input", {
-    id: "instance-name",
-    type: "text",
-    value: current.name,
-    maxlength: 160,
-  });
-  const description = el(
-    "textarea",
-    { id: "instance-description", rows: 2 },
-    current.description,
-  );
-  const model = el("input", {
-    id: "instance-model",
-    type: "text",
-    value: current.defaultModel,
-    list: "models",
-    placeholder: rdText("留空使用 Codex 配置"),
-  });
-  const permissions = permissionEditor(current);
-  const newName = el("input", {
-    id: "new-instance-name",
-    type: "text",
-    placeholder: rdText("例如：视觉助手"),
-    maxlength: 160,
-  });
-  const account = el(
-    "pre",
-    { id: "instance-account" },
-    rdText("点击读取当前实例的登录状态。"),
-  );
-  const shellQuote = (value) => "'" + value.replaceAll("'", "'\\''") + "'";
-  const psQuote = (value) => "'" + value.replaceAll("'", "''") + "'";
-  target.replaceChildren(
-    el(
-      "div",
-      { class: "card" },
-      el("label", { for: "settings-instance" }, rdText("当前实例")),
-      select,
-      el("h3", {}, current.name),
-      el(
-        "p",
-        {},
-        current.managed
-          ? rdText("独立 Codex 配置目录；此实例可以在多个工作区创建会话。")
-          : rdText("默认实例沿用启动 RunDesk 时的 CODEX_HOME 和原有会话。"),
-      ),
-      el("label", { for: "instance-name" }, rdText("实例名称")),
-      name,
-      el("label", { for: "instance-description" }, rdText("用途说明")),
-      description,
-      el("label", { for: "instance-model" }, rdText("新会话默认模型")),
-      model,
-      button(rdText("读取可用模型"), async()=>{const raw=await api(cp("/models"));$("#models").replaceChildren(...(raw.data||[]).map(m=>el("option",{value:m.id||m.model},m.displayName||m.id||m.model)));toast(rdText("已读取模型，选择后保存实例"));}),
-      permissions.node,
-      button(
-        rdText("保存实例"),
-        async () => {
-          await api("/instances/" + current.id, {
-            method: "PATCH",
-            body: {
-              name: name.value,
-              description: description.value,
-              defaultModel: model.value,
-              permissions: permissions.value(),
-              revision: current.revision,
-            },
-          });
-          state.instances = await api("/instances");
-          renderInstanceOptions(current.id);
-          updateWorkspaceLabel();
-          toast(rdText("实例已保存；权限将在下一轮生效，默认模型用于新会话"));
-          await renderSettings();
-        },
-        "primary",
-      ),
-      el("p", { class: "help" }, rdText("配置目录：") + current.codexHome),
-      el(
-        "p",
-        { class: "help" },
-        rdText("会话创建后固定绑定实例与工作区。实例共用本机操作系统用户；全局技能、项目文件和服务环境变量仍可能共享。"),
-      ),
-    ),
-    el(
-      "div",
-      { class: "card" },
-      el("h3", {}, rdText("登录与重新加载")),
-      el(
-        "p",
-        {},
-        rdText("新实例需要配置凭据。请以运行后台的系统用户，在终端执行对应命令；登录完成后重新加载空闲连接。"),
-      ),
-      el(
-        "details",
-        {},
-        el("summary", {}, rdText("Ubuntu / macOS 登录命令")),
-        el(
-          "pre",
-          {},
-          "env CODEX_HOME=" + shellQuote(current.codexHome) + " codex login",
-        ),
-      ),
-      el(
-        "details",
-        {},
-        el("summary", {}, rdText("Windows PowerShell 登录命令")),
-        el(
-          "pre",
-          {},
-          "$env:CODEX_HOME = " + psQuote(current.codexHome) + "\ncodex login",
-        ),
-      ),
-      el(
-        "p",
-        { class: "help" },
-        rdText("如后台使用 --codex 指定可执行文件，请将命令中的 codex 替换为该路径。凭据存储由 Codex 管理；使用系统密钥环时不保证账号隔离。"),
-      ),
-      el(
-        "div",
-        { class: "actions" },
-        button(rdText("读取登录状态"), async () => {
-          account.textContent = json(await api(cp("/account")));
-        }),
-        button(rdText("重新加载空闲连接"), async () => {
-          const r = await api("/instances/" + current.id + "/reload", {
-            method: "POST",
-          });
-          toast(
-            rdFormat("已关闭 ${0} 个空闲连接，保留 ${1} 个忙碌连接",r.closedConnections,r.busyConnections),
-          );
-          account.textContent = json(await api(cp("/account")));
-        }),
-      ),
-      account,
-    ),
-    el(
-      "div",
-      { class: "card" },
-      el("h3", {}, rdText("新建实例")),
-      el("p", {}, rdText("创建独立配置目录，然后在 Skills 和 MCP 页配置这个助手。")),
-      el("label", { for: "new-instance-name" }, rdText("名称")),
-      newName,
-      button(
-        rdText("创建并切换"),
-        async () => {
-          const created = await api("/instances", {
-            method: "POST",
-            body: { name: newName.value },
-          });
-          state.instances = await api("/instances");
-          renderInstanceOptions(created.id);
-          await switchInstance();
-          await renderSettings();
-          toast(rdText("已创建实例：") + created.name);
-        },
-        "primary",
-      ),
-    ),
-  );
 }

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.70.0 — 2026-11-08
+
+Restore a usable everyday conversation context after setup. Kun maintenance preferences no longer select the daily Agent, implicit stale maintenance workspace choices recover to an ordinary workspace, and the ordinary startup route opens conversations with a valid Codex context. Valid workspace-specific Codex choices, explicit application bindings and existing session/deep-link identities remain.
+
+Improve Codex effective-configuration reads with bounded connection admission, concurrent reads on an initialized connection, exclusive writes/lifecycle changes and coalescing only for identical reads still in flight. No completed configuration cache or local-TOML substitute is introduced. The read control disables duplicate clicks and shows local progress, failures and retry. First-time Docker environment preparation retains its separate command limits. OpenMontage 1.1.1, existing recipes, external Kun 0.17.0 and worker protocol 16 are unchanged. See [upgrading](docs/UPGRADING.md) and [validation](docs/VALIDATION.md).
+
 ## 0.69.1 — 2026-11-08
 
 Further reduce the bundled OpenMontage source by excluding reviewed documentation-preview images and an unreferenced example logo. Record the exact omission list and retain the source bytes, paths and executable permission semantics of the remaining code, Skills, templates, fonts, audio and tests. No native template dependency is removed merely because it has a duplicate copy.

@@ -84,7 +84,6 @@
   .reply-dialog {padding:16px}
 }
 
-#manage-instances {display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:7px;flex-shrink:0;color:#737b8c}
 
 /* Whole rounds keep the conversation short without discarding the retained
    answer, tool cards, keyboard disclosures or reply actions. */

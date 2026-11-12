@@ -9,3 +9,7 @@
 @media(max-width:1050px){.build-workbench{grid-template-columns:1fr}.workbench-step{padding:18px}.workbench-image-list{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}}@media(max-width:600px){.build-center-tools{padding:12px}.workbench-image-list{grid-template-columns:1fr}.workbench-step-heading h2{font-size:16px}.workbench-step{padding:16px}.build-center-tools .tabs{gap:4px}}
 
 .badge[data-build-state="available"],.badge[data-build-state="succeeded"]{color:#256e50;background:#e4f4eb}.badge[data-build-state="running"],.badge[data-build-state="queued"]{color:#354dae;background:#e8edff}.badge[data-build-state="failed"],.badge[data-build-state="unavailable"],.badge[data-build-state="missing"]{color:#a33939;background:#fceaea}.badge[data-build-state="unverified"],.badge[data-build-state="interrupted"]{color:#8b6222;background:#fff3d9}.badge[data-build-state="deleted"]{color:#6b7383;background:#edf0f4}
+
+.workbench-environment { padding: 6px 0; }
+.workbench-environment p { margin: 0; font-weight: 600; }
+.workbench-environment .actions { margin: 6px 0; flex-wrap: wrap; }

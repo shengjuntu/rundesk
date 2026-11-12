@@ -36,19 +36,17 @@ RunDesk 通过 Kun 集成提供模块状态检查和执行循环策略选择。�
 
 入口：[Harness 控制](docs/KUN-HARNESS.md)。[运行时分叉](docs/KUN-FORKS.md#runtime-forks)与[重复采样对照](docs/KUN-EVALUATION.md#repeated-benchmarks)介绍保留的研究 API 和历史操作流程，不再对应当前主界面的导航入口。
 
-## 以实例为中心使用
+## 会话与制作环境
 
-**工作区**组织会话和文件。每个会话选择一个 Codex 环境，同一工作区中的不同会话可以使用不同的 Codex 配置。**实例**保存环境背后的模型、工具与运行设置；Kun 维护配置单独放在“环境设置”。构建中心从构建预设生成镜像，一个镜像可以用于创建多个独立实例。应用注册是另一个接入步骤，管理实例无需先注册应用。
+打开工作区就能用默认 Codex 开始会话。应用通过获准的制作预设提交任务，构建中心负责准备配方、镜像与制作环境。模型、Skills、MCP 和插件设置作用于对话框标注的环境和工作区。
 
-0.54.0 将 Kun 分叉、评测任务集、K4 Skill 工作台和离线实验的启动入口撤出日常导航。对应 API、保存的数据和已有分支的固定预览查看继续保留。K4 的参数化工具流程与普通 `SKILL.md` 管理是不同能力。
-
-实例中心 WebUI **尚未实现实例配置跨工作区自动同步**；Docker 配置仍保存在各自的实例/工作区运行环境中。自动收集能力到统一资源库、不同 Agent 配置格式转换，也仍待实现。具体行为与边界见 [WebUI](docs/WEBUI.md)。
+后台继续使用稳定的实例 ID 来核对授权、配置和执行记录。日常用户从工作区直接进入会话。见[存储契约](docs/STORAGE.md)与[界面说明](docs/WEBUI.md)。
 
 ## 当前源码版本
 
-**RunDesk 0.69.1 · 外部 Kun 0.17.0 · worker 协议 16**
+**RunDesk 0.72.0 · 外部 Kun 0.17.0 · worker 协议 16**
 
-0.69.1 继续精简 OpenMontage 随包源码，保留代码、Skills 和原生模板使用的素材，剥离审阅过的文档预览图与未引用的示例 Logo，并记录省略路径及摘要。新构建使用随配方提供的归档；Python/npm 依赖仍使用配置的下载源。公共基础层、可编辑 Dockerfile 与原构建入口继续保留。见[构建源](docs/BUILD-SOURCES.md)与[升级说明](docs/UPGRADING.md)。
+0.72.0 在每轮准入时保存配置声明版本与执行身份，并把可核实的制品来源关联到产生它的 Run。选择一轮轨迹后可以查看当时有证据的配置。升级继续使用原工作区、会话、引擎历史和应用预设，旧数据的查询方式见[升级说明](docs/UPGRADING.md)。
 
 0.67.1 的 video-build 临时空间修复继续保留：检查使用 2 GiB `/tmp`，上游 doctor 检查条件不变。用户对同一镜像的隔离验证与本版实际检查分别记录在[验证说明](docs/VALIDATION.md#video-build-tmpfs-investigation-2026-11-08)；只有实际检查通过才登记就绪状态。
 
@@ -58,9 +56,9 @@ RunDesk 通过 Kun 集成提供模块状态检查和执行循环策略选择。�
 
 新安装采用**寻找和配置 LLM → 配置和安装 Codex → 准备 Docker 环境**三步向导。Docker 可跳过，以后从“环境设置”重开。下载现成镜像、本机构建、检查本机镜像分别选择；每个准备任务集中展示失败、Kun 修复、候选构建与验证，修复任务结束不等于镜像已验证。
 
-日常会话和应用任务使用 Codex；Kun 负责安装与配方修复、只读轨迹问答。Skill 提取及 MCP 自动优化仍待实现。工作区组织会话，每个会话选择自己的 Codex 环境；应用可绑定多个批准的环境，并按项目建立独立工作区。详见[WebUI](docs/WEBUI.md)、[内部维护](docs/MAINTENANCE.md)及[运行预设](docs/APPLICATION-RUNTIME-PRESETS.md)。
+日常会话和应用任务使用 Codex；Kun 负责安装与配方修复、只读轨迹问答。Skill 提取及 MCP 自动优化仍待实现。工作区组织会话，普通新会话使用默认 Codex；应用可绑定多个批准的环境，并按项目建立独立工作区。详见[WebUI](docs/WEBUI.md)、[内部维护](docs/MAINTENANCE.md)及[运行预设](docs/APPLICATION-RUNTIME-PRESETS.md)。
 
-构建中心连接**配方 → 镜像 → Agent**。Dockerfile 与源列表是可编辑文件，源分国际／中国镜像两组，覆盖 pip、conda、npm、Docker、APT、YUM/DNF、Hugging Face 和 GitHub；实际生效取决于配方声明的参数。构建冻结输入，可复用精确匹配的受管 Codex 运行时。Codex 模型配置与 Kun 模型发现分别保存，作用于明确的 Agent／工作区环境。详见[构建中心](docs/BUILD-CENTER.md#build-workbench)、[下载源](docs/BUILD-SOURCES.md)及[模型服务](docs/CODEX-PROVIDERS.md)。
+构建中心连接**配方 → 镜像 → 制作环境**。Dockerfile 与源列表是可编辑文件，源分国际／中国镜像两组，覆盖 pip、conda、npm、Docker、APT、YUM/DNF、Hugging Face 和 GitHub；实际生效取决于配方声明的参数。构建冻结输入，可复用精确匹配的受管 Codex 运行时。Codex 模型配置与 Kun 模型发现分别保存，作用于明确的 Agent／工作区环境。详见[构建中心](docs/BUILD-CENTER.md#build-workbench)、[下载源](docs/BUILD-SOURCES.md)及[模型服务](docs/CODEX-PROVIDERS.md)。
 
 发布者可在匹配的 offline、smoke 检查通过后分发固定 Digest 镜像。**随包公开目录暂为空，须先发布真实镜像再登记地址**；不预填官方镜像空间，也不据此宣称匿名公网下载已验收。见[镜像分发](docs/IMAGE-DISTRIBUTION.md)。
 

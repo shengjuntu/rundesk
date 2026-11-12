@@ -111,7 +111,7 @@ func (m *Manager) SetExecution(iid string, revision int, spec ExecutionSpec) (In
 	next := *current
 	next.Execution = spec
 	next.Revision++
-	if e = m.Store.Put("instance", iid, next); e != nil {
+	if e = m.Store.Put("instance", iid, persistedInstance(next)); e != nil {
 		return i, e
 	}
 	*current = next

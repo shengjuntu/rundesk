@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -19,6 +20,7 @@ type runtimeImageDocker struct {
 	*fakeDocker
 	failProbe  bool
 	baseImages map[string]map[string]string
+	probeGate  <-chan struct{}
 }
 
 func (d *runtimeImageDocker) Run(ctx context.Context, args ...string) ([]byte, error) {
@@ -37,6 +39,9 @@ func (d *runtimeImageDocker) Run(ctx context.Context, args ...string) ([]byte, e
 }
 
 func (d *runtimeImageDocker) Command(args ...string) *exec.Cmd {
+	if args[0] == "run" && d.probeGate != nil {
+		<-d.probeGate
+	}
 	d.mu.Lock()
 	d.calls = append(d.calls, append([]string{}, args...))
 	if args[0] == "pull" {
@@ -163,6 +168,12 @@ func TestRuntimeImageQueueBeforeApplicationRegistration(t *testing.T) {
 	for _, source := range []string{"build", "pull", "local"} {
 		t.Run(source, func(t *testing.T) {
 			m, d := runtimeImageFixture(t)
+			// Keep the first preparation active until its duplicate is submitted.
+			// Once the first job finishes, a second preparation is a valid new job.
+			probeGate := make(chan struct{})
+			d.probeGate = probeGate
+			releaseProbe := sync.OnceFunc(func() { close(probeGate) })
+			defer releaseProbe()
 			if source == "pull" {
 				d.missingImage = "example:ready"
 			}
@@ -177,6 +188,7 @@ func TestRuntimeImageQueueBeforeApplicationRegistration(t *testing.T) {
 			if err != nil || again.ID != v.ID {
 				t.Fatal(again, err)
 			}
+			releaseProbe()
 			v = waitBuild(t, m, DefaultInstance, v.ID, "succeeded", "failed")
 			if v.Status != "succeeded" || !v.OfflineReady || v.ImageVersionID != "" {
 				t.Fatal(v)

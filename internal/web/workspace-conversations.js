@@ -5,7 +5,6 @@
 window.RunDeskConversations = (() => {
   const newButton = $("#new-session"), expanded = new Set();
   const lastWorkspaceKey = "rundesk-conversation-workspace";
-  const engineKey = wid => "rundesk-workspace-engine:" + wid;
   const sessionKey = wid => "rundesk-workspace-session:" + wid;
   let generation = 0;
   const read = key => {try {return localStorage.getItem(key) || "";} catch {return "";}};
@@ -14,8 +13,10 @@ window.RunDeskConversations = (() => {
   const daily = i => (i?.agentRuntime?.kind || "codex") === "codex";
   const ordinary = w => w.purpose !== "maintenance";
   const label = (i,kind) => {
-    const engine = (kind || i?.agentRuntime?.kind) === "kun" ? "Kun" : "Codex";
-    return engine === "Kun" ? "Kun · " + rdText("维护记录") : i?.id === "default" || !i ? rdText("通用助手") : i.name;
+    const engine = kind || i?.agentRuntime?.kind || "codex";
+    if (engine === "kun") return "Kun · " + rdText("维护记录");
+    if (engine !== "codex") return engine;
+    return !i || i.id === "default" ? "Codex" : "Codex · " + i.name;
   };
   function owner(wid) {
     const project = (state.projectEnvironments || []).find(p => p.workspaceId === wid);
@@ -47,7 +48,6 @@ window.RunDeskConversations = (() => {
   function remember(wid,iid,sid) {
     if (!wid) return;
     expanded.add(wid);write(lastWorkspaceKey,wid);
-    if (iid && available(wid).some(i => i.id === iid)) write(engineKey(wid),iid);
     if (sid) write(sessionKey(wid),sid);
   }
   function choose(wid,preferred) {
@@ -57,8 +57,31 @@ window.RunDeskConversations = (() => {
       if (!i) throw Error(rdText("此工作区不能使用所选引擎，请重新选择。"));
       return i;
     }
-    const recent = ordered(state.sessions.filter(s => s.workspaceId === wid && s.runtimeKind !== "kun" && !s.archived));
-    return [read(engineKey(wid)),...recent.map(s => s.instanceId),"default",...choices.map(i => i.id)].map(id => choices.find(i => i.id === id)).find(Boolean);
+    const wanted = owner(wid)?.instanceId || "default";
+    return choices.find(i => i.id === wanted);
+  }
+  function chooseWorkspace(wid) {
+    const requested=wid || read(lastWorkspaceKey) || read("rundesk-assistant-workspace");
+    // Old initialization could remember Kun's private maintenance workspace.
+    // An implicit preference may recover, but an explicit route must not jump
+    // into an unrelated workspace or application.
+    return state.workspaces.find(w=>w.id===requested&&ordinary(w)&&(wid||!owner(w.id))) || (!wid ? state.workspaces.find(w=>ordinary(w)&&!owner(w.id)) : null);
+  }
+  function ensureDraftContext() {
+    if(state.session)return;
+    if(state.draftRoutingError)throw Error(state.draftRoutingError);
+    const current=ws(),work=chooseWorkspace(current&&ordinary(current)?current.id:undefined);
+    const requested=work&&state.draftContext===draftKey() ? instance()?.id : undefined;
+    const chosen=work&&choose(work.id,requested);
+    if(!work)throw Error(rdText("先创建一个工作区，再开始会话。"));
+    if(!chosen)throw Error(rdText("尚无可用 Codex 环境"));
+    if(work.id===current?.id&&chosen.id===instance()?.id)return;
+    const key=chosen.id+":"+work.id+":new";
+    if((state.uploads.length||state.chosenSkills.length)&&state.draftContext!==key)throw Error(rdText("此工作区不能使用所选引擎，请重新选择。"));
+    const model=$("#model"),explicit=model.dataset.explicitModel==="true",value=model.value;
+    select(work.id,chosen.id);
+    if(explicit&&current?.id===work.id){model.value=value;model.dataset.explicitModel="true";}
+    state.draftContext=key;
   }
   function select(wid,iid) {
     $("#workspace").replaceChildren(...state.workspaces.map(w => el("option",{value:w.id},w.name)));
@@ -81,8 +104,7 @@ window.RunDeskConversations = (() => {
     try {
       if(refresh && !await load(g,selection))return;
       if(g!==generation || selection!==state.selection)return;
-      const requested=wid || read(lastWorkspaceKey) || read("rundesk-assistant-workspace");
-      const work=state.workspaces.find(w=>w.id===requested) || (!wid?state.workspaces.find(w=>ordinary(w)&&!owner(w.id))||state.workspaces.find(ordinary):null);
+      const work=chooseWorkspace(wid);
       if(wid&&!work)throw Error(rdText("工作区不存在，请刷新列表。"));
       const i=work?choose(work.id,instanceId):null;
       select(work?.id,i?.id);
@@ -95,39 +117,21 @@ window.RunDeskConversations = (() => {
       }
       restoreProductDraft();renderSessions();$("#prompt").focus();
     } catch(error) {
-      if(g===generation&&selection===state.selection){$("#instance").value="";state.skills=[];renderSessions();throw error;}
+      if(g===generation&&selection===state.selection){$("#instance").value="";state.draftRoutingError=error.message;state.skills=[];renderSessions();throw error;}
     } finally {
       if(g===generation&&selection===state.selection){state.loadingSession=false;renderStatus();}
     }
   }
-  async function changeEngine(iid) {
-    if(state.session || state.sending || state.loadingSession) return;
-    const wid=ws()?.id,i=choose(wid,iid),text=$("#prompt").value;
-    if(i.id===instance()?.id)return;
-    resetConversation();select(wid,i.id);
-    history.replaceState(null,"","#workspace/"+encodeURIComponent(wid));
-    if(!state.drafts.has(draftKey()))state.drafts.set(draftKey(),{text,uploads:[],skills:[]});
-    restoreProductDraft();renderSessions();renderStatus();$("#prompt").focus();
-  }
-  function enginePicker() {
-    if(state.session||state.sending||state.loadingSession||!ws())return;
-    const wid=ws().id,selection=state.selection;
-    const picker=el("select",{id:"conversation-engine-choice","aria-label":rdText("会话运行环境")},...available(wid).map(i=>el("option",{value:i.id},label(i)+" · "+(i.execution?.mode==="docker"?"Docker":rdText("本机")))));
-    picker.value=instance()?.id||"";
-    const dialog=el("dialog",{class:"conversation-engine-dialog","aria-labelledby":"conversation-engine-title"},el("div",{class:"dialog-head"},el("h2",{id:"conversation-engine-title"},rdText("选择会话环境")),button(rdText("关闭"),()=>dialog.close(),"quiet")),el("div",{class:"engine-picker-body"},el("p",{class:"help"},rdText("所有日常会话均由 Codex 执行。这里选择本条新会话使用的配置与工具环境。")),picker,(state.uploads.length||state.chosenSkills.length)?el("p",{class:"help"},rdText("已选附件和技能保留在原环境的草稿中。")):null));
-    picker.onchange=()=>safe(async()=>{if(selection!==state.selection||wid!==ws()?.id){dialog.close();return;}await changeEngine(picker.value);dialog.close();});
-    document.body.append(dialog);dialog.addEventListener("close",()=>dialog.remove(),{once:true});dialog.showModal();picker.focus();
-  }
   function renderEngine() {
-    const button=$("#session-engine");if(!button)return;
-    const s=state.session,i=state.instances.find(i=>i.id===(s?.instanceId||instance()?.id));
-    newButton.disabled=!ws()||!available(ws()?.id).length||state.loadingSession||state.sending;
-    button.textContent=i||s?label(i,s?.runtimeKind):rdText("尚无可用 Codex 环境");
-    button.disabled=!!s||!ws()||!available(ws()?.id).length||state.sending||state.loadingSession;
-    button.classList.toggle("locked",!!s);button.title=s?rdText("此会话的环境已固定；新建会话可选择其他环境。"):rdText("选择此会话的运行环境");
-    button.setAttribute("aria-label",button.title+" · "+button.textContent);button.onclick=enginePicker;
-    $("#prompt").placeholder=!s?(i?.agentRuntime?.kind==="kun"?rdText("给 Kun 一个任务…"):rdText("给 Codex 一个任务…")):$("#prompt").placeholder;
-    if(!ws()||!i)$("#send").disabled=true;
+    const tag = $("#session-engine");
+    if (!tag) return;
+    const s = state.session;
+    const i = state.instances.find(i => i.id === (s?.instanceId || instance()?.id));
+    const work = ws();
+    newButton.disabled = !work || !choose(work.id) || state.loadingSession || state.sending;
+    tag.textContent = i || s ? label(i, s?.runtimeKind) : rdText("尚无可用 Codex 环境");
+    if (!s) $("#prompt").placeholder = rdText("给 Codex 一个任务…");
+    if (!work || !i || state.draftRoutingError) $("#send").disabled = true;
   }
   function renderTree() {
     const host=$("#session-list");if(!host)return;
@@ -150,7 +154,7 @@ window.RunDeskConversations = (() => {
       toggle.setAttribute("aria-expanded",String(isOpen));toggle.setAttribute("aria-controls","workspace-sessions-"+work.id);
       toggle.append(el("span",{class:"workspace-chevron","aria-hidden":"true"},isOpen?"▾":"▸"),el("span",{class:"workspace-title"},work.name),el("span",{class:"workspace-count"},sessions.length));
       const children=el("div",{class:"workspace-sessions",id:"workspace-sessions-"+work.id,hidden:!isOpen});
-      if(work.id===selected){newButton.disabled=!available(work.id).length||state.loadingSession||state.sending;children.append(newButton);}
+      if(work.id===selected){newButton.disabled=!choose(work.id)||state.loadingSession||state.sending;children.append(newButton);}
       for(const s of sessions){
         const item=button("",()=>selectSession(s.id),"session"+(state.session?.id===s.id?" active":""));item.dataset.sessionId=s.id;
         item.append(el("span",{class:"session-name"},(s.pinned?"◆ ":active(s.status)?"• ":"")+s.title),el("span",{class:"session-engine-label"},label(state.instances.find(i=>i.id===s.instanceId),s.runtimeKind)));
@@ -169,7 +173,7 @@ window.RunDeskConversations = (() => {
     const pendingKey="rundesk-conversation-workspace-create";
     let body;try{body=JSON.parse(sessionStorage.getItem(pendingKey)||"null");}catch{}
     const dialog=el("dialog",{class:"application-register"}),name=el("input",{id:"conversation-workspace-name",required:true,maxlength:160,value:body?.name||"",disabled:!!body,placeholder:rdText("例如：产品视频")}),path=el("input",{id:"conversation-workspace-path",value:body?.path||"",disabled:!!body,placeholder:rdText("留空自动创建")}),error=el("p",{class:"error",role:"alert"}),submit=el("button",{type:"submit",class:"primary"},rdText("创建工作区")),close=button(rdText("关闭"),()=>dialog.close(),"quiet");
-    const form=el("form",{},el("div",{class:"dialog-head"},el("h2",{},rdText("新建工作区")),close),el("label",{},rdText("工作区名称"),name),el("p",{class:"help"},rdText("一个工作区保存同一件事的文件，可以包含多个使用不同 Codex 环境的会话。")),el("details",{},el("summary",{},rdText("使用已有目录（可选）")),el("label",{},rdText("服务器上的绝对路径"),path)),error,submit);
+    const form=el("form",{},el("div",{class:"dialog-head"},el("h2",{},rdText("新建工作区")),close),el("label",{},rdText("工作区名称"),name),el("p",{class:"help"},rdText("工作区保存项目文件，并将相关会话放在一起。")),el("details",{},el("summary",{},rdText("使用已有目录（可选）")),el("label",{},rdText("服务器上的绝对路径"),path)),error,submit);
     let busy=false;const selection=state.selection;
     if(body)error.textContent=rdText("上次创建结果尚未确认；重试会继续同一次创建，不会重复添加。");
     form.onsubmit=async e=>{e.preventDefault();if(busy)return;busy=true;submit.disabled=close.disabled=name.disabled=path.disabled=true;error.textContent="";body||={name:name.value.trim(),path:path.value.trim()};sessionStorage.setItem(pendingKey,JSON.stringify(body));
@@ -179,5 +183,5 @@ window.RunDeskConversations = (() => {
     };
     dialog.addEventListener("cancel",e=>{if(busy)e.preventDefault();});dialog.append(form);document.body.append(dialog);dialog.addEventListener("close",()=>dialog.remove(),{once:true});dialog.showModal();name.focus();
   }
-  return {open,available,source,owner,remember,renderTree,renderEngine,changeEngine,createWorkspace,label};
+  return {open,available,source,owner,remember,renderTree,renderEngine,createWorkspace,label,ensureDraftContext};
 })();

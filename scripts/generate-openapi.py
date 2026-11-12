@@ -43,6 +43,8 @@ schemas={
  'FeedbackInput':obj({'rating':st(enum=['up','down','none']),'comment':st(maxLength=2000)},['rating']),
  'MessageFeedback':obj({'sessionId':st(),'eventId':integer,'rating':st(enum=['up','down','none']),'comment':st(),'updated':st()},['sessionId','eventId','rating','comment','updated']),
  'NativeObject':obj(extra=True),
+ 'ConfigSnapshotStatus':obj({'source':st(enum=['snapshot','live']),'syncedAt':st(description='最近成功同步的 RFC3339 时间；尚未同步时为空'),'lastAttemptAt':st(description='最近同步尝试的 RFC3339 时间；尚未尝试时为空'),'stale':bool_,'errorCode':st(description='快照状态或同步错误分类；not_synced 表示尚无快照，不含原始配置或凭据'),'refreshIntervalSeconds':integer},['source','syncedAt','lastAttemptAt','stale','refreshIntervalSeconds']),
+ 'ConfigView':obj({'config':{'oneOf':[obj(extra=True),{'type':'null'}]},'layers':{'oneOf':[arr(obj(extra=True)),{'type':'null'}]},'origins':{'oneOf':[obj(extra=True),{'type':'null'}]},'snapshot':ref('ConfigSnapshotStatus')},['config','layers','origins'],True),
 }
 schemas.update({
  'TaskSpec':obj({'title':st(maxLength=120),'workspaceId':st(),'instanceId':st(),'model':st(),'source':ref('Source'),'input':ref('Input'),'notBefore':st(format='date-time')},['workspaceId','input']),
@@ -129,6 +131,9 @@ for file in sorted((root/'internal/app').glob('*.go')):
   def query(name,schema=st(),required=False):params.append({'name':name,'in':'query','required':required,'schema':schema})
   if path.startswith('/workspaces/{wid}/') and any('/'+x in path for x in ['skills','skill-bundles','mcp','models','config','diagnostics','account']):query('instanceId')
   if path=='/workspaces/{wid}/skills/{name}':query('scope',st(enum=['instance','project'],default='project'))
+  if path=='/workspaces/{wid}/config':
+   query('view',st(enum=['snapshot'],description='省略时读取原生配置；snapshot 仅读取按 Agent 与工作区隔离的脱敏本地快照，缺少快照时返回 not_synced，不启动 Codex'))
+   query('refresh',st(enum=['true','false'],default='false',description='仅 view=snapshot 时有效；true 强制同步原生配置，失败可返回带 stale/errorCode 的旧快照'))
   if '/skill-bundles' in path:
    query('scope',st(enum=['instance','project'],default='instance'))
    if path.endswith('/skill-bundles'):query('name',required=True);query('replace',st(enum=['0','1'],default='0'))
@@ -173,6 +178,7 @@ for file in sorted((root/'internal/app').glob('*.go')):
   if path.startswith('/environments/'):response=ref('Environment')
   if path=='/workspaces':response=arr({'oneOf':[ref('Workspace'),ref('WorkspaceSummary')]}) if method=='GET' else ref('Workspace')
   if path.endswith('/configuration'):response=ref('Configuration')
+  if path=='/workspaces/{wid}/config':response=ref('ConfigView')
   if path=='/sessions/{sid}/messages/{eid}':response=ref('Reply')
   if path=='/sessions/{sid}/feedback':response=arr(ref('MessageFeedback'))
   if path=='/sessions/{sid}/messages/{eid}/feedback':response=ref('MessageFeedback')
@@ -565,9 +571,32 @@ schemas['ResourcePolicy']=obj({'sandbox':st(),'approvalPolicy':st(),'reviewer':s
 schemas['ResourceDescriptor']=obj({'ref':ref('ResourceRef'),'owner':ref('ResourceScope'),'storage':st(enum=['reference','managed','snapshot']),'source':obj({'system':st(),'id':st()},['system','id']),'versionKind':st(enum=['binding','content','live']),'configuration':ref('ResourceConfiguration'),'policy':ref('ResourcePolicy')},['ref','owner','storage','source','versionKind'])
 schemas['ResourceBinding']=obj({'role':st(),'ref':ref('ResourceRef'),'access':st(enum=['read','write'])},['role','ref','access'])
 schemas['ResourceManifest']=obj({'schema':{'const':1},'scope':ref('ResourceScope'),'resources':arr(ref('ResourceDescriptor')),'bindings':arr(ref('ResourceBinding'))},['schema','scope','resources','bindings'])
+# Run history refers to declarations frozen at admission and native acknowledgments within the chosen cursor.
+schemas['ConfigurationRevision']=obj({
+ 'id':st(pattern='^[0-9a-f]{64}$'),'schemaVersion':{'const':1},'basis':st(const='declared_at_admission'),
+ 'instanceId':st(),'instanceRevision':integer,'workspaceId':st(),'engine':st(),'defaultModel':st(),
+ 'environment':obj({'id':st(),'revision':integer,'spec':ref('ExecutionSpec')},['spec']),
+ 'provider':obj({'source':st(),'revision':integer,'state':st(),'model':st(),'wireAPI':st()},['source','state']),
+ 'bindings':arr(obj({'role':st(),'access':st(enum=['read','write']),'resource':ref('ResourceDescriptor')},['role','access','resource']))
+},['id','schemaVersion','basis','instanceId','instanceRevision','workspaceId','engine','environment','provider','bindings'])
+schemas['RunAttribution']=obj({k:st() for k in [
+ 'sessionId','runId','taskId','workspaceId','instanceId','engine','requestedModel','executionMode','environmentId','participationId','configurationRevisionId'
+]}|{'schemaVersion':integer,'instanceRevision':integer,'basis':st(enum=['declared_at_admission','legacy_evidence']),'inputEventId':integer,'admittedAt':st(format='date-time'),
+ 'participation':obj({'id':st(),'ordinal':integer,'previousId':st()},['id','ordinal']),
+ 'native':obj({'nativeSessionId':st(),'nativeRunId':st(),'sourceEventId':integer,'source':st()},['nativeSessionId','nativeRunId','sourceEventId','source'])},
+ ['sessionId','runId','basis','inputEventId','admittedAt'])
+schemas['RunConfigurationView']=obj({'run':ref('RunAttribution'),'configurationRevision':{'oneOf':[ref('ConfigurationRevision'),{'type':'null'}]}},['run','configurationRevision'])
+runConfigOperation=paths['/sessions/{sid}/configuration']['get']
+runConfigOperation['description']='省略 runId 时检查当前配置。提供 runId 时仅查询本会话的历史准入声明和已确认的原生事件，不探测当前引擎。旧记录中缺失的数据保持未知。'
+runConfigOperation['parameters'].extend([
+ {'name':'runId','in':'query','schema':st(maxLength=256),'description':'选择此会话中已记录的执行'},
+ {'name':'through','in':'query','schema':{'type':'integer','minimum':0},'description':'省略时读取最新证据；显式 0 表示空历史。超过会话最大游标返回 400'}])
+runConfigOperation['responses']['200']['content']['application/json']['schema']={'oneOf':[ref('Configuration'),ref('RunConfigurationView')]}
+schemas['RunArtifacts']=obj({'sessionId':st(),'runId':st(),'workspaceId':st(),'basis':st(const='changed_outputs_at_completion'),
+ 'files':arr(obj({'path':st(),'sha256':st(pattern='^[0-9a-f]{64}$')},['path','sha256']))},['sessionId','runId','workspaceId','basis','files'])
 schemas['TaskStateView']=obj({k:st() for k in ['id','sessionId','runId','status','created','updated','startedAt','finishedAt']}|{'cancelRequested':bool_},['id','sessionId','status','cancelRequested','created','updated'])
 schemas['TaskRuntimeView']=obj({k:st() for k in ['kind','executionMode','environmentId','sessionId','runId','threadId','turnId']}|{'nativeAssociation':st(enum=['not_started','current_run','unavailable'])},['kind','executionMode','sessionId','nativeAssociation'])
-schemas['TaskResourceView']=obj({'schema':{'const':1},'observedAt':st(),'stateSource':{'const':'platform_sqlite'},'availability':st(enum=['available','unavailable']),'unavailableReason':st(),'configurationBasis':st(enum=['current_bindings','unavailable']),'task':ref('TaskStateView'),'runtime':ref('TaskRuntimeView'),'resources':ref('ResourceManifest')},['schema','observedAt','stateSource','availability','configurationBasis','task','resources'])
+schemas['TaskResourceView']=obj({'schema':{'const':1},'observedAt':st(),'stateSource':{'const':'platform_sqlite'},'availability':st(enum=['available','unavailable']),'unavailableReason':st(),'configurationBasis':st(enum=['current_bindings','unavailable']),'task':ref('TaskStateView'),'runtime':ref('TaskRuntimeView'),'artifacts':ref('RunArtifacts'),'resources':ref('ResourceManifest')},['schema','observedAt','stateSource','availability','configurationBasis','task','resources'])
 schemas['TaskResourceExport']=obj({'taskId':st(),'observedAt':st(),'path':st(description='Administrator-only host path to the disposable JSON view.')},['taskId','observedAt','path'])
 for path,method,response in [('/tasks/{tid}/resources','get','TaskResourceView'),('/tasks/{tid}/resources/export','post','TaskResourceExport')]:
  op=paths[path][method]
@@ -575,14 +604,14 @@ for path,method,response in [('/tasks/{tid}/resources','get','TaskResourceView')
  op['description']='读取平台任务状态与当前资源绑定，不启动引擎、不复制原始文件、不修改任务。配置标记 current_bindings；不是历史生效配置。已删除会话返回保留的 Task 状态和 unavailable，不虚构原生身份。'
  op['parameters']=[p for p in op['parameters'] if p['in']!='query']
  op['responses']['200']['content']={'application/json':{'schema':ref(response)}}
- if method=='get':op['x-administrator-only']=False;op['x-application-scopes']=['read'];op['description']+=' 应用凭据必须拥有该 Task。响应不包含主机绝对路径、凭据或任务正文。'
+ if method=='get':op['x-administrator-only']=False;op['x-application-scopes']=['read'];op['description']+=' 应用凭据必须拥有该 Task。有 files 权限并有本轮产物记录时返回 artifacts。响应不包含主机绝对路径、凭据或任务正文。'
  else:
   op['x-administrator-only']=True
   op['requestBody']={'required':True,'content':{'application/json':{'schema':obj()}}}
   op['description']+=' 管理员专用，需要 Idempotency-Key 和空 JSON 对象。写入 <data>/tasks/<id>/resources.json，带 observedAt，可删除和重建；不是实时 /proc 或第二个可写状态源。相同 Key 重放原回执，刷新需要新 Key。'
 
 schemas['PersonalFileSource']=obj({'workspaceId':st(),'path':st(description='Workspace-relative original location; never an absolute host path.')},['workspaceId','path'])
-schemas['PersonalFile']=obj({'id':st(),'owner':st(),'name':st(),'size':integer,'sha256':st(),'created':st(),'kind':st(enum=['upload','generated']),'sessionId':st(),'deleted':bool_,'storage':st(enum=['reference','managed','snapshot']),'source':ref('PersonalFileSource'),'snapshotAt':st()},['id','owner','name','size','sha256','created','kind','deleted','storage'])
+schemas['PersonalFile']=obj({'id':st(),'owner':st(),'name':st(),'size':integer,'sha256':st(),'created':st(),'kind':st(enum=['upload','generated']),'sessionId':st(),'runId':st(),'deleted':bool_,'storage':st(enum=['reference','managed','snapshot']),'source':ref('PersonalFileSource'),'snapshotAt':st()},['id','owner','name','size','sha256','created','kind','deleted','storage'])
 for path,ops in paths.items():
  if not path.startswith('/library'):continue
  for method,op in ops.items():

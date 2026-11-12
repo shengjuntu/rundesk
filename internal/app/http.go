@@ -290,7 +290,12 @@ func NewHandler(m *Manager, token string, local bool, publicOrigin ...string) ht
 		respond(w, v, e)
 	})
 	mux.HandleFunc("GET /api/workspaces/{wid}/config", func(w http.ResponseWriter, r *http.Request) {
-		v, e := m.readConfig(r.PathValue("wid"), r.URL.Query().Get("instanceId"))
+		if r.URL.Query().Get("view") == "snapshot" {
+			v, e := m.ConfigSnapshot(r.Context(), r.PathValue("wid"), r.URL.Query().Get("refresh") == "true", r.URL.Query().Get("instanceId"))
+			respond(w, v, e)
+			return
+		}
+		v, e := m.readConfigContext(r.Context(), r.PathValue("wid"), r.URL.Query().Get("instanceId"))
 		respond(w, redact(v), e)
 	})
 	mux.HandleFunc("POST /api/workspaces/{wid}/uploads", s.upload)

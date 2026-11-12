@@ -158,7 +158,7 @@ func TestGeneratedPersonalFilesSurviveSessionAndDoNotResurrect(t *testing.T) {
 		t.Fatal(files, e)
 	}
 	first := files[0]
-	if first.Storage != resource.Reference || first.Source == nil {
+	if first.Storage != resource.Reference || first.Source == nil || first.RunID != s.RunID || first.Source.WorkspaceID != ws.ID || first.SessionID != s.ID {
 		t.Fatal("generated artifact was not registered as a reference", first)
 	}
 	if _, e = os.Stat(m.libraryPath(first)); !os.IsNotExist(e) {
@@ -175,7 +175,7 @@ func TestGeneratedPersonalFilesSurviveSessionAndDoNotResurrect(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "new.txt"), []byte("changed by B"), 0600)
 	m.capturePersonalRun(s)
 	files, e = m.PersonalFiles(v.ID, "")
-	if e != nil || len(files) != 1 {
+	if e != nil || len(files) != 1 || files[0].RunID != s.RunID || files[0].RunID == first.RunID {
 		t.Fatal(files, e)
 	}
 	a, e := os.ReadFile(m.libraryPath(first))
@@ -196,6 +196,65 @@ func TestGeneratedPersonalFilesSurviveSessionAndDoNotResurrect(t *testing.T) {
 	a, e = os.ReadFile(m.libraryPath(first))
 	if e != nil || string(a) != "new" {
 		t.Fatal("session deletion removed personal file", e)
+	}
+}
+
+func TestArtifactCaptureAfterRestartKeepsUnknownOrigin(t *testing.T) {
+	m, user, _, _, _, s, _ := userFixture(t)
+	s.RunID = "interrupted-run"
+	if err := m.preparePersonalRun(s, s.RunID, user.ID); err != nil {
+		t.Fatal(err)
+	}
+	ws, _ := m.Workspace(s.WorkspaceID)
+	dir := filepath.Join(ws.Path, "outputs", s.ID)
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "after-stop.txt"), []byte("written while host was stopped"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.update(s.ID, func(row *Session) { row.RunID = s.RunID; row.Status = "interrupted" }); err != nil {
+		t.Fatal(err)
+	}
+	m.capturePendingPersonal()
+	files, err := m.PersonalFiles(user.ID, "")
+	if err != nil || len(files) != 1 || files[0].RunID != "" {
+		t.Fatal("late file presented as output of interrupted run", files, err)
+	}
+	var r libraryRun
+	if err = m.Store.Get("library-run", s.RunID, &r); err != nil || !r.Done || r.Artifacts == nil || r.Artifacts.Basis != "recovery_scan" {
+		t.Fatal(r, err)
+	}
+}
+
+func TestApplicationArtifactCaptureNeverImposesPersonalFileQuota(t *testing.T) {
+	m := testManager(t)
+	w := m.Workspaces()[0]
+	s, err := m.CreateSession(w.ID, "large-video", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.RunID = "large-ownerless"
+	dir := filepath.Join(w.Path, "outputs", s.ID)
+	if err = os.MkdirAll(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	file, err := os.Create(filepath.Join(dir, "video.mp4"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = file.Truncate(personalFileLimit + 1)
+	file.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = m.preparePersonalRun(s, s.RunID, ""); err != nil {
+		t.Fatal("oversized file blocked application run", err)
+	}
+	m.capturePersonalRun(s)
+	var record libraryRun
+	if err = m.Store.Get("library-run", s.RunID, &record); err != nil || !record.Done || record.Artifacts != nil {
+		t.Fatal("unavailable baseline labeled as confirmed output", record)
 	}
 }
 

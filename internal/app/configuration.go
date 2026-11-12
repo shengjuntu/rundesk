@@ -20,6 +20,10 @@ func (s *Server) sessionConfiguration(w http.ResponseWriter, r *http.Request) {
 		respond(w, nil, err)
 		return
 	}
+	if r.URL.Query().Has("runId") {
+		s.historicalRunConfiguration(w, r, session.ID)
+		return
+	}
 	value, err := s.Manager.Configuration(session.InstanceID, session.WorkspaceID, r.URL.Query().Get("probe") == "1")
 	if err != nil {
 		respond(w, nil, err)

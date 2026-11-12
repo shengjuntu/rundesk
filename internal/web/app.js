@@ -188,8 +188,9 @@ async function boot() {
   const linkedSession=new URLSearchParams(location.search).get("session");
   if(linkedSession){const linked=await api("/sessions/"+encodeURIComponent(linkedSession));renderInstanceOptions(linked.instanceId);$("#workspace").value=linked.workspaceId;updateWorkspaceLabel();await refreshSessions();setProductPage("conversation");await selectSession(linked.id);return;}
   if (await restoreProductRoute()) return;
-  if(setupInstance&&setupInstance!=="default")await RunDeskInstances.conversation(setupInstance);
-  else await RunDeskInstances.open();
+  // A plain startup lands in a ready conversation, including installations
+  // with stale Kun/removed Agent preferences from older initialization.
+  await RunDeskConversations.open();
  } catch(error) {window.RunDeskOnboarding?.bootFailed(error);throw error;}
 }
 function updateWorkspaceLabel() {
@@ -224,6 +225,7 @@ function wireSuggestions() {
   );
 }
 function resetConversation() {
+  state.draftRoutingError = "";
   $("#model").dataset.explicitModel="false";
   window.RunDeskTraceUI?.close(false);
   state.loadingSession=false;
@@ -257,7 +259,8 @@ function resetConversation() {
 }
 $("#model").addEventListener("input",()=>{$("#model").dataset.explicitModel="true";});
 async function newSession() {
-  if(!instance()||!ws())throw Error(rdText("请先选择实例和工作区"));
+  window.RunDeskConversations?.ensureDraftContext?.();
+  if(!instance()||!ws())throw Error(rdText("尚无可用 Codex 环境"));
   const creationSelection=state.selection;
   const field=$("#model"),chosenModel=field.value.trim(),automaticModel=instance()?.agentRuntime?.kind==="kun"?instance().agentRuntime.model:(instance()?.defaultModel||"");
   const model = field.dataset.explicitModel==="true"||chosenModel!==automaticModel?chosenModel:"";
@@ -670,6 +673,7 @@ $("#prompt").addEventListener("paste", (event) => {
 });
 async function sendMessage() {
   if (state.sending) return;
+  window.RunDeskConversations?.ensureDraftContext?.();
   if(state.session?.kunFork&&!active(state.session.status)){toast("分叉已结束；请从来源创建新预览。");return;}
   if (diagnosticTextOnly() && (state.uploads.length || state.chosenSkills.length)) {toast("此会话只接收文本，请移除附件和技能。");return;}
   if (!diagnosticTextOnly() && [...$("#prompt").value].length >= LONG_TEXT_THRESHOLD) {
@@ -918,7 +922,6 @@ async function renderSettings() {
   const shared=instance()?.id==="default"&&!!state.taskAppID;
   const appBinding=state.view==="application"?currentApplicationBinding():null;
   $("#settings-title").textContent=appBinding?appBinding.name+rdText(" · 能力配置"):(shared?rdText("通用助手（历史任务共享）"):contextTitle())+rdText(" · 设置");
-  $("#settings-eyebrow").textContent="INSTANCE SETTINGS";
   $("#settings-context").textContent=shared?rdText("这条历史应用任务沿用通用助手配置；保存也影响通用助手。"):rdFormat("配置对象：${0} · 当前项目：${1}",contextTitle(),ws()?.name||"");
   const target = el("div");
   $("#settings-content").replaceChildren(target);
@@ -933,7 +936,6 @@ async function renderSettings() {
     else if (tab === "overview") await renderConfigurationOverview(target);
     else if (tab === "kun") await renderKunSettings(target);
     else if (tab === "instances") await renderAssistantSettings(target);
-    else if (tab === "advanced") await renderInstances(target);
     else if (tab === "notes") renderNotes(target);
     else if (tab === "plugins") await RunDeskNativePlugins.render(target);
     else if (tab === "skills") await renderSkills(target);
@@ -1014,8 +1016,7 @@ $("#logout").onclick = () =>
     if (state.stream) state.stream.close();
     location.reload();
   });
-$("#new-session").onclick = () => safe(()=>RunDeskConversations.open(ws()?.id,{fresh:true}));
-$("#instance").onchange = () => safe(()=>RunDeskConversations.changeEngine($("#instance").value));
+$("#new-session").onclick = () => safe(()=>RunDeskConversations.open(ws()?.purpose==="maintenance"?undefined:ws()?.id,{fresh:true}));
 $("#workspace").onchange = () => safe(()=>RunDeskConversations.open($("#workspace").value));
 $("#add-workspace").onclick = () => safe(()=>RunDeskConversations.createWorkspace());
 $("#composer").onsubmit = (e) => {

@@ -71,9 +71,12 @@ func (m *Manager) SetAgentRuntime(id string, revision int, config p.Config) (Ins
 		return Instance{}, failure(400, "kun_bash_host_permission", "Bash 使用宿主权限；请先将实例权限设为完整访问，再明确启用 Bash")
 	}
 	next := *v
+	if runtimeKind(next.AgentRuntime.Kind) != config.Kind {
+		next.restoredEngine = restoredEngine{}
+	}
 	next.AgentRuntime = config
 	next.Revision++
-	if e := m.Store.Put("instance", id, next); e != nil {
+	if e := m.Store.Put("instance", id, persistedInstance(next)); e != nil {
 		return Instance{}, e
 	}
 	*v = next

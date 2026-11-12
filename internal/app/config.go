@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -236,6 +237,9 @@ type nativeConfig struct {
 }
 
 func (m *Manager) readConfig(wid string, ids ...string) (nativeConfig, error) {
+	return m.readConfigContext(m.ctx, wid, ids...)
+}
+func (m *Manager) readConfigContext(ctx context.Context, wid string, ids ...string) (nativeConfig, error) {
 	i, err := m.Instance(ids...)
 	if err != nil {
 		return nativeConfig{}, err
@@ -250,12 +254,22 @@ func (m *Manager) readConfig(wid string, ids ...string) (nativeConfig, error) {
 	if e != nil {
 		return nativeConfig{}, e
 	}
-	raw, e := m.ConfigCall(wid, "config/read", map[string]any{"cwd": w.Path, "includeLayers": true}, ids...)
+	identity, identityErr := m.configSnapshotIdentity(i, w)
+	m.configSnapshotMu.Lock()
+	epoch := m.configSnapshotEpochLocked()
+	m.configSnapshotMu.Unlock()
+	raw, e := m.configCallContext(ctx, wid, "config/read", map[string]any{"cwd": w.Path, "includeLayers": true}, ids...)
 	if e != nil {
+		if identityErr == nil {
+			m.observeConfigSnapshot(configSnapshotPair{i.ID, w.ID}, identity, epoch, nativeConfig{}, e)
+		}
 		return nativeConfig{}, e
 	}
 	var c nativeConfig
 	e = json.Unmarshal(raw, &c)
+	if identityErr == nil {
+		m.observeConfigSnapshot(configSnapshotPair{i.ID, w.ID}, identity, epoch, c, e)
+	}
 	return c, e
 }
 func userMCP(c nativeConfig) (map[string]any, string) {

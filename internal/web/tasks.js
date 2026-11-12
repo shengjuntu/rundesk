@@ -29,7 +29,7 @@ window.RunDeskTasks=(()=>{
   const app=el("select",{id:"task-app"},el("option",{value:""},rdText("手动任务")),...state.applications.map(a=>el("option",{value:a.appId},a.name)));
   const preset=el("select",{id:"task-preset"}),work=el("select",{id:"task-workspace",required:true});
   const text=el("textarea",{id:"task-text",rows:5,required:true},spec.input?.text||""),model=el("input",{id:"task-model",value:spec.model||"",placeholder:rdText("留空使用默认模型")});
-  const sourceDetails=el("details",{class:"task-source",open:!!spec.source?.appId},el("summary",{},rdText("应用来源（可选）")),el("p",{class:"help"},rdText("普通任务直接使用所选实例。应用预设使用固定的实例和工作区。")),el("label",{},rdText("来源应用"),app),el("label",{},rdText("制作环境预设"),preset));
+  const sourceDetails=el("details",{class:"task-source",open:!!spec.source?.appId||!!spec.instanceId&&spec.instanceId!=="default"},el("summary",{},rdText("运行设置（可选）")),el("label",{},rdText("执行环境"),selectedInstance),el("label",{},rdText("来源应用"),app),el("label",{},rdText("制作环境预设"),preset));
   const notice=el("p",{class:"help",role:"status"});
   function chooseInstance(iid){
    if(![...selectedInstance.options].some(o=>o.value===iid))selectedInstance.append(el("option",{value:iid,disabled:true},rdText("历史实例 · ")+iid));
@@ -52,7 +52,7 @@ window.RunDeskTasks=(()=>{
     const recent=state.sessions.find(s=>s.instanceId===iid&&available.some(w=>w.id===s.workspaceId))?.workspaceId;
     work.value=owned||recent||available[0]?.id||"";
    }
-   notice.textContent=p&&!p.enabled?rdText("此应用预设已停用；保留历史绑定，不能提交新任务。"):!available.length?rdText("没有可用工作区，请先在实例页面创建或选择工作区。"):p?rdText("此实例属于应用预设，任务将使用它的固定工作区和来源。"):rdText("任务使用所选实例和工作区；创建任务前不会启动运行环境。");
+   notice.textContent=p&&!p.enabled?rdText("此应用预设已停用；保留历史绑定，不能提交新任务。"):!available.length?rdText("没有可用工作区，请从会话页创建工作区。"):p?rdText("任务将使用此预设的固定工作区。"):"";
   }
   function presetOptions(a,selected=""){
    preset.replaceChildren(el("option",{value:""},rdText("应用默认环境")),...(a?.runtimePresets||[]).filter(p=>p.enabled||p.id===spec.source?.presetId).map(p=>el("option",{value:p.id,disabled:!p.enabled},p.name+(p.enabled?"":rdText(" · 已禁用")))));
@@ -67,7 +67,7 @@ window.RunDeskTasks=(()=>{
   function updateInstance(){
    const binding=owner(selectedInstance.value);
    if(binding){app.value=binding.a.appId;presetOptions(binding.a,binding.p.id);sourceDetails.open=true;updateWorkspaces(binding.p.workspaceId,binding.p);}
-   else{app.value="";presetOptions(null);sourceDetails.open=false;updateWorkspaces(selectedInstance.value===instance()?.id?ws()?.id:undefined);}
+   else{app.value="";presetOptions(null);updateWorkspaces(selectedInstance.value===instance()?.id?ws()?.id:undefined);}
   }
   selectedInstance.onchange=updateInstance;
   app.onchange=()=>{
@@ -75,12 +75,12 @@ window.RunDeskTasks=(()=>{
    if(a)updateBinding();else updateInstance();
   };
   preset.onchange=()=>updateBinding();
-  chooseInstance(spec.instanceId||(instance()?.agentRuntime?.kind!=="kun"?instance()?.id:"")||"default");
+  chooseInstance(spec.instanceId||"default");
   if(spec.source?.appId){
    if(![...app.options].some(o=>o.value===spec.source.appId))app.append(el("option",{value:spec.source.appId,disabled:true},rdText("历史应用 · ")+spec.source.appId));
    app.value=spec.source.appId;presetOptions(state.applications.find(a=>a.appId===app.value),spec.source.presetId||"");updateBinding(spec.workspaceId);
   }else{updateInstance();if(spec.workspaceId)updateWorkspaces(spec.workspaceId,owner(selectedInstance.value)?.p);}
-  return {fields:[el("label",{},rdText("任务名称"),title),el("label",{},rdText("执行实例"),selectedInstance),el("label",{},rdText("工作区"),work),notice,sourceDetails,el("label",{},rdText("任务内容"),text),el("label",{},rdText("模型（可选）"),model)],value:()=>{
+  return {fields:[el("label",{},rdText("任务名称"),title),el("label",{},rdText("工作区"),work),notice,sourceDetails,el("label",{},rdText("任务内容"),text),el("label",{},rdText("模型（可选）"),model)],value:()=>{
    const a=state.applications.find(a=>a.appId===app.value),p=(a?.runtimePresets||[]).find(p=>p.id===preset.value),iid=selectedInstance.value;
    if(preset.value&&!p)throw Error(rdText("历史预设已不可用，请重新选择制作环境"));
    if(app.value&&!a)throw Error(rdText("历史应用已不可用，请重新选择来源"));

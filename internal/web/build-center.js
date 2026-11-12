@@ -44,7 +44,17 @@ window.RunDeskBuildCenter = (() => {
     node.append(form); document.body.append(node); node.addEventListener("close", () => node.remove(), {once:true}); node.showModal(); return {node, form};
   }
   function still(g) { return g === generation && state.view === "build-center" && location.hash.startsWith("#build-center"); }
-  function close() { ++generation; clearTimeout(timer); const target = back || {view:"applications",route:"#applications"}; setProductPage(target.view); history.replaceState(null, "", target.route); }
+  function close() {
+    ++generation;
+    clearTimeout(timer);
+    const target = back || {view:"applications", route:"#applications"};
+    setProductPage(target.view);
+    history.replaceState(null, "", target.route);
+    if (changedContext) {
+      changedContext = false;
+      return restoreProductRoute();
+    }
+  }
   async function open(tab = "workbench", id = "", isTest = false) {
     if (state.view !== "build-center") { stashProductDraft(); back = {view:state.view,route:location.hash.startsWith("#build-center") ? contextRoute() : location.hash || contextRoute()}; }
     const g = ++generation; clearTimeout(timer); currentTab = ["workbench", "recipes", "builds", "images", "publications"].includes(tab) ? tab : "workbench"; selected = id; selectedTest = isTest;
@@ -52,7 +62,7 @@ window.RunDeskBuildCenter = (() => {
     history.replaceState(null, "", "#build-center/" + currentTab + (id ? "/" + enc(id) : "") + (isTest ? "/test" : ""));
     const page = $("#build-center-page"), content = el("div", {class:"build-center-content"}), error = el("p", {class:"error",role:"status","data-center-error":""});
     const tools = el("details", {class:"build-center-tools",open:currentTab !== "workbench"}, el("summary", {}, tr("配方管理与构建记录","Recipe management and build history")), el("div", {class:"actions"}, action(tr("Kun 准备配方","Kun recipe preparation"), () => assistant(), "quiet", {"data-center-action":"assistant"}), action("添加构建配方", upload, "quiet", {"data-center-action":"upload"}), action("下载源设置", sourceCatalog, "quiet", {"data-center-action":"sources"}), action(tr("公开镜像清单","Public image catalog"), publicImages, "quiet", {"data-center-action":"public-images"})), el("nav", {class:"tabs build-center-tabs","aria-label":rdText("构建中心分类")}, ...[["recipes","构建配方"],["builds","构建与测试"],["images","镜像"],["publications",tr("发布记录","Publications")]].map(([key, label]) => button(rdText(label), () => open(key), key === currentTab ? "selected" : ""))));
-    page.replaceChildren(el("div", {class:"page-intro"}, el("div", {}, button(rdText("← 返回"), close, "quiet back-link"), el("p", {class:"eyebrow"}, "BUILD CENTER"), el("h1", {}, rdText("构建中心")), el("p", {}, tr("选择配方，准备镜像，再创建和配置 Agent。","Choose a recipe, prepare an image, then create and configure an Agent."))), currentTab === "workbench" ? action(tr("刷新工作台","Refresh workbench"), () => open("workbench"), "quiet", {"data-center-action":"refresh-workbench"}) : action(tr("返回构建工作台","Back to build workbench"), () => open("workbench"), "primary", {"data-center-action":"workbench"})), tools, error, content);
+    page.replaceChildren(el("div", {class:"page-intro"}, el("div", {}, button(rdText("← 返回"), close, "quiet back-link"), el("p", {class:"eyebrow"}, "BUILD CENTER"), el("h1", {}, rdText("构建中心")), el("p", {}, tr("选择配方，准备镜像，再创建制作环境。","Choose a recipe, prepare an image, then create a production environment."))), currentTab === "workbench" ? action(tr("刷新工作台","Refresh workbench"), () => open("workbench"), "quiet", {"data-center-action":"refresh-workbench"}) : action(tr("返回构建工作台","Back to build workbench"), () => open("workbench"), "primary", {"data-center-action":"workbench"})), tools, error, content);
     setLoading(content);
     try {
       if (currentTab === "workbench") await workbench(content, error, g, id);
@@ -79,8 +89,84 @@ window.RunDeskBuildCenter = (() => {
     return info.name + (info.version ? " · v" + info.version : info.revision ? " · r" + info.revision : "");
   }
   const usableImage = image => !["deleted","missing","unavailable"].includes(image.availability);
+  // Records created before runtime kinds were stored use Codex.
+  const isCodexEnvironment = i => i?.execution?.mode === "docker" && (i.agentRuntime?.kind || "codex") === "codex";
+
+  async function environmentCatalog() {
+    const [instances, workspaces, environments] = await Promise.all([
+      api("/instances"), api("/workspaces"), api("/environments")
+    ]);
+    return {instances, workspaces, environments};
+  }
+
+  function environmentRoute(iid, wid, tab) {
+    const query = new URLSearchParams({tab});
+    if (wid) query.set("workspace", wid);
+    return "#build-center/environment/" + enc(iid) + "?" + query;
+  }
+
+  let environmentRequest = 0, changedContext = false;
+  async function openEnvironment(iid, wid, tab = "instances") {
+    const request = ++environmentRequest;
+    if (state.view !== "build-center" || !$("#build-workbench")) {
+      const loading = open("workbench");
+      const openedGeneration = generation;
+      await loading;
+      if (!still(openedGeneration) || request !== environmentRequest) return;
+    }
+    const g = generation, previousRoute = location.hash;
+    const pageError = $("#build-center-page [data-center-error]");
+    const current = () => still(g) && request === environmentRequest && location.hash === previousRoute;
+    try {
+      changedContext = true;
+      if (!await RunDeskInstances.loadCatalog() || !current()) return;
+      const target = state.instances.find(i => i.id === iid);
+      if (!isCodexEnvironment(target)) {
+        throw Error(tr("此环境不可用。当前工作台只管理 Docker Codex 环境。", "This environment is unavailable. The workbench manages Docker Codex environments."));
+      }
+      const context = RunDeskInstances.select(iid, wid);
+      const work = context.workspace;
+      if (wid && work?.id !== wid) throw Error(tr("所选工作区已不可用。", "The requested workspace is unavailable."));
+      if (tab === "containers") {
+        const binding = RunDeskInstances.binding(iid);
+        await RunDeskEnvironments.open({...binding, instanceContext:true, instanceId:iid, workspaceId:work?.id, name:target.name});
+        return;
+      }
+      if (!work) throw Error(tr("请先为此环境添加工作区。", "Add a workspace to this environment first."));
+      const selectedTab = ["overview", "instances", "skills", "mcp", "plugins", "runtime", "notes"].includes(tab) ? tab : "instances";
+      const nextRoute = environmentRoute(iid, work.id, selectedTab);
+      history.replaceState(null, "", nextRoute);
+      const modal = $("#settings");
+      modal.addEventListener("close", () => {
+        if (location.hash === nextRoute) history.replaceState(null, "", "#build-center/workbench" + (flow.recipeId ? "/" + enc(flow.recipeId) : ""));
+      }, {once:true});
+      await openSettings(selectedTab);
+    } catch (error) {
+      if (still(g) && request === environmentRequest && pageError) pageError.textContent = error.message;
+    }
+  }
+
+  function environmentCard(instance, environments, workspaces) {
+    const card = el("article", {class:"workbench-agent", "data-workbench-agent":instance.id}, el("strong", {}, instance.name));
+    if (!environments.length) {
+      card.append(el("p", {class:"help"}, tr("尚无工作区容器。", "No workspace container yet.")),
+        action(tr("管理容器", "Manage containers"), () => openEnvironment(instance.id, undefined, "containers")));
+      return card;
+    }
+    for (const env of environments) {
+      const workspace = workspaces.find(w => w.id === env.workspaceId);
+      const row = el("section", {class:"workbench-environment", "data-environment-workspace":env.workspaceId},
+        el("p", {}, workspace?.name || env.workspaceId), el("small", {class:"muted"}, env.spec?.image || instance.execution.image || "", " · ", env.state || "unknown"));
+      if (workspace) row.append(el("div", {class:"actions"},
+        action(tr("配置环境", "Configure environment"), () => openEnvironment(instance.id, workspace.id, "instances")),
+        action(tr("管理容器", "Manage containers"), () => openEnvironment(instance.id, workspace.id, "containers"))));
+      card.append(row);
+    }
+    return card;
+  }
   async function workbench(target, error, g, recipeID) {
     if(recipeID && flow.recipeId !== recipeID)Object.assign(flow,{recipeId:recipeID,imageKey:"",buildId:""});
+    let inventory, inventoryError, showAll = false;
     let data, signature = "", request = 0, logAfter = 0, logText = "", logBuild = "", catalogBuild = "", catalogChecks = 0, catalogPending = false, catalogBlocked = false;
     const catalogCheckLimit = 5;
     const root = el("div", {class:"build-workbench",id:"build-workbench"});target.replaceChildren(root);
@@ -98,7 +184,7 @@ window.RunDeskBuildCenter = (() => {
       const recipeSelect = el("select",{id:"workbench-recipe","aria-label":tr("选择配方","Choose recipe")},el("option",{value:""},tr("直接使用已有镜像","Use an existing image directly")),...data.recipes.filter(row => !row.archived || row.id === flow.recipeId).map(row => el("option",{value:row.id,disabled:row.archived},row.name+" · v"+row.version+(row.archived?tr(" · 已归档"," · Archived"):""))));
       recipeSelect.value = flow.recipeId;
       recipeSelect.onchange = () => {Object.assign(flow,{recipeId:recipeSelect.value,imageKey:"",buildId:""});logBuild="";saveFlow();history.replaceState(null,"","#build-center/workbench"+(flow.recipeId?"/"+enc(flow.recipeId):""));render();};
-      const one = el("section",{class:"workbench-step",id:"workbench-recipe-step"},el("div",{class:"workbench-step-heading"},el("span",{class:"workbench-step-number"},"1"),el("h2",{},tr("选择配方","Choose recipe"))),el("label",{},tr("工具环境配方","Tool environment recipe"),recipeSelect),el("p",{class:"help"},recipe?.description || tr("已有镜像可以直接创建 Agent，无需重新构建。","An existing image can create an Agent without another build.")));
+      const one = el("section",{class:"workbench-step",id:"workbench-recipe-step"},el("div",{class:"workbench-step-heading"},el("span",{class:"workbench-step-number"},"1"),el("h2",{},tr("选择配方","Choose recipe"))),el("label",{},tr("工具环境配方","Tool environment recipe"),recipeSelect),el("p",{class:"help"},recipe?.description || tr("也可以直接使用已有镜像。","You can also use an existing image.")));
       if(recipe)one.append(action(tr("查看 Dockerfile 与配方","View Dockerfile and recipe"),()=>inspectRecipe(recipe),"quiet"));
       const two = el("section",{class:"workbench-step",id:"workbench-image-step"},el("div",{class:"workbench-step-heading"},el("span",{class:"workbench-step-number"},"2"),el("h2",{},tr("准备镜像","Prepare image"))));
       if(recipe && !recipe.archived)two.append(action(tr("构建新镜像","Build a new image"),()=>buildRecipe(recipe,{onBuild:async value=>{Object.assign(flow,{recipeId:recipe.id,buildId:value.id,imageKey:""});saveFlow();await open("workbench",recipe.id);}}),"primary",{"data-workbench-build":recipe.id}));
@@ -109,22 +195,48 @@ window.RunDeskBuildCenter = (() => {
         if(["failed","interrupted","canceled"].includes(selectedBuild.status))buildCard.append(action(tr("Kun 分析并修复","Analyze and repair with Kun"),()=>assistant(selectedBuild),"quiet"));
         two.append(buildCard);
       }
-      two.append(el("p",{class:"help"},recipe?tr("选择该配方已生成的镜像，也可以构建另一个版本。","Select an image produced from this recipe, or build another version."):tr("选择已登记镜像；其配方来源和已有 Agent 会显示在下方。","Select a registered image; its recipe source and existing Agents are shown below.")));
+      two.append(el("p",{class:"help"},recipe?tr("选择该配方已生成的镜像，也可以构建另一个版本。","Select an image produced from this recipe, or build another version."):tr("选择已登记镜像，查看关联的制作环境。","Select a registered image to see its production environments.")));
       const imageList = el("div",{class:"workbench-image-list"});
-      for(const value of choices){const info=imageIdentity(value,data.recipes,recipe?.id),pick=action(imageTitle(value,data.recipes,recipe?.id),()=>chooseImage(value),"workbench-image-pick",{"data-workbench-image":value.key,"aria-pressed":String(image?.key===value.key)});imageList.append(el("article",{class:"workbench-image"+(image?.key===value.key?" selected":"")},pick,el("div",{class:"workbench-image-state"},status(value.availability),el("span",{},rdFormat("${0} 个 Agent",(value.selectedBy || []).length))),el("p",{class:"workbench-image-reference"},(value.references || []).join(" · ") || tr("无镜像标签","No image tag")),el("details",{class:"workbench-technical"},el("summary",{},"Image ID"),el("code",{},value.imageId)),!info.source?el("p",{class:"help"},tr("未记录配方来源。","No recipe source was recorded.")):null));}
+      for(const value of choices){const info=imageIdentity(value,data.recipes,recipe?.id),pick=action(imageTitle(value,data.recipes,recipe?.id),()=>chooseImage(value),"workbench-image-pick",{"data-workbench-image":value.key,"aria-pressed":String(image?.key===value.key)});imageList.append(el("article",{class:"workbench-image"+(image?.key===value.key?" selected":"")},pick,el("div",{class:"workbench-image-state"},status(value.availability),el("span",{},(value.selectedBy || []).length + tr(" 个制作环境", " environments"))),el("p",{class:"workbench-image-reference"},(value.references || []).join(" · ") || tr("无镜像标签","No image tag")),el("details",{class:"workbench-technical"},el("summary",{},"Image ID"),el("code",{},value.imageId)),!info.source?el("p",{class:"help"},tr("未记录配方来源。","No recipe source was recorded.")):null));}
       if(!choices.length)imageList.append(el("p",{class:"workbench-empty"},recipe?tr("这个配方还没有生成镜像。点击上方按钮开始构建。","This recipe has no recorded image yet. Start a build above."):tr("尚无已登记镜像。先选择配方，或在配方管理中准备已有镜像。","No registered image. Choose a recipe, or prepare an image in recipe management.")));
       two.append(imageList);
-      const three = el("section",{class:"workbench-step",id:"workbench-agent-step"},el("div",{class:"workbench-step-heading"},el("span",{class:"workbench-step-number"},"3"),el("h2",{},tr("创建 Agent","Create Agent"))));
-      if(image){
-        three.append(el("p",{class:"workbench-selected-image"},imageTitle(image,data.recipes,recipe?.id)),el("p",{class:"help"},tr("每个 Agent 保存独立的模型、Skills、MCP 与运行配置。同一个镜像可以创建多个 Agent。","Each Agent keeps separate model, Skills, MCP and runtime settings. One image can support multiple Agents.")));
-        const create = action(tr("从此镜像创建 Agent","Create Agent from this image"),()=>launch(image,{onCreated:refresh}),"primary",{"data-workbench-create-agent":image.key});create.disabled=!usableImage(image);three.append(create);
-        if(!usableImage(image))three.append(el("p",{class:"error"},image.error || tr("此镜像当前不可用，请先核对镜像状态。","This image is unavailable. Check its status first.")));
-        const linked = image.selectedBy || [];
-        three.append(el("h3",{},tr("使用此镜像的 Agent","Agents using this image")));
-        if(!linked.length)three.append(el("p",{class:"help"},tr("还没有 Agent 使用此镜像。","No Agent uses this image yet.")));
-        for(const agent of linked){const env=(image.environments || []).filter(row=>row.instanceId===agent.instanceId);three.append(el("article",{class:"workbench-agent","data-workbench-agent":agent.instanceId},el("strong",{},agent.name),el("p",{class:"help"},env.map(row=>row.state || "unknown").join(" · ") || tr("尚无工作区容器","No workspace container yet")),action(tr("配置 Agent","Configure Agent"),()=>showLegacyApplication(agent.instanceId,env[0]?.workspaceId),"quiet")));}
-      }else three.append(el("p",{class:"workbench-empty"},tr("先在第二步选择镜像。","Select an image in step two first.")));
+      const three = el("section", {class:"workbench-step", id:"workbench-agent-step"},
+        el("div", {class:"workbench-step-heading"}, el("span", {class:"workbench-step-number"}, "3"), el("h2", {}, tr("制作环境", "Production environments"))));
+      if (image) {
+        const create = action(tr("从此镜像创建环境", "Create environment from this image"), () => launch(image, {onCreated:async () => { await readInventory(); await refresh(); }}), "primary", {"data-workbench-create-agent":image.key});
+        create.disabled = !usableImage(image);
+        three.append(el("p", {class:"workbench-selected-image"}, imageTitle(image, data.recipes, recipe?.id)), create);
+        if (create.disabled) three.append(el("p", {class:"error"}, image.error || tr("此镜像当前不可用。", "This image is unavailable.")));
+      } else three.append(el("p", {class:"workbench-empty"}, tr("选择镜像后即可创建制作环境。", "Select an image to create an environment.")));
+      three.append(el("h3", {}, tr("已有制作环境", "Existing environments")));
+      if (image) {
+        const scope = el("select", {id:"workbench-environment-filter", "aria-label":tr("环境范围", "Environment filter")},
+          el("option", {value:"selected"}, tr("使用当前镜像", "Using selected image")), el("option", {value:"all"}, tr("全部制作环境", "All environments")));
+        scope.value = showAll ? "all" : "selected";
+        scope.onchange = () => { showAll = scope.value === "all"; render(); };
+        three.append(scope);
+      }
+      if (inventoryError) three.append(el("p", {class:"error"}, inventoryError.message), action(tr("重试", "Retry"), async () => { await readInventory(); if (still(g)) render(); }));
+      else {
+        const instances = inventory.instances.filter(isCodexEnvironment);
+        let count = 0;
+        for (const instance of instances) {
+          let rows = inventory.environments.filter(env => env.instanceId === instance.id);
+          const selectedForInstance = (image?.selectedBy || []).some(value => value.instanceId === instance.id) || instance.execution.imageId === image?.imageId;
+          if (image && !showAll && !selectedForInstance) {
+            rows = rows.filter(env => (env.imageId || env.spec?.imageId) === image.imageId);
+            if (!rows.length) continue;
+          }
+          three.append(environmentCard(instance, rows, inventory.workspaces));
+          count++;
+        }
+        if (!count) three.append(el("p", {class:"help"}, image && !showAll ? tr("这个镜像还没有制作环境。", "This image has no production environments yet.") : tr("暂无制作环境。", "No production environments yet.")));
+      }
       const focused=document.activeElement?.id;root.replaceChildren(one,two,three);if(focused)root.querySelector("#"+focused)?.focus();
+    }
+    async function readInventory() {
+      try { inventory = await environmentCatalog(); inventoryError = null; }
+      catch (error) { inventoryError = error; }
     }
     async function refresh(){
       const ticket=++request;clearTimeout(timer);
@@ -142,7 +254,7 @@ window.RunDeskBuildCenter = (() => {
           if(value){catalogChecks=0;if(!flow.imageKey)flow.imageKey=value.key;}
         }else catalogPending=catalogBlocked=false;
         if(build){if(logBuild!==build.id){logBuild=build.id;logAfter=0;logText="";}const log=await api(base+"/builds/"+enc(build.id)+"/log?after="+logAfter);if(!still(g)||ticket!==request)return;logAfter=log.next;logText+=log.text || "";}
-        error.textContent="";const nextSignature=JSON.stringify([data,flow,logText,catalogPending,catalogBlocked]);if(signature!==nextSignature){signature=nextSignature;render();}
+        error.textContent="";const nextSignature=JSON.stringify([data,flow,logText,catalogPending,catalogBlocked,inventory,inventoryError?.message]);if(signature!==nextSignature){signature=nextSignature;render();}
         if(build && (active(build.status) || catalogPending && !catalogBlocked))timer=setTimeout(refresh,2000);
       }catch(e){if(still(g)&&ticket===request){
         error.textContent=e.message;
@@ -151,7 +263,8 @@ window.RunDeskBuildCenter = (() => {
         else if(catalogPending && !catalogBlocked){catalogBlocked=++catalogChecks>=catalogCheckLimit;if(catalogBlocked)render();else timer=setTimeout(refresh,5000);}
       }}
     }
-    await refresh();
+    await readInventory();
+    if (still(g)) await refresh();
   }
   async function recipes(target, g) {
     const data = await api(base + "/recipes"); if (!still(g)) return; catalogRecipes=data.items || [];
@@ -362,7 +475,7 @@ window.RunDeskBuildCenter = (() => {
     let sourceInput, runtimeInput, busy = false, sourceReady = false;
     const runtimePanel = el("section", {class:"build-runtime-panel"});
     if (recipe.kind === "builtin") { runtimeInput = runtimeOptions(runtimePanel, {version:() => version.value.trim()}); version.addEventListener("input", runtimeInput.invalidate); }
-    form.append(el("h3", {}, recipe.name + " · r" + recipe.revision), recipe.kind === "builtin" ? el("label", {}, rdText("Codex 精确版本"), version) : null, el("label", {}, rdText("镜像标签（可选）"), reference), recipe.kind === "builtin" ? runtimePanel : null, sources, el("label", {class:"build-checkbox"}, noCache, rdText("不使用缓存")), el("p", {class:"help"}, rdText("在 RunDesk 所在主机使用 Docker 构建。成功后可启动独立实例，现有环境继续使用各自配置。")), error, submit);
+    form.append(el("h3", {}, recipe.name + " · r" + recipe.revision), recipe.kind === "builtin" ? el("label", {}, rdText("Codex 精确版本"), version) : null, el("label", {}, rdText("镜像标签（可选）"), reference), recipe.kind === "builtin" ? runtimePanel : null, sources, el("label", {class:"build-checkbox"}, noCache, rdText("不使用缓存")), el("p", {class:"help"}, tr("在 RunDesk 主机上构建，完成后可以用镜像创建制作环境。", "Build on the RunDesk host, then create a production environment from the image.")), error, submit);
     const load = async () => {
       sourceReady = false; submit.disabled = true; setLoading(sources); error.textContent = "";
       try {
@@ -583,11 +696,11 @@ window.RunDeskBuildCenter = (() => {
       try {
         const value = await api(base + "/images/" + enc(key)); if (!still(g) || seq !== selection) return;
         history.replaceState(null, "", "#build-center/images/" + enc(key));
-        const ops = el("div", {class:"actions"}, action("核对镜像", async () => { await api(base + "/images/" + enc(key) + "/check", {method:"POST",body:{}}); if (still(g) && selected === key) await open("images", key); }), action("创建并启动独立实例", () => launch(value), "primary", {"data-center-action":"launch"}), action("删除镜像", async () => { if (!confirm(rdText("从本机 Docker 实际删除此镜像，保留历史登记？被现有实例、环境或容器引用时会拒绝删除。"))) return; await mutate("/images/" + enc(key), {imageId:value.imageId}, "DELETE"); if (still(g)) await open("images"); }, "quiet", {"data-center-action":"delete-image"}));
+        const ops = el("div", {class:"actions"}, action("核对镜像", async () => { await api(base + "/images/" + enc(key) + "/check", {method:"POST",body:{}}); if (still(g) && selected === key) await open("images", key); }), action(tr("在工作台使用镜像", "Use image in workbench"), () => { Object.assign(flow, {recipeId:"", imageKey:value.key, buildId:""}); flowRestored = true; saveFlow(); return open("workbench"); }, "primary", {"data-center-action":"launch"}), action("删除镜像", async () => { if (!confirm(rdText("从本机 Docker 实际删除此镜像，保留历史登记？被现有实例、环境或容器引用时会拒绝删除。"))) return; await mutate("/images/" + enc(key), {imageId:value.imageId}, "DELETE"); if (still(g)) await open("images"); }, "quiet", {"data-center-action":"delete-image"}));
         const tests = el("div", {class:"actions"}, ...["offline","smoke"].map(kind => action(kind === "offline" ? "Offline 检查" : "Smoke 测试", async () => { const test = await mutate("/images/" + enc(key) + "/tests", {kind}); if (still(g)) await open("builds", test.id, true); }, "quiet", {"data-center-test":kind})));
         if (value.availability === "deleted") { for (const node of ops.querySelectorAll('[data-center-action="launch"],[data-center-action="delete-image"]')) node.disabled = true; for (const node of tests.querySelectorAll("button")) node.disabled = true; }
         if (value.lastTest) tests.append(action("上次测试结果", () => open("builds", value.lastTest.id, true)));
-        detail.replaceChildren(el("h2", {class:"image-recipe-heading"}, imageTitle(value,recipeRows)), metadata([["Image ID",value.imageId],["标签",value.references.join("\n")],["可用状态",value.availability || "unknown"],["核对时间",value.checkedAt || "—"]]), value.error ? el("p", {class:"error"}, value.error) : null, ops, el("h3", {}, rdText("简单测试")), el("p", {class:"help"}, rdText("Offline 使用内置工具检查；Smoke 执行配方冻结的测试命令。不支持的检查会返回明确原因，不表示通过。")), tests, el("h3", {}, rdText("来源与使用情况")), metadata([["来源",(value.sources || []).map(source => (source.name || source.id) + (source.status ? " · " + rdText(labels[source.status] || source.status) : "") + (source.recipeRevision ? " · r" + source.recipeRevision : "")).join("\n")],["实例引用",(value.selectedBy || []).map(row => row.name + " (" + row.instanceId + ")").join("\n")],["项目环境",(value.environments || []).map(row => row.instanceId + " / " + row.workspaceId + " · " + (row.state || "unknown")).join("\n")]]));
+        detail.replaceChildren(el("h2", {class:"image-recipe-heading"}, imageTitle(value,recipeRows)), metadata([["Image ID",value.imageId],["标签",value.references.join("\n")],["可用状态",value.availability || "unknown"],["核对时间",value.checkedAt || "—"]]), value.error ? el("p", {class:"error"}, value.error) : null, ops, el("h3", {}, rdText("简单测试")), el("p", {class:"help"}, rdText("Offline 使用内置工具检查；Smoke 执行配方冻结的测试命令。不支持的检查会返回明确原因，不表示通过。")), tests, el("h3", {}, rdText("来源与使用情况")), metadata([["来源",(value.sources || []).map(source => (source.name || source.id) + (source.status ? " · " + rdText(labels[source.status] || source.status) : "") + (source.recipeRevision ? " · r" + source.recipeRevision : "")).join("\n")],[tr("制作环境", "Environments"),(value.selectedBy || []).map(row => row.name + " (" + row.instanceId + ")").join("\n")],["项目环境",(value.environments || []).map(row => row.instanceId + " / " + row.workspaceId + " · " + (row.state || "unknown")).join("\n")]]));
         const publication = el("section", {"data-center-publication-readiness":key}, el("h3", {}, tr("发布镜像","Publish image")), el("p", {class:"help",role:"status"}, tr("正在检查发布条件…","Checking publication requirements…")));
         detail.append(publication);
         api(base + "/images/" + enc(key) + "/publication-readiness").then(ready => {
@@ -604,9 +717,9 @@ window.RunDeskBuildCenter = (() => {
   async function launch(image, options = {}) {
     const path = "/images/" + enc(image.key) + "/launch", saved = launchInputs.get(path);
     const first = image.sources.find(source => source.profileId || source.recipeId), ref = image.references.find(value => !value.startsWith("sha256:"));
-    const suggested = (first?.profileId || first?.recipeId?.replace(/^builtin-/, "") || ref?.split("/").pop()?.split(":")[0] || image.sources.find(source => !source.name?.startsWith("sha256:"))?.name || "Docker Agent").slice(0,48);
-    const {node, form} = dialog("从镜像添加 Agent"), name = el("input", {id:"center-launch-name",maxlength:160,value:saved?.name || suggested,disabled:!!saved}), error = el("p", {class:"error",role:"status"}), result = el("div", {role:"status"}), submit = el("button", {type:"submit",class:"primary"}, rdText(saved ? "重试原请求" : "创建并启动")), reset = action("开始另一实例请求", async () => { const signature = await submissionSignature("build-center:POST" + path, {operation:"launch"}); receipts.delete(signature); launchInputs.delete(path); saveReceipts(); saveLaunchInputs(); node.close(); await launch(image, options); }); reset.hidden = !saved;
-    form.append(el("p", {class:"image-reference"}, image.imageId), el("label", {}, rdText("Agent 名称"), name), el("p", {class:"help"}, rdText("从已登记的镜像添加 Codex Agent 和工作区，并为这对 Agent 与工作区启动容器。模型和登录在 Agent 设置中配置。")), error, result, submit, reset);
+    const suggested = (first?.profileId || first?.recipeId?.replace(/^builtin-/, "") || ref?.split("/").pop()?.split(":")[0] || image.sources.find(source => !source.name?.startsWith("sha256:"))?.name || "Docker").slice(0,48);
+    const {node, form} = dialog(tr("创建制作环境", "Create production environment")), name = el("input", {id:"center-launch-name",maxlength:160,value:saved?.name || suggested,disabled:!!saved}), error = el("p", {class:"error",role:"status"}), result = el("div", {role:"status"}), submit = el("button", {type:"submit",class:"primary"}, rdText(saved ? "重试原请求" : "创建并启动")), reset = action(tr("开始另一创建请求", "Start a separate request"), async () => { const signature = await submissionSignature("build-center:POST" + path, {operation:"launch"}); receipts.delete(signature); launchInputs.delete(path); saveReceipts(); saveLaunchInputs(); node.close(); await launch(image, options); }); reset.hidden = !saved;
+    form.append(el("p", {class:"image-reference"}, image.imageId), el("label", {}, tr("制作环境名称", "Environment name"), name), el("p", {class:"help"}, tr("RunDesk 会为这个环境创建工作区并启动容器。", "RunDesk creates a workspace and starts its container.")), error, result, submit, reset);
     let provider; submit.disabled = true; form.onsubmit = event => event.preventDefault();
     try { provider = await window.RunDeskCodexProvider?.launchFields?.(form, {image, saved}); if(!node.open)return;submit.disabled = false; }
     catch(e) { if(node.open)error.textContent=e.message;return; }
@@ -615,8 +728,8 @@ window.RunDeskBuildCenter = (() => {
       const value = await mutate(path, input); launchInputs.delete(path); saveLaunchInputs(); if (!node.open) return;
       submitted = true; submit.hidden = true; reset.hidden = true; name.disabled = true;
       await provider?.afterCreated?.(value); await options.onCreated?.(value);
-      result.replaceChildren(el("h3", {}, rdText("Agent 已创建")), metadata([["Agent",value.instance.name + " · " + value.instance.id],["项目",value.workspace.name + " · " + value.workspace.id],["容器状态",value.environment.state || "unknown"],["环境",value.environment.id],["Image ID",value.environment.imageId || image.imageId]]), value.environment.error ? el("p", {class:"error"}, value.environment.error) : null, action("打开 Agent", async () => { await refreshApplicationCatalog(); state.workspaces = await api("/workspaces"); $("#workspace").replaceChildren(...state.workspaces.map(work => el("option", {value:work.id}, work.name))); $("#workspace").value = value.workspace.id; node.close(); await showLegacyApplication(value.instance.id,value.workspace.id); }));
-    } catch (e) { error.textContent = e.message; name.disabled = true; reset.hidden = false; submit.textContent = rdText("重试原请求"); result.replaceChildren(el("p", {class:"help"}, rdText("重试会查询同一请求结果。若已创建资源，请按错误中的编号处理；开始另一请求会创建另一实例。"))); } finally { busy = false; submit.disabled = false; } };
+      result.replaceChildren(el("h3", {}, tr("制作环境已创建", "Environment created")), metadata([[tr("制作环境", "Environment"),value.instance.name],["项目",value.workspace.name + " · " + value.workspace.id],["容器状态",value.environment.state || "unknown"],[tr("容器环境 ID", "Container environment ID"),value.environment.id],["Image ID",value.environment.imageId || image.imageId]]), value.environment.error ? el("p", {class:"error"}, value.environment.error) : null, action(tr("配置环境", "Configure environment"), async () => { node.close(); await openEnvironment(value.instance.id, value.workspace.id); }));
+    } catch (e) { error.textContent = e.message; name.disabled = true; reset.hidden = false; submit.textContent = rdText("重试原请求"); result.replaceChildren(el("p", {class:"help"}, tr("重试会使用同一请求。开始另一请求将创建独立的制作环境。", "Retry uses the same request. A separate request creates another environment."))); } finally { busy = false; submit.disabled = false; } };
   }
   async function assistant(sourceBuild) {
     const repairing=!!sourceBuild?.id;
@@ -639,5 +752,5 @@ window.RunDeskBuildCenter = (() => {
     target.replaceChildren(el("h3", {}, tr("Kun 维护任务","Kun maintenance task")), maintenanceView(value.maintenance), metadata([["任务",value.taskId],["状态",value.status || "unknown"],["实例",value.instanceId],["专用工作区",value.workspaceId]]), value.error ? el("p", {class:"error"}, value.error) : null, value.sessionId ? el("a", {href:"/?session=" + enc(value.sessionId),class:"app-open"}, rdText("查看维护记录与轨迹 ↗")) : null, el("p", {class:"help"}, value.skillBootstrap ? rdText("已准备 Skill 引导；原生插件安装状态未改变。") : rdText("原生插件安装状态未改变。")));
   }
   $("#nav-build-center").onclick = () => safe(() => open());
-  return {open, close, sourceOptions, sourceCatalog, publicImages, runtimeOptions, frozenRuntimeView, mutate, maintenanceView, imageIdentity};
+  return {open, openEnvironment, environmentRoute, close, sourceOptions, sourceCatalog, publicImages, runtimeOptions, frozenRuntimeView, mutate, maintenanceView, imageIdentity};
 })();

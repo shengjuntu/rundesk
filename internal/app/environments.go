@@ -115,6 +115,9 @@ func (m *Manager) ensureEnvironment(i Instance, w Workspace) (Environment, error
 	return m.ensureEnvironmentLocked(i, w)
 }
 func (m *Manager) ensureEnvironmentLocked(i Instance, w Workspace) (Environment, error) {
+	if err := requireCodexExecutionAdapter(i); err != nil {
+		return Environment{}, err
+	}
 	// Ordinary project files can be shared by multiple session engines. App
 	// workspaces retain their owner; each allowed pair still has its own HOME.
 	if e := m.checkEnvironmentWorkspaceOwner(i.ID, w.ID); e != nil {
@@ -430,6 +433,9 @@ func (m *Manager) startEnvironmentLocked(v *Environment, w Workspace) error {
 // A connection gets its own lease. Cleanup intentionally acquires no Manager
 // locks because rpc.Close is also used while holding session/manager locks.
 func (m *Manager) prepareCommand(w Workspace, i Instance) (*exec.Cmd, Instance, func(), error) {
+	if err := requireCodexExecutionAdapter(i); err != nil {
+		return nil, i, nil, err
+	}
 	if i.Execution.normalized().Mode != "docker" {
 		return m.command(w, i), i, func() {}, nil
 	}
@@ -532,6 +538,9 @@ func (m *Manager) EnvironmentAction(id, action string, revision int, application
 		return v, e
 	}
 	if action == "start" || action == "recreate" {
+		if e = requireCodexExecutionAdapter(i); e != nil {
+			return v, e
+		}
 		if i.Execution.normalized().Mode != "docker" {
 			return v, failure(409, "not_docker_application", "应用当前使用本机运行方式")
 		}
