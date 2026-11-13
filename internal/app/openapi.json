@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Control API (RDCA)",
-    "version": "0.72.0",
+    "version": "0.73.0",
     "description": "RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter；附加 UHP /v1 入口共用任务核心，具体范围与限制见 docs/UHP.md，不声明完整规范兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。0.61.0 起日常会话与应用任务仅接受 Codex，Kun 用于维护、轨迹问答及保留的研究 API；普通 Kun 提交返回 kun_maintenance_only。当前应用接入、错误、幂等及示例见 docs/API-V1.md。"
   },
   "servers": [
@@ -20019,6 +20019,30 @@
             }
           },
           {
+            "name": "acknowledge",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "0",
+                "1"
+              ],
+              "default": "0",
+              "description": "检查有待复核项或不完整时，必须明确设为 1 并提供 reason；不是安全认证。"
+            }
+          },
+          {
+            "name": "reason",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 2000,
+              "description": "待复核项的继续安装理由；去空白后至少 4 个字符，最多 2000 UTF-8 字节。"
+            }
+          },
+          {
             "name": "X-Request-ID",
             "in": "header",
             "schema": {
@@ -20072,6 +20096,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "同名技能已存在，或 skill_review_required 要求显式风险确认及理由。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
           }
         },
         "requestBody": {
@@ -20095,7 +20129,8 @@
             }
           }
         },
-        "x-administrator-only": true
+        "x-administrator-only": true,
+        "description": " 导入前运行内置静态检查。待复核或检查不完整时返回 409 skill_review_required，需明确 acknowledge=1 和 reason 后重发；替换保留既有完整备份。"
       }
     },
     "/workspaces/{wid}/skill-bundles/{name}": {
@@ -24919,6 +24954,1906 @@
           }
         }
       }
+    },
+    "/skill-center/sources": {
+      "get": {
+        "operationId": "get_skill_center_sources",
+        "summary": "可用搜索来源",
+        "x-administrator-only": true,
+        "parameters": [],
+        "description": "管理员专用，沿用宿主认证、来源与主机校验；应用和成员凭据不开放。外部命令只来自服务端配置，不接受任意命令。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "enum": [
+                              "clawhub",
+                              "skillsmp",
+                              "skills.sh",
+                              "github"
+                            ]
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label",
+                          "description"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "无效请求、参数或引擎。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、文件或任务不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "内容摘要变化、未完成复核、同名目录或扫描冲突；检查 code 和 details。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "请求、文件或快照超出上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "来源不可导入、多技能候选、源码转交或来源协议错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行两个扫描；等待已有任务结束。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "宿主存储或运行失败；若 installed=true 则先检查安装目录。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "后台正在停止。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；不可将失败或缺失报告作为安全通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/engines": {
+      "get": {
+        "operationId": "get_skill_center_engines",
+        "summary": "检查引擎可发现性",
+        "x-administrator-only": true,
+        "parameters": [],
+        "description": "管理员专用，沿用宿主认证、来源与主机校验；应用和成员凭据不开放。外部命令只来自服务端配置，不接受任意命令。 available 仅说明命令可发现，实际可用性以检查任务报告为准。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "enum": [
+                              "builtin",
+                              "skillspector"
+                            ]
+                          },
+                          "available": {
+                            "type": "boolean"
+                          },
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "available",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "无效请求、参数或引擎。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、文件或任务不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "内容摘要变化、未完成复核、同名目录或扫描冲突；检查 code 和 details。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "请求、文件或快照超出上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "来源不可导入、多技能候选、源码转交或来源协议错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行两个扫描；等待已有任务结束。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "宿主存储或运行失败；若 installed=true 则先检查安装目录。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "后台正在停止。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；不可将失败或缺失报告作为安全通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/search": {
+      "get": {
+        "operationId": "get_skill_center_search",
+        "summary": "聚合所选来源的技能候选",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "sources",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "clawhub,skillsmp,skills.sh",
+              "description": "逗号分隔 clawhub、skillsmp、skills.sh、github；显式空值不请求外部来源。"
+            }
+          }
+        ],
+        "description": "管理员专用，沿用宿主认证、来源与主机校验；应用和成员凭据不开放。外部命令只来自服务端配置，不接受任意命令。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillSearchResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "无效请求、参数或引擎。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、文件或任务不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "内容摘要变化、未完成复核、同名目录或扫描冲突；检查 code 和 details。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "请求、文件或快照超出上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "来源不可导入、多技能候选、源码转交或来源协议错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行两个扫描；等待已有任务结束。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "宿主存储或运行失败；若 installed=true 则先检查安装目录。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "后台正在停止。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；不可将失败或缺失报告作为安全通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/packs": {
+      "get": {
+        "operationId": "get_skill_center_packs",
+        "summary": "列出本地固定快照",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "管理员专用，沿用宿主认证、来源与主机校验；应用和成员凭据不开放。外部命令只来自服务端配置，不接受任意命令。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SkillPack"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "无效请求、参数或引擎。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、文件或任务不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "内容摘要变化、未完成复核、同名目录或扫描冲突；检查 code 和 details。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "请求、文件或快照超出上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "来源不可导入、多技能候选、源码转交或来源协议错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行两个扫描；等待已有任务结束。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "宿主存储或运行失败；若 installed=true 则先检查安装目录。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "后台正在停止。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；不可将失败或缺失报告作为安全通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/fetch": {
+      "post": {
+        "operationId": "post_skill_center_fetch",
+        "summary": "获取完整目录并执行内置静态检查",
+        "x-administrator-only": true,
+        "parameters": [],
+        "description": "管理员专用，沿用宿主认证、来源与主机校验；应用和成员凭据不开放。外部命令只来自服务端配置，不接受任意命令。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pack": {
+                      "$ref": "#/components/schemas/SkillPack"
+                    },
+                    "scan": {
+                      "$ref": "#/components/schemas/SkillScanReport"
+                    }
+                  },
+                  "required": [
+                    "pack",
+                    "scan"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "无效请求、参数或引擎。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、文件或任务不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "内容摘要变化、未完成复核、同名目录或扫描冲突；检查 code 和 details。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "请求、文件或快照超出上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "来源不可导入、多技能候选、源码转交或来源协议错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行两个扫描；等待已有任务结束。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "宿主存储或运行失败；若 installed=true 则先检查安装目录。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "后台正在停止。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；不可将失败或缺失报告作为安全通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "url"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/packs/{id}": {
+      "get": {
+        "operationId": "get_skill_center_packs_id",
+        "summary": "读取快照与完整检查报告",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          }
+        ],
+        "description": "管理员专用，沿用宿主认证、来源与主机校验；应用和成员凭据不开放。外部命令只来自服务端配置，不接受任意命令。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillPack"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "无效请求、参数或引擎。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、文件或任务不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "内容摘要变化、未完成复核、同名目录或扫描冲突；检查 code 和 details。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "请求、文件或快照超出上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "来源不可导入、多技能候选、源码转交或来源协议错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行两个扫描；等待已有任务结束。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "宿主存储或运行失败；若 installed=true 则先检查安装目录。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "后台正在停止。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；不可将失败或缺失报告作为安全通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/packs/{id}/file": {
+      "get": {
+        "operationId": "get_skill_center_packs_id_file",
+        "summary": "预览快照文件",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "快照清单内的完整相对路径；文本预览最多 128 KiB，截断明确标记。"
+            }
+          }
+        ],
+        "description": "管理员专用，沿用宿主认证、来源与主机校验；应用和成员凭据不开放。外部命令只来自服务端配置，不接受任意命令。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillPackFilePreview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "无效请求、参数或引擎。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、文件或任务不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "内容摘要变化、未完成复核、同名目录或扫描冲突；检查 code 和 details。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "请求、文件或快照超出上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "来源不可导入、多技能候选、源码转交或来源协议错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行两个扫描；等待已有任务结束。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "宿主存储或运行失败；若 installed=true 则先检查安装目录。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "后台正在停止。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；不可将失败或缺失报告作为安全通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/packs/{id}/scan": {
+      "post": {
+        "operationId": "post_skill_center_packs_id_scan",
+        "summary": "提交后台检查",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          }
+        ],
+        "description": "管理员专用，沿用宿主认证、来源与主机校验；应用和成员凭据不开放。外部命令只来自服务端配置，不接受任意命令。",
+        "responses": {
+          "202": {
+            "description": "任务已接收，需查询状态与报告结论。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "job": {
+                      "$ref": "#/components/schemas/SkillScanJob"
+                    }
+                  },
+                  "required": [
+                    "job"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "无效请求、参数或引擎。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、文件或任务不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "内容摘要变化、未完成复核、同名目录或扫描冲突；检查 code 和 details。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "请求、文件或快照超出上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "来源不可导入、多技能候选、源码转交或来源协议错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行两个扫描；等待已有任务结束。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "宿主存储或运行失败；若 installed=true 则先检查安装目录。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "后台正在停止。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；不可将失败或缺失报告作为安全通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "engine": {
+                    "type": "string",
+                    "enum": [
+                      "builtin",
+                      "skillspector"
+                    ],
+                    "default": "builtin"
+                  },
+                  "allowLLM": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "仅明确开启时允许 SkillSpector 使用其配置的 LLM 语义层。"
+                  }
+                },
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/jobs/{id}": {
+      "get": {
+        "operationId": "get_skill_center_jobs_id",
+        "summary": "查询检查任务",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          }
+        ],
+        "description": "管理员专用，沿用宿主认证、来源与主机校验；应用和成员凭据不开放。外部命令只来自服务端配置，不接受任意命令。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillScanJob"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "无效请求、参数或引擎。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、文件或任务不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "内容摘要变化、未完成复核、同名目录或扫描冲突；检查 code 和 details。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "请求、文件或快照超出上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "来源不可导入、多技能候选、源码转交或来源协议错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行两个扫描；等待已有任务结束。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "宿主存储或运行失败；若 installed=true 则先检查安装目录。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "后台正在停止。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；不可将失败或缺失报告作为安全通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/jobs/{id}/cancel": {
+      "post": {
+        "operationId": "post_skill_center_jobs_id_cancel",
+        "summary": "取消检查任务",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          }
+        ],
+        "description": "管理员专用，沿用宿主认证、来源与主机校验；应用和成员凭据不开放。外部命令只来自服务端配置，不接受任意命令。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillScanJob"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "无效请求、参数或引擎。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、文件或任务不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "内容摘要变化、未完成复核、同名目录或扫描冲突；检查 code 和 details。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "请求、文件或快照超出上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "来源不可导入、多技能候选、源码转交或来源协议错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行两个扫描；等待已有任务结束。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "宿主存储或运行失败；若 installed=true 则先检查安装目录。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "后台正在停止。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；不可将失败或缺失报告作为安全通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/packs/{id}/install": {
+      "post": {
+        "operationId": "post_skill_center_packs_id_install",
+        "summary": "核对摘要并安装到既有技能范围",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          }
+        ],
+        "description": "管理员专用，沿用宿主认证、来源与主机校验；应用和成员凭据不开放。外部命令只来自服务端配置，不接受任意命令。 检查状态不完整、有发现或外部检查失败时，要求 acknowledge=true 和理由。写入复用原有暂存、备份及范围隔离。此接口不承诺幂等重放，不应自动重试。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "bundle": {
+                      "$ref": "#/components/schemas/SkillBundle"
+                    },
+                    "receipt": {
+                      "$ref": "#/components/schemas/SkillInstallReceipt"
+                    }
+                  },
+                  "required": [
+                    "bundle",
+                    "receipt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "无效请求、参数或引擎。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、文件或任务不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "内容摘要变化、未完成复核、同名目录或扫描冲突；检查 code 和 details。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "请求、文件或快照超出上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "来源不可导入、多技能候选、源码转交或来源协议错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行两个扫描；等待已有任务结束。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "宿主存储或运行失败；若 installed=true 则先检查安装目录。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "后台正在停止。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；不可将失败或缺失报告作为安全通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "workspaceId": {
+                    "type": "string"
+                  },
+                  "instanceId": {
+                    "type": "string",
+                    "description": "省略使用 default。"
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "instance",
+                      "project"
+                    ],
+                    "default": "project"
+                  },
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                  },
+                  "replace": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "digest": {
+                    "type": "string",
+                    "pattern": "^sha256:[a-f0-9]{64}$",
+                    "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+                  },
+                  "acknowledge": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "仅在查看待复核项后明确继续安装。"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "description": "需要复核时，去空白后至少 4 字符、最多 2000 UTF-8 字节。"
+                  }
+                },
+                "required": [
+                  "workspaceId",
+                  "name",
+                  "digest"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/installations": {
+      "get": {
+        "operationId": "get_skill_center_installations",
+        "summary": "读取安装回执",
+        "x-administrator-only": true,
+        "parameters": [],
+        "description": "管理员专用，沿用宿主认证、来源与主机校验；应用和成员凭据不开放。外部命令只来自服务端配置，不接受任意命令。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SkillInstallReceipt"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "无效请求、参数或引擎。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、文件或任务不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "内容摘要变化、未完成复核、同名目录或扫描冲突；检查 code 和 details。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "请求、文件或快照超出上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "来源不可导入、多技能候选、源码转交或来源协议错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行两个扫描；等待已有任务结束。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "宿主存储或运行失败；若 installed=true 则先检查安装目录。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "后台正在停止。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；不可将失败或缺失报告作为安全通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -25172,6 +27107,14 @@
           },
           "backupPath": {
             "type": "string"
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+          },
+          "scan": {
+            "$ref": "#/components/schemas/SkillScanReport"
           }
         },
         "required": [
@@ -36993,6 +38936,692 @@
           "nextOffset",
           "hasMore",
           "coverage"
+        ],
+        "additionalProperties": false
+      },
+      "SkillFinding": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "ruleId": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "recommendation": {
+            "type": "string"
+          },
+          "line": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "ruleId",
+          "severity",
+          "category",
+          "file",
+          "line",
+          "evidence",
+          "reason",
+          "recommendation"
+        ],
+        "additionalProperties": false
+      },
+      "SkillScanCoverage": {
+        "type": "object",
+        "properties": {
+          "filesSeen": {
+            "type": "integer"
+          },
+          "filesScanned": {
+            "type": "integer"
+          },
+          "filesSkipped": {
+            "type": "integer"
+          },
+          "skipped": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "file",
+                "reason"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "filesSeen",
+          "filesScanned",
+          "filesSkipped",
+          "skipped"
+        ],
+        "additionalProperties": false
+      },
+      "SkillScanReport": {
+        "type": "object",
+        "properties": {
+          "engine": {
+            "type": "string"
+          },
+          "engineVersion": {
+            "type": "string"
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "incomplete",
+              "error",
+              "unavailable"
+            ]
+          },
+          "recommendation": {
+            "type": "string",
+            "enum": [
+              "no_findings",
+              "review",
+              "incomplete"
+            ]
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkillFinding"
+            }
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/SkillScanCoverage"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "engine",
+          "status",
+          "recommendation",
+          "findings",
+          "coverage",
+          "warnings"
+        ],
+        "additionalProperties": false,
+        "description": "静态检查信号及明确覆盖范围。no_findings 不证明安全；unavailable、error、incomplete 不能视作通过。不公开工具原始载荷。"
+      },
+      "SkillPack": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sourceUrl": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "size": {
+                  "type": "integer"
+                },
+                "executable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "path",
+                "size",
+                "executable"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "scan": {
+            "$ref": "#/components/schemas/SkillScanReport"
+          },
+          "reports": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SkillScanReport"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "sourceUrl",
+          "digest",
+          "createdAt",
+          "files",
+          "scan",
+          "reports"
+        ],
+        "additionalProperties": false,
+        "description": "完整获取内容的固定快照；安装时重新读取并核对摘要，不代表已有会话资源已冻结。"
+      },
+      "SkillScanJob": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "packId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+          },
+          "engine": {
+            "type": "string",
+            "enum": [
+              "builtin",
+              "skillspector"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "completed",
+              "failed",
+              "unavailable",
+              "canceled",
+              "interrupted"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "startedAt": {
+            "type": "string"
+          },
+          "finishedAt": {
+            "type": "string"
+          },
+          "report": {
+            "$ref": "#/components/schemas/SkillScanReport"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "packId",
+          "digest",
+          "engine",
+          "status",
+          "createdAt"
+        ],
+        "additionalProperties": false,
+        "description": "后台任务执行状态与报告结论分开：completed 可包含 incomplete 报告。重启后的在途任务标记 interrupted，不自动重跑。"
+      },
+      "SkillInstallReceipt": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "packId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "sourceUrl": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "installedAt": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "instance",
+              "project"
+            ]
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+          },
+          "acknowledged": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "workspaceId",
+          "instanceId",
+          "scope",
+          "digest",
+          "installedAt",
+          "acknowledged"
+        ],
+        "additionalProperties": false
+      },
+      "SkillSearchItem": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "repositoryUrl": {
+            "type": "string"
+          },
+          "repository": {
+            "type": "string"
+          },
+          "skillPath": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "clawhub",
+              "skillsmp",
+              "skills.sh",
+              "github"
+            ]
+          },
+          "slug": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "skill",
+              "repository"
+            ]
+          },
+          "importUrl": {
+            "type": "string"
+          },
+          "canImport": {
+            "type": "boolean"
+          },
+          "origins": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "clawhub",
+                    "skillsmp",
+                    "skills.sh",
+                    "github"
+                  ]
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "source",
+                "url"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "metrics": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "number"
+                },
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "clawhub",
+                    "skillsmp",
+                    "skills.sh",
+                    "github"
+                  ]
+                }
+              },
+              "required": [
+                "name",
+                "value",
+                "source"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "scanState": {
+            "type": "string",
+            "enum": [
+              "not_scanned"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "url",
+          "source",
+          "kind",
+          "canImport",
+          "origins",
+          "metrics",
+          "scanState"
+        ],
+        "additionalProperties": false
+      },
+      "SkillSearchResult": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkillSearchItem"
+            }
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "clawhub",
+                    "skillsmp",
+                    "skills.sh",
+                    "github"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ok",
+                    "error",
+                    "cached"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "count": {
+                  "type": "integer"
+                },
+                "code": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "source",
+                "status",
+                "message",
+                "count"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "items",
+          "providers",
+          "complete",
+          "warnings"
+        ],
+        "additionalProperties": false,
+        "description": "最多每来源 12 个候选。来源失败保留独立状态，complete=false；市场指标保留来源，市场安全标签不作为本地检查结果。仅完整结果进入 10 分钟缓存。"
+      },
+      "SkillPackFilePreview": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "truncated": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "path",
+              "text",
+              "truncated"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "binary": {
+                "const": true
+              },
+              "size": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "path",
+              "binary",
+              "size"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "SkillReviewDetails": {
+        "type": "object",
+        "properties": {
+          "report": {
+            "$ref": "#/components/schemas/SkillScanReport"
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+          },
+          "reports": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SkillScanReport"
+            }
+          }
+        },
+        "required": [
+          "report",
+          "digest",
+          "reports"
+        ],
+        "additionalProperties": false,
+        "description": "409 skill_review_required：当前内容与各引擎报告摘要。错误体有界；完整报告从技能快照详情读取。"
+      },
+      "SkillCatalogErrorDetails": {
+        "type": "object",
+        "properties": {
+          "candidates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "url"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "githubUrl": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": true,
+        "description": "422：multiple_skills 返回候选目录；source_handoff 可返回 githubUrl，需明确选择后重新获取。其他源错误保留 code。"
+      },
+      "SkillInstallPartialDetails": {
+        "type": "object",
+        "properties": {
+          "installed": {
+            "const": true
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+          }
+        },
+        "required": [
+          "installed",
+          "digest"
+        ],
+        "additionalProperties": false,
+        "description": "500 skill_install_receipt_failed：内容已写入但回执保存失败；先核查目录，不能自动重复安装。"
+      },
+      "SkillCenterError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorDetails"
+              },
+              {
+                "$ref": "#/components/schemas/SkillReviewDetails"
+              },
+              {
+                "$ref": "#/components/schemas/SkillCatalogErrorDetails"
+              },
+              {
+                "$ref": "#/components/schemas/SkillInstallPartialDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "error",
+          "code",
+          "requestId",
+          "retryable"
         ],
         "additionalProperties": false
       }

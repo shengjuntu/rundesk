@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.73.0 — 2026-11-12
+
+Add an administrator Skill Center with native Go search across ClawHub, SkillsMP, skills.sh and GitHub, source snapshots, full-directory previews, bounded static checks and optional external NVIDIA SkillSpector jobs. Reports bind file paths, bytes and executable flags; installation verifies the snapshot and reuses workspace/environment targeting and complete-directory backups. Risky or incomplete inspections require explicit review and a recorded reason. Existing ZIP/directory imports and application Skill seeding/copying use the same built-in review gate.
+
+Search sources fail independently. Missing or failed external scanners never count as completed checks. External SkillSpector protocol fixtures and a simulated CLI are verified separately from a real NVIDIA installation. Skill-Up and runtime enforcement remain future work. See the [Skill Center guide](docs/SKILL-CENTER.md) and [validation](docs/VALIDATION.md).
+
 ## 0.70.0 — 2026-11-08
 
 Restore a usable everyday conversation context after setup. Kun maintenance preferences no longer select the daily Agent, implicit stale maintenance workspace choices recover to an ordinary workspace, and the ordinary startup route opens conversations with a valid Codex context. Valid workspace-specific Codex choices, explicit application bindings and existing session/deep-link identities remain.

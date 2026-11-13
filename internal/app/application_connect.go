@@ -196,7 +196,7 @@ func (m *Manager) ConnectApplication(id string, in ApplicationConnect) (Applicat
 		for p, v := range files {
 			assets = append(assets, skillAsset{Path: p, Data: []byte(v), Mode: 0600})
 		}
-		if _, e = m.ImportSkillBundle(record.WorkspaceID, name, assets, false, record.InstanceID, "instance"); e != nil {
+		if _, _, e = m.importReviewedSkill(record.WorkspaceID, name, assets, false, false, "", nil, record.InstanceID, "instance"); e != nil {
 			out.Status = "needs_attention"
 			out.Message = "初始技能安装未完成，请在 RunDesk 管理页处理"
 			return out, nil

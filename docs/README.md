@@ -4,7 +4,7 @@
 
 RunDesk 的三个使命：为 Agent 落地提供调试工作台、连接领域应用与 Agent Harness、为 Harness 研究提供实验场。文档按完整任务组织；界面操作、对应契约与限制在同一专题查阅。
 
-当前源码：**RunDesk 0.72.0 / 独立 Kun 0.17.0 / worker 协议 16**。新安装先进入[初始化](SETUP.md#首次初始化)；日常会话与应用由 Codex 执行，Kun 用于[内部维护](MAINTENANCE.md)与只读轨迹问答。配方声明引用的共享内容来自 `recipes/common/`，导出时物化为普通文件；操作见[下载源与配方文件](BUILD-SOURCES.md)及[升级说明](UPGRADING.md)。
+当前源码：**RunDesk 0.73.0 / 独立 Kun 0.17.0 / worker 协议 16**。新安装先进入[初始化](SETUP.md#首次初始化)；日常会话与应用由 Codex 执行，Kun 用于[内部维护](MAINTENANCE.md)与只读轨迹问答。配方声明引用的共享内容来自 `recipes/common/`，导出时物化为普通文件；操作见[下载源与配方文件](BUILD-SOURCES.md)及[升级说明](UPGRADING.md)。
 
 ## 1. Agent 落地与调试 / Agent debugging
 
@@ -27,6 +27,7 @@ RunDesk 的三个使命：为 Agent 落地提供调试工作台、连接领域�
 | 修改配方与下载源、复用 Codex | [配方与源设置](BUILD-SOURCES.md)、[构建运行时](BUILD-RUNTIME.md) |
 | 下载或发布预构建镜像 | [镜像分发](IMAGE-DISTRIBUTION.md) |
 | 配置容器、模型与插件 | [Docker 环境](DOCKER-ENVIRONMENTS.md)、[Codex 模型服务](CODEX-PROVIDERS.md)、[插件边界](NATIVE-PLUGINS.md) |
+| 搜索 Skill、预览固定内容、检查并安装 | [技能中心](SKILL-CENTER.md)：四源搜索、Go 静态检查、可选 SkillSpector、风险确认与备份范围 |
 | 使用 UHP 接口 | [UHP 服务、接入与限制](UHP.md)、[Python 客户端](../clients/python/uhp_client.py) |
 | 参考领域应用 | [Video App 接入](VIDEO-APP.md)、[独立视频环境](UPSTREAM-VIDEO-ENVIRONMENTS.md)、[新闻采集工具](../recipes/news2douyin/AGENT-REACH.md) |
 

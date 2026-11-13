@@ -17,11 +17,12 @@ function stashProductDraft(){if(!state.draftContext||state.view!=="conversation"
 function restoreProductDraft(){state.draftContext=draftKey();const d=state.drafts.get(state.draftContext);if(d){$("#prompt").value=d.text;state.uploads=[...d.uploads];state.chosenSkills=[...d.skills];renderAttachments();}}
 function updateProductNavigation(){
  const view=state.view,conversation=view==="conversation";
- for(const [id,on] of [["nav-users",view==="users"],["nav-build-center",view==="build-center"],["nav-assistant",conversation],["nav-applications",["applications","application"].includes(view)],["nav-tasks",view==="tasks"]]){
+ for(const [id,on] of [["nav-users",view==="users"],["nav-build-center",view==="build-center"],["nav-skills",view==="skill-center"],["nav-assistant",conversation],["nav-applications",["applications","application"].includes(view)],["nav-tasks",view==="tasks"]]){
   const node=$("#"+id);if(!node)continue;node.classList.toggle("selected",on);if(on)node.setAttribute("aria-current","page");else node.removeAttribute("aria-current");
  }
  $("#application-count").textContent=state.applications.length||"";
- $("#page-label").textContent=({"build-center":rdText("构建中心"),users:rdText("用户与授权"),tasks:rdText("任务"),applications:rdText("应用接入")})[view]||(conversation?rdText("会话"):contextTitle());
+ $("#nav-skills")?.classList.toggle("hidden",state.identity?.kind!=="administrator");
+ $("#page-label").textContent=({"build-center":rdText("构建中心"),"skill-center":window.RunDeskSkillCenter?.label()||rdText("技能"),users:rdText("用户与授权"),tasks:rdText("任务"),applications:rdText("应用接入")})[view]||(conversation?rdText("会话"):contextTitle());
  $("#history-label").textContent=contextTitle();
  $("#settings-button").textContent=rdText("会话设置");$("#settings-button").classList.toggle("hidden",!conversation||!ws()||!instance());
  $("#new-session").classList.toggle("hidden",!conversation);
@@ -34,7 +35,7 @@ function updateProductNavigation(){
 }
 function setProductPage(view){
  state.view=view;document.body.dataset.view=view;
- for(const [selector,shown] of [["#tasks-page",view==="tasks"],[".main-row",view==="conversation"],["#applications-page",["applications","application","users"].includes(view)],["#build-center-page",view==="build-center"]])$(selector)?.classList.toggle("hidden",!shown);
+ for(const [selector,shown] of [["#tasks-page",view==="tasks"],[".main-row",view==="conversation"],["#applications-page",["applications","application","users"].includes(view)],["#build-center-page",view==="build-center"],["#skill-center-page",view==="skill-center"]])$(selector)?.classList.toggle("hidden",!shown);
  updateProductNavigation();closeConversationSidebar();window.RunDeskLayout?.setView(view);
 }
 async function refreshApplicationCatalog(){const selection=state.selection;const [a,i,s]=await Promise.all([api("/applications"),api("/instances"),api("/sessions")]);if(selection!==state.selection)return;const id=instance()?.id||"default";state.applications=a;state.instances=i;state.sessions=s;renderInstanceOptions(id);}
@@ -135,6 +136,7 @@ async function restoreProductRoute(){
  }
  if(parts[0]==="assistant"&&!parts[1]){await enterAssistant();return true;}
  if(parts[0]==="build-center"){let selected="";try{selected=decodeURIComponent(parts[2]||"");}catch{return false;}await RunDeskBuildCenter.open(parts[1]||"workbench",selected,parts[3]==="test");return true;}
+ if(parts[0]==="skills"){let pack="";try{pack=decodeURIComponent(parts[2]||"");}catch{return false;}await RunDeskSkillCenter.open(parts[1]||"search",pack);return true;}
  if(parts[0]==="tasks"){await RunDeskTasks.open();return true;}
  if(parts[0]==="trace"){const sid=sessionStorage.getItem("rundesk-trace-session")||localStorage.getItem("rundesk-session");if(state.sessions.some(s=>s.id===sid)){await selectSession(sid);window.RunDeskTraceUI?.open();return true;}}
  if(parts[0]==="assistant"&&parts[1]==="settings"&&["plugins","skills","mcp"].includes(parts[2])){await enterAssistant();await showCapabilityPage(parts[2]);return true;}

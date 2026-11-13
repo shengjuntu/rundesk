@@ -91,7 +91,7 @@ window.RunDeskDiagnostics = (() => {
       // A Kun worker may still be starting or already be idle-reclaimed. This is
       // an expected inspector state; retain the error for its local UI only.
       if(response.status===409&&info.code==="kun_offline"&&base.method==="GET"&&/\/kun\/state$/.test(new URL(url,location.origin).pathname)){const error=Error(summary||message);error.status=409;error.code=info.code;throw error;}
-      throw failure(message,info);
+      const error=failure(message,info);error.details=data?.details;throw error;
     }
     return format==="text"?raw:data;
   }

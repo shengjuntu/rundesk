@@ -42,9 +42,13 @@ Open a workspace and start a conversation with the default Codex. Applications u
 
 An execution instance still has a persistent ID for authorization, configuration and audit. Users can start everyday conversations directly from their workspace. See the [storage contract](docs/STORAGE.md) and [WebUI guide](docs/WEBUI.md).
 
+Administrators can use the [Skill center](docs/SKILL-CENTER.md) to search ClawHub, SkillsMP, skills.sh and GitHub, retrieve fixed source content, inspect complete file lists and static reports, and install reviewed Skills into a workspace or runtime environment. Search and the built-in inspection run in Go; an external SkillSpector CLI is optional. Findings and incomplete checks require an explicit acknowledgment and review reason before installation.
+
 ## Current source version
 
-**RunDesk 0.72.0 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.73.0 source · external Kun 0.17.0 · worker protocol 16**
+
+Version 0.73.0 adds the administrator Skill center described above. Its source snapshots bind retrieved content, inspection reports and installation receipts; historical session Skill content snapshots and runtime protection remain outside this change. The external SkillSpector adapter has protocol-fixture and simulated-CLI coverage; NVIDIA's tool has not been installed and run for this integration.
 
 Version 0.72.0 records the configuration declarations and execution identity at admission and ties generated file records to their producing run when evidence is available. Inspect a selected run in the trace view to see what RunDesk recorded at that time. Existing workspaces, session IDs, native histories and application preset bindings remain available. The [upgrade guide](docs/UPGRADING.md) explains compatibility with older records.
 
@@ -118,7 +122,7 @@ Kun uses a tool-capable Chat Completions service; Codex uses its native provider
 | Agent deployment engineers | [Debugging](docs/TRACE.md#debug-overview) · [Observation and capture](docs/UNIFIED_DEBUGGING.md) · [Read-only debug API/MCP](docs/DEBUG-SERVICE.md) |
 | Application developers | [Connect an application](docs/APPLICATION-CONNECT.md) · [API](docs/API-V1.md) · [Presets](docs/APPLICATION-RUNTIME-PRESETS.md) · [Python example](clients/python/application_quickstart.py) |
 | Harness developers and researchers | [Kun integration](docs/KUN.md) · [Harness controls](docs/KUN-HARNESS.md) · [Research APIs and historical workflows](docs/README.md#3-harness-开发与研究--harness-research) |
-| Maintainers and operators | [Architecture](docs/ARCHITECTURE.md) · [Build center](docs/BUILD-CENTER.md#build-workbench) · [Download sources](docs/BUILD-SOURCES.md) · [Upgrading](docs/UPGRADING.md) · [Security](SECURITY.md) |
+| Maintainers and operators | [Architecture](docs/ARCHITECTURE.md) · [Skill center](docs/SKILL-CENTER.md) · [Build center](docs/BUILD-CENTER.md#build-workbench) · [Download sources](docs/BUILD-SOURCES.md) · [Upgrading](docs/UPGRADING.md) · [Security](SECURITY.md) |
 
 For local development, `make test` runs the host and SDK tests; `make check` adds race checks and `go vet`. Some integration checks require an independent Kun executable. See [validation](docs/VALIDATION.md) for reproduction and current scope, and [provenance](docs/validation/README.md) for preserved historical results.
 

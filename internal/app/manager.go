@@ -105,6 +105,8 @@ type handle struct {
 	configReads        map[configReadKey]*configReadFlight
 }
 type Manager struct {
+	skillCenterMu        sync.Mutex
+	skillCenter          *skillCenterState
 	configSnapshotMu     sync.Mutex
 	configSnapshotCycle  sync.Mutex
 	configSnapshotEpoch  uint64
@@ -1257,7 +1259,9 @@ func (m *Manager) Close() {
 	// Publication access checks add to wg under this lock. Close admission
 	// before cancellation can let the permanent workers drain to zero.
 	m.publicationMu.Lock()
+	m.skillCenterMu.Lock()
 	m.cancel()
+	m.skillCenterMu.Unlock()
 	m.publicationMu.Unlock()
 	m.mu.Lock()
 	hs := []*handle{}

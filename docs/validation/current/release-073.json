@@ -1,0 +1,95 @@
+{
+  "version": "0.73.0",
+  "status": "passed",
+  "date": "2026-11-12",
+  "baseline": {
+    "version": "0.72.0",
+    "sourceSHA256": "65edb5da8b3205f8c8c8e0086909bfa8670882a4b0996228682ef40fb1ff47f9"
+  },
+  "scope": "Native administrator Skill Center: public search, immutable acquisition directories, source preview, static review, optional SkillSpector jobs and reviewed workspace/environment installation.",
+  "toolchain": {
+    "go": "go1.25.12",
+    "buildCGO": false,
+    "host": "linux/amd64"
+  },
+  "sourceFiles": 855,
+  "checks": [
+    {
+      "check": "Final host Go regression, all packages split into app/skillsafety and remaining packages",
+      "result": "passed",
+      "appSeconds": 174.966,
+      "note": "go test ./internal/app ./internal/skillsafety -count=1 -timeout=300s; remaining host packages tested separately with -count=1. Includes 11 Skill Center integration cases and legacy upload review."
+    },
+    {
+      "check": "Focused application race regression and complete skillcatalog/skillsafety race suites",
+      "result": "passed",
+      "note": "Includes scan admission, cancellation, report invalidation, digest binding, explicit review and bounded JSON diagnostics."
+    },
+    {
+      "check": "Go vet ./... and final targeted vet for changed packages",
+      "result": "passed"
+    },
+    {
+      "check": "Native browser JavaScript behavior in JSDOM",
+      "result": "passed",
+      "suites": [
+        "skill-center.cjs",
+        "workspace-conversations.cjs",
+        "conversation-rounds.cjs",
+        "layout.cjs",
+        "build-center.cjs"
+      ],
+      "note": "Includes administrator-only navigation, source degradation, XSS text rendering, review confirmation, exact upload body reuse and ordinary conversation/draft compatibility. No browser geometry assertion."
+    },
+    {
+      "check": "JS syntax, OpenAPI schemas/admin boundaries, documentation links/current version, source hygiene",
+      "result": "passed",
+      "openapiPaths": 260
+    },
+    {
+      "check": "Live public marketplace API verification",
+      "result": "passed",
+      "sources": [
+        "clawhub",
+        "skillsmp",
+        "skills.sh"
+      ],
+      "query": "pdf",
+      "resultsPerSource": 12,
+      "note": "Opt-in live_test.go; availability and quotas may change."
+    },
+    {
+      "check": "Live fixed-version downloads",
+      "result": "passed",
+      "githubCommit": "1a2c79d4e6c4a2283dc2c614b6538cbe1ed5ca62",
+      "githubFiles": 1,
+      "clawhubSkill": "steipete/weather",
+      "clawhubVersion": "1.0.0",
+      "clawhubFiles": 2
+    },
+    {
+      "check": "Compiled host HTTP smoke in disposable demo workspace",
+      "result": "passed",
+      "note": "Real GitHub fetch, file preview, builtin completed/no_findings, project installation, revision/digest-bound receipt and installed directory read."
+    },
+    {
+      "check": "Linux amd64 and Windows amd64 CGO-disabled builds",
+      "result": "passed",
+      "note": "Windows binary cross-compiled, not executed on Windows."
+    },
+    {
+      "check": "External SkillSpector protocol/CLI and process cleanup fixtures",
+      "result": "passed",
+      "note": "Official report shape fixtures and explicitly configured fake CLI; Linux descendant cancellation and normal-exit cleanup repeated five times. Windows helper cross-compiled."
+    }
+  ],
+  "limits": [
+    "Real NVIDIA SkillSpector is not installed or executed; no NVIDIA real-scan result is claimed.",
+    "Browser visual acceptance was blocked: the browser could not reach the local verification service; JSDOM and host HTTP tests are separate evidence.",
+    "Windows and macOS runtime behavior has not been accepted on target machines.",
+    "Skill-Up case execution, automatic repair, market publication and multi-Agent distribution outside RunDesk managed targets are not implemented.",
+    "No runtime security enforcement or historical-session Skill content freezing; manual edits keep existing semantics.",
+    "Existing Docker/model/business workloads and unchanged Kun SDK were not rerun as business acceptance.",
+    "Static no_findings is limited to covered rules and is not a safety guarantee."
+  ]
+}

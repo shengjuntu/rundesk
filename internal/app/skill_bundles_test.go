@@ -144,9 +144,21 @@ func TestSkillBundleHTTPDirectoryAndZIP(t *testing.T) {
 		w.Write(f.Data)
 	}
 	form.Close()
-	r := httptest.NewRequest("POST", "http://127.0.0.1:3210"+base+"?name=research&scope=instance", &body)
+	// The legacy importer also gates uninspected binary content; explicit
+	// review is required before the exact same upload can be installed.
+	r := httptest.NewRequest("POST", "http://127.0.0.1:3210"+base+"?name=research&scope=instance", bytes.NewReader(body.Bytes()))
 	r.Header.Set("Content-Type", form.FormDataContentType())
 	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != 409 {
+		t.Fatal("legacy upload bypassed review", w.Code, w.Body.String())
+	}
+	if _, e := m.SkillBundle(wid, "research", "default", "instance"); e == nil {
+		t.Fatal("unreviewed legacy upload wrote a skill")
+	}
+	r = httptest.NewRequest("POST", "http://127.0.0.1:3210"+base+"?name=research&scope=instance&acknowledge=1&reason=reviewed-binary-fixture", bytes.NewReader(body.Bytes()))
+	r.Header.Set("Content-Type", form.FormDataContentType())
+	w = httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 	if w.Code != 200 {
 		t.Fatal(w.Code, w.Body.String())
@@ -158,7 +170,7 @@ func TestSkillBundleHTTPDirectoryAndZIP(t *testing.T) {
 		t.Fatal(w.Code, w.Body.String())
 	}
 	data, _ := io.ReadAll(w.Result().Body)
-	r = httptest.NewRequest("POST", "http://127.0.0.1:3210"+base+"?name=copy&scope=project", bytes.NewReader(data))
+	r = httptest.NewRequest("POST", "http://127.0.0.1:3210"+base+"?name=copy&scope=project&acknowledge=1&reason=reviewed-binary-fixture", bytes.NewReader(data))
 	r.Header.Set("Content-Type", "application/zip")
 	w = httptest.NewRecorder()
 	h.ServeHTTP(w, r)

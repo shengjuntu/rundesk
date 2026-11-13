@@ -137,6 +137,9 @@ for file in sorted((root/'internal/app').glob('*.go')):
   if '/skill-bundles' in path:
    query('scope',st(enum=['instance','project'],default='instance'))
    if path.endswith('/skill-bundles'):query('name',required=True);query('replace',st(enum=['0','1'],default='0'))
+   if path.endswith('/skill-bundles') and method=='POST':
+    query('acknowledge',st(enum=['0','1'],default='0',description='检查有待复核项或不完整时，必须明确设为 1 并提供 reason；不是安全认证。'))
+    query('reason',st(maxLength=2000,description='待复核项的继续安装理由；去空白后至少 4 个字符，最多 2000 UTF-8 字节。'))
   if path=='/tasks' and method=='GET':
    for n in ['status','appId','instanceId','cursor']:query(n)
    query('limit',integer)
@@ -1269,6 +1272,103 @@ for path in ['/sessions/{sid}/debug/query','/member/{grantId}/sessions/{sid}/deb
   {'name':'source','in':'query','required':False,'schema':st(enum=observation_sources),'description':'仅 observations/activity：记录来源。外层响应 source=unified_observation；单条记录保留来源判定依据。'},
   {'name':'recordKind','in':'query','required':False,'schema':st(maxLength=256,enum=observation_kinds),'description':'仅 observations/activity：规范化记录类别的精确匹配；未知原生方法保留为 event，不丢弃证据。'},
  ]
+
+# Skill Center uses a local administrator-only register wrapper, rather than
+# direct mux.HandleFunc literals. Keep its complete routes and bounded review
+# error bodies explicit so generic route discovery cannot silently omit them.
+skill_source=st(enum=['clawhub','skillsmp','skills.sh','github'])
+skill_digest=st(pattern=r'^sha256:[a-f0-9]{64}$',description='路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。')
+skill_pack_id=st(pattern=r'^[a-f0-9]{24}$')
+schemas['SkillFinding']=obj({k:st() for k in ['id','ruleId','severity','category','file','evidence','reason','recommendation']}|{'line':integer},['id','ruleId','severity','category','file','line','evidence','reason','recommendation'])
+schemas['SkillScanCoverage']=obj({'filesSeen':integer,'filesScanned':integer,'filesSkipped':integer,'skipped':arr(obj({'file':st(),'reason':st()},['file','reason']))},['filesSeen','filesScanned','filesSkipped','skipped'])
+schemas['SkillScanReport']=obj({
+ 'engine':st(),'engineVersion':st(),'digest':skill_digest,
+ 'status':st(enum=['completed','incomplete','error','unavailable']),
+ 'recommendation':st(enum=['no_findings','review','incomplete']),
+ 'findings':arr(ref('SkillFinding')),'coverage':ref('SkillScanCoverage'),'warnings':arr(st()),
+},['engine','status','recommendation','findings','coverage','warnings'])
+schemas['SkillScanReport']['description']='静态检查信号及明确覆盖范围。no_findings 不证明安全；unavailable、error、incomplete 不能视作通过。不公开工具原始载荷。'
+schemas['SkillBundle']['properties'].update({'digest':skill_digest,'scan':ref('SkillScanReport')})
+schemas['SkillPack']=obj({
+ 'id':skill_pack_id,'name':st(),'sourceUrl':st(),'revision':st(),'digest':skill_digest,'createdAt':st(),
+ 'files':schemas['SkillBundle']['properties']['files'],'scan':ref('SkillScanReport'),
+ 'reports':{'type':'object','additionalProperties':ref('SkillScanReport')},
+},['id','name','sourceUrl','digest','createdAt','files','scan','reports'])
+schemas['SkillPack']['description']='完整获取内容的固定快照；安装时重新读取并核对摘要，不代表已有会话资源已冻结。'
+schemas['SkillScanJob']=obj({
+ 'id':skill_pack_id,'packId':skill_pack_id,'digest':skill_digest,'engine':st(enum=['builtin','skillspector']),
+ 'status':st(enum=['queued','running','completed','failed','unavailable','canceled','interrupted']),
+ 'createdAt':st(),'startedAt':st(),'finishedAt':st(),'report':ref('SkillScanReport'),'error':st(),
+},['id','packId','digest','engine','status','createdAt'])
+schemas['SkillScanJob']['description']='后台任务执行状态与报告结论分开：completed 可包含 incomplete 报告。重启后的在途任务标记 interrupted，不自动重跑。'
+schemas['SkillInstallReceipt']=obj({k:st() for k in ['id','packId','name','workspaceId','instanceId','sourceUrl','revision','installedAt','reason']}|{'scope':st(enum=['instance','project']),'digest':skill_digest,'acknowledged':bool_},['id','name','workspaceId','instanceId','scope','digest','installedAt','acknowledged'])
+schemas['SkillSearchItem']=obj({
+ 'name':st(),'description':st(),'url':st(),'repositoryUrl':st(),'repository':st(),'skillPath':st(),'source':skill_source,
+ 'slug':st(),'kind':st(enum=['skill','repository']),'importUrl':st(),'canImport':bool_,
+ 'origins':arr(obj({'source':skill_source,'url':st()},['source','url'])),
+ 'metrics':arr(obj({'name':st(),'value':{'type':'number'},'source':skill_source},['name','value','source'])),
+ 'updatedAt':st(),'scanState':st(enum=['not_scanned']),
+},['name','description','url','source','kind','canImport','origins','metrics','scanState'])
+schemas['SkillSearchResult']=obj({
+ 'items':arr(ref('SkillSearchItem')),
+ 'providers':arr(obj({'source':skill_source,'status':st(enum=['ok','error','cached']),'message':st(),'count':integer,'code':st()},['source','status','message','count'])),
+ 'complete':bool_,'warnings':arr(st()),
+},['items','providers','complete','warnings'])
+schemas['SkillSearchResult']['description']='最多每来源 12 个候选。来源失败保留独立状态，complete=false；市场指标保留来源，市场安全标签不作为本地检查结果。仅完整结果进入 10 分钟缓存。'
+schemas['SkillPackFilePreview']={'oneOf':[
+ obj({'path':st(),'text':st(),'truncated':bool_},['path','text','truncated']),
+ obj({'path':st(),'binary':{'const':True},'size':integer},['path','binary','size']),
+]}
+schemas['SkillReviewDetails']=obj({'report':ref('SkillScanReport'),'digest':skill_digest,'reports':{'type':'object','additionalProperties':ref('SkillScanReport')}},['report','digest','reports'])
+schemas['SkillReviewDetails']['description']='409 skill_review_required：当前内容与各引擎报告摘要。错误体有界；完整报告从技能快照详情读取。'
+schemas['SkillCatalogErrorDetails']=obj({'candidates':arr(obj({'name':st(),'url':st()},['name','url'])),'githubUrl':st()},extra=True)
+schemas['SkillCatalogErrorDetails']['description']='422：multiple_skills 返回候选目录；source_handoff 可返回 githubUrl，需明确选择后重新获取。其他源错误保留 code。'
+schemas['SkillInstallPartialDetails']=obj({'installed':{'const':True},'digest':skill_digest},['installed','digest'])
+schemas['SkillInstallPartialDetails']['description']='500 skill_install_receipt_failed：内容已写入但回执保存失败；先核查目录，不能自动重复安装。'
+schemas['SkillCenterError']=obj({'error':st(),'code':st(),'requestId':st(),'retryable':bool_,'details':{'anyOf':[ref('ErrorDetails'),ref('SkillReviewDetails'),ref('SkillCatalogErrorDetails'),ref('SkillInstallPartialDetails'),{'type':'null'}]}},['error','code','requestId','retryable'])
+skill_center_routes=[
+ ('get','/skill-center/sources','可用搜索来源',None,obj({'items':arr(obj({'id':skill_source,'label':st(),'description':st()},['id','label','description']))},['items'])),
+ ('get','/skill-center/engines','检查引擎可发现性',None,obj({'items':arr(obj({'id':st(enum=['builtin','skillspector']),'available':bool_,'message':st()},['id','available','message']))},['items'])),
+ ('get','/skill-center/search','聚合所选来源的技能候选',None,ref('SkillSearchResult')),
+ ('get','/skill-center/packs','列出本地固定快照',None,obj({'items':arr(ref('SkillPack'))},['items'])),
+ ('post','/skill-center/fetch','获取完整目录并执行内置静态检查',obj({'url':st()},['url']),obj({'pack':ref('SkillPack'),'scan':ref('SkillScanReport')},['pack','scan'])),
+ ('get','/skill-center/packs/{id}','读取快照与完整检查报告',None,ref('SkillPack')),
+ ('get','/skill-center/packs/{id}/file','预览快照文件',None,ref('SkillPackFilePreview')),
+ ('post','/skill-center/packs/{id}/scan','提交后台检查',obj({'engine':st(enum=['builtin','skillspector'],default='builtin'),'allowLLM':dict(bool_,default=False,description='仅明确开启时允许 SkillSpector 使用其配置的 LLM 语义层。')}),obj({'job':ref('SkillScanJob')},['job'])),
+ ('get','/skill-center/jobs/{id}','查询检查任务',None,ref('SkillScanJob')),
+ ('post','/skill-center/jobs/{id}/cancel','取消检查任务',None,ref('SkillScanJob')),
+ ('post','/skill-center/packs/{id}/install','核对摘要并安装到既有技能范围',obj({
+  'workspaceId':st(),'instanceId':st(description='省略使用 default。'),'scope':st(enum=['instance','project'],default='project'),
+  'name':st(pattern=r'^[A-Za-z0-9_-]{1,64}$'),'replace':dict(bool_,default=False),'digest':skill_digest,
+  'acknowledge':dict(bool_,default=False,description='仅在查看待复核项后明确继续安装。'),
+  'reason':st(maxLength=2000,description='需要复核时，去空白后至少 4 字符、最多 2000 UTF-8 字节。'),
+ },['workspaceId','name','digest']),obj({'bundle':ref('SkillBundle'),'receipt':ref('SkillInstallReceipt')},['bundle','receipt'])),
+ ('get','/skill-center/installations','读取安装回执',None,obj({'items':arr(ref('SkillInstallReceipt'))},['items'])),
+]
+for method,path,summary,body,response in skill_center_routes:
+ params=[{'name':n,'in':'path','required':True,'schema':skill_pack_id} for n in re.findall(r'\{(.*?)\}',path)]
+ if path in ['/skill-center/search','/skill-center/packs']:
+  params.append({'name':'q','in':'query','required':path.endswith('/search'),'schema':st(minLength=1,maxLength=200) if path.endswith('/search') else st()})
+ if path=='/skill-center/search':
+  params.append({'name':'sources','in':'query','required':False,'schema':st(default='clawhub,skillsmp,skills.sh',description='逗号分隔 clawhub、skillsmp、skills.sh、github；显式空值不请求外部来源。')})
+ if path.endswith('/file'):params.append({'name':'path','in':'query','required':True,'schema':st(description='快照清单内的完整相对路径；文本预览最多 128 KiB，截断明确标记。')})
+ status='202' if path.endswith('/scan') else '200'
+ error_response=lambda description:{'description':description,'content':{'application/json':{'schema':ref('SkillCenterError')}}}
+ op={'operationId':method+'_'+re.sub(r'[^A-Za-z0-9]+','_',path).strip('_'),'summary':summary,'x-administrator-only':True,'parameters':params,
+  'description':'管理员专用，沿用宿主认证、来源与主机校验；应用和成员凭据不开放。外部命令只来自服务端配置，不接受任意命令。',
+  'responses':{status:{'description':'任务已接收，需查询状态与报告结论。' if status=='202' else '成功。','content':{'application/json':{'schema':response}}},
+   '400':error_response('无效请求、参数或引擎。'),'401':error_response('需要宿主身份认证。'),'403':error_response('仅管理员。'),
+   '404':error_response('快照、文件或任务不存在。'),'409':error_response('内容摘要变化、未完成复核、同名目录或扫描冲突；检查 code 和 details。'),
+   '413':error_response('请求、文件或快照超出上限。'),'422':error_response('来源不可导入、多技能候选、源码转交或来源协议错误。'),
+   '429':error_response('最多同时执行两个扫描；等待已有任务结束。'),'500':error_response('宿主存储或运行失败；若 installed=true 则先检查安装目录。'),
+   '503':error_response('后台正在停止。'),'default':error_response('结构化错误；不可将失败或缺失报告作为安全通过。')}}
+ if body is not None:op['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
+ if path.endswith('/engines'):op['description']+=' available 仅说明命令可发现，实际可用性以检查任务报告为准。'
+ if path.endswith('/install'):op['description']+=' 检查状态不完整、有发现或外部检查失败时，要求 acknowledge=true 和理由。写入复用原有暂存、备份及范围隔离。此接口不承诺幂等重放，不应自动重试。'
+ paths.setdefault(path,{})[method]=op
+upload_op=paths['/workspaces/{wid}/skill-bundles']['post']
+upload_op['description']=upload_op.get('description','')+' 导入前运行内置静态检查。待复核或检查不完整时返回 409 skill_review_required，需明确 acknowledge=1 和 reason 后重发；替换保留既有完整备份。'
+upload_op['responses']['409']={'description':'同名技能已存在，或 skill_review_required 要求显式风险确认及理由。','content':{'application/json':{'schema':ref('SkillCenterError')}}}
 
 spec={'openapi':'3.1.0','info':{'title':'RunDesk Control API (RDCA)','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter；附加 UHP /v1 入口共用任务核心，具体范围与限制见 docs/UHP.md，不声明完整规范兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。0.61.0 起日常会话与应用任务仅接受 Codex，Kun 用于维护、轨迹问答及保留的研究 API；普通 Kun 提交返回 kun_maintenance_only。当前应用接入、错误、幂等及示例见 docs/API-V1.md。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'},'BuildTaskCapability':{'type':'http','scheme':'bearer','description':'仅构建助手MCP接受的短期任务能力，不是管理员或应用令牌。'},'SetupTaskCapability':{'type':'http','scheme':'bearer','description':'仅初始化修复MCP接受的短期任务能力，不是管理员或应用令牌。'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')

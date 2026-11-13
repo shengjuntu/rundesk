@@ -149,6 +149,8 @@ async function boot() {
   $("#startup-loading")?.classList.remove("hidden");
   const rememberedInstance=localStorage.getItem("rundesk-instance")||"default";
   const identity=await api("/whoami");
+  state.identity=identity;
+  $("#nav-skills")?.classList.toggle("hidden",identity.kind!=="administrator");
   if(identity.kind==="user"){location.replace("/member.html");return;}
   const meta = await api("/meta");
   state.demo = meta.demo;

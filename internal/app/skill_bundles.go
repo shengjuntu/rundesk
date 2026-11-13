@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"errors"
+	"github.com/shengjuntu/rundesk/internal/skillsafety"
 	"github.com/shengjuntu/rundesk/internal/store"
 	"io"
 	"io/fs"
@@ -32,10 +33,12 @@ type SkillFile struct {
 	Executable bool   `json:"executable"`
 }
 type SkillBundle struct {
-	Name       string      `json:"name"`
-	Files      []SkillFile `json:"files"`
-	Size       int64       `json:"size"`
-	BackupPath string      `json:"backupPath,omitempty"`
+	Name       string              `json:"name"`
+	Files      []SkillFile         `json:"files"`
+	Size       int64               `json:"size"`
+	BackupPath string              `json:"backupPath,omitempty"`
+	Digest     string              `json:"digest,omitempty"`
+	Scan       *skillsafety.Report `json:"scan,omitempty"`
 }
 
 func bundleError(message string) error { return failure(400, "invalid_skill_bundle", message) }
@@ -193,6 +196,9 @@ func readBundleDirectory(r *multipart.Reader) ([]skillAsset, error) {
 	}
 	return normalizeSkillAssets(files)
 }
+
+// ImportSkillBundle is the trusted atomic write primitive. Untrusted acquisitions
+// and application seed/copy flows must use importReviewedSkill before calling it.
 func (m *Manager) ImportSkillBundle(wid, name string, files []skillAsset, replace bool, opts ...string) (SkillBundle, error) {
 	if !slug.MatchString(name) {
 		return SkillBundle{}, bundleError("技能目录名仅支持字母、数字、下划线和连字符，最多 64 字符")
@@ -488,8 +494,12 @@ func (s *Server) skillBundleRoutes(mux *http.ServeMux) {
 			respond(w, nil, e)
 			return
 		}
-		v, e := s.Manager.ImportSkillBundle(r.PathValue("wid"), r.URL.Query().Get("name"), files, r.URL.Query().Get("replace") == "1", opts(r)...)
-		respond(w, v, e)
+		v, _, e := s.Manager.importReviewedSkill(r.PathValue("wid"), r.URL.Query().Get("name"), files, r.URL.Query().Get("replace") == "1", r.URL.Query().Get("acknowledge") == "1", r.URL.Query().Get("reason"), nil, opts(r)...)
+		if e != nil {
+			writeSkillCenterError(w, e)
+			return
+		}
+		respond(w, v, nil)
 	})
 	mux.HandleFunc("GET /api/workspaces/{wid}/skill-bundles/{name}", func(w http.ResponseWriter, r *http.Request) {
 		v, e := s.Manager.SkillBundle(r.PathValue("wid"), r.PathValue("name"), opts(r)...)

@@ -96,7 +96,7 @@ func (m *Manager) connectApplicationPreset(id string, in ApplicationConnect, rea
 		for p, v := range files {
 			assets = append(assets, skillAsset{Path: p, Data: []byte(v), Mode: 0600})
 		}
-		if _, e = m.ImportSkillBundle(a.WorkspaceID, name, assets, false, a.InstanceID, "instance"); e != nil {
+		if _, _, e = m.importReviewedSkill(a.WorkspaceID, name, assets, false, false, "", nil, a.InstanceID, "instance"); e != nil {
 			return out, e
 		}
 	}

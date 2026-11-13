@@ -85,7 +85,7 @@ func (m *Manager) selectCapabilities(a Application, p capabilitySelection) error
 	}
 	for name, files := range bundles {
 		if _, e = m.SkillBundle(a.WorkspaceID, name, a.InstanceID, "instance"); missingSkill(e) {
-			_, e = m.ImportSkillBundle(a.WorkspaceID, name, files, false, a.InstanceID, "instance")
+			_, _, e = m.importReviewedSkill(a.WorkspaceID, name, files, false, false, "", nil, a.InstanceID, "instance")
 		}
 		if e != nil {
 			return e

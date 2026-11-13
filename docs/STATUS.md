@@ -1,6 +1,8 @@
 # 当前能力与后续工作
 
-**RunDesk 0.72.0 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。三个使命的产品定位见[中文 README](../README.zh-CN.md)。
+**RunDesk 0.73.0 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。三个使命的产品定位见[中文 README](../README.zh-CN.md)。
+
+0.73.0 增加管理员[技能中心](SKILL-CENTER.md)：四来源搜索、获取完整固定目录、源码预览、内置 Go 静态检查、可选外部 SkillSpector 后台扫描与安装回执。安装沿用工作区／环境及完整备份；风险或未覆盖项需显式确认和理由。Skill-Up、运行时防护与历史会话技能内容冻结未纳入本版。
 
 本版为六套内置配方增加自动准备与复用的系统、媒体和浏览器公共层，沿用现有构建入口和日志。源参数、阶段输入、平台及实际镜像身份决定复用；Codex 与业务依赖继续在配方中安装。旧冻结上下文不改写，历史重建不使用后来移动的同名镜像。0.67.1 的 video-build 临时空间修复继续保留，构建成功与 offline/smoke 通过仍分别记录。用户提供的同镜像 17/17 检查结果与本版回归范围分别归档在[验证说明](VALIDATION.md#video-build-tmpfs-investigation-2026-11-08)。
 
