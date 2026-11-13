@@ -46,7 +46,9 @@ Administrators can use the [Skill center](docs/SKILL-CENTER.md) to search ClawHu
 
 ## Current source version
 
-**RunDesk 0.74.0 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.75.0 source · external Kun 0.17.0 · worker protocol 16**
+
+Version 0.75.0 adds local ZIP/directory acquisition and independent snapshots from installed Skills. Explicit environment self-diagnostics check known tool versions and controlled canaries, while preserving unknown model/authentication status. See [Skill Center](docs/SKILL-CENTER.md).
 
 Version 0.74.0 adds [Skill-Up effect checks](docs/SKILL-CHECKS.md): validate and execute suites in explicitly selected Docker environments, inspect per-case outcomes, import clearly labeled external reports and compare versions. Networking and execution require explicit choices; the host never substitutes for an unavailable container.
 

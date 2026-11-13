@@ -1,0 +1,126 @@
+{
+  "version": "0.75.0",
+  "status": "passed",
+  "date": "2026-11-12",
+  "scope": "Local Skill snapshots and explicit bounded tool diagnostics",
+  "baseline": {
+    "filename": "rundesk-v0.74.0-skill-up-source.zip",
+    "sha256": "ffde254776bc7c1c16bd193acde816336ce0e7f089ebcf6bb7c7f2a63e96e77e"
+  },
+  "implementation": {
+    "backend": "Go",
+    "frontend": "native HTML/CSS/JavaScript",
+    "newProductionGoDependencies": false
+  },
+  "environment": {
+    "host": "Linux amd64",
+    "go": "1.25.12",
+    "productionBuildCGO": false
+  },
+  "checks": [
+    {
+      "id": "host-tests",
+      "status": "passed",
+      "command": "CGO_ENABLED=0 go test ./... -count=1 -timeout=300s",
+      "packagesPassed": 20,
+      "appSeconds": 174.99
+    },
+    {
+      "id": "bundled-sdk-tests",
+      "status": "passed",
+      "command": "cd third_party/kun-sdk && CGO_ENABLED=0 go test ./... -count=1 -timeout=180s",
+      "packagesPassed": 3
+    },
+    {
+      "id": "focused-race",
+      "status": "passed",
+      "command": "CGO_ENABLED=1 go test -race ./internal/app ./internal/skillsafety -run 'TestSkillLocal|TestSkillDiagnostic|TestProbeVersion|TestSkillCheck' -count=1 -timeout=180s",
+      "coverage": [
+        "local paths, file limits, links and permissions",
+        "scope and immutable snapshots",
+        "explicit diagnostics and passive GET",
+        "version and canary mismatch",
+        "timeout, cancellation and shutdown",
+        "cleanup failure and recovery",
+        "999/1000 ordinary history boundaries and repeated diagnostics"
+      ]
+    },
+    {
+      "id": "vet",
+      "status": "passed",
+      "command": "CGO_ENABLED=0 go vet ./..."
+    },
+    {
+      "id": "frontend",
+      "status": "passed",
+      "syntaxChecks": 3,
+      "jsdomSuites": [
+        "skill-center-local",
+        "skill-center",
+        "skill-checks",
+        "workspace-conversations",
+        "conversation-rounds"
+      ]
+    },
+    {
+      "id": "skillspector-real-canary",
+      "status": "passed",
+      "toolVersion": "2.13.4",
+      "upstreamCommit": "54824463814a0be01360792523ec7245a69190fc",
+      "scope": "Real --version and trusted one-file static canary; no LLM and no user Skill execution"
+    },
+    {
+      "id": "skillup-real-canary",
+      "status": "passed",
+      "toolVersion": "0.15.0",
+      "upstreamCommit": "ffba9031129271260026dbb2a823af23d0505100",
+      "scope": "Real CLI validates the trusted diagnostic suite on the host in an opt-in test; product remains container-only; no Agent/model invocation"
+    },
+    {
+      "id": "builds",
+      "status": "passed",
+      "platforms": [
+        "linux/amd64",
+        "windows/amd64"
+      ],
+      "flags": "-buildvcs=false -trimpath",
+      "linuxVersionOutput": "RunDesk 0.75.0"
+    },
+    {
+      "id": "compiled-http",
+      "status": "passed",
+      "mode": "isolated local demo service",
+      "checks": [
+        "compiled service version and capabilities",
+        "ZIP acquisition freezes all files without installing",
+        "folder acquisition preserves relative paths and execution mode; duplicate reused",
+        "explicit installation records frozen content digest",
+        "installed snapshots retain attachments and stay immutable after edits",
+        "explicit diagnostics report missing tools and reject unknown environments without records",
+        "compiled service embeds local acquisition and diagnostics UI"
+      ]
+    },
+    {
+      "id": "contract-and-docs",
+      "status": "passed",
+      "command": "python3 scripts/check-docs.py",
+      "openapiPaths": 272,
+      "openapiOperations": 326
+    },
+    {
+      "id": "release-source",
+      "status": "passed",
+      "command": "python3 scripts/check-source.py --verify-manifest",
+      "scope": "Final source manifest, no generated runtime payloads, archive CRC and byte/permission comparison"
+    }
+  ],
+  "limits": [
+    "Docker Engine is unavailable here. Container isolation, cleanup and lifecycle use protocol fixtures, not real Docker acceptance.",
+    "No target Agent, model authentication, network/model connection or business-effect acceptance was performed.",
+    "SkillSpector static protocol readiness is not a Skill safety guarantee; model-assisted scanning remains unverified.",
+    "Windows amd64 was cross-compiled, not run on Windows.",
+    "Frontend behavior uses JSDOM; browser visual acceptance was not performed.",
+    "Optional external integrations without required binaries, credentials or services may skip in the ordinary Go suite; they are not counted as real integration acceptance.",
+    "Prior market-search, multi-sample security scans and Skill-Up mock-run evidence remains in prior release archives and is not counted as a new 0.75 pass."
+  ]
+}

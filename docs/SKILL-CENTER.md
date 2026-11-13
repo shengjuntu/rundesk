@@ -1,6 +1,6 @@
 # 技能中心 / Skill center
 
-RunDesk 0.74.0 的技能中心供管理员搜索公开 Skill、获取固定版本的完整目录、查看静态检查报告，再安装到当前工作区或运行环境。搜索和内置检查由 Go 实现，页面使用随程序嵌入的 HTML、CSS 和 JavaScript，无需前端构建，也不调用 Skills Manager 或 `npx skills add`。
+RunDesk 0.75.0 的技能中心供管理员搜索公开 Skill、从本地上传或已安装目录获取固定内容、查看静态检查报告，再安装到当前工作区或运行环境。搜索和内置检查由 Go 实现，页面使用随程序嵌入的 HTML、CSS 和 JavaScript，无需前端构建，也不调用 Skills Manager 或 `npx skills add`。
 
 技能中心是安装前的开发与管理入口。获取、预览和内置检查不会执行 Skill 代码；安装后 Agent 使用 Skill 时的行为仍取决于目标运行环境。
 
@@ -14,6 +14,21 @@ RunDesk 0.74.0 的技能中心供管理员搜索公开 Skill、获取固定版�
 6. 有发现项或检查未完成时，阅读报告，勾选确认并填写复核理由，再决定是否继续安装。服务端要求理由至少 4 个字符、最多 2000 字节。
 
 “已获取技能”保存获取到的内容与报告，不代表已经安装或启用；其过滤器按名称和来源链接匹配，不是全文或语义搜索。
+
+## 从本地或已安装目录获取
+
+“从本地获取”支持 ZIP 与浏览器文件夹选择。两种方式都先保存固定内容并运行内置检查；它们不会自动写入工作区或启用 Skill，也不会执行上传目录中的脚本。获取后进入详情页，继续沿用源码预览、安全复核、效果测试与明确安装的步骤。
+
+- ZIP 使用 `application/zip` 上传，保留完整相对目录；根部可为 `SKILL.md`，也可有一层技能文件夹。压缩包中的符号链接、特殊文件、越界路径、重复或大小写冲突路径都会拒绝。
+- 文件夹使用 `multipart/form-data`，每个字段名为浏览器提供的相对路径；不会把 `scripts/`、`references/`、`assets/` 或 `evals/` 的附件扁平化。浏览器提供文件字节和相对路径，不是让服务器读取浏览器电脑上的任意目录。
+- 每次只获取一个完整 Skill，上传请求封装最多 34 MiB，最多 1000 个文件、完整内容最多 32 MiB；根部仍需 UTF-8、以 YAML frontmatter 标记开头的 `SKILL.md`。风险项和二进制等未覆盖内容不会阻止暂存，但会保留需要复核或检查不完整的报告，安装时继续执行原有门槛。
+
+可选名称只能使用安全目录名。省略时优先采用 `SKILL.md` 中可识别的安全 `name`；无法采用时使用内容摘要生成名称。来源为 `local-upload://<name>`，不是市场来源；`revision` 是内容摘要，不是虚构的 Git 提交或发布版本。相同来源、版本和内容可复用已有快照。
+
+“从已安装 Skill 创建快照”使用当前工作区、运行环境和范围。选择目标名称后，服务端通过已有完整目录读取机制复制文件与执行位，再生成快照和检查报告；不会修改、移动或重新安装原目录。随后手工编辑已安装内容，不会改变已经取得的快照。列表读取不跟随符号链接，超过可列出数量会提示截断；实际获取仍校验整个目录。
+
+执行位取决于输入方式：ZIP 尽量保留其文件权限标记；浏览器文件夹上传不能携带原始 POSIX 权限，沿用现有 `#!` 首行推断可执行文件的规则。已安装目录快照记录服务端实际读到的执行位。Windows 上的 POSIX 执行位保留与校验仍以该平台及快照清单的能力为限，不能理解为跨系统权限完全相同。
+
 
 ## 搜索来源与失败处理
 
@@ -32,7 +47,7 @@ RunDesk 0.74.0 的技能中心供管理员搜索公开 Skill、获取固定版�
 
 GitHub 获取先把分支或标签解析为提交 SHA，再读取完整目录清单和该版本的文件，校验 Git blob 内容；ClawHub 获取要求固定版本的完整文件清单、大小和 SHA-256。缺失清单、截断目录、符号链接、子模块、特殊文件以及不安全路径会拒绝获取，不能只下载 `SKILL.md` 就当作完整技能。
 
-远程获取当前限制为 200 个文件、单文件 2 MiB、总量 20 MiB。原有 ZIP／文件夹导入上限为 1000 个文件、解压后 32 MiB；根目录需有带 YAML frontmatter 的 `SKILL.md`，也可接受一层外包装目录。超过内置检查单文件分析上限的内容会明确记为未检查。
+远程获取当前限制为 200 个文件、单文件 2 MiB、总量 20 MiB。技能中心本地 ZIP／文件夹获取及原有安装导入上限为 1000 个文件、完整内容 32 MiB；根目录需有带 YAML frontmatter 的 `SKILL.md`，也可接受一层外包装目录。超过内置检查单文件分析上限的内容会明确记为未检查。
 
 完整获取内容保存于 RunDesk 数据目录的 `skill-center/packs/<id>`，复用现有对象存储记录元数据。内容摘要使用确定性的 SHA-256，覆盖相对路径、文件字节与执行位。重新检查、预览和安装读取这份内容；文件或执行位发生变化时会拒绝复用旧摘要，提示重新获取。
 
@@ -63,6 +78,27 @@ Windows 文件系统不保留 POSIX 执行位，固定快照的清单保留来�
 检查任务自身还有排队、运行、完成、失败、取消、中断等状态。任务“已完成”仅表示已取得结果，需继续核对报告状态与建议；后台重启后，未结束任务标为中断，不自动重跑。
 
 安装时，内置报告必须为 `completed` 且建议为 `no_findings` 才可免风险确认；对同一摘要已经运行的其他引擎报告，只要仍需复核，也会进入确认流程。管理员必须明确勾选确认、填写理由。回执记录安装目标、摘要、来源、版本、安装时间及实际使用的复核理由。原有 ZIP／文件夹 HTTP 导入也经过内置检查与确认门槛；本次没有把外部 SkillSpector 设为必装前提。
+
+## 工具与测试环境诊断
+
+环境诊断与 Skill 内容检查分别记录。打开页面或读取最近诊断结果只读取已保存的记录，不自动运行工具、创建容器、读取账号凭据或调用模型。点击诊断后才对选中的工具执行受控探测；页面不接受任意命令或可执行路径。
+
+SkillSpector 诊断针对 RunDesk 服务主机的可信命令，先确认版本，再对程序生成的最小文本样本做静态 canary 检查，以核对依赖、JSON 报告和覆盖协议。它不扫描当前用户 Skill，固定关闭 LLM；成功只说明该版本的静态调用与报告协议在这次样本上可用，不是用户 Skill 的安全证书。
+
+Skill-Up 诊断使用所选受管 Docker 镜像，在独立容器内核对 CLI 版本和程序自带的可信用例校验。它不在宿主执行用户 YAML，不启动 Agent 测试，也不自动挂入日常账号凭据。诊断沿用效果测试的执行与清理边界；若已有任务或清理未确认，不能额外启动诊断容器。需要重试清理时，通过记录中的关联任务返回既有任务入口处理。
+
+版本核对按当前已接入的兼容窗口进行：SkillSpector `2.13.x`、Skill-Up `0.15.x`。命令存在、Docker 可连接、版本匹配、静态协议通过及模型实际可用是不同证据，不能互相替代。其他版本会明确标为不兼容或尚未验证，不会仅凭退出码为 0 就宣称可用。
+
+| 检查状态 | 含义 |
+| --- | --- |
+| `ok` | 该项受控检查本次完成，具体范围见项目说明 |
+| `missing` | 所需命令、工具或运行依赖未发现 |
+| `incompatible` | 版本或已接入协议不在支持范围内 |
+| `failed` | 实际探测失败，保留脱敏原因 |
+| `unknown` | 本次没有取得该能力的有效证据，例如模型认证或实际网络连接 |
+| `skipped` | 该项按本次诊断范围没有执行，例如静态模式下的 LLM 检查 |
+
+SkillSpector 的 `ready` 仅指静态工具协议已验证。Skill-Up 即使版本与 canary 用例校验都成功，仍不自动证明模型认证、网络或 Agent 可执行；未取得这些证据时总体保留为 `incomplete`。诊断不自动安装、升级、登录或执行付费模型请求。结果带有本次检查时间，后续环境变化需要重新诊断。
 
 ## 可选 SkillSpector
 
@@ -127,9 +163,9 @@ $env:RUNDESK_SKILLSPECTOR_BIN = Join-Path $SkillSpectorEnv "Scripts\skillspector
 
 随后从该 PowerShell 启动 RunDesk；已有进程需重启。若 RunDesk 作为 Windows 服务运行，将变量设置到该服务的实际启动环境，并确保服务账户有权访问虚拟环境后再重启。此配置示例未在 Windows 实机验收。浏览器运行在 Windows、RunDesk 服务运行在 Linux 时，应使用 Linux 主机的可执行路径。
 
-### 本版真实静态验证
+### 已有固定版本的真实静态验证
 
-在 Linux 独立虚拟环境中安装并运行了上述真实 SkillSpector，使用默认关闭 LLM 的静态参数检查三个受控样本：
+0.73.1 阶段在 Linux 独立虚拟环境中安装并运行了上述真实 SkillSpector，使用默认关闭 LLM 的静态参数检查三个受控样本：
 
 | 样本 | 真实 CLI 报告 | 结论边界 |
 | --- | --- | --- |
@@ -153,14 +189,21 @@ RUNDESK_TEST_SKILLSPECTOR_BIN="$RUNDESK_SKILLSPECTOR_BIN" \
 | 方法与路径 | 用途 |
 | --- | --- |
 | `GET /sources`、`GET /engines` | 来源说明与扫描命令可用性 |
+| `GET /diagnostics` | 读取各工具／环境最近保存的诊断结果，不启动探测 |
+| `POST /diagnostics` | 以 `target` 和可选 `instanceId` 显式发起可信 canary 诊断 |
 | `GET /search?q=…&sources=clawhub,skillsmp,skills.sh,github` | 搜索指定来源；省略 `sources` 使用默认三个市场 |
 | `POST /fetch` | 以 `{"url":"https://…"}` 获取一个完整技能并自动快速检查 |
+| `POST /import?name=…` | 上传 ZIP 或 multipart 文件夹，先获取与检查，不安装 |
+| `GET /installed?workspaceId=…&instanceId=…&scope=project` | 枚举当前受管范围内可选择的已安装技能名称 |
+| `POST /from-installed` | 按 `workspaceId / instanceId / scope / name` 取得已安装完整目录的固定快照 |
 | `GET /packs?q=…`、`GET /packs/{id}` | 已获取技能列表与详情 |
 | `GET /packs/{id}/file?path=…` | 预览保存的文件 |
 | `POST /packs/{id}/scan` | 以 `{"engine":"builtin"}` 或 `{"engine":"skillspector","allowLLM":false}` 创建检查任务 |
 | `GET /jobs/{id}`、`POST /jobs/{id}/cancel` | 查询或取消任务 |
 | `POST /packs/{id}/install` | 提交工作区、运行环境、范围、目录名、摘要与可选复核信息后安装 |
 | `GET /installations` | 安装回执列表 |
+
+诊断请求的 `target` 为 `skillspector` 或 `skillup`。SkillSpector 在服务主机执行，不接受非空 `instanceId`；Skill-Up 使用已配置的受管 Docker 环境。响应的 `checks` 分别说明版本、协议与未知能力，`overall` 不是安全等级。结果按工具及环境保存最近一份，带有检查时间。若返回 `cleanupJobId`，它引用内部工具 canary 的清理任务，可使用既有 `POST /check-jobs/{id}/cancel` 入口重试回收；该任务没有用户 `packId/digest/suiteDigest`，不能当作 Skill 效果报告。
 
 安装 JSON 字段为 `workspaceId`、`instanceId`、`scope`（`project` 或 `instance`）、`name`、`digest`、`replace`、`acknowledge` 和 `reason`。`skill_review_required` 表示需要人工确认，`skill_digest_mismatch`／`skill_snapshot_changed` 表示内容身份不符，不能用确认风险跳过内容核对。
 

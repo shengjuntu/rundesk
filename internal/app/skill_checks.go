@@ -222,7 +222,17 @@ func (m *Manager) StartSkillCheck(packID string, in SkillCheckRequest) (SkillChe
 	if err != nil {
 		return SkillCheckJob{}, err
 	}
-	if len(rows) >= 1000 {
+	historyCount := 0
+	for _, row := range rows {
+		var previous SkillCheckJob
+		if err := json.Unmarshal(row, &previous); err != nil {
+			return SkillCheckJob{}, err
+		}
+		if !isSkillDiagnosticJob(previous) {
+			historyCount++
+		}
+	}
+	if historyCount >= 1000 {
 		return SkillCheckJob{}, failure(409, "skill_check_history_full", "测试记录已达上限，请先整理历史记录")
 	}
 	id := store.ID()

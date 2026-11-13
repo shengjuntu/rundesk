@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.75.0 — 2026-11-12
+
+Acquire local ZIPs, browser-selected directories and installed Skills into fixed Skill Center snapshots before explicit installation or effect tests. Preserve complete relative paths and source provenance; existing installed content is read without being changed. Add explicit bounded environment self-diagnostics that distinguish missing commands, unsupported versions, failed protocols and unknown model readiness. Opening saved diagnostics does not start a probe.
+
+See [Skill Center](docs/SKILL-CENTER.md) for local inputs, execution-bit limits, diagnostic setup and scope, and [validation](docs/VALIDATION.md) for actual checks.
+
 ## 0.74.0 — 2026-11-12
 
 Add Skill-Up effect checks to the Skill Center: explicit container-only validation and execution, persistent task recovery/cancellation, bounded report ingestion, per-case outcomes and cross-version comparisons. Freeze source, evaluation-suite and image identities. Missing cases, changed inputs, unknown configurations and externally imported reports cannot silently pass regression gates. Existing security scanning remains a separate result.

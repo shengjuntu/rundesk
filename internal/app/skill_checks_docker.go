@@ -137,7 +137,9 @@ func skillCheckContainerArgs(job SkillCheckJob, sourceDir string) ([]string, err
 	if !skillCenterID.MatchString(job.ID) || job.ContainerName != "rundesk-skillcheck-"+job.ID || !skillCheckImageID.MatchString(job.ImageID) {
 		return nil, failure(400, "invalid_skill_check_identity", "测试容器或冻结镜像身份无效")
 	}
-	if job.Action != "validate" && job.Action != "run" {
+	// version is an internal trusted diagnostic action. The public admission
+	// path continues to accept only validate/run.
+	if job.Action != "validate" && job.Action != "run" && job.Action != "version" {
 		return nil, failure(400, "invalid_skill_check_action", "未知测试操作")
 	}
 	if !filepath.IsAbs(sourceDir) || strings.ContainsAny(sourceDir, ",:\r\n\x00") {
@@ -173,6 +175,8 @@ func skillCheckContainerArgs(job SkillCheckJob, sourceDir string) ([]string, err
 		"--entrypoint", entrypoint, job.ImageID, job.Action, "/source/evals/eval.yaml"}
 	if job.Action == "run" {
 		args = append(args, "--output-dir", "/output", "--iteration", "1", "--parallelism", "1")
+	} else if job.Action == "version" {
+		args = append(args[:len(args)-2], "--version")
 	}
 	return args, nil
 }
@@ -206,6 +210,12 @@ func (m *Manager) cleanupSkillCheck(ctx context.Context, job SkillCheckJob) erro
 }
 
 func (m *Manager) executeSkillCheck(ctx context.Context, job SkillCheckJob, sourceDir string) (result SkillCheckExecution, executionErr error) {
+	return m.executeSkillCheckWithCleanup(ctx, job, sourceDir, 15*time.Second)
+}
+
+// Trusted diagnostics share the same container boundary with a shorter cleanup
+// allowance; ordinary evaluation keeps its existing fifteen-second allowance.
+func (m *Manager) executeSkillCheckWithCleanup(ctx context.Context, job SkillCheckJob, sourceDir string, cleanupBudget time.Duration) (result SkillCheckExecution, executionErr error) {
 	result.ExitCode = -1
 	if runtime.GOOS != "linux" {
 		return result, failure(503, "skill_check_unavailable", "Skill-Up 执行需要 Linux 本机 Docker Engine")
@@ -222,7 +232,7 @@ func (m *Manager) executeSkillCheck(ctx context.Context, job SkillCheckJob, sour
 	// A failed create can still leave a daemon-side object after a transport
 	// interruption. Recover only objects carrying this job's exact owner label.
 	defer func() {
-		cleanupCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), cleanupBudget)
 		defer cancel()
 		if err := m.cleanupSkillCheck(cleanupCtx, job); err != nil {
 			result.CleanupError = err.Error()

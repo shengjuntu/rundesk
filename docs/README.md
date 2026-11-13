@@ -4,7 +4,7 @@
 
 RunDesk 的三个使命：为 Agent 落地提供调试工作台、连接领域应用与 Agent Harness、为 Harness 研究提供实验场。文档按完整任务组织；界面操作、对应契约与限制在同一专题查阅。
 
-当前源码：**RunDesk 0.74.0 / 独立 Kun 0.17.0 / worker 协议 16**。新安装先进入[初始化](SETUP.md#首次初始化)；日常会话与应用由 Codex 执行，Kun 用于[内部维护](MAINTENANCE.md)与只读轨迹问答。配方声明引用的共享内容来自 `recipes/common/`，导出时物化为普通文件；操作见[下载源与配方文件](BUILD-SOURCES.md)及[升级说明](UPGRADING.md)。
+当前源码：**RunDesk 0.75.0 / 独立 Kun 0.17.0 / worker 协议 16**。新安装先进入[初始化](SETUP.md#首次初始化)；日常会话与应用由 Codex 执行，Kun 用于[内部维护](MAINTENANCE.md)与只读轨迹问答。配方声明引用的共享内容来自 `recipes/common/`，导出时物化为普通文件；操作见[下载源与配方文件](BUILD-SOURCES.md)及[升级说明](UPGRADING.md)。
 
 ## 1. Agent 落地与调试 / Agent debugging
 

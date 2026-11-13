@@ -782,6 +782,7 @@ func writeSkillCenterError(w http.ResponseWriter, e error) {
 }
 
 func (s *Server) skillCenterRoutes(mux *http.ServeMux) {
+	s.skillCenterLocalRoutes(mux)
 	register := func(pattern string, handler http.HandlerFunc) {
 		mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 			if principal(r) != nil || human(r) != nil {

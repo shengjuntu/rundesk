@@ -11,7 +11,7 @@ window.RunDeskSkillCenter = (() => {
   const reportEngines = {builtin:["Go 快速检查", "Go quick check"],skillspector:["NVIDIA SkillSpector", "NVIDIA SkillSpector"]};
   let generation = 0, searchSequence = 0, currentTab = "search", selected = "", back;
   let query = "", sourceSelection = ["clawhub", "skillsmp", "skills.sh"], searchResult = null;
-  let enginesPromise, pollTimer, requestController;
+  let enginesPromise, pollTimer, requestController, diagnosticsController;
   const packJobs = new Map();
   const page = () => $("#skill-center-page");
   const isAdministrator = () => state.identity?.kind === "administrator";
@@ -44,6 +44,11 @@ window.RunDeskSkillCenter = (() => {
     const d = new Date(value);
     return Number.isNaN(d.getTime()) ? text(value) : d.toLocaleString(document.documentElement.lang === "en" ? "en" : "zh-CN");
   }
+  function acquisitionSource(pack) {
+    if (String(pack.sourceUrl || "").startsWith("local-upload://")) return tr("本地 ZIP／文件夹", "Local ZIP / folder");
+    if (String(pack.sourceUrl || "").startsWith("rundesk://")) return tr("已安装技能目录的独立快照", "Independent snapshot of an installed skill directory");
+    return pack.sourceUrl || "—";
+  }
   function message(target, value, type = "help") {
     target.className = type; target.textContent = value; target.hidden = !value;
   }
@@ -53,6 +58,7 @@ window.RunDeskSkillCenter = (() => {
   function activeJob(status) { return ["queued", "running"].includes(status); }
   function close() {
     ++generation; clearTimeout(pollTimer); requestController?.abort();
+    diagnosticsController?.abort();
     window.RunDeskSkillChecks?.dispose();
     const target = back || {view:"conversation",route:"#conversations"};
     setProductPage(target.view); history.replaceState(null, "", target.route); return restoreProductRoute();
@@ -63,6 +69,7 @@ window.RunDeskSkillCenter = (() => {
       back = {view:state.view,route:location.hash.startsWith("#skills") ? contextRoute() : location.hash || contextRoute()};
     }
     const g = ++generation; ++searchSequence; clearTimeout(pollTimer); requestController?.abort();
+    diagnosticsController?.abort();
     window.RunDeskSkillChecks?.dispose();
     currentTab = tab === "library" || tab === "pack" ? tab : "search"; selected = id;
     if ($("#settings")?.open) $("#settings").close();
@@ -86,6 +93,7 @@ window.RunDeskSkillCenter = (() => {
       else if (currentTab === "library") await renderLibrary(content, g);
       else if (id) await renderPack(content, id, g);
       else await open("library");
+      if (still(g)) mountDiagnostics(content, g);
     } catch (error) {
       if (still(g)) content.replaceChildren(el("p", {class:"error",role:"alert"}, errorText(error)), action(tr("重试", "Retry"), () => open(currentTab, selected)));
     }
@@ -162,13 +170,178 @@ window.RunDeskSkillCenter = (() => {
       el("small", {class:"help"}, tr("支持 GitHub 与 ClawHub。获取内容不会自动安装到运行环境。", "Supports GitHub and ClawHub. Retrieving content does not install it into a runtime.")));
     direct.onsubmit = async event => { event.preventDefault(); fetch.disabled = true; try { await fetchPack(url.value); } finally { fetch.disabled = false; } };
     const config = el("details", {class:"skill-center-source-config"}, el("summary", {}, tr("来源与配额说明", "Source and quota information")), el("p", {class:"help"}, tr("正在读取…", "Loading…")));
-    target.replaceChildren(form, direct, config, results);
+    target.replaceChildren(form, direct, localAcquisition(g), config, results);
     if (searchResult) displayResults(results, searchResult);
     else results.append(el("div", {class:"skill-center-empty"}, tr("搜索结果会保留来源；获取源码后，再查看我们的安全检查结果。", "Search results retain their origin. Retrieve the source before viewing our inspection results.")));
     try {
       const data = await api(base + "/sources");
       if (still(g)) config.replaceChildren(el("summary", {}, tr("来源与配额说明", "Source and quota information")), ...((data.items || []).map(source => el("p", {}, el("strong", {}, source.label || source.id), " · ", source.description || ""))));
     } catch (problem) { if (still(g)) config.replaceChildren(el("summary", {}, tr("来源与配额说明", "Source and quota information")), el("p", {class:"help"}, errorText(problem))); }
+  }
+  function localAcquisition(g) {
+    let busy = false, installedBinding = null, listSequence = 0;
+    const name = el("input", {id:"skill-center-local-name",type:"text",maxlength:64,pattern:"[A-Za-z0-9_-]{1,64}",placeholder:tr("可选：技能名称", "Optional skill name"),"aria-label":tr("本地技能名称", "Local skill name"),"aria-describedby":"skill-center-local-name-help"});
+    const zip = el("input", {id:"skill-center-local-zip",type:"file",accept:".zip,application/zip","aria-label":tr("选择技能 ZIP", "Choose a skill ZIP")});
+    const directory = el("input", {id:"skill-center-local-directory",type:"file",multiple:true,webkitdirectory:true,"aria-label":tr("选择技能文件夹", "Choose a skill folder")});
+    directory.setAttribute("webkitdirectory", "");
+    const status = el("p", {id:"skill-center-local-message",class:"help",role:"status",hidden:true});
+    const scope = el("select", {id:"skill-center-installed-scope","aria-label":tr("已安装技能范围", "Installed skill scope")},el("option",{value:"project"},tr("当前工作区", "Current workspace")),el("option",{value:"instance"},tr("当前运行环境", "Current environment")));
+    const installed = el("select", {id:"skill-center-installed-name","aria-label":tr("选择已安装技能", "Choose an installed skill")});
+    const sameContext = binding => context().workspaceId === binding.workspaceId && context().instanceId === binding.instanceId;
+    const controls = [];
+    function sync() {
+      for (const node of controls) node.disabled = busy;
+      zipSubmit.disabled = busy || !zip.files?.length;
+      directorySubmit.disabled = busy || !directory.files?.length;
+      installed.disabled = busy || !installed.options.length;
+      snapshot.disabled = busy || !installedBinding || !installed.value;
+      load.disabled = busy || !context().workspaceId;
+    }
+    async function acquired(request, binding) {
+      if (busy) return;
+      busy = true; sync(); message(status,tr("正在保存完整目录并进行快速检查…", "Saving the complete directory and running the quick check…"));
+      try {
+        const value = await request();
+        if (!still(g)) return;
+        const pack = value.pack || value;
+        if (!pack.id) throw Error(tr("服务未返回技能快照。", "The service did not return a skill snapshot."));
+        if (!sameContext(binding)) { message(status,tr("快照已保存到技能库；当前工作区或运行环境已改变，请从“已获取技能”查看。", "The snapshot was saved to the Library. The current workspace or environment changed; open it from retrieved skills.")); return; }
+        await open("pack",pack.id);
+      } catch (problem) { if (still(g)) message(status,errorText(problem),"error"); }
+      finally { busy = false; if (still(g)) sync(); }
+    }
+    async function upload(kind) {
+      if (busy || !name.reportValidity()) return;
+      const files = [...(kind === "zip" ? zip.files || [] : directory.files || [])];
+      if (!files.length) { message(status,tr("请先选择文件。", "Choose files first."),"error"); return; }
+      const byteLimit = (kind === "zip" ? 34 : 32)*1024*1024;
+      if (files.length > 1000 || files.reduce((total,file) => total + file.size,0) > byteLimit) {
+        message(status,kind === "zip" ? tr("ZIP 上传最多 34 MiB；解压后最多 1000 个文件、32 MiB，由服务端校验。", "ZIP uploads are limited to 34 MiB. The server checks expanded content against 1,000 files and 32 MiB.") : tr("文件夹一次最多 1000 个文件、总计 32 MiB。", "A folder can contain up to 1,000 files and 32 MiB."),"error"); return;
+      }
+      let body, headers;
+      if (kind === "zip") { if (files.length !== 1) return; body = files[0]; headers = {"Content-Type":"application/zip"}; }
+      else {
+        if (files.some(file => !file.webkitRelativePath)) { message(status,tr("请选择完整的技能文件夹，以保留文件相对路径。", "Choose a complete skill folder so relative file paths are preserved."),"error"); return; }
+        body = new FormData();
+        for (const file of files) body.append(file.webkitRelativePath,file,file.name);
+      }
+      const binding = context(), selectedName = name.value.trim();
+      const path = base + "/import" + (selectedName ? "?" + new URLSearchParams({name:selectedName}) : "");
+      return acquired(() => api(path,{method:"POST",body,headers}),binding);
+    }
+    const zipSubmit = button(tr("获取 ZIP 并检查", "Get ZIP and check"), () => upload("zip"),"quiet"); zipSubmit.id = "skill-center-local-zip-submit";
+    const directorySubmit = button(tr("获取文件夹并检查", "Get folder and check"), () => upload("directory"),"quiet"); directorySubmit.id = "skill-center-local-directory-submit";
+    const load = button(tr("读取已安装技能", "Load installed skills"), async () => {
+      if (busy) return;
+      const binding = {...context(),scope:scope.value}, sequence = ++listSequence;
+      if (!binding.workspaceId) { message(status,tr("请先选择工作区。", "Choose a workspace first."),"error"); return; }
+      busy = true; installedBinding = null; installed.replaceChildren(); sync(); message(status,tr("正在读取当前范围的技能目录…", "Reading skill directories in the selected scope…"));
+      try {
+        const value = await api(base + "/installed?" + new URLSearchParams({workspaceId:binding.workspaceId,instanceId:binding.instanceId,scope:binding.scope}));
+        if (!still(g) || sequence !== listSequence) return;
+        if (!sameContext(binding) || scope.value !== binding.scope) { message(status,tr("工作区、环境或范围已改变，请重新读取。", "The workspace, environment or scope changed. Load the list again."),"error"); return; }
+        if (value.workspaceId !== binding.workspaceId || value.instanceId !== binding.instanceId || value.scope !== binding.scope) throw Error(tr("服务返回的技能范围与所选范围不一致，请重试。", "The returned skill scope does not match the selection. Retry."));
+        const items = value.items || [];
+        installed.replaceChildren(...items.map(item => el("option",{value:item.name},item.name)));
+        installedBinding = binding;
+        const warnings = (value.warnings || []).map(text).join(" ");
+        message(status,(items.length ? tr("选择技能后创建独立快照，已安装内容保持原样。", "Choose a skill to create an independent snapshot. The installed content is preserved.") : tr("当前范围没有可获取的完整技能目录。", "There are no complete skill directories in this scope.")) + (value.truncated ? tr(" 列表已截断。", " The list was truncated.") : "") + (warnings ? " "+warnings : ""));
+      } catch (problem) { if (still(g) && sequence === listSequence) message(status,errorText(problem),"error"); }
+      finally { busy = false; if (still(g)) sync(); }
+    },"quiet"); load.id = "skill-center-installed-load";
+    const snapshot = button(tr("创建快照并检查", "Create snapshot and check"), async () => {
+      if (busy || !installedBinding || !installed.value) return;
+      const binding = {...installedBinding}, selectedName = installed.value;
+      if (!sameContext(binding) || scope.value !== binding.scope) { installedBinding = null; sync(); message(status,tr("工作区、环境或范围已改变，请重新读取已安装技能。", "The workspace, environment or scope changed. Reload installed skills."),"error"); return; }
+      const body = {workspaceId:binding.workspaceId,instanceId:binding.instanceId,scope:binding.scope,name:selectedName};
+      return acquired(() => api(base + "/from-installed",{method:"POST",body}),binding);
+    },"quiet"); snapshot.id = "skill-center-installed-snapshot";
+    controls.push(name,zip,directory,scope,load,installed,snapshot,zipSubmit,directorySubmit);
+    zip.onchange = directory.onchange = installed.onchange = sync;
+    scope.onchange = () => { ++listSequence; installedBinding = null; installed.replaceChildren(); sync(); };
+    sync();
+    return el("details", {id:"skill-center-local",class:"skill-center-local"},el("summary",{},tr("从本地获取", "Retrieve local skills")),
+      el("p",{class:"help"},tr("先获取完整目录、生成固定快照并检查，不会自动安装。目录中需包含 SKILL.md；二进制或未覆盖内容会明确标记。需要保留原始可执行权限时，请使用带权限信息的 ZIP。", "Retrieve the full directory as a fixed snapshot and inspect it before installation. SKILL.md is required; binary or uninspected content remains clearly marked. Use a ZIP carrying permissions when preserving original executable flags matters.")),
+      name,el("small",{id:"skill-center-local-name-help",class:"help"},tr("名称可留空自动读取；手动填写时使用字母、数字、下划线或连字符，最多 64 字符。", "Leave the name empty to derive it from the skill. An explicit name can use letters, digits, underscores or hyphens, up to 64 characters.")),
+      el("div",{class:"skill-center-local-upload"},el("label",{},tr("技能 ZIP", "Skill ZIP"),zip),zipSubmit),
+      el("div",{class:"skill-center-local-upload"},el("label",{},tr("技能文件夹", "Skill folder"),directory),directorySubmit),
+      el("div",{class:"skill-center-installed"},el("strong",{},tr("从已安装技能创建快照", "Create a snapshot from an installed skill")),
+        el("p",{class:"help"},tr("使用当前工作区和运行环境读取完整目录及附件。", "Read the complete directory and attachments from the current workspace and environment.")),
+        el("div",{class:"skill-center-local-row"},scope,load),el("div",{class:"skill-center-local-row"},installed,snapshot)),status);
+  }
+  function mountDiagnostics(target, g) {
+    let busy = false, history = [], revision = 0;
+    diagnosticsController = new AbortController();
+    const signal = diagnosticsController.signal;
+    const overallNames = {ready:["静态工具协议已验证", "Static tool protocol verified"],unavailable:["工具或环境不可用", "Tool or environment unavailable"],incompatible:["版本或协议不兼容", "Incompatible version or protocol"],failed:["诊断失败", "Diagnostic failed"],incomplete:["诊断未完整覆盖", "Incomplete diagnostics"]};
+    const checkNames = {ok:["已验证", "Verified"],missing:["未安装或缺失", "Missing"],incompatible:["不兼容", "Incompatible"],failed:["执行失败", "Failed"],unknown:["未检查", "Not checked"],skipped:["未启用", "Not enabled"]};
+    const type = el("select", {id:"skill-center-diagnostic-target","aria-label":tr("诊断工具", "Diagnostic tool")},el("option",{value:"skillspector"},"NVIDIA SkillSpector"),el("option",{value:"skillup"},"Skill-Up"));
+    const environments = (state.instances || []).filter(item => item.managed && item.execution?.mode === "docker");
+    const environment = el("select", {id:"skill-center-diagnostic-environment","aria-label":tr("诊断测试环境", "Diagnostic test environment")}, ...environments.map(item => el("option",{value:item.id},item.name || item.id)));
+    if (environments.some(item => item.id === context().instanceId)) environment.value = context().instanceId;
+    const environmentGroup = el("label", {class:"skill-center-diagnostic-environment",hidden:true},tr("测试环境", "Test environment"),environment);
+    const status = el("p", {id:"skill-center-diagnostic-message",class:"help",role:"status",hidden:true});
+    const results = el("div", {id:"skill-center-diagnostic-results"});
+    const run = button(tr("运行受控诊断", "Run controlled diagnostics"), async () => {
+      if (busy || type.value === "skillup" && !environment.value) return;
+      const selection = {target:type.value,...(type.value === "skillup" ? {instanceId:environment.value} : {})};
+      const sequence = ++revision;
+      busy = true; sync(); message(status,tr("正在核对工具版本和受控样本协议…", "Checking the tool version and a controlled sample protocol…"));
+      try {
+        const value = await api(base + "/diagnostics",{method:"POST",body:selection,signal});
+        if (!still(g) || sequence !== revision) return;
+        if (value.target !== selection.target || selection.instanceId && value.instanceId !== selection.instanceId) throw Error(tr("诊断返回的工具或环境与选择不一致。", "The diagnostic result does not match the selected tool or environment."));
+        history = [value,...history.filter(item => item.id !== value.id)];
+        draw(); message(status,tr("诊断已记录。模型认证与网络未检查项仍需单独确认。", "The diagnostic was recorded. Unchecked model authentication and network access still require separate confirmation."));
+      } catch (problem) { if (still(g) && problem.name !== "AbortError") message(status,errorText(problem),"error"); }
+      finally { busy = false; if (still(g)) sync(); }
+    },"quiet"); run.id = "skill-center-diagnostic-run";
+    function sync() {
+      type.disabled = environment.disabled = busy;
+      environmentGroup.hidden = type.value !== "skillup";
+      run.disabled = busy || type.value === "skillup" && !environment.value;
+    }
+    function draw() {
+      const matches = history.filter(item => item.target === type.value && (type.value !== "skillup" || !environment.value || item.instanceId === environment.value)).sort((a,b) => String(b.checkedAt || "").localeCompare(String(a.checkedAt || "")));
+      const result = matches[0];
+      if (!result) {
+        results.replaceChildren(el("p", {class:"help"},type.value === "skillup" && !environment.value ? tr("尚无已配置的受管 Docker 测试环境。准备后可运行工具诊断；模型和认证不会自动检查。", "There is no configured managed Docker test environment. Prepare one before diagnosing its tools; model access and authentication are not checked automatically.") : tr("尚未诊断。点击按钮检查固定样本，不会执行用户 Skill 或调用模型。", "No diagnostic has run. Use the button to check a controlled sample without executing a user skill or calling a model.")));
+        return;
+      }
+      const engine = result.target === "skillup" ? "Skill-Up" : "NVIDIA SkillSpector";
+      results.replaceChildren(el("div", {class:"skill-center-diagnostic-heading"},el("strong",{},engine),badge(result.overall,translated(overallNames,result.overall))),
+        meta([[tr("最近检查", "Last checked"),date(result.checkedAt)],...(result.instanceId ? [[tr("测试环境", "Test environment"),environments.find(item => item.id === result.instanceId)?.name || result.instanceId]] : [])]),
+        el("p",{class:"help"},tr("这是工具和协议的诊断记录，不是 Skill 安全证明，也不代表模型、认证和网络已经就绪。", "This is a tool and protocol diagnostic, not proof of skill safety or model, authentication and network readiness.")),
+        el("div",{class:"skill-center-diagnostic-checks"},...(result.checks || []).map(check => el("article",{class:"skill-center-diagnostic-check","data-diagnostic-status":check.status},
+          el("div",{},el("strong",{},check.label || check.id),badge(check.status,translated(checkNames,check.status))),
+          check.version ? el("small",{},tr("版本：", "Version: ")+check.version) : null,
+          el("p",{},check.message || ""),typeof check.durationMs === "number" ? el("small",{},`${check.durationMs} ms`) : null))));
+      if (result.cleanupJobId) {
+        const cleanup = button(tr("重试清理", "Retry cleanup"),async () => {
+          if (busy) return;
+          busy = true; sync(); cleanup.disabled = true;
+          try {
+            const job = await api(base + "/check-jobs/" + enc(result.cleanupJobId) + "/cancel",{method:"POST",body:{},signal});
+            if (!still(g)) return;
+            message(status,job.cleanupError || (job.cleanupPending ? tr("清理仍未确认，请稍后重试。", "Cleanup is not yet confirmed. Retry shortly.") : tr("容器清理已确认。原诊断记录保留；需要时可重新运行诊断。", "Container cleanup was confirmed. The original diagnostic record remains; run another diagnostic when needed.")),job.cleanupError || job.cleanupPending ? "error" : "help");
+          } catch (problem) { if (still(g) && problem.name !== "AbortError") message(status,errorText(problem),"error"); }
+          finally { busy = false; if (still(g)) { sync(); cleanup.disabled = false; } }
+        },"quiet");
+        results.append(el("p",{class:"skill-center-notice"},tr("此诊断有待确认的容器清理，新的测试可能被阻断。", "Container cleanup for this diagnostic has not been confirmed. New tests may remain blocked.")),cleanup);
+      }
+    }
+    type.onchange = environment.onchange = () => { sync(); draw(); };
+    sync(); draw();
+    target.append(el("details",{id:"skill-center-diagnostics",class:"skill-center-diagnostics"},el("summary",{},tr("检查工具与环境", "Inspect tools and environments")),
+      el("p",{class:"help"},tr("Go 快速检查随 RunDesk 提供，无需额外安装。外部工具只有经过显式诊断后才会记录已验证状态。", "The Go quick check is included with RunDesk. External tools are only recorded as verified after an explicit diagnostic.")),
+      el("div",{class:"skill-center-local-row"},type,environmentGroup,run),status,results,
+      el("details",{class:"skill-center-diagnostic-help"},el("summary",{},tr("配置说明", "Configuration help")),
+        el("p",{class:"help"},tr("SkillSpector 使用运行 RunDesk 的服务主机上的 RUNDESK_SKILLSPECTOR_BIN；Skill-Up 使用所选 Docker 镜像内的 /usr/local/bin/skill-up，或服务配置的 RUNDESK_SKILLUP_CONTAINER_BIN。修改服务环境变量后需重启 RunDesk。诊断不会安装工具或登录模型。", "SkillSpector uses RUNDESK_SKILLSPECTOR_BIN on the RunDesk service host. Skill-Up uses /usr/local/bin/skill-up in the selected Docker image, or the service's RUNDESK_SKILLUP_CONTAINER_BIN. Restart RunDesk after changing service environment variables. Diagnostics do not install tools or sign in to model providers.")))));
+    const sequence = revision;
+    api(base + "/diagnostics",{signal}).then(value => {
+      if (!still(g) || sequence !== revision) return;
+      history = value.items || []; draw();
+    }).catch(problem => { if (still(g) && sequence === revision && problem.name !== "AbortError") message(status,errorText(problem),"error"); });
   }
   async function fetchPack(url) {
     const g = generation, content = page().querySelector(".skill-center-content");
@@ -346,7 +519,7 @@ window.RunDeskSkillCenter = (() => {
       el("div", {class:"skill-center-pack-heading"}, el("div", {}, el("h2", {}, pack.name || pack.id), el("p", {class:"help"}, pack.description || "")),
         el("div", {class:"actions"}, link(tr("来源页面 ↗", "Source page ↗"), pack.sourceUrl), action(tr("安装到工作区", "Install into workspace"), () => install(pack), "primary", {id:"skill-center-install"}))),
       el("p", {class:"skill-center-notice",id:"skill-center-install-status",role:"status",hidden:true}, tr("该技能正在检查，任务结束后才能安装。", "This skill is being checked. Installation is available after the job finishes.")),
-      meta([[tr("固定版本", "Pinned revision"),pack.revision],[tr("内容摘要", "Content digest"),pack.digest],[tr("获取时间", "Retrieved"),date(pack.createdAt)]]),
+      meta([[tr("获取来源", "Acquisition source"),acquisitionSource(pack)],[tr("固定版本", "Pinned revision"),pack.revision],[tr("内容摘要", "Content digest"),pack.digest],[tr("获取时间", "Retrieved"),date(pack.createdAt)]]),
       el("div", {class:"skill-center-source-preview"}, files, preview)),
       el("section", {class:"skill-center-checks"}, el("div", {class:"actions"}, builtin, external), engineNote, job, view.selector, view.report));
     window.RunDeskSkillChecks?.mount(target, pack, {isCurrent: () => still(g) && selected === pack.id});

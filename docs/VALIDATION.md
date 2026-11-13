@@ -1,10 +1,10 @@
 # 验证范围与复验
 
-RunDesk **0.74.0** 的本次变更为技能中心中的 Skill-Up 效果测试。实际执行命令、结果和边界见 [release-074.json](validation/current/release-074.json)。测试用例执行、效果结论和安全扫描分别记录；导入报告不能自证来源或用例一致。
+RunDesk **0.75.0** 补齐本地 Skill 获取、已安装内容的独立快照和显式环境自检。实际执行命令、结果与限制见 [release-075.json](validation/current/release-075.json)。上传与获取只暂存完整内容；安装、效果测试和受控环境诊断分别验证。
 
-本环境没有 Docker Engine，容器隔离和生命周期仅使用协议／命令替身验证，未作为真实容器验收。已从官方固定发布下载安装 Skill-Up CLI，使用受控 custom-engine mock 验证协议，不代表调用了真实 LLM 或取得业务效果。目标机器需要分别验收镜像、模型连接、脚本 Judge 和实际用例。
+本次从 0.74.0 源包继续。已有真实市场搜索、SkillSpector 三样本扫描和 Skill-Up 受控 mock 运行的历史证据保留在相应旧源包，不继承为本次通过数。
 
-本次以 0.73.1 源码继续，已有真实 SkillSpector 静态验证记录保留在 0.73.1 源包；没有把此前的通过数继承成本次检查。当前实际宿主、解析器、UI 和打包检查见本版摘要。
+当前环境没有 Docker Engine，Docker 诊断和效果测试的命令、清理与生命周期由协议替身验证；真实容器、目标模型及鉴权仍需部署机验收。自检仅证明所检查的工具协议，不是 Skill 安全证书，也不是 Agent 效果评测。
 
 <a id="video-build-tmpfs-investigation-2026-11-08"></a>
 ## video-build 1.4.0 构建失败调查归档（2026-11-08）

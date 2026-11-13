@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Control API (RDCA)",
-    "version": "0.74.0",
+    "version": "0.75.0",
     "description": "RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter；附加 UHP /v1 入口共用任务核心，具体范围与限制见 docs/UHP.md，不声明完整规范兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。0.61.0 起日常会话与应用任务仅接受 Codex，Kun 用于维护、轨迹问答及保留的研究 API；普通 Kun 提交返回 kun_maintenance_only。当前应用接入、错误、幂等及示例见 docs/API-V1.md。"
   },
   "servers": [
@@ -28282,6 +28282,617 @@
           }
         }
       }
+    },
+    "/skill-center/import": {
+      "post": {
+        "operationId": "post_skill_center_import",
+        "summary": "从本地 ZIP 或文件夹取得固定快照",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^([A-Za-z0-9_-]{1,64})?$"
+            },
+            "description": "可选安全显示名称，不作为上传路径；省略或空值时采用简单 frontmatter name，无法采用时以内容摘要生成名称。"
+          }
+        ],
+        "description": "管理员专用，沿用宿主认证、来源与主机检查。不向应用或成员凭据开放；不接受任意主机路径。获取固定内容与安装是独立动作。",
+        "responses": {
+          "200": {
+            "description": "成功；取得快照不代表已安装或已证明安全。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillLocalImportResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数、范围、媒体类型、完整 Skill 结构、路径或名称无效。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员或既有范围权限不允许。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "工作区、运行环境或已安装技能不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "快照库已达上限或后台状态冲突。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "上传请求、解压后内容或文件数量超限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "快照或元数据保存失败。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "后台正在停止。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；失败不产生安全通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "最多 34 MiB 请求封装，完整内容最多 32 MiB、1000 文件。根 SKILL.md 或一层外包装目录；拒绝归档声明的链接、特殊文件和不安全路径。",
+          "content": {
+            "application/zip": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string",
+                  "format": "binary"
+                },
+                "maxProperties": 1000,
+                "description": "每个字段名为文件完整相对路径，保持目录结构。浏览器上传不携带原始 POSIX 权限，沿用 #! 首行推断执行位的规则；ZIP 尽量保留声明的权限。"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/installed": {
+      "get": {
+        "operationId": "get_skill_center_installed",
+        "summary": "枚举已安装技能快照候选",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "instanceId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "project",
+                "instance"
+              ],
+              "default": "project"
+            }
+          }
+        ],
+        "description": "管理员专用，沿用宿主认证、来源与主机检查。不向应用或成员凭据开放；不接受任意主机路径。获取固定内容与安装是独立动作。",
+        "responses": {
+          "200": {
+            "description": "成功；取得快照不代表已安装或已证明安全。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillInstalledList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数、范围、媒体类型、完整 Skill 结构、路径或名称无效。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员或既有范围权限不允许。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "工作区、运行环境或已安装技能不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "快照库已达上限或后台状态冲突。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "上传请求、解压后内容或文件数量超限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "快照或元数据保存失败。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "后台正在停止。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；失败不产生安全通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/from-installed": {
+      "post": {
+        "operationId": "post_skill_center_from_installed",
+        "summary": "从已安装完整目录取得固定快照",
+        "x-administrator-only": true,
+        "parameters": [],
+        "description": "管理员专用，沿用宿主认证、来源与主机检查。不向应用或成员凭据开放；不接受任意主机路径。获取固定内容与安装是独立动作。 在既有技能锁内完整读取目标目录、附件与执行位，解除读取锁后生成固定快照；不修改或重新安装原目录。",
+        "responses": {
+          "200": {
+            "description": "成功；取得快照不代表已安装或已证明安全。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillLocalImportResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数、范围、媒体类型、完整 Skill 结构、路径或名称无效。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员或既有范围权限不允许。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "工作区、运行环境或已安装技能不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "快照库已达上限或后台状态冲突。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "上传请求、解压后内容或文件数量超限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "快照或元数据保存失败。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "后台正在停止。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；失败不产生安全通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkillInstalledSnapshotInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/diagnostics": {
+      "get": {
+        "operationId": "get_skill_center_diagnostics",
+        "summary": "读取最近工具诊断证据",
+        "x-administrator-only": true,
+        "parameters": [],
+        "description": "管理员专用，沿用宿主认证、来源与主机检查，不开放给应用和成员凭据。 仅读取对象存储及已保存的清理状态，不执行命令、不创建或检查 Docker 容器、不自动重跑探测。",
+        "responses": {
+          "200": {
+            "description": "已保存的诊断证据或本次显式诊断结果；请检查 overall 及各项状态，不将未知或缺失视为通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SkillDiagnostic"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "无效诊断目标、实例参数或请求。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "已有测试、诊断或尚未确认的容器清理；先处理既有任务。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "诊断证据或关联任务保存失败。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "后台正在停止；不自动退回宿主执行 Skill-Up。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；不会形成工具、模型或用户 Skill 的通过证据。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "post_skill_center_diagnostics",
+        "summary": "显式执行可信工具诊断",
+        "x-administrator-only": true,
+        "parameters": [],
+        "description": "管理员专用，沿用宿主认证、来源与主机检查，不开放给应用和成员凭据。 用户明确触发后才执行版本与程序提供的 canary，受限输出与取消／超时；已接入版本窗口为 SkillSpector 2.13.x、Skill-Up 0.15.x。Skill-Up 只在已固定本机镜像的独立无网络容器内运行 --version 和可信 eval.yaml validate，不运行 Agent 或模型、不接受任意命令，也不直接处理用户 YAML。共享效果测试执行槽；清理未确认时阻断新任务并返回 cleanupJobId，可通过既有 check-jobs cancel 重试清理。工具未安装、不兼容、探测失败及未知能力通过结构化检查分别保留，通常仍为 HTTP 200 的诊断结果。",
+        "responses": {
+          "200": {
+            "description": "已保存的诊断证据或本次显式诊断结果；请检查 overall 及各项状态，不将未知或缺失视为通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillDiagnostic"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "无效诊断目标、实例参数或请求。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "已有测试、诊断或尚未确认的容器清理；先处理既有任务。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "诊断证据或关联任务保存失败。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "后台正在停止；不自动退回宿主执行 Skill-Up。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；不会形成工具、模型或用户 Skill 的通过证据。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkillDiagnosticRequest"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -41323,7 +41934,8 @@
             "type": "string"
           },
           "packId": {
-            "type": "string"
+            "type": "string",
+            "description": "普通效果任务关联用户快照；工具诊断的内部 canary 清理任务为空字符串。"
           },
           "instanceId": {
             "type": "string"
@@ -41356,14 +41968,30 @@
             "type": "string"
           },
           "digest": {
-            "type": "string",
-            "pattern": "^sha256:[a-f0-9]{64}$",
-            "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$",
+                "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+              },
+              {
+                "const": ""
+              }
+            ],
+            "description": "普通效果任务必须有内容身份；仅内部工具诊断 canary 任务为空，不可用作用户 Skill 或回归通过证据。"
           },
           "suiteDigest": {
-            "type": "string",
-            "pattern": "^sha256:[a-f0-9]{64}$",
-            "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$",
+                "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+              },
+              {
+                "const": ""
+              }
+            ],
+            "description": "普通效果任务必须有内容身份；仅内部工具诊断 canary 任务为空，不可用作用户 Skill 或回归通过证据。"
           },
           "imageId": {
             "type": "string",
@@ -41417,7 +42045,7 @@
           "cleanupPending"
         ],
         "additionalProperties": false,
-        "description": "执行状态与质量结论分离。completed 表示报告或有效校验结果已取得，仍需检查报告 PASS/FAIL/ERROR。exitCode=-1 表示尚无确定退出码。cleanupPending=true 或 cleanupError 非空表示容器清理未确认，执行槽继续阻断；接受取消不代表清理已完成，终态有 cleanupError 可调用 cancel 重试。重启在途任务标记 interrupted，不自动重跑，遗留清理失败继续阻断。"
+        "description": "执行状态与质量结论分离。completed 表示报告或有效校验结果已取得，仍需检查报告 PASS/FAIL/ERROR。exitCode=-1 表示尚无确定退出码。cleanupPending=true 或 cleanupError 非空表示容器清理未确认，执行槽继续阻断；接受取消不代表清理已完成，终态有 cleanupError 可调用 cancel 重试。重启在途任务标记 interrupted，不自动重跑，遗留清理失败继续阻断。 工具诊断可能使用内部 canary 任务承载容器清理，packId/digest/suiteDigest 为空；action 仍为 validate，不对外接受 version 等内部操作，不产生用户效果报告。"
       },
       "SkillCheckReportRecord": {
         "type": "object",
@@ -41663,6 +42291,226 @@
         ],
         "additionalProperties": false,
         "description": "已有受管 Docker 制作环境候选与 Docker 可用性；available 不证明镜像内 Skill-Up、Agent、模型或用例已经验证。"
+      },
+      "SkillLocalImportResult": {
+        "type": "object",
+        "properties": {
+          "pack": {
+            "$ref": "#/components/schemas/SkillPack"
+          },
+          "scan": {
+            "$ref": "#/components/schemas/SkillScanReport"
+          }
+        },
+        "required": [
+          "pack",
+          "scan"
+        ],
+        "additionalProperties": false,
+        "description": "本地上传或已安装目录读取所得固定快照及内置扫描。风险或未覆盖内容可暂存；不会自动安装、启用或执行 Skill。revision 是路径、字节与执行位的内容摘要，sourceUrl 明确标识 local-upload:// 或 rundesk:// 来源，不伪造市场版本。"
+      },
+      "SkillInstalledItem": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "SkillInstalledList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkillInstalledItem"
+            },
+            "maxItems": 1000
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "instance",
+              "project"
+            ]
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "items",
+          "workspaceId",
+          "instanceId",
+          "scope",
+          "truncated",
+          "warnings"
+        ],
+        "additionalProperties": false,
+        "description": "枚举所选受管范围内可供取得快照的名称；不返回主机目录，不在列表阶段读取所有文件。最多 1000 个名称或检查 10000 个目录条目；达到限制时 truncated=true 并保留 warnings。读取整个技能时仍需完整路径、文件和内容验证。"
+      },
+      "SkillInstalledSnapshotInput": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "instanceId": {
+            "type": "string",
+            "default": "default"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "project",
+              "instance"
+            ],
+            "default": "project"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          }
+        },
+        "required": [
+          "workspaceId",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "SkillDiagnosticCheck": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "missing",
+              "incompatible",
+              "failed",
+              "unknown",
+              "skipped"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "durationMs": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "status",
+          "message"
+        ],
+        "additionalProperties": false,
+        "description": "本次一项受控证据。ok 仅覆盖该项说明；unknown 表示未验证，skipped 表示按范围未执行。不能把版本匹配、命令存在或 canary 成功当作模型认证或用户 Skill 安全证书。"
+      },
+      "SkillDiagnostic": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "target": {
+            "type": "string",
+            "enum": [
+              "skillspector",
+              "skillup"
+            ]
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "imageId": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$"
+          },
+          "overall": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "unavailable",
+              "incompatible",
+              "failed",
+              "incomplete"
+            ]
+          },
+          "checkedAt": {
+            "type": "string"
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkillDiagnosticCheck"
+            },
+            "minItems": 1
+          },
+          "cleanupJobId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          }
+        },
+        "required": [
+          "id",
+          "target",
+          "overall",
+          "checkedAt",
+          "checks"
+        ],
+        "additionalProperties": false,
+        "description": "保存的工具诊断证据。SkillSpector ready 仅指主机静态版本和可信单文件报告协议通过，LLM 固定 skipped；Skill-Up 即使版本和可信配置校验通过，模型／认证／网络仍 unknown，整体 incomplete。只保留每个 target/instance 的最近结果。cleanupJobId 引用内部 canary 清理任务，不代表用户 Skill 效果报告。"
+      },
+      "SkillDiagnosticRequest": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string",
+            "enum": [
+              "skillspector",
+              "skillup"
+            ]
+          },
+          "instanceId": {
+            "type": "string",
+            "description": "Skill-Up 诊断选择已有受管 Docker 环境；SkillSpector 为主机命令，不接受非空 instanceId。"
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "additionalProperties": false
       }
     }
   }

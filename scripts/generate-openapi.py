@@ -1462,6 +1462,97 @@ for method,path,summary,body,response in skill_check_routes:
   op['description']+=' baseline 可来自另一快照；candidate 必须属于当前快照且摘要匹配。自动回归门禁仅支持纯根 SKILL.md 修订；其他文件、镜像、模型、配置和输入身份须相同，且须有可核对的内建规则证据。身份变化或脚本／Agent／未知 Judge 不能核实时，明细统一 unknown，整体不可比较或 incomplete。'
  paths.setdefault(path,{})[method]=op
 
+
+# Local acquisition always stages an immutable pack; it does not install it.
+schemas['SkillLocalImportResult']=obj({'pack':ref('SkillPack'),'scan':ref('SkillScanReport')},['pack','scan'])
+schemas['SkillLocalImportResult']['description']='本地上传或已安装目录读取所得固定快照及内置扫描。风险或未覆盖内容可暂存；不会自动安装、启用或执行 Skill。revision 是路径、字节与执行位的内容摘要，sourceUrl 明确标识 local-upload:// 或 rundesk:// 来源，不伪造市场版本。'
+schemas['SkillInstalledItem']=obj({'name':st(pattern=r'^[A-Za-z0-9_-]{1,64}$')},['name'])
+schemas['SkillInstalledList']=obj({
+ 'items':dict(arr(ref('SkillInstalledItem')),maxItems=1000),'workspaceId':st(),'instanceId':st(),
+ 'scope':st(enum=['instance','project']),'truncated':bool_,'warnings':arr(st()),
+},['items','workspaceId','instanceId','scope','truncated','warnings'])
+schemas['SkillInstalledList']['description']='枚举所选受管范围内可供取得快照的名称；不返回主机目录，不在列表阶段读取所有文件。最多 1000 个名称或检查 10000 个目录条目；达到限制时 truncated=true 并保留 warnings。读取整个技能时仍需完整路径、文件和内容验证。'
+schemas['SkillInstalledSnapshotInput']=obj({
+ 'workspaceId':st(minLength=1),'instanceId':st(default='default'),
+ 'scope':st(enum=['project','instance'],default='project'),
+ 'name':st(pattern=r'^[A-Za-z0-9_-]{1,64}$'),
+},['workspaceId','name'])
+local_skill_routes=[
+ ('post','/skill-center/import','从本地 ZIP 或文件夹取得固定快照',None,ref('SkillLocalImportResult')),
+ ('get','/skill-center/installed','枚举已安装技能快照候选',None,ref('SkillInstalledList')),
+ ('post','/skill-center/from-installed','从已安装完整目录取得固定快照',ref('SkillInstalledSnapshotInput'),ref('SkillLocalImportResult')),
+]
+for method,path,summary,body,response in local_skill_routes:
+ params=[]
+ if path.endswith('/import'):
+  params.append({'name':'name','in':'query','required':False,'schema':st(pattern=r'^([A-Za-z0-9_-]{1,64})?$'),
+   'description':'可选安全显示名称，不作为上传路径；省略或空值时采用简单 frontmatter name，无法采用时以内容摘要生成名称。'})
+ if path.endswith('/installed'):
+  params += [{'name':'workspaceId','in':'query','required':True,'schema':st(minLength=1)},
+   {'name':'instanceId','in':'query','required':False,'schema':st(default='default')},
+   {'name':'scope','in':'query','required':False,'schema':st(enum=['project','instance'],default='project')}]
+ op={'operationId':method+'_'+re.sub(r'[^A-Za-z0-9]+','_',path).strip('_'),'summary':summary,
+  'x-administrator-only':True,'parameters':params,
+  'description':'管理员专用，沿用宿主认证、来源与主机检查。不向应用或成员凭据开放；不接受任意主机路径。获取固定内容与安装是独立动作。',
+  'responses':{'200':{'description':'成功；取得快照不代表已安装或已证明安全。','content':{'application/json':{'schema':response}}},
+   **{code:{'description':message,'content':{'application/json':{'schema':ref('SkillCenterError')}}} for code,message in {
+    '400':'参数、范围、媒体类型、完整 Skill 结构、路径或名称无效。',
+    '401':'需要宿主认证。','403':'仅管理员或既有范围权限不允许。','404':'工作区、运行环境或已安装技能不存在。',
+    '409':'快照库已达上限或后台状态冲突。','413':'上传请求、解压后内容或文件数量超限。',
+    '500':'快照或元数据保存失败。','503':'后台正在停止。','default':'结构化错误；失败不产生安全通过。'}.items()}}}
+ if body is not None:op['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
+ if path.endswith('/import'):
+  op['requestBody']={'required':True,'description':'最多 34 MiB 请求封装，完整内容最多 32 MiB、1000 文件。根 SKILL.md 或一层外包装目录；拒绝归档声明的链接、特殊文件和不安全路径。',
+   'content':{'application/zip':{'schema':st(format='binary')},'multipart/form-data':{'schema':{'type':'object','additionalProperties':st(format='binary'),'maxProperties':1000,
+     'description':'每个字段名为文件完整相对路径，保持目录结构。浏览器上传不携带原始 POSIX 权限，沿用 #! 首行推断执行位的规则；ZIP 尽量保留声明的权限。'}}}}
+ if path.endswith('/from-installed'):
+  op['description']+=' 在既有技能锁内完整读取目标目录、附件与执行位，解除读取锁后生成固定快照；不修改或重新安装原目录。'
+ paths.setdefault(path,{})[method]=op
+
+
+# Explicit trusted-canary diagnostics are not user-Skill scans or model tests.
+schemas['SkillDiagnosticCheck']=obj({
+ 'id':st(),'label':st(),'status':st(enum=['ok','missing','incompatible','failed','unknown','skipped']),
+ 'message':st(),'version':st(),'durationMs':dict(integer,minimum=0),
+},['id','label','status','message'])
+schemas['SkillDiagnosticCheck']['description']='本次一项受控证据。ok 仅覆盖该项说明；unknown 表示未验证，skipped 表示按范围未执行。不能把版本匹配、命令存在或 canary 成功当作模型认证或用户 Skill 安全证书。'
+schemas['SkillDiagnostic']=obj({
+ 'id':skill_pack_id,'target':st(enum=['skillspector','skillup']),'instanceId':st(),
+ 'imageId':st(pattern=r'^sha256:[a-f0-9]{64}$'),
+ 'overall':st(enum=['ready','unavailable','incompatible','failed','incomplete']),
+ 'checkedAt':st(),'checks':dict(arr(ref('SkillDiagnosticCheck')),minItems=1),
+ 'cleanupJobId':skill_pack_id,
+},['id','target','overall','checkedAt','checks'])
+schemas['SkillDiagnostic']['description']='保存的工具诊断证据。SkillSpector ready 仅指主机静态版本和可信单文件报告协议通过，LLM 固定 skipped；Skill-Up 即使版本和可信配置校验通过，模型／认证／网络仍 unknown，整体 incomplete。只保留每个 target/instance 的最近结果。cleanupJobId 引用内部 canary 清理任务，不代表用户 Skill 效果报告。'
+schemas['SkillDiagnosticRequest']=obj({
+ 'target':st(enum=['skillspector','skillup']),
+ 'instanceId':st(description='Skill-Up 诊断选择已有受管 Docker 环境；SkillSpector 为主机命令，不接受非空 instanceId。'),
+},['target'])
+# Internal canary tasks have no user pack or suite. They remain visible only as
+# lifecycle evidence when an explicit cleanup retry uses the shared job route.
+schemas['SkillCheckJob']['properties']['packId']['description']='普通效果任务关联用户快照；工具诊断的内部 canary 清理任务为空字符串。'
+for name in ['digest','suiteDigest']:
+ schemas['SkillCheckJob']['properties'][name]={'oneOf':[skill_digest,{'const':''}],
+  'description':'普通效果任务必须有内容身份；仅内部工具诊断 canary 任务为空，不可用作用户 Skill 或回归通过证据。'}
+schemas['SkillCheckJob']['description']+=' 工具诊断可能使用内部 canary 任务承载容器清理，packId/digest/suiteDigest 为空；action 仍为 validate，不对外接受 version 等内部操作，不产生用户效果报告。'
+for method,path,summary,body,response in [
+ ('get','/skill-center/diagnostics','读取最近工具诊断证据',None,obj({'items':arr(ref('SkillDiagnostic'))},['items'])),
+ ('post','/skill-center/diagnostics','显式执行可信工具诊断',ref('SkillDiagnosticRequest'),ref('SkillDiagnostic')),
+]:
+ op={'operationId':method+'_'+re.sub(r'[^A-Za-z0-9]+','_',path).strip('_'),'summary':summary,'x-administrator-only':True,'parameters':[],
+  'description':'管理员专用，沿用宿主认证、来源与主机检查，不开放给应用和成员凭据。',
+  'responses':{'200':{'description':'已保存的诊断证据或本次显式诊断结果；请检查 overall 及各项状态，不将未知或缺失视为通过。','content':{'application/json':{'schema':response}}},
+   **{code:{'description':message,'content':{'application/json':{'schema':ref('SkillCenterError')}}} for code,message in {
+    '400':'无效诊断目标、实例参数或请求。','401':'需要宿主认证。','403':'仅管理员。',
+    '429':'已有测试、诊断或尚未确认的容器清理；先处理既有任务。','500':'诊断证据或关联任务保存失败。',
+    '503':'后台正在停止；不自动退回宿主执行 Skill-Up。','default':'结构化错误；不会形成工具、模型或用户 Skill 的通过证据。'}.items()}}}
+ if body is not None:op['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
+ if method=='get':
+  op['description']+=' 仅读取对象存储及已保存的清理状态，不执行命令、不创建或检查 Docker 容器、不自动重跑探测。'
+ else:
+  op['description']+=' 用户明确触发后才执行版本与程序提供的 canary，受限输出与取消／超时；已接入版本窗口为 SkillSpector 2.13.x、Skill-Up 0.15.x。Skill-Up 只在已固定本机镜像的独立无网络容器内运行 --version 和可信 eval.yaml validate，不运行 Agent 或模型、不接受任意命令，也不直接处理用户 YAML。共享效果测试执行槽；清理未确认时阻断新任务并返回 cleanupJobId，可通过既有 check-jobs cancel 重试清理。工具未安装、不兼容、探测失败及未知能力通过结构化检查分别保留，通常仍为 HTTP 200 的诊断结果。'
+ paths.setdefault(path,{})[method]=op
+
 spec={'openapi':'3.1.0','info':{'title':'RunDesk Control API (RDCA)','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter；附加 UHP /v1 入口共用任务核心，具体范围与限制见 docs/UHP.md，不声明完整规范兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。0.61.0 起日常会话与应用任务仅接受 Codex，Kun 用于维护、轨迹问答及保留的研究 API；普通 Kun 提交返回 kun_maintenance_only。当前应用接入、错误、幂等及示例见 docs/API-V1.md。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'},'BuildTaskCapability':{'type':'http','scheme':'bearer','description':'仅构建助手MCP接受的短期任务能力，不是管理员或应用令牌。'},'SetupTaskCapability':{'type':'http','scheme':'bearer','description':'仅初始化修复MCP接受的短期任务能力，不是管理员或应用令牌。'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
 print(f'{len(paths)} paths, {sum(len(v) for v in paths.values())} operations')
