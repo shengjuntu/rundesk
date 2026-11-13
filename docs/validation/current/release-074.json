@@ -1,0 +1,100 @@
+{
+  "version": "0.74.0",
+  "status": "passed",
+  "date": "2026-11-12",
+  "baseline": {
+    "version": "0.73.1",
+    "sourceSHA256": "b01f15ae5d5fa53e72240fd50ce4568bbd0f30e13681129cc3e5b3abcd423725"
+  },
+  "scope": "Native Skill-Up effect-check UI/API, container-only validation/execution, bounded report ingestion and conservative cross-version regression comparisons.",
+  "toolchain": {
+    "go": "go1.25.12",
+    "host": "linux/amd64",
+    "buildCGO": false
+  },
+  "sourceFiles": 874,
+  "skillUp": {
+    "version": "0.15.0",
+    "commit": "ffba9031129271260026dbb2a823af23d0505100",
+    "archiveSHA256": "d5f0591d8a357816cc2c2d5b7303f89caabfe7297bc2f85123631e5cbf40747f",
+    "archiveBytes": 23113774,
+    "installation": "Official Linux amd64 release binary, checksum verified; not redistributed in source."
+  },
+  "checks": [
+    {
+      "check": "go test ./... -count=1 -timeout=300s",
+      "result": "passed",
+      "appSeconds": 172.061,
+      "note": "Opt-in external CLI tests skip by default. Docker execution uses explicit command/protocol fixtures, not a daemon."
+    },
+    {
+      "check": "Focused application and parser race regression",
+      "result": "passed",
+      "command": "go test -race ./internal/app ./internal/skillcheck -run TestSkillCheck|TestParse|TestCompare|TestValidation|TestValidate -count=1 -timeout=120s"
+    },
+    {
+      "check": "Final custom-Judge identifier regression",
+      "result": "passed",
+      "note": "After the host regression, a final narrow guard rejects all unverified judge: identities, including a malicious ID ending in :rule. The affected cross-version comparison test passed again under race."
+    },
+    {
+      "check": "go vet ./...",
+      "result": "passed"
+    },
+    {
+      "check": "Real official CLI version/validate/run protocol",
+      "result": "passed",
+      "engine": "official controlled custom-engine mock",
+      "cases": 1,
+      "declaredOutcome": "PASS",
+      "modelIdentityKnown": false,
+      "note": "Clean HOME and explicit mock command; no LLM, private credentials or third-party skill executed. Runtime result.json was read by the adapter."
+    },
+    {
+      "check": "Real CLI adapter opt-in test",
+      "result": "passed",
+      "command": "RUNDESK_TEST_SKILLUP_BIN=<official binary> RUNDESK_TEST_SKILLUP_FIXTURE_DIR=<trusted fixture> RUNDESK_TEST_SKILLUP_REPORT=<actual result.json> go test ./internal/skillcheck -run ^TestLiveOfficialValidationAndResultProtocol$ -v -count=1",
+      "note": "Validate success/cases=1; normalized custom engine result has unknown model identity and cannot self-attest a passing comparison."
+    },
+    {
+      "check": "Native JavaScript behavior and syntax",
+      "result": "passed",
+      "suites": [
+        "skill-checks.cjs",
+        "skill-center.cjs",
+        "workspace-conversations.cjs",
+        "conversation-rounds.cjs"
+      ],
+      "note": "JSDOM: explicit consent/default no network, fixed snapshot, report import trust, per-case variants, cross-version selection, cleanupPending across cancellation/restart, failed cleanup retry and context/draft preservation. No browser geometry acceptance."
+    },
+    {
+      "check": "Linux amd64 and Windows amd64 CGO-disabled builds",
+      "result": "passed",
+      "note": "Final source and embedded UI. Linux binary reports RunDesk 0.74.0; Windows cross-compiled only."
+    },
+    {
+      "check": "Compiled host HTTP and static-asset smoke",
+      "result": "passed",
+      "note": "Disposable demo service: version/capability, native effect-check JS/CSS, global reports route, unavailable Docker not presented as ready."
+    },
+    {
+      "check": "OpenAPI generation/schema parity/admin-only routes/document links",
+      "result": "passed",
+      "paths": 268,
+      "operations": 321
+    },
+    {
+      "check": "Complete source SHA256SUMS manifest and release hygiene",
+      "result": "passed"
+    }
+  ],
+  "limits": [
+    "No Docker CLI/daemon is available in this verification environment. Actual container startup, cgroups, mounts, cleanup and daemon behavior require target-machine acceptance.",
+    "No real LLM, Codex/Claude/Qoder model evaluation, script/Agent Judge effect or business workload is accepted. The official mock only verifies protocol transport.",
+    "Windows/macOS runtime and real-browser visual layout have not been accepted.",
+    "Automatic regression gates are deliberately limited to root SKILL.md changes, identical other file/image/model/configuration/input identities and built-in grading/gates. Unknown/script/Agent judge identities cannot establish a passing gate.",
+    "Imported reports are external_unverified; they never self-attest source/suite identity and do not change the security installation gate.",
+    "No host execution fallback, credential auto-mount, automatic test/repair, marketplace publication or runtime security enforcement is included.",
+    "Existing real SkillSpector and marketplace verification remains in the 0.73.1 archive, separate from this release; those live checks were not claimed as rerun."
+  ]
+}

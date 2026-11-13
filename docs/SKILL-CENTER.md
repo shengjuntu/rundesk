@@ -1,6 +1,6 @@
 # 技能中心 / Skill center
 
-RunDesk 0.73 的技能中心供管理员搜索公开 Skill、获取固定版本的完整目录、查看静态检查报告，再安装到当前工作区或运行环境。搜索和内置检查由 Go 实现，页面使用随程序嵌入的 HTML、CSS 和 JavaScript，无需前端构建，也不调用 Skills Manager 或 `npx skills add`。
+RunDesk 0.74.0 的技能中心供管理员搜索公开 Skill、获取固定版本的完整目录、查看静态检查报告，再安装到当前工作区或运行环境。搜索和内置检查由 Go 实现，页面使用随程序嵌入的 HTML、CSS 和 JavaScript，无需前端构建，也不调用 Skills Manager 或 `npx skills add`。
 
 技能中心是安装前的开发与管理入口。获取、预览和内置检查不会执行 Skill 代码；安装后 Agent 使用 Skill 时的行为仍取决于目标运行环境。
 
@@ -9,7 +9,7 @@ RunDesk 0.73 的技能中心供管理员搜索公开 Skill、获取固定版本�
 1. 以管理员身份打开导航中的“技能中心”，在“搜索技能”中输入关键词并选择来源，也可直接填写支持的源码链接。
 2. 点击获取源码。仓库包含多个 `SKILL.md` 时，先选择一个具体技能目录；来源要求转到 GitHub 时，按提示继续获取已固定版本的源码。
 3. 在详情页核对来源、固定版本、内容摘要和完整文件清单，选择文件预览，阅读自动生成的 Go 快速检查报告。
-4. 如已部署外部 SkillSpector，可手动启动额外检查。检查可以取消；离开页面不会把后台任务误记为成功。
+4. 如已部署外部 SkillSpector，可手动启动额外检查。详情页可切换“内置快速检查”和“SkillSpector”各自保存的报告；刷新或重新打开详情会恢复服务端记录的在途任务。检查可以取消，离开页面不会把后台任务误记为成功。
 5. 点击“安装到工作区”，核对当前工作区、运行环境、目录名和范围。默认仅当前项目，也可选择当前运行环境；替换同名技能需要另行勾选。
 6. 有发现项或检查未完成时，阅读报告，勾选确认并填写复核理由，再决定是否继续安装。服务端要求理由至少 4 个字符、最多 2000 字节。
 
@@ -48,7 +48,7 @@ Windows 文件系统不保留 POSIX 执行位，固定快照的清单保留来�
 
 内置快速检查扫描文本中的 12 类信号：指令覆盖、隐瞒行为、凭据访问、下载后执行、递归破坏、权限弱化、持久化、可能的数据外传、环境变量收集、编码后动态执行、内嵌密钥和父目录引用。它不执行脚本，也不进行完整语义、数据流、图片内容或依赖漏洞分析。普通网络请求不会单独判为数据外传。
 
-报告包含引擎与版本、内容摘要、严重程度、规则编号、文件和行号、脱敏证据、原因与建议，以及已检查和跳过文件的数量及原因。页面可按严重程度筛选并下载规范化 JSON。凭据形式的证据会尽量脱敏，原始外部报告不直接对页面开放；源码预览仍是技能本身的完整文本内容。
+报告按引擎持久保存，包含引擎与版本、内容摘要、严重程度、规则编号、文件和行号、脱敏证据、原因与建议，以及已检查和跳过文件的数量及原因。详情页切换引擎时读取对应报告，不会把内置报告当成外部工具结果；页面可按严重程度筛选并下载规范化 JSON。凭据形式的证据会尽量脱敏，原始外部报告不直接对页面开放；源码预览仍是技能本身的完整文本内容。
 
 | 报告状态 | 含义与界面处理 |
 | --- | --- |
@@ -86,9 +86,65 @@ skillspector scan <受限的临时目录> --format json --fail-on-incomplete --n
 
 临时目录由固定快照复制生成，不把用户工作区作为扫描器工作目录。取消与超时会清理扫描进程及其普通子进程：Linux/macOS 使用独立进程组，Windows 使用 Job Object；这不是执行不可信程序的操作系统沙箱。外部进程默认最多运行 2 分钟，JSON 输出最多 8 MiB，错误日志最多 64 KiB。当前页面固定关闭 LLM；管理员 API 的 `allowLLM: true` 可省略 `--no-llm`，依赖与模型需自行准备。`--no-llm` 仅关闭该工具的 LLM 层，不保证外部工具完全离线，例如其依赖检查可能访问漏洞数据库。
 
-适配器同时读取工具的 `risk_assessment`、`execution_successful` 与 `analysis_completeness`。退出码为 0 不会自动变成“安全”；`CAUTION` 和 `DO_NOT_INSTALL` 都需要复核，缺少完整度或执行信息会标记不完整。仅在工具明确返回完整、成功的 `SAFE` 且没有发现项时，才归一化为 `no_findings`。
+适配器同时读取工具的 `risk_assessment`、`execution_successful` 与 `analysis_completeness`。退出码为 0 不会自动变成“安全”；`CAUTION` 和 `DO_NOT_INSTALL` 都需要复核，缺少完整度或执行信息会标记不完整。只有工具明确返回完整、成功的 `SAFE`、没有发现项，并且实际文件覆盖核对通过时，才归一化为 `no_findings`。
 
-本次开发没有安装并实际运行 NVIDIA SkillSpector。外部适配部分使用协议格式 fixture 和模拟 CLI 验证参数、报告解析、异常与取消处理；这些验证不能代替目标部署上的真实工具、版本、依赖与模型检查。
+覆盖核对同时检查文件数量、完整／部分／未检查计数、`ledger_exceptions` 与 `scope_exclusions`，并把工具的组件清单与准备的实际目录逐项比对。零文件、零已检查文件、账本矛盾、遗漏文件、无效或重复路径以及明确的范围排除，都不能算完整通过。上游的 `coverage_percent: 100` 不能覆盖这些缺口；二进制已登记但未做内容分析时，仍保留未检查文件与原因，不会显示成“全部已检查”。
+
+### 在运行 RunDesk 的主机安装
+
+本版固定验证 [NVIDIA SkillSpector 2.13.4](https://github.com/NVIDIA/SkillSpector/releases/tag/v2.13.4)，源码提交为 `54824463814a0be01360792523ec7245a69190fc`。该版要求 Python `>=3.12,<3.15`；使用独立虚拟环境，不向 RunDesk 的 Go 源码、Go 依赖或系统 Python 中复制这些包。以下命令假定已安装 `uv`；本次 Linux 验证实际使用 `uv pip install` 安装了同一固定提交归档。
+
+Linux 示例：
+
+```sh
+skillspector_env="$HOME/.local/share/rundesk-tools/skillspector-2.13.4"
+uv venv --python 3.12 "$skillspector_env"
+uv pip install --python "$skillspector_env/bin/python" \
+  "https://github.com/NVIDIA/SkillSpector/archive/54824463814a0be01360792523ec7245a69190fc.tar.gz"
+"$skillspector_env/bin/python" -c "from importlib.metadata import version; print(version('skillspector'))"
+export RUNDESK_SKILLSPECTOR_BIN="$skillspector_env/bin/skillspector"
+```
+
+将变量配置给实际启动 RunDesk 的进程。若使用 systemd，在该服务的环境设置中填写服务账户可访问的绝对路径，例如：
+
+```ini
+[Service]
+Environment="RUNDESK_SKILLSPECTOR_BIN=/home/rundesk/.local/share/rundesk-tools/skillspector-2.13.4/bin/skillspector"
+```
+
+按现有部署方式重载服务配置并重启 RunDesk；在交互终端执行 `export` 不会修改已运行的服务。重新打开技能详情，确认页面发现了命令，再启动一次静态检查以确认依赖和报告协议确实可用。
+
+Windows PowerShell 示例：
+
+```powershell
+$SkillSpectorEnv = Join-Path $env:LOCALAPPDATA "RunDesk\tools\skillspector-2.13.4"
+uv venv --python 3.12 $SkillSpectorEnv
+uv pip install --python (Join-Path $SkillSpectorEnv "Scripts\python.exe") `
+  "https://github.com/NVIDIA/SkillSpector/archive/54824463814a0be01360792523ec7245a69190fc.tar.gz"
+& (Join-Path $SkillSpectorEnv "Scripts\python.exe") -c "from importlib.metadata import version; print(version('skillspector'))"
+$env:RUNDESK_SKILLSPECTOR_BIN = Join-Path $SkillSpectorEnv "Scripts\skillspector.exe"
+```
+
+随后从该 PowerShell 启动 RunDesk；已有进程需重启。若 RunDesk 作为 Windows 服务运行，将变量设置到该服务的实际启动环境，并确保服务账户有权访问虚拟环境后再重启。此配置示例未在 Windows 实机验收。浏览器运行在 Windows、RunDesk 服务运行在 Linux 时，应使用 Linux 主机的可执行路径。
+
+### 本版真实静态验证
+
+在 Linux 独立虚拟环境中安装并运行了上述真实 SkillSpector，使用默认关闭 LLM 的静态参数检查三个受控样本：
+
+| 样本 | 真实 CLI 报告 | 结论边界 |
+| --- | --- | --- |
+| 普通文本 Skill | `SAFE`，执行成功且范围完整 | 在本次静态分析覆盖内未发现问题 |
+| 含凭据外传命令的文本及脚本 | `CAUTION`，存在高严重程度发现项 | 需要复核；样本脚本没有执行 |
+| 含不透明二进制的 Skill | `DO_NOT_INSTALL`，`is_complete: false`、范围为 `partial` | 即使原始覆盖百分比为 100，也不能当成完整检查 |
+
+这些是三个样本的真实 CLI 静态验证，不代表总体恶意召回率或安全保证，也不包含 LLM 语义层、Windows 实机或目标 Agent 执行效果验收。RunDesk 任务、报告和安装流程的实际回归结果另见[本版验证范围](VALIDATION.md)。
+
+已完成同三类样本的 RunDesk 后台任务、持久报告与安装门禁验证：普通样本可安装，外传与不完整样本返回 `skill_review_required`。在源码根目录可显式运行真实工具复验（未设置变量时该测试跳过）：
+
+```sh
+RUNDESK_TEST_SKILLSPECTOR_BIN="$RUNDESK_SKILLSPECTOR_BIN" \
+  go test ./internal/app -run '^TestSkillCenterLiveSkillSpector$' -v -count=1 -timeout=180s
+```
 
 ## 管理 API
 
@@ -110,6 +166,6 @@ skillspector scan <受限的临时目录> --format json --fail-on-incomplete --n
 
 ## 本次边界
 
-本次完成的范围是搜索、固定内容获取、目录预览、静态检查与既有范围安装。Skill-Up 的声明式用例、多引擎执行和回归门禁留待后续，不包含运行 Skill 的效果评测、自动修复或市场发布。
+搜索、固定内容获取、目录预览、静态检查与安装继续保留；0.74.0 新增独立的 [Skill-Up 效果测试](SKILL-CHECKS.md)。效果测试需显式发起，结果不等于安全结论。自动修复与市场发布仍未实现。
 
 技能中心不提供运行时流量代理、权限强制或 sidecar 防护。获取快照用于绑定源码、报告与此次安装，也没有把历史会话引用的 Skill 内容冻结成可重放快照；相关运行与存储边界仍见[存储契约](STORAGE.md)和[资源契约](RESOURCE-CONTRACTS.md)。

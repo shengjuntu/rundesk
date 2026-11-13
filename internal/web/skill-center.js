@@ -8,6 +8,7 @@ window.RunDeskSkillCenter = (() => {
   const recommendationNames = {no_findings:["未发现规则命中","No rule findings"],review:["需要人工复核","Review required"],incomplete:["检查不完整","Incomplete inspection"],SAFE:["工具建议允许","Tool recommends allowing"],CAUTION:["工具建议谨慎处理","Tool recommends caution"],DO_NOT_INSTALL:["工具不建议安装","Tool advises against installing"]};
   const severityNames = {critical:["严重","Critical"],high:["高","High"],medium:["中","Medium"],low:["低","Low"],info:["提示","Info"]};
   const metricNames = {installs:["安装量","Installs"],downloads:["下载量","Downloads"],github_stars:["GitHub stars","GitHub stars"]};
+  const reportEngines = {builtin:["Go 快速检查", "Go quick check"],skillspector:["NVIDIA SkillSpector", "NVIDIA SkillSpector"]};
   let generation = 0, searchSequence = 0, currentTab = "search", selected = "", back;
   let query = "", sourceSelection = ["clawhub", "skillsmp", "skills.sh"], searchResult = null;
   let enginesPromise, pollTimer, requestController;
@@ -52,6 +53,7 @@ window.RunDeskSkillCenter = (() => {
   function activeJob(status) { return ["queued", "running"].includes(status); }
   function close() {
     ++generation; clearTimeout(pollTimer); requestController?.abort();
+    window.RunDeskSkillChecks?.dispose();
     const target = back || {view:"conversation",route:"#conversations"};
     setProductPage(target.view); history.replaceState(null, "", target.route); return restoreProductRoute();
   }
@@ -61,6 +63,7 @@ window.RunDeskSkillCenter = (() => {
       back = {view:state.view,route:location.hash.startsWith("#skills") ? contextRoute() : location.hash || contextRoute()};
     }
     const g = ++generation; ++searchSequence; clearTimeout(pollTimer); requestController?.abort();
+    window.RunDeskSkillChecks?.dispose();
     currentTab = tab === "library" || tab === "pack" ? tab : "search"; selected = id;
     if ($("#settings")?.open) $("#settings").close();
     setProductPage("skill-center");
@@ -222,7 +225,7 @@ window.RunDeskSkillCenter = (() => {
     target.replaceChildren(el("div", {class:"skill-center-report-heading"}, el("h3", {}, tr("检查报告", "Inspection report")), reportBadge(report)));
     if (!report) { target.append(el("p", {class:"help"}, tr("尚未运行检查。", "No inspection has run."))); return; }
     const coverage = report.coverage || {};
-    target.append(meta([[tr("检查引擎", "Engine"),report.engine],[tr("引擎版本", "Engine version"),report.engineVersion],
+    target.append(meta([[tr("检查引擎", "Engine"),translated(reportEngines, report.engine)],[tr("引擎版本", "Engine version"),report.engineVersion],
       [tr("内容摘要", "Content digest"),report.digest],
       [tr("检查文件", "Files inspected"),typeof coverage.filesScanned === "number" ? `${coverage.filesScanned} / ${coverage.filesSeen ?? "?"}` : "—"],
       [tr("未检查文件", "Files not inspected"),coverage.filesSkipped ?? "—"]]),
@@ -251,6 +254,22 @@ window.RunDeskSkillCenter = (() => {
     });
     target.append(el("div", {class:"skill-center-report-toolbar"}, filter, download), list); draw();
   }
+  function renderReviewReports(target, details, fallback) {
+    const reports = [], seen = new Set();
+    const add = (value, engine) => {
+      if (!value) return;
+      const report = {...value,engine:value.engine || engine || "unknown"};
+      const key = report.engine + "\u0000" + (report.digest || details?.digest || "");
+      if (seen.has(key)) return;
+      seen.add(key); reports.push(report);
+    };
+    add(details?.report || details?.scan || fallback, "builtin");
+    for (const [engine, report] of Object.entries(details?.reports || {})) add(report, engine);
+    target.replaceChildren(...reports.map(report => {
+      const section = el("section", {class:"skill-center-report","data-review-engine":report.engine});
+      renderReport(section, report); return section;
+    }));
+  }
   async function loadEngines() {
     if (!enginesPromise) enginesPromise = api(base + "/engines").then(value => value.items || []).finally(() => { enginesPromise = null; });
     return enginesPromise;
@@ -261,15 +280,51 @@ window.RunDeskSkillCenter = (() => {
     if (installButton) installButton.disabled = active;
     if (note) note.hidden = !active;
   }
+  function packReportView(pack) {
+    const report = el("section", {class:"skill-center-report",id:"skill-center-report"});
+    const selector = el("div", {class:"actions skill-center-report-selector",role:"group","aria-label":tr("检查引擎报告", "Inspection engine reports")});
+    let engine = pack.reports?.skillspector ? "skillspector" : "builtin", pendingEngine = "";
+    const reports = () => ({builtin:pack.scan,...pack.reports});
+    function draw(preferred) {
+      const values = reports();
+      if (preferred && values[preferred]) engine = preferred;
+      if (!values[engine]) engine = values.skillspector ? "skillspector" : "builtin";
+      selector.replaceChildren(...Object.entries(reportEngines).filter(([key]) => values[key]).map(([key, label]) => {
+        const node = button(tr(...label), () => draw(key), key === engine ? "selected" : "quiet");
+        node.setAttribute("aria-pressed", String(key === engine)); node.setAttribute("data-report-engine", key);
+        return node;
+      }));
+      renderReport(report, values[engine]);
+    }
+    function pending(key, force = false) {
+      if (!reportEngines[key]) return;
+      if (!force && pendingEngine === key) return;
+      pendingEngine = key;
+      pack.reports = {...pack.reports,[key]:{engine:key,digest:pack.digest,status:"incomplete",recommendation:"incomplete",findings:[],coverage:{filesSeen:pack.files?.length || 0,filesScanned:0},warnings:[tr("本次扫描尚未完成，不能沿用先前结论。", "This scan has not completed. Its previous verdict is not applicable.")]}};
+      draw(key);
+    }
+    draw();
+    return {report,selector,pending,refresh:preferred => { pendingEngine = ""; draw(preferred); }};
+  }
+  async function refreshPackReports(pack, view, g, engine) {
+    const latest = await api(base + "/packs/" + enc(pack.id));
+    if (!still(g)) return null;
+    // A different snapshot must never inherit a report or enable installation
+    // through a response returned for an earlier page state.
+    if (latest.id !== pack.id || latest.digest !== pack.digest) throw Error(tr("技能快照已改变，请刷新详情页。", "The skill snapshot changed. Refresh its details."));
+    pack.scan = latest.scan; pack.reports = latest.reports; pack.activeJob = latest.activeJob;
+    view.refresh(engine);
+    return latest;
+  }
   async function renderPack(target, id, g) {
     target.append(el("p", {class:"help"}, tr("正在读取技能…", "Loading skill…")));
     const pack = await api(base + "/packs/" + enc(id));
     if (!still(g)) return;
-    const report = el("section", {class:"skill-center-report",id:"skill-center-report"});
-    renderReport(report, pack.scan);
+    const view = packReportView(pack);
+    if (pack.activeJob?.id && activeJob(pack.activeJob.status)) { packJobs.set(pack.id, pack.activeJob.id); view.pending(pack.activeJob.engine); }
     const job = el("div", {class:"skill-center-job",role:"status",id:"skill-center-job",hidden:true});
-    const builtin = action(tr("重新快速检查", "Run quick check"), () => startScan(pack, "builtin", job, report, g));
-    const external = action(tr("SkillSpector 静态检查", "SkillSpector static scan"), () => startScan(pack, "skillspector", job, report, g));
+    const builtin = action(tr("重新快速检查", "Run quick check"), () => startScan(pack, "builtin", job, view, g));
+    const external = action(tr("SkillSpector 静态检查", "SkillSpector static scan"), () => startScan(pack, "skillspector", job, view, g));
     external.disabled = true;
     const engineNote = el("p", {class:"help",id:"skill-center-engine-note"}, tr("正在检查扫描引擎配置…", "Checking inspection engine configuration…"));
     const files = el("nav", {class:"skill-center-files","aria-label":tr("技能文件", "Skill files")});
@@ -293,7 +348,8 @@ window.RunDeskSkillCenter = (() => {
       el("p", {class:"skill-center-notice",id:"skill-center-install-status",role:"status",hidden:true}, tr("该技能正在检查，任务结束后才能安装。", "This skill is being checked. Installation is available after the job finishes.")),
       meta([[tr("固定版本", "Pinned revision"),pack.revision],[tr("内容摘要", "Content digest"),pack.digest],[tr("获取时间", "Retrieved"),date(pack.createdAt)]]),
       el("div", {class:"skill-center-source-preview"}, files, preview)),
-      el("section", {class:"skill-center-checks"}, el("div", {class:"actions"}, builtin, external), engineNote, job, report));
+      el("section", {class:"skill-center-checks"}, el("div", {class:"actions"}, builtin, external), engineNote, job, view.selector, view.report));
+    window.RunDeskSkillChecks?.mount(target, pack, {isCurrent: () => still(g) && selected === pack.id});
     scanInstallState(pack, g, packJobs.has(pack.id));
     try {
       const engines = await loadEngines();
@@ -303,19 +359,20 @@ window.RunDeskSkillCenter = (() => {
         engineNote.textContent = available?.message || (available?.available ? tr("SkillSpector 已就绪。此处仅运行静态检查，不启用 LLM。", "SkillSpector is ready. These checks are static and do not enable an LLM.") : tr("SkillSpector 未配置，快速检查仍可使用。", "SkillSpector is not configured. Quick checks remain available."));
       }
     } catch (error) { if (still(g)) { external.disabled = true; engineNote.textContent = errorText(error); } }
-    if (packJobs.has(pack.id)) await pollJob(pack, packJobs.get(pack.id), job, report, g, 0);
+    if (packJobs.has(pack.id)) await pollJob(pack, packJobs.get(pack.id), job, view, g, 0);
   }
-  async function startScan(pack, engine, jobTarget, reportTarget, g) {
+  async function startScan(pack, engine, jobTarget, view, g) {
     scanInstallState(pack, g, true);
+    view.pending(engine, true);
     try {
       const value = await api(base + "/packs/" + enc(pack.id) + "/scan", {method:"POST",body:{engine,allowLLM:false}});
       if (!still(g)) return;
       const job = value.job || value;
       if (!job.id) throw Error(tr("服务未返回检查任务。", "The service did not return an inspection job."));
-      packJobs.set(pack.id, job.id); await pollJob(pack, job.id, jobTarget, reportTarget, g, 0);
+      packJobs.set(pack.id, job.id); await pollJob(pack, job.id, jobTarget, view, g, 0);
     } catch (error) { if (still(g)) { message(jobTarget, errorText(error), "error"); scanInstallState(pack, g, error.code === "skill_scan_running" || packJobs.has(pack.id)); } }
   }
-  async function pollJob(pack, id, target, reportTarget, g, attempt) {
+  async function pollJob(pack, id, target, view, g, attempt) {
     clearTimeout(pollTimer);
     if (!still(g)) return;
     try {
@@ -323,15 +380,24 @@ window.RunDeskSkillCenter = (() => {
       if (!still(g) || packJobs.get(pack.id) !== id) return;
       target.hidden = false; target.className = "skill-center-job";
       target.replaceChildren(badge(job.status, translated(jobStates, job.status)), el("span", {}, job.error || job.message || ""));
-      scanInstallState(pack, g, activeJob(job.status));
-      if (job.report) renderReport(reportTarget, job.report);
       if (activeJob(job.status)) {
-        target.append(action(tr("取消检查", "Cancel check"), async () => { await api(base + "/jobs/" + enc(id) + "/cancel", {method:"POST",body:{}}); await pollJob(pack, id, target, reportTarget, g, 0); }));
-        if (attempt < 300) pollTimer = setTimeout(() => pollJob(pack, id, target, reportTarget, g, attempt + 1), 1000);
-        else target.append(action(tr("刷新任务状态", "Refresh job status"), () => pollJob(pack, id, target, reportTarget, g, 0)));
-      } else packJobs.delete(pack.id);
+        scanInstallState(pack, g, true); view.pending(job.engine || pack.activeJob?.engine || "builtin");
+        target.append(action(tr("取消检查", "Cancel check"), async () => { await api(base + "/jobs/" + enc(id) + "/cancel", {method:"POST",body:{}}); await pollJob(pack, id, target, view, g, 0); }));
+        if (attempt < 300) pollTimer = setTimeout(() => pollJob(pack, id, target, view, g, attempt + 1), 1000);
+        else target.append(action(tr("刷新任务状态", "Refresh job status"), () => pollJob(pack, id, target, view, g, 0)));
+      } else {
+        // Read persisted verdicts after every terminal outcome. In particular,
+        // cancellation cannot reveal a cached successful external report.
+        scanInstallState(pack, g, true);
+        const latest = await refreshPackReports(pack, view, g, job.engine);
+        if (!latest || packJobs.get(pack.id) !== id) return;
+        if (latest.activeJob?.id && activeJob(latest.activeJob.status)) {
+          packJobs.set(pack.id, latest.activeJob.id);
+          await pollJob(pack, latest.activeJob.id, target, view, g, 0);
+        } else { packJobs.delete(pack.id); scanInstallState(pack, g, false); }
+      }
     } catch (error) {
-      if (still(g) && packJobs.get(pack.id) === id) target.replaceChildren(el("p", {class:"error"}, errorText(error)), action(tr("重试读取任务", "Retry reading job"), () => pollJob(pack, id, target, reportTarget, g, 0)));
+      if (still(g) && packJobs.get(pack.id) === id) target.replaceChildren(el("p", {class:"error"}, errorText(error)), action(tr("重试读取任务", "Retry reading job"), () => pollJob(pack, id, target, view, g, 0)));
     }
   }
   function install(pack) {
@@ -342,7 +408,7 @@ window.RunDeskSkillCenter = (() => {
     const scope = el("select", {id:"skill-center-install-scope"}, el("option", {value:"project"}, tr("仅当前项目", "Current project only")), el("option", {value:"instance"}, tr("当前运行环境", "Current runtime environment")));
     const replace = el("input", {type:"checkbox",id:"skill-center-install-replace"});
     const submit = el("button", {type:"submit",class:"primary",id:"skill-center-install-submit",disabled:!binding.workspaceId}, tr("安装此版本", "Install this revision"));
-    const review = el("section", {class:"skill-center-install-review",hidden:true}), report = el("div", {class:"skill-center-report"});
+    const review = el("section", {class:"skill-center-install-review",hidden:true}), report = el("div", {class:"skill-center-review-reports"});
     const acknowledge = el("input", {type:"checkbox",id:"skill-center-install-ack"});
     const reason = el("textarea", {id:"skill-center-install-reason",rows:2,maxlength:2000,placeholder:tr("说明已复核的用途、授权或接受风险的理由", "Describe the reviewed purpose, authorization, or reason for accepting this risk")});
     const override = el("button", {type:"button",class:"primary",id:"skill-center-install-override",disabled:true}, tr("记录理由并继续安装", "Record reason and continue installing"));
@@ -377,7 +443,7 @@ window.RunDeskSkillCenter = (() => {
         if (!modal.open) return;
         message(error, errorText(problem), "error");
         if (problem.code === "skill_review_required") {
-          renderReport(report, problem.details?.report || problem.details?.scan || pack.scan);
+          renderReviewReports(report, problem.details, pack.scan);
           review.hidden = false; submit.hidden = true; acknowledge.checked = false; checkOverride();
           name.disabled = true; scope.disabled = true; replace.disabled = true;
         }

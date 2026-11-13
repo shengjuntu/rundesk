@@ -1,10 +1,10 @@
 # 验证范围与复验
 
-RunDesk **0.73.0** 的本次变更为原生技能中心。实际执行结果、命令和限制见 [release-073.json](validation/current/release-073.json)。普通会话、应用预设和旧完整目录安装流程需保留回归；外部市场搜索与固定目录下载的联网验证，和离线协议测试分别记录。
+RunDesk **0.74.0** 的本次变更为技能中心中的 Skill-Up 效果测试。实际执行命令、结果和边界见 [release-074.json](validation/current/release-074.json)。测试用例执行、效果结论和安全扫描分别记录；导入报告不能自证来源或用例一致。
 
-SkillSpector 当前未在本环境安装实跑；其适配器使用官方报告协议 fixture 和模拟 CLI 验证。没有将内置规则结果代替 NVIDIA 实机结论，也没有进行真实 Agent、Docker 应用或目标 Windows 系统上的业务验收。Skill-Up 未纳入本次实现。
+本环境没有 Docker Engine，容器隔离和生命周期仅使用协议／命令替身验证，未作为真实容器验收。已从官方固定发布下载安装 Skill-Up CLI，使用受控 custom-engine mock 验证协议，不代表调用了真实 LLM 或取得业务效果。目标机器需要分别验收镜像、模型连接、脚本 Judge 和实际用例。
 
-本次从 RunDesk 0.72.0 源包继续，原版验证记录保留在原源包；历史通过数不计作本版检查结果。现有镜像、配方、Kun SDK 与执行协议未做功能修改。配置协议替身、Node DOM 检查与交叉编译均有各自验证边界。
+本次以 0.73.1 源码继续，已有真实 SkillSpector 静态验证记录保留在 0.73.1 源包；没有把此前的通过数继承成本次检查。当前实际宿主、解析器、UI 和打包检查见本版摘要。
 
 <a id="video-build-tmpfs-investigation-2026-11-08"></a>
 ## video-build 1.4.0 构建失败调查归档（2026-11-08）

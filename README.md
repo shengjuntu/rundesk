@@ -46,9 +46,11 @@ Administrators can use the [Skill center](docs/SKILL-CENTER.md) to search ClawHu
 
 ## Current source version
 
-**RunDesk 0.73.0 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.74.0 source · external Kun 0.17.0 · worker protocol 16**
 
-Version 0.73.0 adds the administrator Skill center described above. Its source snapshots bind retrieved content, inspection reports and installation receipts; historical session Skill content snapshots and runtime protection remain outside this change. The external SkillSpector adapter has protocol-fixture and simulated-CLI coverage; NVIDIA's tool has not been installed and run for this integration.
+Version 0.74.0 adds [Skill-Up effect checks](docs/SKILL-CHECKS.md): validate and execute suites in explicitly selected Docker environments, inspect per-case outcomes, import clearly labeled external reports and compare versions. Networking and execution require explicit choices; the host never substitutes for an unavailable container.
+
+Version 0.73.0 adds the administrator Skill center described above. Its source snapshots bind retrieved content, inspection reports and installation receipts; historical session Skill content snapshots and runtime protection remain outside this change. Version 0.73.1 also verifies the adapter with the real NVIDIA SkillSpector 2.13.4 static CLI, checks coverage against the acquired directory, and preserves separate Go/NVIDIA reports and active scan recovery. LLM analysis and target Windows execution are not covered by that verification.
 
 Version 0.72.0 records the configuration declarations and execution identity at admission and ties generated file records to their producing run when evidence is available. Inspect a selected run in the trace view to see what RunDesk recorded at that time. Existing workspaces, session IDs, native histories and application preset bindings remain available. The [upgrade guide](docs/UPGRADING.md) explains compatibility with older records.
 

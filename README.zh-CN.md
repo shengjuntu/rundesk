@@ -44,9 +44,13 @@ RunDesk 通过 Kun 集成提供模块状态检查和执行循环策略选择。�
 
 ## 当前源码版本
 
-**RunDesk 0.73.0 · 外部 Kun 0.17.0 · worker 协议 16**
+**RunDesk 0.74.0 · 外部 Kun 0.17.0 · worker 协议 16**
 
-0.73.0 新增原生[技能中心](docs/SKILL-CENTER.md)：搜索 ClawHub、SkillsMP、skills.sh 与 GitHub，获取固定目录、预览源码、进行内置检查或可选 SkillSpector 扫描，再安装到工作区／运行环境。风险项及检查不完整需显式确认与理由。Skill-Up 后续接入。
+0.74.0 接入[Skill-Up 效果测试](docs/SKILL-CHECKS.md)：在选定 Docker 环境中显式校验／运行用例，查看逐用例结果、导入外部报告及比较不同 Skill 版本。报告来源、用例身份与配置缺失不能自动当作回归通过，Docker 不可用时不会退回宿主执行。
+
+0.73.0 新增原生[技能中心](docs/SKILL-CENTER.md)：搜索 ClawHub、SkillsMP、skills.sh 与 GitHub，获取固定目录、预览源码、进行内置检查或可选 SkillSpector 扫描，再安装到工作区／运行环境。风险项及检查不完整需显式确认与理由。
+
+0.73.1 已用真实 NVIDIA SkillSpector 2.13.4 验证静态扫描与安装门禁，补充严格覆盖核对、持久报告切换和刷新恢复任务。未验证模型辅助扫描与 Windows 实机运行。
 
 0.72.0 在每轮准入时保存配置声明版本与执行身份，并把可核实的制品来源关联到产生它的 Run。选择一轮轨迹后可以查看当时有证据的配置。升级继续使用原工作区、会话、引擎历史和应用预设，旧数据的查询方式见[升级说明](docs/UPGRADING.md)。
 

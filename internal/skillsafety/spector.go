@@ -2,12 +2,16 @@ package skillsafety
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -81,15 +85,17 @@ type spectorReport struct {
 		Severity       string `json:"severity"`
 	} `json:"risk_assessment"`
 	Completeness struct {
-		Complete            *bool    `json:"is_complete"`
-		Status              string   `json:"status"`
-		Coverage            *float64 `json:"coverage_percent"`
-		FilesSeen           *int     `json:"files_seen"`
-		FilesScanned        *int     `json:"files_scanned"`
-		FilesSkipped        *int     `json:"files_skipped"`
-		FullyInspected      *int     `json:"fully_inspected_files"`
-		PartiallyInspected  *int     `json:"partially_inspected_files"`
-		EntirelyUninspected *int     `json:"entirely_uninspected_files"`
+		Complete            *bool             `json:"is_complete"`
+		Status              string            `json:"status"`
+		Coverage            *float64          `json:"coverage_percent"`
+		FilesSeen           *int              `json:"files_seen"`
+		FilesScanned        *int              `json:"files_scanned"`
+		FilesSkipped        *int              `json:"files_skipped"`
+		FullyInspected      *int              `json:"fully_inspected_files"`
+		PartiallyInspected  *int              `json:"partially_inspected_files"`
+		EntirelyUninspected *int              `json:"entirely_uninspected_files"`
+		LedgerExceptions    []spectorScopeGap `json:"ledger_exceptions"`
+		ScopeExclusions     []spectorScopeGap `json:"scope_exclusions"`
 	} `json:"analysis_completeness"`
 	Metadata struct {
 		Version      string `json:"skillspector_version"`
@@ -125,6 +131,12 @@ type spectorReport struct {
 	} `json:"issues"`
 }
 
+type spectorScopeGap struct {
+	Path       string `json:"path"`
+	ReasonCode string `json:"reason_code"`
+	Message    string `json:"message"`
+}
+
 func emptySpectorReport() Report {
 	return Report{
 		Engine: "skillspector", Status: "error", Recommendation: "incomplete",
@@ -148,6 +160,12 @@ func parseSpectorReport(data []byte, exitCode int, allowLLM bool) (Report, error
 		return spectorReportError(report, "invalid_report", "SkillSpector 未返回有效的 JSON 报告")
 	}
 	report.EngineVersion = Redact(source.Metadata.Version)
+	ledgerConsistent := true
+	for _, count := range []*int{source.Completeness.FilesSeen, source.Completeness.FilesScanned, source.Completeness.FilesSkipped, source.Completeness.FullyInspected, source.Completeness.PartiallyInspected, source.Completeness.EntirelyUninspected} {
+		if count != nil && (*count < 0 || *count > MaxFiles) {
+			ledgerConsistent = false
+		}
+	}
 	report.Coverage.FilesSeen = len(source.Components)
 	if source.Completeness.FilesSeen != nil && *source.Completeness.FilesSeen >= 0 {
 		report.Coverage.FilesSeen = *source.Completeness.FilesSeen
@@ -166,6 +184,58 @@ func parseSpectorReport(data []byte, exitCode int, allowLLM bool) (Report, error
 		if value := source.Completeness.EntirelyUninspected; value != nil && *value >= 0 {
 			report.Coverage.FilesSkipped += *value
 		}
+	}
+	if report.Coverage.FilesScanned+report.Coverage.FilesSkipped > report.Coverage.FilesSeen {
+		if source.Completeness.FilesSeen != nil {
+			ledgerConsistent = false
+		}
+		report.Coverage.FilesSeen = report.Coverage.FilesScanned + report.Coverage.FilesSkipped
+	}
+	if seen, scanned := source.Completeness.FilesScanned, source.Completeness.FullyInspected; seen != nil && scanned != nil && *seen != *scanned {
+		ledgerConsistent = false
+	}
+	// Old aggregate fields cannot hide incomplete entries in the newer ledger.
+	partial, uninspected := 0, 0
+	if value := source.Completeness.PartiallyInspected; value != nil && *value > 0 {
+		partial = *value
+	}
+	if value := source.Completeness.EntirelyUninspected; value != nil && *value > 0 {
+		uninspected = *value
+	}
+	if partial+uninspected > 0 {
+		ledgerConsistent = false
+		if report.Coverage.FilesSkipped < partial+uninspected {
+			report.Coverage.FilesSkipped = partial + uninspected
+		}
+	}
+	if source.Completeness.FilesSeen != nil && source.Completeness.FullyInspected != nil && source.Completeness.PartiallyInspected != nil && source.Completeness.EntirelyUninspected != nil && *source.Completeness.FilesSeen != *source.Completeness.FullyInspected+*source.Completeness.PartiallyInspected+*source.Completeness.EntirelyUninspected {
+		ledgerConsistent = false
+	}
+	gapFiles := map[string]bool{}
+	for _, group := range [][]spectorScopeGap{source.Completeness.LedgerExceptions, source.Completeness.ScopeExclusions} {
+		for _, gap := range group {
+			ledgerConsistent = false
+			file, reason := gap.Path, gap.ReasonCode
+			if file == "" {
+				file = "."
+			}
+			if gap.Message != "" {
+				if reason != "" {
+					reason += ": "
+				}
+				reason += gap.Message
+			}
+			if reason == "" {
+				reason = "upstream_scope_or_ledger_exception"
+			}
+			gapFiles[file] = true
+			if len(report.Coverage.Skipped) < MaxFiles {
+				report.Coverage.Skipped = append(report.Coverage.Skipped, Skipped{File: Redact(file), Reason: Redact(reason)})
+			}
+		}
+	}
+	if report.Coverage.FilesSkipped < len(gapFiles) {
+		report.Coverage.FilesSkipped = len(gapFiles)
 	}
 	if report.Coverage.FilesScanned+report.Coverage.FilesSkipped > report.Coverage.FilesSeen {
 		report.Coverage.FilesSeen = report.Coverage.FilesScanned + report.Coverage.FilesSkipped
@@ -269,8 +339,12 @@ func parseSpectorReport(data []byte, exitCode int, allowLLM bool) (Report, error
 		complete = false
 		report.Warnings = append(report.Warnings, "报告未提供明确的执行完成状态")
 	}
-	if source.Completeness.Coverage != nil && *source.Completeness.Coverage < 100 {
+	if source.Completeness.Coverage != nil && *source.Completeness.Coverage != 100 {
 		complete = false
+	}
+	if !ledgerConsistent || report.Coverage.FilesSeen <= 0 || report.Coverage.FilesScanned <= 0 {
+		complete = false
+		report.Warnings = append(report.Warnings, "报告没有有效的正数文件覆盖，或文件账本字段互相矛盾")
 	}
 	if allowLLM && (source.Metadata.LLMRequested == nil || !*source.Metadata.LLMRequested || source.Metadata.LLMAvailable == nil || !*source.Metadata.LLMAvailable || source.Metadata.LLMError != "") {
 		complete = false
@@ -295,6 +369,130 @@ func parseSpectorReport(data []byte, exitCode int, allowLLM bool) (Report, error
 	return report, nil
 }
 
+type spectorSourceFile struct {
+	Path       string
+	Size       int64
+	Digest     [sha256.Size]byte
+	Executable bool
+}
+
+// Inventory is read without executing source or following links. The caller
+// supplies a privately prepared snapshot; unbounded directory trees are refused.
+func spectorSourceInventory(dir string) ([]spectorSourceFile, error) {
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close()
+	files := []spectorSourceFile{}
+	seen := map[string]bool{}
+	var bytes int64
+	entries := 0
+	err = filepath.WalkDir(dir, func(name string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		entries++
+		if entries > MaxFiles*32 {
+			return errors.New("scanner source contains too many directory entries")
+		}
+		if entry.Type()&os.ModeSymlink != 0 {
+			return errors.New("scanner source contains a symbolic link")
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		info, err := entry.Info()
+		if err != nil || !info.Mode().IsRegular() {
+			return errors.New("scanner source contains an unreadable or special file")
+		}
+		relative, err := filepath.Rel(dir, name)
+		relative = filepath.ToSlash(relative)
+		key := strings.ToLower(relative)
+		if err != nil || !safePath(relative) || seen[key] {
+			return errors.New("scanner source contains an invalid or conflicting path")
+		}
+		seen[key] = true
+		if len(files) >= MaxFiles || info.Size() < 0 || info.Size() > MaxTotalBytes-bytes {
+			return errors.New("scanner source exceeds its file or byte limit")
+		}
+		bytes += info.Size()
+		file, err := root.Open(relative)
+		if err != nil {
+			return err
+		}
+		hash := sha256.New()
+		count, readErr := io.Copy(hash, io.LimitReader(file, MaxTotalBytes-(bytes-info.Size())+1))
+		closeErr := file.Close()
+		if readErr != nil || closeErr != nil || count != info.Size() {
+			return errors.New("scanner source changed while inventorying its bytes")
+		}
+		identity := spectorSourceFile{Path: relative, Size: count, Executable: info.Mode()&0111 != 0}
+		copy(identity.Digest[:], hash.Sum(nil))
+		files = append(files, identity)
+		return nil
+	})
+	if err == nil && len(files) == 0 {
+		err = errors.New("scanner source has no regular files")
+	}
+	sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })
+	return files, err
+}
+
+func verifySpectorCoverage(report Report, data []byte, dir string, expected []spectorSourceFile) Report {
+	incomplete := func(message string) {
+		report.Status, report.Recommendation = "incomplete", "incomplete"
+		report.Warnings = append(report.Warnings, message)
+	}
+	actual, err := spectorSourceInventory(dir)
+	if err != nil || len(actual) != len(expected) {
+		incomplete("扫描期间来源目录已变化，报告不能用于安装")
+	} else {
+		for index := range expected {
+			if actual[index] != expected[index] {
+				incomplete("扫描期间来源目录已变化，报告不能用于安装")
+				break
+			}
+		}
+	}
+	if report.Coverage.FilesSeen != len(expected) || report.Coverage.FilesScanned != len(expected) {
+		incomplete("扫描器的文件覆盖数量与实际来源目录不一致")
+	}
+	var source spectorReport
+	if json.Unmarshal(data, &source) != nil {
+		incomplete("无法核对扫描器的实际文件清单")
+		return report
+	}
+	paths := map[string]bool{}
+	invalid := false
+	for _, component := range source.Components {
+		name := component.Path
+		if filepath.IsAbs(name) {
+			name, err = filepath.Rel(dir, name)
+			if err != nil {
+				invalid = true
+				continue
+			}
+		}
+		name = strings.TrimPrefix(filepath.ToSlash(name), "./")
+		if !safePath(name) || paths[name] {
+			invalid = true
+			continue
+		}
+		paths[name] = true
+	}
+	for _, file := range expected {
+		if !paths[file.Path] {
+			invalid = true
+			report.Coverage.Skipped = append(report.Coverage.Skipped, Skipped{File: Redact(file.Path), Reason: "missing_from_scanner_file_inventory"})
+		}
+	}
+	if invalid || len(paths) != len(expected) {
+		incomplete("扫描器未返回与实际来源一致的完整文件清单")
+	}
+	return report
+}
+
 // RunSkillSpector invokes a configured local scanner using an argument vector.
 // It never invokes a shell or executes any source file from the scanned skill.
 func RunSkillSpector(ctx context.Context, dir string, executable string, allowLLM bool) (Report, error) {
@@ -311,6 +509,14 @@ func RunSkillSpector(ctx context.Context, dir string, executable string, allowLL
 	info, err := os.Lstat(dir)
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return spectorReportError(report, "invalid_directory", "扫描来源必须是已准备的普通目录")
+	}
+	dir, err = filepath.Abs(dir)
+	if err != nil {
+		return spectorReportError(report, "invalid_directory", "无法确认扫描来源目录")
+	}
+	expected, err := spectorSourceInventory(dir)
+	if err != nil {
+		return spectorReportError(report, "invalid_directory", "扫描来源包含链接、特殊文件、无效路径、空目录或超出范围")
 	}
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
@@ -343,6 +549,9 @@ func RunSkillSpector(ctx context.Context, dir string, executable string, allowLL
 		exitCode = exitErr.ExitCode()
 	}
 	report, err = parseSpectorReport(output, exitCode, allowLLM)
+	if err == nil {
+		report = verifySpectorCoverage(report, output, dir, expected)
+	}
 	if logsExceeded {
 		report.Warnings = append(report.Warnings, "SkillSpector 日志超过 64 KiB，已截断保存范围")
 	}

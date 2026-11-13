@@ -425,6 +425,11 @@ func TestSkillCenterExternalRescanSuspendsOldVerdictAndInstallation(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
+	detail := skillCenterCall(t, h, "GET", "/packs/"+pack.ID, nil)
+	visible, ok := object(t, detail)["activeJob"].(map[string]any)
+	if detail.Code != 200 || !ok || visible["id"] != job.ID {
+		t.Fatalf("refresh lost the active scan identity: %d %s", detail.Code, detail.Body.String())
+	}
 	updated, err := m.SkillPack(pack.ID)
 	if err != nil || updated.Reports["skillspector"].Status != "incomplete" || updated.Reports["skillspector"].Recommendation == "no_findings" {
 		t.Fatalf("new scan kept a previous passing verdict active: %+v %v", updated.Reports, err)

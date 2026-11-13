@@ -1295,6 +1295,7 @@ schemas['SkillPack']=obj({
  'reports':{'type':'object','additionalProperties':ref('SkillScanReport')},
 },['id','name','sourceUrl','digest','createdAt','files','scan','reports'])
 schemas['SkillPack']['description']='完整获取内容的固定快照；安装时重新读取并核对摘要，不代表已有会话资源已冻结。'
+schemas['SkillPack']['properties']['activeJob']=ref('SkillScanJob')
 schemas['SkillScanJob']=obj({
  'id':skill_pack_id,'packId':skill_pack_id,'digest':skill_digest,'engine':st(enum=['builtin','skillspector']),
  'status':st(enum=['queued','running','completed','failed','unavailable','canceled','interrupted']),
@@ -1369,6 +1370,97 @@ for method,path,summary,body,response in skill_center_routes:
 upload_op=paths['/workspaces/{wid}/skill-bundles']['post']
 upload_op['description']=upload_op.get('description','')+' 导入前运行内置静态检查。待复核或检查不完整时返回 409 skill_review_required，需明确 acknowledge=1 和 reason 后重发；替换保留既有完整备份。'
 upload_op['responses']['409']={'description':'同名技能已存在，或 skill_review_required 要求显式风险确认及理由。','content':{'application/json':{'schema':ref('SkillCenterError')}}}
+
+# Skill-Up execution evidence is separate from static security findings. Its
+# handlers use a local administrator wrapper, so curate these routes explicitly.
+schemas['SkillCheckAgentConfiguration']=obj({k:st() for k in ['role','engine','protocol','provider','model','version']})
+schemas['SkillCheckAssertion']=obj({'text':st(),'passed':bool_,'skipped':bool_,'evidence':st(),'source':st()},['text','passed','skipped','source'])
+schemas['SkillCheckCase']=obj({
+ 'caseId':st(),'title':st(),'variant':st(description='default、with_skill、without_skill 分别保留；未知变体不会作为通过。'),
+ 'inputId':skill_digest,'runtimeId':dict(skill_digest,description='上游明确提供的逐用例 observed_model／observed_version 的摘要；不返回原始运行身份文本，缺失时省略。'),
+ 'status':st(enum=['PASS','FAIL','ERROR','SKIP','UNKNOWN']),
+ 'durationMs':integer,'error':st(),'assertions':arr(ref('SkillCheckAssertion')),
+},['caseId','title','variant','status','durationMs','assertions'])
+schemas['SkillCheckSummary']=obj({k:integer for k in ['total','pass','fail','error','skip','unknown','durationMs']},['total','pass','fail','error','skip','unknown','durationMs'])
+schemas['SkillCheckReport']=obj({
+ 'skillName':st(),'schemaVersion':st(),'engineName':st(),'modelName':st(),
+ 'requestedConfiguration':ref('SkillCheckAgentConfiguration'),'appliedConfiguration':ref('SkillCheckAgentConfiguration'),'observedConfiguration':ref('SkillCheckAgentConfiguration'),
+ 'configurationId':skill_digest,'suiteDigest':skill_digest,'identityComplete':bool_,
+ 'startedAt':st(),'finishedAt':st(),'status':st(enum=['pass','fail','error','incomplete']),
+ 'cases':dict(arr(ref('SkillCheckCase')),maxItems=1000),'summary':ref('SkillCheckSummary'),'warnings':arr(st()),
+},['skillName','schemaVersion','engineName','modelName','identityComplete','status','cases','summary','warnings'])
+schemas['SkillCheckReport']['description']='有界规范化 Skill-Up v1alpha1 报告；不返回原始 prompt/response、完整配置或任意原始 JSON。主汇总按 caseId 选主结果，不双计 with_skill/without_skill。suiteDigest 只能由宿主对冻结包内除根 SKILL.md 外的全部文件路径、字节与执行位计算后设置，覆盖用例、辅助脚本和数据；外部 JSON 不能自行声明可信来源。质量结果不替代安全扫描。'
+schemas['SkillCheckValidation']=obj({'status':st(enum=['success','failed','unavailable']),'cases':integer,'output':st(),'warnings':arr(st())},['status','cases','output','warnings'])
+schemas['SkillCheckValidation']['description']='校验命令输出及明确用例数量；退出 0 但没有可识别的非空完成输出不能算校验成功。'
+schemas['SkillCheckJob']=obj({
+ **{k:st() for k in ['id','packId','instanceId','environmentName','containerName','createdAt','startedAt','finishedAt','reportId','output','error','cleanupError']},
+ 'digest':skill_digest,'suiteDigest':skill_digest,'imageId':st(pattern=r'^sha256:[a-f0-9]{64}$'),
+ 'action':st(enum=['validate','run']),'allowNetwork':bool_,
+ 'status':st(enum=['queued','running','completed','failed','canceled','interrupted']),
+ 'exitCode':integer,'cleanupPending':bool_,'validation':ref('SkillCheckValidation'),
+},['id','packId','digest','suiteDigest','action','instanceId','environmentName','imageId','containerName','allowNetwork','status','createdAt','exitCode','cleanupPending'])
+schemas['SkillCheckJob']['description']='执行状态与质量结论分离。completed 表示报告或有效校验结果已取得，仍需检查报告 PASS/FAIL/ERROR。exitCode=-1 表示尚无确定退出码。cleanupPending=true 或 cleanupError 非空表示容器清理未确认，执行槽继续阻断；接受取消不代表清理已完成，终态有 cleanupError 可调用 cancel 重试。重启在途任务标记 interrupted，不自动重跑，遗留清理失败继续阻断。'
+schemas['SkillCheckReportRecord']=obj({
+ **{k:st() for k in ['id','packId','jobId','instanceId','createdAt']},
+ 'digest':skill_digest,'suiteDigest':skill_digest,'imageId':st(pattern=r'^sha256:[a-f0-9]{64}$'),
+ 'source':st(enum=['docker_run','external_unverified']),'casesOmitted':bool_,'report':ref('SkillCheckReport'),
+},['id','packId','digest','source','createdAt','casesOmitted','report'])
+schemas['SkillCheckReportRecord']['description']='固定快照关联与执行来源。列表只返回 casesOmitted=true 的摘要，完整用例从单报告 GET 读取。external_unverified 仅按用户声明关联，不拥有可信 suiteDigest，不参与安全安装门禁，也不能单独建立回归通过。'
+schemas['SkillCheckCaseChange']=obj({
+ 'caseId':st(),'variant':st(),'beforeStatus':st(),'afterStatus':st(),
+ 'change':st(enum=['fixed','regressed','unchanged','new','removed','unknown']),'reason':st(),
+},['caseId','variant','change'])
+schemas['SkillCheckChangeSummary']=obj({k:integer for k in ['fixed','regressed','unchanged','new','removed','unknown']},['fixed','regressed','unchanged','new','removed','unknown'])
+schemas['SkillCheckComparison']=obj({
+ 'comparable':bool_,'reason':st(),'verdict':st(enum=['pass','fail','incomplete']),
+ 'cases':dict(arr(ref('SkillCheckCaseChange')),maxItems=2000),'summary':ref('SkillCheckChangeSummary'),'warnings':arr(st()),
+},['comparable','verdict','cases','summary','warnings'])
+schemas['SkillCheckComparison']['description']='按 caseId + variant 对照。MVP 自动回归门禁仅支持根 SKILL.md 修订，冻结包内所有其他文件、镜像、模型、配置及声明输入身份须一致，且使用可核对的内建 grading/gates 规则。辅助文件或镜像变化、脚本／Agent／未知 Judge 实现身份无法证实时，全部明细 change=unknown 且 verdict=incomplete；各报告原始观测状态仍可分别查看。缺失、新增、删除、SKIP 和未知不会算通过；外部来源或缺少可信 suiteDigest 也不能建立回归通过。'
+schemas['SkillCheckComparisonResult']=obj({'baselineId':skill_pack_id,'candidateId':skill_pack_id,'comparison':ref('SkillCheckComparison')},['baselineId','candidateId','comparison'])
+schemas['SkillCheckEnvironment']=obj({'instanceId':st(),'name':st(),'image':st(),'available':bool_,'message':st()},['instanceId','name','image','available','message'])
+schemas['SkillCheckEngines']=obj({'available':bool_,'message':st(),'items':arr(ref('SkillCheckEnvironment'))},['available','message','items'])
+schemas['SkillCheckEngines']['description']='已有受管 Docker 制作环境候选与 Docker 可用性；available 不证明镜像内 Skill-Up、Agent、模型或用例已经验证。'
+skill_check_input=obj({
+ 'digest':skill_digest,'action':st(enum=['validate','run']),'instanceId':st(),
+ 'allowNetwork':dict(bool_,default=False,description='只有显式开启才允许测试容器使用 bridge；默认 none。'),
+ 'acknowledgeExecution':dict(bool_,default=False,description='validate 也可能读取 YAML 引用内容，两个操作均须明确确认独立容器执行。'),
+},['digest','action','instanceId','acknowledgeExecution'])
+skill_check_import=obj({
+ 'digest':skill_digest,'report':obj(extra=True),
+ 'acknowledgeImport':dict(bool_,default=False,description='确认外部报告的执行来源和技能关联未核验。'),
+},['digest','report','acknowledgeImport'])
+skill_check_import['description']='report 是上游 result.json 对象，最大 4 MiB、1000 用例；整个请求另有 16 KiB 封装预算。原始配置、prompt/response 不直接返回。'
+skill_check_routes=[
+ ('get','/skill-center/check-engines','可用效果测试环境',None,ref('SkillCheckEngines')),
+ ('get','/skill-center/packs/{id}/checks','查询该快照的测试任务',None,obj({'items':arr(ref('SkillCheckJob'))},['items'])),
+ ('post','/skill-center/packs/{id}/checks','在独立容器校验或执行用例',skill_check_input,obj({'job':ref('SkillCheckJob')},['job'])),
+ ('get','/skill-center/check-jobs/{id}','查询效果测试任务',None,ref('SkillCheckJob')),
+ ('post','/skill-center/check-jobs/{id}/cancel','取消任务或重试清理独立容器',None,ref('SkillCheckJob')),
+ ('get','/skill-center/packs/{id}/check-reports','列出当前快照报告摘要',None,obj({'items':arr(ref('SkillCheckReportRecord'))},['items'])),
+ ('post','/skill-center/packs/{id}/check-reports','导入未核验来源的外部报告',skill_check_import,ref('SkillCheckReportRecord')),
+ ('get','/skill-center/check-reports','列出可用跨版本基线报告摘要',None,obj({'items':arr(ref('SkillCheckReportRecord'))},['items'])),
+ ('get','/skill-center/check-reports/{id}','读取完整效果测试报告',None,ref('SkillCheckReportRecord')),
+ ('get','/skill-center/packs/{id}/check-compare','对比基线与当前快照报告',None,ref('SkillCheckComparisonResult')),
+]
+for method,path,summary,body,response in skill_check_routes:
+ params=[{'name':n,'in':'path','required':True,'schema':skill_pack_id} for n in re.findall(r'\{(.*?)\}',path)]
+ if path.endswith('/check-compare'):
+  params += [{'name':name,'in':'query','required':True,'schema':skill_pack_id} for name in ['baseline','candidate']]
+ status='202' if method=='post' and path.endswith('/checks') else '200'
+ op={'operationId':method+'_'+re.sub(r'[^A-Za-z0-9]+','_',path).strip('_'),'summary':summary,'x-administrator-only':True,'parameters':params,
+  'description':'管理员专用。沿用宿主认证、来源和主机检查；不向应用或成员凭据开放。效果测试不替代安全扫描，不自动安装或修复技能。',
+  'responses':{status:{'description':'任务已接收，继续查询执行状态及报告。' if status=='202' else '成功。','content':{'application/json':{'schema':response}}},
+   **{code:{'description':message,'content':{'application/json':{'schema':ref('SkillCenterError')}}} for code,message in {
+    '400':'参数、用例配置或外部报告无效／超限；缺少固定 evals/eval.yaml。','401':'需要宿主身份认证。','403':'仅管理员；候选报告必须属于当前快照。',
+    '404':'快照、任务或报告不存在。','409':'摘要变化、未确认执行／导入、已有同快照任务或历史上限。','429':'最多同时执行一个隔离效果测试；清理未确认继续阻断。',
+    '500':'持久状态或报告保存失败。','502':'Docker 未返回可确认的冻结镜像身份。','503':'需要 Linux 本机 Docker 与已有受管镜像；不可用时不会退回宿主执行。',
+    'default':'结构化错误；失败、缺失或未核验来源不能作为通过。'}.items()}}}
+ if body is not None:op['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
+ if path.endswith('/checks') and method=='post':
+  op['description']+=' 固定读取 /source/evals/eval.yaml；源快照只读，工作及输出目录用限额 tmpfs。固定本机镜像 ID，不拉取镜像、不挂主机工作区、Codex HOME 或 Docker socket。确认要求包括 validate。接口不承诺幂等重放，不应自动重试。'
+ if path.endswith('/check-compare'):
+  op['description']+=' baseline 可来自另一快照；candidate 必须属于当前快照且摘要匹配。自动回归门禁仅支持纯根 SKILL.md 修订；其他文件、镜像、模型、配置和输入身份须相同，且须有可核对的内建规则证据。身份变化或脚本／Agent／未知 Judge 不能核实时，明细统一 unknown，整体不可比较或 incomplete。'
+ paths.setdefault(path,{})[method]=op
 
 spec={'openapi':'3.1.0','info':{'title':'RunDesk Control API (RDCA)','version':re.search(r'const Version = "([^"]+)"',(root/'internal/app/api_v1.go').read_text()).group(1),'description':'RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter；附加 UHP /v1 入口共用任务核心，具体范围与限制见 docs/UHP.md，不声明完整规范兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。0.61.0 起日常会话与应用任务仅接受 Codex，Kun 用于维护、轨迹问答及保留的研究 API；普通 Kun 提交返回 kun_maintenance_only。当前应用接入、错误、幂等及示例见 docs/API-V1.md。'},'servers':[{'url':'/api/v1'}],'security':[{'BearerAuth':[]},{'BrowserCookie':[]}],'paths':paths,'components':{'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer'},'BrowserCookie':{'type':'apiKey','in':'cookie','name':'rundesk'},'BuildTaskCapability':{'type':'http','scheme':'bearer','description':'仅构建助手MCP接受的短期任务能力，不是管理员或应用令牌。'},'SetupTaskCapability':{'type':'http','scheme':'bearer','description':'仅初始化修复MCP接受的短期任务能力，不是管理员或应用令牌。'}},'schemas':schemas}}
 (root/'internal/app/openapi.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')

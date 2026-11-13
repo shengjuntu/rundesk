@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.74.0 — 2026-11-12
+
+Add Skill-Up effect checks to the Skill Center: explicit container-only validation and execution, persistent task recovery/cancellation, bounded report ingestion, per-case outcomes and cross-version comparisons. Freeze source, evaluation-suite and image identities. Missing cases, changed inputs, unknown configurations and externally imported reports cannot silently pass regression gates. Existing security scanning remains a separate result.
+
+Tests are never launched on the host as a fallback. Container execution requires a prepared Linux Docker environment and explicit confirmation; networking is off by default. See [effect checks](docs/SKILL-CHECKS.md) and [validation](docs/VALIDATION.md) for setup and the distinction between CLI protocol tests and target-model acceptance.
+
+## 0.73.1 — 2026-11-12
+
+Validate the external SkillSpector path against the real NVIDIA 2.13.4 CLI. Reject zero-file and inconsistent coverage claims, match the scanner inventory to the frozen directory, preserve file-level exclusion reasons, and detect content changes during inspection. Keep Go and NVIDIA reports separately visible after navigation and restore active scans after a browser refresh. Static fixture checks are separate from LLM, target Windows and business-workload acceptance.
+
+See [Skill Center setup](docs/SKILL-CENTER.md) and [validation](docs/VALIDATION.md).
+
 ## 0.73.0 — 2026-11-12
 
 Add an administrator Skill Center with native Go search across ClawHub, SkillsMP, skills.sh and GitHub, source snapshots, full-directory previews, bounded static checks and optional external NVIDIA SkillSpector jobs. Reports bind file paths, bytes and executable flags; installation verifies the snapshot and reuses workspace/environment targeting and complete-directory backups. Risky or incomplete inspections require explicit review and a recorded reason. Existing ZIP/directory imports and application Skill seeding/copying use the same built-in review gate.

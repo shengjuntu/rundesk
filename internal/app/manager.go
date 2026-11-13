@@ -105,6 +105,8 @@ type handle struct {
 	configReads        map[configReadKey]*configReadFlight
 }
 type Manager struct {
+	skillCheckMu         sync.Mutex
+	skillChecks          *skillCheckState
 	skillCenterMu        sync.Mutex
 	skillCenter          *skillCenterState
 	configSnapshotMu     sync.Mutex
@@ -1260,7 +1262,9 @@ func (m *Manager) Close() {
 	// before cancellation can let the permanent workers drain to zero.
 	m.publicationMu.Lock()
 	m.skillCenterMu.Lock()
+	m.skillCheckMu.Lock()
 	m.cancel()
+	m.skillCheckMu.Unlock()
 	m.skillCenterMu.Unlock()
 	m.publicationMu.Unlock()
 	m.mu.Lock()

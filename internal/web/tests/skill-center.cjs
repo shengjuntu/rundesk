@@ -10,9 +10,10 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 async function until(check, message = 'UI did not settle') { for (let n = 0; n < 200; n++) { if (check()) return; await flush(); } assert(check(), message); }
 const submit = form => form.onsubmit({preventDefault(){}});
 
-function fixture() {
+function fixture(fixtureOptions = {}) {
   const dom = new JSDOM(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), {url:'http://localhost/#conversations',runScripts:'outside-only'}), w = dom.window, ctx = dom.getInternalVMContext();
-  const $ = selector => w.document.querySelector(selector), $$ = selector => [...w.document.querySelectorAll(selector)], requests = [], timers = new Map(); let timerID = 0, jobStatus = 'queued', installs = 0;
+  const storedPack = copy(fixtureOptions.pack || pack);
+  const $ = selector => w.document.querySelector(selector), $$ = selector => [...w.document.querySelectorAll(selector)], requests = [], timers = new Map(); let timerID = 0, jobStatus = storedPack.activeJob?.status || 'queued', jobEngine = storedPack.activeJob?.engine || 'builtin', installs = 0;
   w.setTimeout = (fn, delay) => { timers.set(++timerID, {fn,delay}); return timerID; }; w.clearTimeout = id => timers.delete(id); w.setInterval = () => 0;
   w.HTMLDialogElement.prototype.showModal = function () { this.open = true; }; w.HTMLDialogElement.prototype.close = function () { this.open = false; this.dispatchEvent(new w.Event('close')); };
   w.rdText = value => value; w.rdFormat = (value, ...args) => value.replace(/\$\{(\d+)\}/g, (_, n) => args[+n]);
@@ -27,21 +28,26 @@ function fixture() {
     if (method === 'GET') {
       if (route === '/skill-center/sources') return {items:[{id:'skillsmp',label:'SkillsMP',description:'Source quota information'}]};
       if (route.startsWith('/skill-center/search?')) return {items:[{name:'PDF reader',description:malicious,url:'https://skills.sh/example/pdf',source:'skills.sh',kind:'skill',canImport:true,importUrl:'https://github.com/example/skills',origins:[{source:'skills.sh',url:'https://skills.sh/example/pdf'},{source:'github',url:'javascript:alert(1)'}],metrics:[{name:'installs',value:0,source:'skills.sh'},{name:'github_stars',value:7,source:'github'}]}],providers:[{source:'skills.sh',status:'ok',count:1},{source:'clawhub',status:'error',message:'ClawHub timed out',count:0}],complete:false,warnings:['One source is unavailable']};
-      if (route === '/skill-center/packs') return {items:[copy(pack)]};
-      if (route === '/skill-center/packs/pack-fixed') return copy(pack);
+      if (route === '/skill-center/packs') return {items:[copy(storedPack)]};
+      if (route === '/skill-center/packs/pack-fixed') { if (fixtureOptions.refreshFailure && requests.filter(row => row.route === route).length > 1) throw Error('Cannot reload saved report'); return copy(storedPack); }
       if (route.startsWith('/skill-center/packs/pack-fixed/file?')) return {path:'SKILL.md',text:malicious,truncated:false};
-      if (route === '/skill-center/engines') return {items:[{id:'builtin',available:true},{id:'skillspector',available:false,message:'SkillSpector is not configured'}]};
-      if (route === '/skill-center/jobs/job-1') return {id:'job-1',status:jobStatus,...(jobStatus === 'completed' ? {report:copy(report)} : {})};
+      if (route === '/skill-center/engines') return {items:[{id:'builtin',available:true},{id:'skillspector',available:!!fixtureOptions.spectorAvailable,message:fixtureOptions.spectorAvailable ? 'Command discovered' : 'SkillSpector is not configured'}]};
+      if (route === '/skill-center/jobs/job-1') return {id:'job-1',engine:jobEngine,status:jobStatus,...(jobStatus === 'completed' ? {report:copy(storedPack.reports?.[jobEngine] || report)} : {})};
     }
     if (method === 'POST') {
       if (route === '/skill-center/fetch') {
         if (body.url === 'https://github.com/example/skills') throw Object.assign(new Error('Choose one skill'), {status:409,code:'multiple_skills',details:{candidates:[{name:'pdf-reader',url:pack.sourceUrl}]}});
         return {pack:copy(pack),scan:copy(report)};
       }
-      if (route === '/skill-center/packs/pack-fixed/scan') return {job:{id:'job-1',status:'queued'}};
-      if (route === '/skill-center/jobs/job-1/cancel') { jobStatus = 'canceled'; return {id:'job-1',status:jobStatus}; }
+      if (route === '/skill-center/packs/pack-fixed/scan') {
+        jobStatus = 'queued'; jobEngine = body.engine;
+        storedPack.activeJob = {id:'job-1',packId:pack.id,engine:jobEngine,status:jobStatus};
+        if (jobEngine === 'skillspector') storedPack.reports = {...storedPack.reports,skillspector:{engine:'skillspector',digest:pack.digest,status:'incomplete',recommendation:'incomplete',findings:[],coverage:{filesSeen:2,filesScanned:0},warnings:['This scan has not completed']}};
+        return {job:copy(storedPack.activeJob)};
+      }
+      if (route === '/skill-center/jobs/job-1/cancel') { jobStatus = 'canceled'; delete storedPack.activeJob; return {id:'job-1',engine:jobEngine,status:jobStatus}; }
       if (route === '/skill-center/packs/pack-fixed/install') {
-        installs++; if (!body.acknowledge) throw Object.assign(new Error('Review this exact content before installing'), {status:409,code:'skill_review_required',details:{report:copy(report),digest:pack.digest}});
+        installs++; if (!body.acknowledge) throw Object.assign(new Error('Review this exact content before installing'), {status:409,code:'skill_review_required',details:copy(fixtureOptions.installReviewDetails || {report:copy(report),digest:pack.digest})});
         return {receipt:{digest:pack.digest},files:copy(pack.files)};
       }
       if (route.startsWith('/workspaces/workspace/skill-bundles?')) {
@@ -60,7 +66,12 @@ function fixture() {
   $('#workspace').replaceChildren(...state.workspaces.map(row => { const node = w.document.createElement('option'); node.value = row.id; node.textContent = row.name; return node; })); $('#workspace').value = 'workspace';
   const findButton = (target, label) => [...target.querySelectorAll('button')].find(node => node.textContent === label);
   const installRequests = () => requests.filter(row => row.route.endsWith('/install'));
-  return {dom,w,ctx,state,$,$$,requests,timers,findButton,installRequests,get installs(){return installs;}};
+  const finishJob = (status, value) => {
+    jobStatus = status; delete storedPack.activeJob;
+    if (value) { storedPack.reports = {...storedPack.reports,[jobEngine]:copy(value)}; if (jobEngine === 'builtin') storedPack.scan = copy(value); }
+  };
+  const tickJob = async () => { const timer = [...timers.entries()].find(([,value]) => value.delay === 1000); assert(timer, 'No job poll is scheduled'); timers.delete(timer[0]); await timer[1].fn(); };
+  return {dom,w,ctx,state,$,$$,requests,timers,findButton,installRequests,finishJob,tickJob,get installs(){return installs;}};
 }
 
 (async () => {
@@ -139,6 +150,84 @@ function fixture() {
     else { assert(first.body instanceof w.FormData); assert.equal(first.body.get('pdf-reader/SKILL.md').name, 'SKILL.md'); }
     w.RunDeskSkillCenter = center;
   }
+
+  // Reports survive navigation and retain separate engine identities. The
+  // persisted NVIDIA verdict is the default whenever one exists.
+  const nvidia = {...copy(report),engine:'skillspector',engineVersion:'2.13.4',findings:[{ruleId:'NVIDIA_RULE',severity:'high',file:'SKILL.md',evidence:malicious,reason:'External scanner finding'}]};
+  const saved = fixture({pack:{...copy(pack),reports:{builtin:copy(report),skillspector:nvidia}},spectorAvailable:true});
+  await saved.w.RunDeskSkillCenter.open('pack', pack.id);
+  assert(saved.$('#skill-center-report').textContent.includes('NVIDIA SkillSpector'));
+  assert(saved.$('#skill-center-report').textContent.includes('2.13.4'));
+  assert(saved.$('#skill-center-report').textContent.includes('NVIDIA_RULE'));
+  assert.equal(saved.$('[data-report-engine="skillspector"]').getAttribute('aria-pressed'), 'true');
+  saved.$('[data-report-engine="builtin"]').click();
+  assert(saved.$('#skill-center-report').textContent.includes('Go 快速检查')); assert(saved.$('#skill-center-report').textContent.includes('fixture-1'));
+  assert(saved.$('#skill-center-report').textContent.includes('SHELL_EXEC')); assert(!saved.$('#skill-center-report').textContent.includes('NVIDIA_RULE'));
+  await saved.w.RunDeskSkillCenter.open('library'); await saved.w.RunDeskSkillCenter.open('pack', pack.id);
+  assert(saved.$('#skill-center-report').textContent.includes('NVIDIA_RULE'), 'navigation lost a saved external verdict');
+  assert(!saved.$('#skill-center-report img')); assert(!saved.$('#skill-center-report script'));
+
+  // Every engine that caused the gate must remain visible in the confirmation
+  // dialog, even when the fresh builtin report contains no findings.
+  const cleanGo = {...copy(report),recommendation:'no_findings',findings:[],warnings:[]};
+  const combined = fixture({pack:{...copy(pack),scan:cleanGo,reports:{builtin:cleanGo,skillspector:nvidia}},installReviewDetails:{digest:pack.digest,report:cleanGo,reports:{builtin:copy(cleanGo),skillspector:copy(nvidia)}}});
+  await combined.w.RunDeskSkillCenter.open('pack', pack.id); combined.$('#skill-center-install').click();
+  await until(() => !!combined.$('#skill-center-install-submit'));
+  await submit(combined.$('#skill-center-install-submit').closest('form'));
+  const gate = combined.$('.skill-center-install-review');
+  assert(!gate.hidden); assert.equal(gate.querySelectorAll('[data-review-engine="builtin"]').length, 1, 'builtin report was duplicated');
+  assert.equal(gate.querySelectorAll('[data-review-engine="skillspector"]').length, 1, 'external report was omitted from confirmation');
+  assert(gate.querySelector('[data-review-engine="builtin"] [data-skill-state="no_findings"]'));
+  assert(gate.querySelector('[data-review-engine="skillspector"]').textContent.includes('NVIDIA_RULE'));
+  assert(gate.querySelector('[data-review-engine="skillspector"]').textContent.includes('2.13.4'));
+  assert(!gate.querySelector('img')); assert(!gate.querySelector('script'));
+  assert(combined.$('#skill-center-install-override').disabled); assert.equal(combined.installRequests().length, 1);
+  combined.$('#skill-center-install-ack').checked = true; combined.$('#skill-center-install-ack').dispatchEvent(new combined.w.Event('change'));
+  assert(combined.$('#skill-center-install-override').disabled, 'a clear builtin report removed the reason requirement');
+  combined.$('#skill-center-install-reason').value = 'Reviewed the NVIDIA finding and its intended use'; combined.$('#skill-center-install-reason').dispatchEvent(new combined.w.Event('input'));
+  assert(!combined.$('#skill-center-install-override').disabled); combined.$('#skill-center-install-override').click();
+  await until(() => !!combined.$('.skill-center-success')); assert.equal(combined.installRequests().length, 2);
+
+  // Re-scanning invalidates the visible old pass immediately. Cancellation
+  // re-reads the server's incomplete attempt instead of restoring that pass.
+  const passing = {...copy(nvidia),status:'completed',recommendation:'no_findings',findings:[],warnings:[]};
+  const rescanned = fixture({pack:{...copy(pack),reports:{builtin:copy(report),skillspector:passing}},spectorAvailable:true});
+  await rescanned.w.RunDeskSkillCenter.open('pack', pack.id);
+  assert(rescanned.$('#skill-center-report [data-skill-state="no_findings"]'));
+  rescanned.findButton(rescanned.$('#skill-center-page'), 'SkillSpector 静态检查').click();
+  await until(() => !!rescanned.findButton(rescanned.$('#skill-center-job'), '取消检查'));
+  assert(rescanned.$('#skill-center-install').disabled);
+  assert(!rescanned.$('#skill-center-report [data-skill-state="no_findings"]'), 'an old successful report remained visible during re-scan');
+  const readsBeforeCancel = rescanned.requests.filter(row => row.route === '/skill-center/packs/pack-fixed').length;
+  rescanned.findButton(rescanned.$('#skill-center-job'), '取消检查').click();
+  await until(() => !rescanned.$('#skill-center-install').disabled);
+  assert(rescanned.requests.filter(row => row.route === '/skill-center/packs/pack-fixed').length > readsBeforeCancel, 'cancellation did not reload persisted reports');
+  assert(rescanned.$('#skill-center-report').textContent.includes('This scan has not completed'));
+  assert(!rescanned.$('#skill-center-report [data-skill-state="no_findings"]'), 'cancellation restored a previous external pass');
+
+  // A fresh page can resume a persisted job without the previous page's map.
+  const pending = {...copy(passing),status:'incomplete',recommendation:'incomplete',warnings:['Persisted attempt is still running']};
+  const recovered = fixture({pack:{...copy(pack),reports:{builtin:copy(report),skillspector:pending},activeJob:{id:'job-1',packId:pack.id,engine:'skillspector',status:'running'}},spectorAvailable:true});
+  await recovered.w.RunDeskSkillCenter.open('pack', pack.id);
+  assert(recovered.$('#skill-center-install').disabled); assert(recovered.findButton(recovered.$('#skill-center-job'), '取消检查'));
+  assert(recovered.requests.some(row => row.route === '/skill-center/jobs/job-1'), 'page refresh failed to resume polling');
+  recovered.$('[data-report-engine="builtin"]').click(); await recovered.tickJob();
+  assert.equal(recovered.$('[data-report-engine="builtin"]').getAttribute('aria-pressed'), 'true', 'job polling stole the selected report');
+  recovered.finishJob('completed', passing); await recovered.tickJob();
+  assert(!recovered.$('#skill-center-install').disabled);
+  assert(recovered.$('#skill-center-report').textContent.includes('2.13.4')); assert(recovered.$('#skill-center-report [data-skill-state="no_findings"]'));
+  assert.equal(recovered.$('[data-report-engine="skillspector"]').getAttribute('aria-pressed'), 'true');
+
+  // A terminal task is insufficient to enable installation when its persisted
+  // report cannot be read. Retry remains explicit and the old pass stays hidden.
+  const unreadable = fixture({pack:{...copy(pack),reports:{builtin:copy(report),skillspector:pending},activeJob:{id:'job-1',packId:pack.id,engine:'skillspector',status:'running'}},spectorAvailable:true,refreshFailure:true});
+  await unreadable.w.RunDeskSkillCenter.open('pack', pack.id); unreadable.finishJob('failed'); await unreadable.tickJob();
+  assert(unreadable.$('#skill-center-install').disabled);
+  assert(unreadable.$('#skill-center-job').textContent.includes('Cannot reload saved report'));
+  assert(unreadable.findButton(unreadable.$('#skill-center-job'), '重试读取任务'));
+  assert(!unreadable.$('#skill-center-report [data-skill-state="no_findings"]'));
+
+  for (const test of [saved,combined,rescanned,recovered,unreadable]) test.dom.window.close();
   f.dom.window.close();
-  console.log(JSON.stringify({passed:true,checks:['administrator-only native navigation and routes','partial-source results and source-specific zero metrics','untrusted descriptions, links, evidence and source remain text','missing SkillSpector stays unavailable','scan cancellation preserves ordinary session state','install gate requires report review, explicit acknowledgement and reason','installation stays bound to reviewed digest and workspace','conversation visibility and draft are preserved','existing ZIP/directory importers freeze reviewed parameters and reuse exact upload bodies','upload review works without the center module and rejects duplicate submissions'],scope:'shipped browser JavaScript in JSDOM; no browser geometry assertions'}));
+  console.log(JSON.stringify({passed:true,checks:['administrator-only native navigation and routes','partial-source results and source-specific zero metrics','untrusted descriptions, links, evidence and source remain text','missing SkillSpector stays unavailable','scan cancellation preserves ordinary session state','install gate requires report review, explicit acknowledgement and reason','installation stays bound to reviewed digest and workspace','conversation visibility and draft are preserved','existing ZIP/directory importers freeze reviewed parameters and reuse exact upload bodies','upload review works without the center module and rejects duplicate submissions','confirmation retains external findings even when builtin has no findings','persisted NVIDIA and builtin reports remain separately viewable','re-scan and cancellation never restore an old external pass','page refresh resumes persisted scan jobs and cancellation','terminal job does not enable installation before saved reports reload'],scope:'shipped browser JavaScript in JSDOM; no browser geometry assertions'}));
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -38,6 +38,7 @@ type SkillPack struct {
 	Files     []SkillFile                   `json:"files"`
 	Scan      skillsafety.Report            `json:"scan"`
 	Reports   map[string]skillsafety.Report `json:"reports"`
+	ActiveJob *SkillScanJob                 `json:"activeJob,omitempty"`
 }
 
 type SkillScanJob struct {
@@ -572,6 +573,12 @@ func (m *Manager) runSkillScan(ctx context.Context, center *skillCenterState, jo
 			}
 		}
 	}
+	// Release the execution slot before publishing a terminal job. Once a
+	// caller observes completion, installation must not race deferred cleanup.
+	if cancel := center.cancels[job.ID]; cancel != nil {
+		cancel()
+		delete(center.cancels, job.ID)
+	}
 	_ = m.Store.Put("skill-center-job", job.ID, job)
 }
 
@@ -600,8 +607,32 @@ func (m *Manager) CancelSkillScan(id string) (SkillScanJob, error) {
 	return job, nil
 }
 
+// Active scan identity is returned with the detail view so a browser refresh
+// can resume observation/cancellation without creating another scan.
+func (m *Manager) activeSkillScan(packID string) (*SkillScanJob, error) {
+	center, e := m.skillsCenter()
+	if e != nil {
+		return nil, e
+	}
+	center.mu.Lock()
+	defer center.mu.Unlock()
+	for id := range center.cancels {
+		var job SkillScanJob
+		if e = m.Store.Get("skill-center-job", id, &job); e != nil {
+			return nil, e
+		}
+		if job.PackID == packID && (job.Status == "queued" || job.Status == "running") {
+			return &job, nil
+		}
+	}
+	return nil, nil
+}
+
 func scanNeedsReview(report skillsafety.Report) bool {
-	return report.Status != "completed" || report.Recommendation != "no_findings"
+	return report.Status != "completed" || report.Recommendation != "no_findings" ||
+		report.Coverage.FilesSeen <= 0 || report.Coverage.FilesScanned <= 0 ||
+		report.Coverage.FilesSkipped != 0 || len(report.Coverage.Skipped) > 0 ||
+		report.Coverage.FilesScanned != report.Coverage.FilesSeen
 }
 
 func summarizeSkillReport(report skillsafety.Report) skillsafety.Report {
@@ -816,6 +847,11 @@ func (s *Server) skillCenterRoutes(mux *http.ServeMux) {
 	})
 	register("GET /api/skill-center/packs/{id}", func(w http.ResponseWriter, r *http.Request) {
 		v, e := s.Manager.SkillPack(r.PathValue("id"))
+		if e != nil {
+			writeSkillCenterError(w, e)
+			return
+		}
+		v.ActiveJob, e = s.Manager.activeSkillScan(v.ID)
 		if e != nil {
 			writeSkillCenterError(w, e)
 			return

@@ -15,6 +15,9 @@ import (
 // executed. A delayed write detects a descendant surviving scanner cleanup.
 func TestSpectorCancellationStopsDescendants(t *testing.T) {
 	directory := t.TempDir()
+	if err := os.WriteFile(filepath.Join(directory, "SKILL.md"), []byte("Read this fixture."), 0600); err != nil {
+		t.Fatal(err)
+	}
 	ready := filepath.Join(directory, "child-ready")
 	marker := filepath.Join(directory, "child-survived")
 	child := "printf ready > " + shellQuote(ready) + "; sleep 0.6; printf survived > " + shellQuote(marker)
@@ -57,6 +60,9 @@ func TestSpectorCancellationStopsDescendants(t *testing.T) {
 
 func TestSpectorNormalExitCleansUpDescendants(t *testing.T) {
 	directory := t.TempDir()
+	if err := os.WriteFile(filepath.Join(directory, "SKILL.md"), []byte("Read this fixture."), 0600); err != nil {
+		t.Fatal(err)
+	}
 	marker := filepath.Join(directory, "child-survived")
 	child := "sleep 0.6; printf survived > " + shellQuote(marker)
 	command := writeScanner(t, "sh -c "+shellQuote(child)+" >/dev/null 2>&1 &\nprintf '%s' "+shellQuote(string(spectorJSON("SAFE", true, true))))

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RunDesk Control API (RDCA)",
-    "version": "0.73.0",
+    "version": "0.74.0",
     "description": "RunDesk Control API（RDCA），RunDesk 自有的应用与管理契约；不依赖 HarnessRouter；附加 UHP /v1 入口共用任务核心，具体范围与限制见 docs/UHP.md，不声明完整规范兼容。/api/v1 为稳定入口；新增可选字段不改变既有语义。应用凭据绑定应用、实例、项目和 scopes；x-administrator-only 标识管理接口，x-application-scopes 标识应用所需权限。任务接收、执行终态和业务评测分开；事件保留后端原生载荷。独立 Kun 0.17.0 / worker 协议 16；Kun 与 Codex 的内部调试能力不同。0.61.0 起日常会话与应用任务仅接受 Codex，Kun 用于维护、轨迹问答及保留的研究 API；普通 Kun 提交返回 kun_maintenance_only。当前应用接入、错误、幂等及示例见 docs/API-V1.md。"
   },
   "servers": [
@@ -26854,6 +26854,1434 @@
           }
         }
       }
+    },
+    "/skill-center/check-engines": {
+      "get": {
+        "operationId": "get_skill_center_check_engines",
+        "summary": "可用效果测试环境",
+        "x-administrator-only": true,
+        "parameters": [],
+        "description": "管理员专用。沿用宿主认证、来源和主机检查；不向应用或成员凭据开放。效果测试不替代安全扫描，不自动安装或修复技能。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCheckEngines"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数、用例配置或外部报告无效／超限；缺少固定 evals/eval.yaml。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员；候选报告必须属于当前快照。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、任务或报告不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "摘要变化、未确认执行／导入、已有同快照任务或历史上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行一个隔离效果测试；清理未确认继续阻断。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "持久状态或报告保存失败。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Docker 未返回可确认的冻结镜像身份。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "需要 Linux 本机 Docker 与已有受管镜像；不可用时不会退回宿主执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；失败、缺失或未核验来源不能作为通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/packs/{id}/checks": {
+      "get": {
+        "operationId": "get_skill_center_packs_id_checks",
+        "summary": "查询该快照的测试任务",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          }
+        ],
+        "description": "管理员专用。沿用宿主认证、来源和主机检查；不向应用或成员凭据开放。效果测试不替代安全扫描，不自动安装或修复技能。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SkillCheckJob"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数、用例配置或外部报告无效／超限；缺少固定 evals/eval.yaml。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员；候选报告必须属于当前快照。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、任务或报告不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "摘要变化、未确认执行／导入、已有同快照任务或历史上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行一个隔离效果测试；清理未确认继续阻断。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "持久状态或报告保存失败。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Docker 未返回可确认的冻结镜像身份。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "需要 Linux 本机 Docker 与已有受管镜像；不可用时不会退回宿主执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；失败、缺失或未核验来源不能作为通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "post_skill_center_packs_id_checks",
+        "summary": "在独立容器校验或执行用例",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          }
+        ],
+        "description": "管理员专用。沿用宿主认证、来源和主机检查；不向应用或成员凭据开放。效果测试不替代安全扫描，不自动安装或修复技能。 固定读取 /source/evals/eval.yaml；源快照只读，工作及输出目录用限额 tmpfs。固定本机镜像 ID，不拉取镜像、不挂主机工作区、Codex HOME 或 Docker socket。确认要求包括 validate。接口不承诺幂等重放，不应自动重试。",
+        "responses": {
+          "202": {
+            "description": "任务已接收，继续查询执行状态及报告。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "job": {
+                      "$ref": "#/components/schemas/SkillCheckJob"
+                    }
+                  },
+                  "required": [
+                    "job"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数、用例配置或外部报告无效／超限；缺少固定 evals/eval.yaml。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员；候选报告必须属于当前快照。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、任务或报告不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "摘要变化、未确认执行／导入、已有同快照任务或历史上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行一个隔离效果测试；清理未确认继续阻断。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "持久状态或报告保存失败。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Docker 未返回可确认的冻结镜像身份。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "需要 Linux 本机 Docker 与已有受管镜像；不可用时不会退回宿主执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；失败、缺失或未核验来源不能作为通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "digest": {
+                    "type": "string",
+                    "pattern": "^sha256:[a-f0-9]{64}$",
+                    "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "validate",
+                      "run"
+                    ]
+                  },
+                  "instanceId": {
+                    "type": "string"
+                  },
+                  "allowNetwork": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "只有显式开启才允许测试容器使用 bridge；默认 none。"
+                  },
+                  "acknowledgeExecution": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "validate 也可能读取 YAML 引用内容，两个操作均须明确确认独立容器执行。"
+                  }
+                },
+                "required": [
+                  "digest",
+                  "action",
+                  "instanceId",
+                  "acknowledgeExecution"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/check-jobs/{id}": {
+      "get": {
+        "operationId": "get_skill_center_check_jobs_id",
+        "summary": "查询效果测试任务",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          }
+        ],
+        "description": "管理员专用。沿用宿主认证、来源和主机检查；不向应用或成员凭据开放。效果测试不替代安全扫描，不自动安装或修复技能。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCheckJob"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数、用例配置或外部报告无效／超限；缺少固定 evals/eval.yaml。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员；候选报告必须属于当前快照。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、任务或报告不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "摘要变化、未确认执行／导入、已有同快照任务或历史上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行一个隔离效果测试；清理未确认继续阻断。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "持久状态或报告保存失败。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Docker 未返回可确认的冻结镜像身份。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "需要 Linux 本机 Docker 与已有受管镜像；不可用时不会退回宿主执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；失败、缺失或未核验来源不能作为通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/check-jobs/{id}/cancel": {
+      "post": {
+        "operationId": "post_skill_center_check_jobs_id_cancel",
+        "summary": "取消任务或重试清理独立容器",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          }
+        ],
+        "description": "管理员专用。沿用宿主认证、来源和主机检查；不向应用或成员凭据开放。效果测试不替代安全扫描，不自动安装或修复技能。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCheckJob"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数、用例配置或外部报告无效／超限；缺少固定 evals/eval.yaml。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员；候选报告必须属于当前快照。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、任务或报告不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "摘要变化、未确认执行／导入、已有同快照任务或历史上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行一个隔离效果测试；清理未确认继续阻断。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "持久状态或报告保存失败。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Docker 未返回可确认的冻结镜像身份。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "需要 Linux 本机 Docker 与已有受管镜像；不可用时不会退回宿主执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；失败、缺失或未核验来源不能作为通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/packs/{id}/check-reports": {
+      "get": {
+        "operationId": "get_skill_center_packs_id_check_reports",
+        "summary": "列出当前快照报告摘要",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          }
+        ],
+        "description": "管理员专用。沿用宿主认证、来源和主机检查；不向应用或成员凭据开放。效果测试不替代安全扫描，不自动安装或修复技能。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SkillCheckReportRecord"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数、用例配置或外部报告无效／超限；缺少固定 evals/eval.yaml。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员；候选报告必须属于当前快照。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、任务或报告不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "摘要变化、未确认执行／导入、已有同快照任务或历史上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行一个隔离效果测试；清理未确认继续阻断。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "持久状态或报告保存失败。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Docker 未返回可确认的冻结镜像身份。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "需要 Linux 本机 Docker 与已有受管镜像；不可用时不会退回宿主执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；失败、缺失或未核验来源不能作为通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "post_skill_center_packs_id_check_reports",
+        "summary": "导入未核验来源的外部报告",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          }
+        ],
+        "description": "管理员专用。沿用宿主认证、来源和主机检查；不向应用或成员凭据开放。效果测试不替代安全扫描，不自动安装或修复技能。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCheckReportRecord"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数、用例配置或外部报告无效／超限；缺少固定 evals/eval.yaml。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员；候选报告必须属于当前快照。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、任务或报告不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "摘要变化、未确认执行／导入、已有同快照任务或历史上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行一个隔离效果测试；清理未确认继续阻断。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "持久状态或报告保存失败。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Docker 未返回可确认的冻结镜像身份。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "需要 Linux 本机 Docker 与已有受管镜像；不可用时不会退回宿主执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；失败、缺失或未核验来源不能作为通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "digest": {
+                    "type": "string",
+                    "pattern": "^sha256:[a-f0-9]{64}$",
+                    "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+                  },
+                  "report": {
+                    "type": "object",
+                    "properties": {},
+                    "required": [],
+                    "additionalProperties": true
+                  },
+                  "acknowledgeImport": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "确认外部报告的执行来源和技能关联未核验。"
+                  }
+                },
+                "required": [
+                  "digest",
+                  "report",
+                  "acknowledgeImport"
+                ],
+                "additionalProperties": false,
+                "description": "report 是上游 result.json 对象，最大 4 MiB、1000 用例；整个请求另有 16 KiB 封装预算。原始配置、prompt/response 不直接返回。"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/check-reports": {
+      "get": {
+        "operationId": "get_skill_center_check_reports",
+        "summary": "列出可用跨版本基线报告摘要",
+        "x-administrator-only": true,
+        "parameters": [],
+        "description": "管理员专用。沿用宿主认证、来源和主机检查；不向应用或成员凭据开放。效果测试不替代安全扫描，不自动安装或修复技能。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SkillCheckReportRecord"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数、用例配置或外部报告无效／超限；缺少固定 evals/eval.yaml。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员；候选报告必须属于当前快照。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、任务或报告不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "摘要变化、未确认执行／导入、已有同快照任务或历史上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行一个隔离效果测试；清理未确认继续阻断。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "持久状态或报告保存失败。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Docker 未返回可确认的冻结镜像身份。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "需要 Linux 本机 Docker 与已有受管镜像；不可用时不会退回宿主执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；失败、缺失或未核验来源不能作为通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/check-reports/{id}": {
+      "get": {
+        "operationId": "get_skill_center_check_reports_id",
+        "summary": "读取完整效果测试报告",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          }
+        ],
+        "description": "管理员专用。沿用宿主认证、来源和主机检查；不向应用或成员凭据开放。效果测试不替代安全扫描，不自动安装或修复技能。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCheckReportRecord"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数、用例配置或外部报告无效／超限；缺少固定 evals/eval.yaml。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员；候选报告必须属于当前快照。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、任务或报告不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "摘要变化、未确认执行／导入、已有同快照任务或历史上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行一个隔离效果测试；清理未确认继续阻断。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "持久状态或报告保存失败。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Docker 未返回可确认的冻结镜像身份。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "需要 Linux 本机 Docker 与已有受管镜像；不可用时不会退回宿主执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；失败、缺失或未核验来源不能作为通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skill-center/packs/{id}/check-compare": {
+      "get": {
+        "operationId": "get_skill_center_packs_id_check_compare",
+        "summary": "对比基线与当前快照报告",
+        "x-administrator-only": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          },
+          {
+            "name": "baseline",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          },
+          {
+            "name": "candidate",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          }
+        ],
+        "description": "管理员专用。沿用宿主认证、来源和主机检查；不向应用或成员凭据开放。效果测试不替代安全扫描，不自动安装或修复技能。 baseline 可来自另一快照；candidate 必须属于当前快照且摘要匹配。自动回归门禁仅支持纯根 SKILL.md 修订；其他文件、镜像、模型、配置和输入身份须相同，且须有可核对的内建规则证据。身份变化或脚本／Agent／未知 Judge 不能核实时，明细统一 unknown，整体不可比较或 incomplete。",
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCheckComparisonResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数、用例配置或外部报告无效／超限；缺少固定 evals/eval.yaml。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要宿主身份认证。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "仅管理员；候选报告必须属于当前快照。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "快照、任务或报告不存在。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "摘要变化、未确认执行／导入、已有同快照任务或历史上限。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "最多同时执行一个隔离效果测试；清理未确认继续阻断。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "持久状态或报告保存失败。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Docker 未返回可确认的冻结镜像身份。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "需要 Linux 本机 Docker 与已有受管镜像；不可用时不会退回宿主执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "结构化错误；失败、缺失或未核验来源不能作为通过。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCenterError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -39136,6 +40564,9 @@
             "additionalProperties": {
               "$ref": "#/components/schemas/SkillScanReport"
             }
+          },
+          "activeJob": {
+            "$ref": "#/components/schemas/SkillScanJob"
           }
         },
         "required": [
@@ -39624,6 +41055,614 @@
           "retryable"
         ],
         "additionalProperties": false
+      },
+      "SkillCheckAgentConfiguration": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string"
+          },
+          "engine": {
+            "type": "string"
+          },
+          "protocol": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "SkillCheckAssertion": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "skipped": {
+            "type": "boolean"
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "passed",
+          "skipped",
+          "source"
+        ],
+        "additionalProperties": false
+      },
+      "SkillCheckCase": {
+        "type": "object",
+        "properties": {
+          "caseId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "variant": {
+            "type": "string",
+            "description": "default、with_skill、without_skill 分别保留；未知变体不会作为通过。"
+          },
+          "inputId": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+          },
+          "runtimeId": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "description": "上游明确提供的逐用例 observed_model／observed_version 的摘要；不返回原始运行身份文本，缺失时省略。"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PASS",
+              "FAIL",
+              "ERROR",
+              "SKIP",
+              "UNKNOWN"
+            ]
+          },
+          "durationMs": {
+            "type": "integer"
+          },
+          "error": {
+            "type": "string"
+          },
+          "assertions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkillCheckAssertion"
+            }
+          }
+        },
+        "required": [
+          "caseId",
+          "title",
+          "variant",
+          "status",
+          "durationMs",
+          "assertions"
+        ],
+        "additionalProperties": false
+      },
+      "SkillCheckSummary": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "pass": {
+            "type": "integer"
+          },
+          "fail": {
+            "type": "integer"
+          },
+          "error": {
+            "type": "integer"
+          },
+          "skip": {
+            "type": "integer"
+          },
+          "unknown": {
+            "type": "integer"
+          },
+          "durationMs": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "pass",
+          "fail",
+          "error",
+          "skip",
+          "unknown",
+          "durationMs"
+        ],
+        "additionalProperties": false
+      },
+      "SkillCheckReport": {
+        "type": "object",
+        "properties": {
+          "skillName": {
+            "type": "string"
+          },
+          "schemaVersion": {
+            "type": "string"
+          },
+          "engineName": {
+            "type": "string"
+          },
+          "modelName": {
+            "type": "string"
+          },
+          "requestedConfiguration": {
+            "$ref": "#/components/schemas/SkillCheckAgentConfiguration"
+          },
+          "appliedConfiguration": {
+            "$ref": "#/components/schemas/SkillCheckAgentConfiguration"
+          },
+          "observedConfiguration": {
+            "$ref": "#/components/schemas/SkillCheckAgentConfiguration"
+          },
+          "configurationId": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+          },
+          "suiteDigest": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+          },
+          "identityComplete": {
+            "type": "boolean"
+          },
+          "startedAt": {
+            "type": "string"
+          },
+          "finishedAt": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "fail",
+              "error",
+              "incomplete"
+            ]
+          },
+          "cases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkillCheckCase"
+            },
+            "maxItems": 1000
+          },
+          "summary": {
+            "$ref": "#/components/schemas/SkillCheckSummary"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "skillName",
+          "schemaVersion",
+          "engineName",
+          "modelName",
+          "identityComplete",
+          "status",
+          "cases",
+          "summary",
+          "warnings"
+        ],
+        "additionalProperties": false,
+        "description": "有界规范化 Skill-Up v1alpha1 报告；不返回原始 prompt/response、完整配置或任意原始 JSON。主汇总按 caseId 选主结果，不双计 with_skill/without_skill。suiteDigest 只能由宿主对冻结包内除根 SKILL.md 外的全部文件路径、字节与执行位计算后设置，覆盖用例、辅助脚本和数据；外部 JSON 不能自行声明可信来源。质量结果不替代安全扫描。"
+      },
+      "SkillCheckValidation": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success",
+              "failed",
+              "unavailable"
+            ]
+          },
+          "cases": {
+            "type": "integer"
+          },
+          "output": {
+            "type": "string"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "status",
+          "cases",
+          "output",
+          "warnings"
+        ],
+        "additionalProperties": false,
+        "description": "校验命令输出及明确用例数量；退出 0 但没有可识别的非空完成输出不能算校验成功。"
+      },
+      "SkillCheckJob": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "packId": {
+            "type": "string"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "environmentName": {
+            "type": "string"
+          },
+          "containerName": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "startedAt": {
+            "type": "string"
+          },
+          "finishedAt": {
+            "type": "string"
+          },
+          "reportId": {
+            "type": "string"
+          },
+          "output": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "cleanupError": {
+            "type": "string"
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+          },
+          "suiteDigest": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+          },
+          "imageId": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "validate",
+              "run"
+            ]
+          },
+          "allowNetwork": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "completed",
+              "failed",
+              "canceled",
+              "interrupted"
+            ]
+          },
+          "exitCode": {
+            "type": "integer"
+          },
+          "cleanupPending": {
+            "type": "boolean"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/SkillCheckValidation"
+          }
+        },
+        "required": [
+          "id",
+          "packId",
+          "digest",
+          "suiteDigest",
+          "action",
+          "instanceId",
+          "environmentName",
+          "imageId",
+          "containerName",
+          "allowNetwork",
+          "status",
+          "createdAt",
+          "exitCode",
+          "cleanupPending"
+        ],
+        "additionalProperties": false,
+        "description": "执行状态与质量结论分离。completed 表示报告或有效校验结果已取得，仍需检查报告 PASS/FAIL/ERROR。exitCode=-1 表示尚无确定退出码。cleanupPending=true 或 cleanupError 非空表示容器清理未确认，执行槽继续阻断；接受取消不代表清理已完成，终态有 cleanupError 可调用 cancel 重试。重启在途任务标记 interrupted，不自动重跑，遗留清理失败继续阻断。"
+      },
+      "SkillCheckReportRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "packId": {
+            "type": "string"
+          },
+          "jobId": {
+            "type": "string"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+          },
+          "suiteDigest": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "description": "路径、完整字节和执行位的 rundesk-skill-v1 内容摘要。"
+          },
+          "imageId": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "docker_run",
+              "external_unverified"
+            ]
+          },
+          "casesOmitted": {
+            "type": "boolean"
+          },
+          "report": {
+            "$ref": "#/components/schemas/SkillCheckReport"
+          }
+        },
+        "required": [
+          "id",
+          "packId",
+          "digest",
+          "source",
+          "createdAt",
+          "casesOmitted",
+          "report"
+        ],
+        "additionalProperties": false,
+        "description": "固定快照关联与执行来源。列表只返回 casesOmitted=true 的摘要，完整用例从单报告 GET 读取。external_unverified 仅按用户声明关联，不拥有可信 suiteDigest，不参与安全安装门禁，也不能单独建立回归通过。"
+      },
+      "SkillCheckCaseChange": {
+        "type": "object",
+        "properties": {
+          "caseId": {
+            "type": "string"
+          },
+          "variant": {
+            "type": "string"
+          },
+          "beforeStatus": {
+            "type": "string"
+          },
+          "afterStatus": {
+            "type": "string"
+          },
+          "change": {
+            "type": "string",
+            "enum": [
+              "fixed",
+              "regressed",
+              "unchanged",
+              "new",
+              "removed",
+              "unknown"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "caseId",
+          "variant",
+          "change"
+        ],
+        "additionalProperties": false
+      },
+      "SkillCheckChangeSummary": {
+        "type": "object",
+        "properties": {
+          "fixed": {
+            "type": "integer"
+          },
+          "regressed": {
+            "type": "integer"
+          },
+          "unchanged": {
+            "type": "integer"
+          },
+          "new": {
+            "type": "integer"
+          },
+          "removed": {
+            "type": "integer"
+          },
+          "unknown": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fixed",
+          "regressed",
+          "unchanged",
+          "new",
+          "removed",
+          "unknown"
+        ],
+        "additionalProperties": false
+      },
+      "SkillCheckComparison": {
+        "type": "object",
+        "properties": {
+          "comparable": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "fail",
+              "incomplete"
+            ]
+          },
+          "cases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkillCheckCaseChange"
+            },
+            "maxItems": 2000
+          },
+          "summary": {
+            "$ref": "#/components/schemas/SkillCheckChangeSummary"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "comparable",
+          "verdict",
+          "cases",
+          "summary",
+          "warnings"
+        ],
+        "additionalProperties": false,
+        "description": "按 caseId + variant 对照。MVP 自动回归门禁仅支持根 SKILL.md 修订，冻结包内所有其他文件、镜像、模型、配置及声明输入身份须一致，且使用可核对的内建 grading/gates 规则。辅助文件或镜像变化、脚本／Agent／未知 Judge 实现身份无法证实时，全部明细 change=unknown 且 verdict=incomplete；各报告原始观测状态仍可分别查看。缺失、新增、删除、SKIP 和未知不会算通过；外部来源或缺少可信 suiteDigest 也不能建立回归通过。"
+      },
+      "SkillCheckComparisonResult": {
+        "type": "object",
+        "properties": {
+          "baselineId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "candidateId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "comparison": {
+            "$ref": "#/components/schemas/SkillCheckComparison"
+          }
+        },
+        "required": [
+          "baselineId",
+          "candidateId",
+          "comparison"
+        ],
+        "additionalProperties": false
+      },
+      "SkillCheckEnvironment": {
+        "type": "object",
+        "properties": {
+          "instanceId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "instanceId",
+          "name",
+          "image",
+          "available",
+          "message"
+        ],
+        "additionalProperties": false
+      },
+      "SkillCheckEngines": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkillCheckEnvironment"
+            }
+          }
+        },
+        "required": [
+          "available",
+          "message",
+          "items"
+        ],
+        "additionalProperties": false,
+        "description": "已有受管 Docker 制作环境候选与 Docker 可用性；available 不证明镜像内 Skill-Up、Agent、模型或用例已经验证。"
       }
     }
   }

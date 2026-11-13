@@ -20,7 +20,7 @@ func spectorJSON(recommendation string, complete, successful any) []byte {
 		"components":            []any{map[string]any{"path": "SKILL.md"}},
 	}
 	if complete != nil {
-		value["analysis_completeness"] = map[string]any{"is_complete": complete}
+		value["analysis_completeness"] = map[string]any{"is_complete": complete, "fully_inspected_files": 1}
 	}
 	if successful != nil {
 		value["execution_successful"] = successful
@@ -128,7 +128,7 @@ func TestSpectorContradictoryAndLLMCompleteness(t *testing.T) {
 	if report.Status != "incomplete" {
 		t.Fatal("partial status cannot be overridden by is_complete")
 	}
-	value["analysis_completeness"] = map[string]any{"status": "complete"}
+	value["analysis_completeness"] = map[string]any{"status": "complete", "fully_inspected_files": 1}
 	value["metadata"] = map[string]any{"llm_requested": true, "llm_available": false, "llm_error": "provider absent"}
 	data, _ = json.Marshal(value)
 	report, _ = parseSpectorReport(data, 0, true)
@@ -168,6 +168,9 @@ func TestSpectorRunsVectorArgumentsAndCapturesJSON(t *testing.T) {
 	if err := os.Mkdir(directory, 0700); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(directory, "SKILL.md"), []byte("Read this fixture."), 0600); err != nil {
+		t.Fatal(err)
+	}
 	argsPath := filepath.Join(t.TempDir(), "arguments")
 	data := string(spectorJSON("SAFE", true, true))
 	command := writeScanner(t, "printf '%s\\n' \"$@\" > "+shellQuote(argsPath)+"\nprintf '%s' "+shellQuote(data))
@@ -204,7 +207,11 @@ func TestSpectorCancellationIsNotComplete(t *testing.T) {
 	command := writeScanner(t, "exec sleep 10")
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
 	defer cancel()
-	report, err := RunSkillSpector(ctx, t.TempDir(), command, false)
+	directory := t.TempDir()
+	if err := os.WriteFile(filepath.Join(directory, "SKILL.md"), []byte("Read this fixture."), 0600); err != nil {
+		t.Fatal(err)
+	}
+	report, err := RunSkillSpector(ctx, directory, command, false)
 	if err == nil || report.Status != "incomplete" || report.Recommendation != "incomplete" {
 		t.Fatalf("report=%+v err=%v", report, err)
 	}
