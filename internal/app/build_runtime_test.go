@@ -2,10 +2,12 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -106,5 +108,41 @@ func TestRuntimeSnapshotBoundToFrozenRecipe(t *testing.T) {
 	build.CodexRuntime = &changed
 	if err = m.validateFrozenBuildRuntime(build); err == nil || !strings.Contains(err.Error(), "冻结") {
 		t.Fatal("changed snapshot accepted", err)
+	}
+}
+
+func TestBaseBuildRuntimeUsesImageIDForChecksAndVerifiedTagForFROM(t *testing.T) {
+	m := quietRecipeManager(t)
+	d := newBaseFixtureDocker()
+	m.docker = d
+	snapshot := &BuildRuntimeSnapshot{RequestedMode: "base", Mode: "base", Reference: "moving-codex:latest", ImageID: d.root, Version: "0.157.1", Platform: "linux/" + runtime.GOARCH}
+	data, err := freezeBuildRuntime(buildZip(t, map[string]string{"Dockerfile": "FROM scratch\n"}), snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := "0123456789abcdef01234567"
+	if err = os.MkdirAll(m.buildDir(id), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(filepath.Join(m.buildDir(id), "context.zip"), data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	sha := sha256.Sum256(data)
+	v := ImageBuild{ID: id, ContextSHA256: fmt.Sprintf("%x", sha), CodexRuntime: snapshot}
+	args, err := m.prepareBuildRuntime(context.Background(), v, t.TempDir(), io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	from := ""
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "RD_BASE_IMAGE=") {
+			from = strings.TrimPrefix(arg, "RD_BASE_IMAGE=")
+		}
+	}
+	if from == "" || strings.HasPrefix(from, "sha256:") || d.aliases[from] != snapshot.ImageID || snapshot.Reference != "moving-codex:latest" {
+		t.Fatal("runtime FROM lost frozen identity", args, snapshot)
+	}
+	if len(d.commands) != 2 || d.commands[0][0] != "run" || d.commands[1][0] != "image" || !strings.Contains(strings.Join(d.commands[0], " "), "--network none") || !strings.Contains(strings.Join(d.commands[0], " "), snapshot.ImageID) {
+		t.Fatal("capability check stopped using the isolated frozen ID", d.commands)
 	}
 }

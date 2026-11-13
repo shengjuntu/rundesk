@@ -405,6 +405,37 @@ func (m *Manager) checkedBaseImage(id, key string) (imageInspection, error) {
 	return image, nil
 }
 
+// Image IDs remain the frozen provenance and cache identity, but BuildKit does
+// not accept a bare content ID in FROM. Bind an ID-derived local tag and verify
+// it after tagging; never follow the original movable repository tag here.
+func localBuildImageReference(id string) string {
+	return "rundesk-base/image:sha256-" + strings.TrimPrefix(id, "sha256:")
+}
+
+func (m *Manager) prepareLocalBuildImageReference(ctx context.Context, id string, out io.Writer) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	if _, err := m.checkedBaseImage(id, ""); err != nil {
+		return "", err
+	}
+	ref := localBuildImageReference(id)
+	if err := m.runtimeDockerCommand(ctx, out, "image", "tag", id, ref); err != nil {
+		return "", fmt.Errorf("无法为冻结镜像建立本机构建引用：%w", err)
+	}
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	image, err := m.inspectImage(ref)
+	if err != nil {
+		return "", err
+	}
+	if image.ID != id {
+		return "", failure(409, "base_image_reference_changed", "本机构建引用未指向冻结镜像，拒绝继续构建")
+	}
+	return ref, nil
+}
+
 // Only an explicit missing-image response permits acquisition or rebuilding.
 // Daemon/socket errors, platform mismatches and invalid labels must fail closed.
 func baseImageMissing(err error) bool {
@@ -461,6 +492,9 @@ func (m *Manager) prepareBuildBases(ctx context.Context, v ImageBuild, out io.Wr
 		if inspectErr != nil {
 			if !baseImageMissing(inspectErr) {
 				return nil, inspectErr
+			}
+			if baseImageIdentity.MatchString(snapshot.RootReference) {
+				return nil, fmt.Errorf("本机根镜像内容ID不可用，不能从镜像仓库下载裸内容ID：%w", inspectErr)
 			}
 			fmt.Fprintf(out, "Tool bases: acquiring root %s (%s).\n", snapshot.RootReference, snapshot.Platform)
 			if err = m.runtimeDockerCommand(ctx, out, "pull", "--platform", snapshot.Platform, snapshot.RootReference); err != nil {
@@ -547,7 +581,12 @@ func (m *Manager) prepareBuildBases(ctx context.Context, v ImageBuild, out io.Wr
 					}
 				}
 				iidfile := filepath.Join(ctxDir, "image-id")
-				args := []string{"build", "--pull=false", "--platform", snapshot.Platform, "--iidfile", iidfile, "--tag", "rundesk-base/" + stage.ID + ":" + key, "--label", "io.rundesk.base.key=" + key, "--file", filepath.Join(ctxDir, filepath.FromSlash(stage.Dockerfile)), "--build-arg", "RD_BASE_IMAGE=" + parent}
+				from, refErr := m.prepareLocalBuildImageReference(ctx, parent, out)
+				if refErr != nil {
+					err = refErr
+					return
+				}
+				args := []string{"build", "--pull=false", "--platform", snapshot.Platform, "--iidfile", iidfile, "--tag", "rundesk-base/" + stage.ID + ":" + key, "--label", "io.rundesk.base.key=" + key, "--file", filepath.Join(ctxDir, filepath.FromSlash(stage.Dockerfile)), "--build-arg", "RD_BASE_IMAGE=" + from}
 				if v.NoCache {
 					args = append(args, "--no-cache")
 				}
@@ -588,5 +627,9 @@ func (m *Manager) prepareBuildBases(ctx context.Context, v ImageBuild, out io.Wr
 		parent = layer.ImageID
 	}
 	fmt.Fprintf(out, "Tool bases ready: %s -> preset %s.\n", parent, v.ProfileID)
-	return []string{"--build-arg", "RD_BASE_IMAGE=" + parent, "--build-arg", "RD_TOOL_BASE_READY=1"}, nil
+	from, err := m.prepareLocalBuildImageReference(ctx, parent, out)
+	if err != nil {
+		return nil, err
+	}
+	return []string{"--build-arg", "RD_BASE_IMAGE=" + from, "--build-arg", "RD_TOOL_BASE_READY=1"}, nil
 }

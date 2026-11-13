@@ -2,7 +2,8 @@
 
 The server freezes its own build jobs. This CLI pins parent and dependency image
 IDs for one invocation, with a small persistent ID cache across invocations.
-No mutable cache tag is trusted and no BuildKit-only feature is required.
+Dockerfile FROM receives a checked, content-named local tag: a bare content ID
+is not a resolvable image reference in BuildKit. No mutable cache tag is trusted.
 """
 import hashlib
 import json
@@ -144,8 +145,20 @@ def prepare(context, prefix, timeout, cache_root=None, runner=None):
             raise BaseImageError("Common base image cache label changed")
         return fields[:3]
 
+    def from_reference(image):
+        # FROM sha256:<content-id> is parsed as a registry image by BuildKit.
+        # Create our own content-named local alias from the frozen ID instead
+        # of trusting a user tag or changing cache/snapshot identity to a tag.
+        reference = "rundesk-base/image:sha256-" + image[0].removeprefix("sha256:")
+        invoke(["image", "tag", image[0], reference], capture=False)
+        if inspect(reference) != image:
+            raise BaseImageError("Local common base reference changed identity/platform")
+        return reference
+
     parent = inspect(root, optional=True)
     if parent is None:
+        if re.fullmatch(r"sha256:[0-9a-f]{64}", root):
+            raise BaseImageError("Fixed common base root image is missing locally; restore the pinned image before rebuilding")
         invoke(["pull", root], capture=False)
         parent = inspect(root)
     platform = parent[1] + "/" + parent[2]
@@ -188,7 +201,7 @@ def prepare(context, prefix, timeout, cache_root=None, runner=None):
                     target.write_bytes(_regular(context / filename))
                     target.chmod(0o644 | files[filename]["executable"])
                 iidfile = Path(temporary) / "image.id"
-                args = ["build", "--pull=false", "--platform", platform, "--iidfile", str(iidfile), "--build-arg", "RD_BASE_IMAGE=" + parent[0],
+                args = ["build", "--pull=false", "--platform", platform, "--iidfile", str(iidfile), "--build-arg", "RD_BASE_IMAGE=" + from_reference(parent),
                         "--label", "io.rundesk.base.key=" + key]
                 for name in sorted(arguments):
                     args += ["--build-arg", name + "=" + arguments[name]]
@@ -210,6 +223,7 @@ def prepare(context, prefix, timeout, cache_root=None, runner=None):
                     temporary_record.unlink(missing_ok=True)
                 parent = built
         snapshots.append({"stage": stage["id"], "key": key, "imageId": parent[0], "parentImageId": identity["parentImageId"], "platform": platform})
+    leaf_reference = from_reference(parent)
     lock = {"schemaVersion": 1, "target": value["target"], "stages": snapshots}
     (context / "build-bases.lock.json").write_bytes(_canonical(lock) + b"\n")
-    return snapshots, ["--build-arg", "RD_BASE_IMAGE=" + parent[0], "--build-arg", "RD_TOOL_BASE_READY=1"]
+    return snapshots, ["--build-arg", "RD_BASE_IMAGE=" + leaf_reference, "--build-arg", "RD_TOOL_BASE_READY=1"]

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.75.1 — 2026-11-12
+
+Fix shared tool-base builds passing bare Docker content IDs to `RD_BASE_IMAGE`. Bind each verified frozen image ID to a content-named local tag, verify the tag resolves to that ID, and use the tag for `FROM` in root, intermediate, reused and final recipe builds. Explicit Codex `base` mode uses the same conversion. Frozen image IDs, cache keys, recipe inputs and historical build records retain their meaning.
+
+The standalone Python recipe CLI follows the same local-reference contract. A missing fixed image ID fails locally rather than being sent to a registry as an image name. Existing offline and smoke checks remain required. See [build runtime](docs/BUILD-RUNTIME.md), [upgrading](docs/UPGRADING.md) and [validation](docs/VALIDATION.md).
+
 ## 0.75.0 — 2026-11-12
 
 Acquire local ZIPs, browser-selected directories and installed Skills into fixed Skill Center snapshots before explicit installation or effect tests. Preserve complete relative paths and source provenance; existing installed content is read without being changed. Add explicit bounded environment self-diagnostics that distinguish missing commands, unsupported versions, failed protocols and unknown model readiness. Opening saved diagnostics does not start a probe.

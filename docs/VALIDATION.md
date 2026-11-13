@@ -1,10 +1,12 @@
 # 验证范围与复验
 
-RunDesk **0.75.0** 补齐本地 Skill 获取、已安装内容的独立快照和显式环境自检。实际执行命令、结果与限制见 [release-075.json](validation/current/release-075.json)。上传与获取只暂存完整内容；安装、效果测试和受控环境诊断分别验证。
+RunDesk **0.75.1** 修复公共工具基础层和显式 Codex 基础镜像把裸内容 ID 传给 Dockerfile `FROM` 的问题。实际执行命令、结果与限制见 [release-0751.json](validation/current/release-0751.json)。根层、层间、缓存／冻结层复用及最终配方均使用已核验的本地引用，冻结身份继续保存原内容 ID。
 
-本次从 0.74.0 源包继续。已有真实市场搜索、SkillSpector 三样本扫描和 Skill-Up 受控 mock 运行的历史证据保留在相应旧源包，不继承为本次通过数。
+本次从 0.75.0 源包继续。已有真实市场搜索、SkillSpector 扫描、Skill-Up 和本地 Skill 功能的历史证据保留在相应旧源包，不继承为本次新增实机通过数。
 
-当前环境没有 Docker Engine，Docker 诊断和效果测试的命令、清理与生命周期由协议替身验证；真实容器、目标模型及鉴权仍需部署机验收。自检仅证明所检查的工具协议，不是 Skill 安全证书，也不是 Agent 效果评测。
+用户提供的 0.72.0 部署证据（Docker 29.7.2，提交 `576d224`）显示：`FROM sha256:<镜像 ID>` 触发仓库解析并失败，`FROM <本地 tag>` 可在零网络条件完成对应构建。本次据此修复自动构建参数；该用户证据不是修复后六套配方已通过的结论。
+
+当前环境没有 Docker Engine，命令、身份核验、复用及失败处理由会拒绝裸 ID 的协议替身验证。真实 BuildKit、六套镜像构建及其 offline/smoke 仍需部署机验收；本次不调整镜像源、网络超时或检查通过条件。
 
 <a id="video-build-tmpfs-investigation-2026-11-08"></a>
 ## video-build 1.4.0 构建失败调查归档（2026-11-08）

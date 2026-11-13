@@ -1,0 +1,111 @@
+{
+  "version": "0.75.1",
+  "status": "passed",
+  "date": "2026-11-12",
+  "scope": "BuildKit-compatible local FROM references for shared tool bases and explicit Codex base mode",
+  "baseline": {
+    "filename": "rundesk-v0.75.0-local-skills-source.zip",
+    "sha256": "d2cc9868caa7e49914c941fb4d92b99469278ca6c4f0ea81701aaaf731456f03"
+  },
+  "reportedIssue": {
+    "source": "User deployment report, not a new local Docker acceptance result",
+    "rundeskVersion": "0.72.0",
+    "reportedCommit": "576d224",
+    "dockerVersion": "29.7.2",
+    "observation": "FROM bare sha256 image ID requests a registry and fails; FROM an existing local tag succeeds without network"
+  },
+  "implementation": {
+    "localReference": "rundesk-base/image:sha256-<64-hex>",
+    "verification": "Bind from the verified local image ID and inspect the derived tag; reject mismatch or tagging failure",
+    "frozenIdentity": "RootImageID, ParentImageID, ImageID, cache keys and lock schemas keep content IDs",
+    "fixedImageMissing": "Fail locally; do not pull a bare ID or substitute a movable tag",
+    "changedProductionFiles": [
+      "internal/app/build_bases.go",
+      "internal/app/build_runtime.go",
+      "scripts/recipe_tools/base_images.py"
+    ],
+    "dependencies": "No new production dependencies; existing Docker builder selection is unchanged"
+  },
+  "environment": {
+    "host": "Linux amd64",
+    "go": "1.25.12",
+    "productionCGO": false,
+    "dockerEngineAvailable": false
+  },
+  "checks": [
+    {
+      "id": "go-full",
+      "status": "passed",
+      "command": "CGO_ENABLED=0 go test ./... -count=1 -timeout=300s",
+      "packagesPassed": 20,
+      "appSeconds": 171.219
+    },
+    {
+      "id": "go-race",
+      "status": "passed",
+      "command": "CGO_ENABLED=1 go test -race ./internal/app -run 'TestToolBase|TestToolBases|TestBaseBuildRuntime|TestBuildRuntime|TestBuildSources' -count=1 -timeout=180s",
+      "scope": [
+        "Cold root/system/media/browser/leaf FROM boundaries",
+        "Shared cache and frozen/no-cache rebuilds",
+        "Original user-tag drift",
+        "Derived alias repair and identity mismatch",
+        "Tag failure, missing fixed root, cancellation",
+        "Explicit Codex base: ID for capability checks, verified local tag for FROM"
+      ]
+    },
+    {
+      "id": "python-bases",
+      "status": "passed",
+      "command": "python3 -B scripts/test_base_images.py",
+      "tests": 15
+    },
+    {
+      "id": "python-profiles",
+      "status": "passed",
+      "command": "python3 -B scripts/test_profiles.py",
+      "tests": 35
+    },
+    {
+      "id": "setup-image-flow",
+      "status": "passed",
+      "scope": "All TestRuntimeImage cases plus the initialization image queue race regression; the command fixture resolves aliases to their exact image IDs"
+    },
+    {
+      "id": "go-vet",
+      "status": "passed",
+      "command": "CGO_ENABLED=0 go vet ./..."
+    },
+    {
+      "id": "builds",
+      "status": "passed",
+      "platforms": [
+        "linux/amd64",
+        "windows/amd64"
+      ],
+      "flags": "-buildvcs=false -trimpath",
+      "linuxVersionOutput": "RunDesk 0.75.1"
+    },
+    {
+      "id": "docs",
+      "status": "passed",
+      "command": "python3 scripts/check-docs.py",
+      "paths": 272,
+      "operations": 326
+    },
+    {
+      "id": "release-source",
+      "status": "passed",
+      "command": "python3 scripts/check-source.py --verify-manifest",
+      "scope": "Final source manifest, archive CRC, exact bytes and permission bits"
+    }
+  ],
+  "limits": [
+    "Docker command fixtures reject bare image IDs in FROM and require the local tag to resolve to the expected ID. They do not constitute real BuildKit acceptance.",
+    "Real Docker 29.7.2 and the six full built-in recipe builds, offline checks and smoke tests must be rerun on the deployment host.",
+    "This fix covers the existing local Docker Engine/default-builder workflow; arbitrary remote or docker-container builders are not validated.",
+    "APT, Python/npm and source downloads retain their existing network requirements; avoiding a spurious parent registry lookup does not make the whole build offline.",
+    "Old failed build records and frozen contexts are not rewritten. Retrying creates a new build; a removed frozen image must be restored or a new input explicitly selected.",
+    "Windows amd64 was cross-compiled, not run on a Windows host.",
+    "Optional external integration tests may skip without their service binaries or credentials. Prior Skill and model evidence is not counted as new live acceptance."
+  ]
+}

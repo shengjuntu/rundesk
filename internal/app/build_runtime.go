@@ -443,7 +443,11 @@ func (m *Manager) prepareBuildRuntime(ctx context.Context, v ImageBuild, context
 		if err := m.runtimeDockerCommand(check, out, "run", "--rm", "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "64", "--memory", "512m", "--cpus", "1", "--user", "0:0", "--entrypoint", "sh", snapshot.ImageID, "-c", probe, "rundesk-runtime-check", snapshot.Version); err != nil {
 			return nil, fmt.Errorf("Codex 基础镜像不满足版本/Node 22+/npm/node 用户约定：%w", err)
 		}
-		return append(args, "--build-arg", "RD_BASE_IMAGE="+snapshot.ImageID), nil
+		from, err := m.prepareLocalBuildImageReference(ctx, snapshot.ImageID, out)
+		if err != nil {
+			return nil, err
+		}
+		return append(args, "--build-arg", "RD_BASE_IMAGE="+from), nil
 	case "native":
 		if !runtimeSHA.MatchString(snapshot.AssetSHA256) {
 			return nil, failure(409, "codex_runtime_snapshot_changed", "冻结原生归档身份无效")

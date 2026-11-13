@@ -56,16 +56,19 @@ type baseFixtureDocker struct {
 	*fakeDocker
 	lock        sync.Mutex
 	images      map[string]map[string]string
+	aliases     map[string]string
 	root        string
 	commands    [][]string
 	generation  int
 	failStage   string
 	waitStage   string
 	daemonError bool
+	tagError    bool
+	tagWrong    string
 }
 
 func newBaseFixtureDocker() *baseFixtureDocker {
-	d := &baseFixtureDocker{fakeDocker: newFakeDocker(), images: map[string]map[string]string{}, root: "sha256:" + strings.Repeat("1", 64)}
+	d := &baseFixtureDocker{fakeDocker: newFakeDocker(), images: map[string]map[string]string{}, aliases: map[string]string{}, root: "sha256:" + strings.Repeat("1", 64)}
 	d.images[d.root] = map[string]string{}
 	return d
 }
@@ -80,6 +83,9 @@ func (d *baseFixtureDocker) Run(ctx context.Context, args ...string) ([]byte, er
 		if ref == "node:22-bookworm-slim" {
 			ref = d.root
 		}
+		if id, ok := d.aliases[ref]; ok {
+			ref = id
+		}
 		labels, ok := d.images[ref]
 		if !ok {
 			return nil, errors.New("No such image: " + ref)
@@ -92,6 +98,20 @@ func (d *baseFixtureDocker) Command(args ...string) *exec.Cmd {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 	d.commands = append(d.commands, append([]string{}, args...))
+	if len(args) == 4 && args[0] == "image" && args[1] == "tag" {
+		mode := "tag"
+		if _, ok := d.images[args[2]]; !ok || d.tagError {
+			mode = "fail"
+		} else if d.tagWrong != "" {
+			d.aliases[args[3]] = d.tagWrong
+		} else {
+			d.aliases[args[3]] = args[2]
+		}
+		exe, _ := os.Executable()
+		cmd := exec.Command(exe, "-test.run=^TestBaseBuildProcess$")
+		cmd.Env = append(os.Environ(), "RUNDESK_BASE_HELPER="+mode)
+		return cmd
+	}
 	key, stage, mode, id := "", "", "success", ""
 	for i, a := range args {
 		if a == "--label" && i+1 < len(args) {
@@ -102,6 +122,17 @@ func (d *baseFixtureDocker) Command(args ...string) *exec.Cmd {
 		}
 	}
 	if len(args) > 0 && args[0] == "build" {
+		// Model BuildKit's FROM contract: a bare image content ID is never a
+		// usable local source, and an unknown local tag must not be pulled.
+		for _, arg := range args {
+			if strings.HasPrefix(arg, "RD_BASE_IMAGE=") {
+				ref := strings.TrimPrefix(arg, "RD_BASE_IMAGE=")
+				id, exists := d.aliases[ref]
+				if strings.HasPrefix(ref, "sha256:") || !exists || d.images[id] == nil {
+					mode = "fail"
+				}
+			}
+		}
 		d.generation++
 		sum := sha256.Sum256([]byte(fmt.Sprintf("%s:%d", key, d.generation)))
 		id = fmt.Sprintf("sha256:%x", sum)
@@ -129,6 +160,9 @@ func TestBaseBuildProcess(t *testing.T) {
 	if mode == "" {
 		return
 	}
+	if mode == "tag" {
+		os.Exit(0)
+	}
 	if mode == "wait" {
 		fmt.Fprintln(os.Stdout, "fixture media stage waiting")
 		for {
@@ -154,6 +188,9 @@ func (d *baseFixtureDocker) baseCommands() int {
 	defer d.lock.Unlock()
 	n := 0
 	for _, a := range d.commands {
+		if len(a) == 0 || a[0] != "build" {
+			continue
+		}
 		for _, s := range a {
 			if strings.HasPrefix(s, "rundesk-base/") {
 				n++
@@ -206,6 +243,96 @@ func TestToolBasesShareSystemAndMediaAcrossPresets(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func TestToolBasesFROMUsesVerifiedLocalTagsAtEveryBoundary(t *testing.T) {
+	m := quietRecipeManager(t)
+	d := newBaseFixtureDocker()
+	m.docker = d
+	wrong := "sha256:" + strings.Repeat("9", 64)
+	d.images[wrong] = map[string]string{}
+	// The ID-derived tag is an execution reference, not trusted provenance.
+	// A stale tag must be restored from the frozen ID before it enters FROM.
+	d.aliases[localBuildImageReference(d.root)] = wrong
+	v := baseFixtureBuild(t, m, "browser", false)
+	args, err := m.prepareBuildBases(context.Background(), v, io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v = loadBaseBuild(t, m, v)
+	parents := []string{v.BaseImages.RootImageID, v.BaseImages.Layers[0].ImageID, v.BaseImages.Layers[1].ImageID}
+	builds := 0
+	for _, command := range d.commands {
+		if command[0] != "build" {
+			continue
+		}
+		for _, arg := range command {
+			if strings.HasPrefix(arg, "RD_BASE_IMAGE=") {
+				ref := strings.TrimPrefix(arg, "RD_BASE_IMAGE=")
+				if strings.HasPrefix(ref, "sha256:") || d.aliases[ref] != parents[builds] {
+					t.Fatal("FROM did not resolve to the frozen parent", command, parents[builds], d.aliases[ref])
+				}
+			}
+		}
+		builds++
+	}
+	if builds != 3 || v.BaseImages.RootReference != "node:22-bookworm-slim" {
+		t.Fatal("root provenance or stage count changed", v.BaseImages, builds)
+	}
+	leaf := strings.TrimPrefix(args[1], "RD_BASE_IMAGE=")
+	if d.aliases[leaf] != v.BaseImages.Layers[2].ImageID || strings.HasPrefix(leaf, "sha256:") {
+		t.Fatal("leaf did not inherit the verified target", args)
+	}
+}
+
+func TestToolBaseLocalReferenceFailuresNeverBuildOrPull(t *testing.T) {
+	for _, mode := range []string{"tag failure", "tag mismatch", "source missing", "cancelled"} {
+		t.Run(mode, func(t *testing.T) {
+			m := quietRecipeManager(t)
+			d := newBaseFixtureDocker()
+			m.docker = d
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			switch mode {
+			case "tag failure":
+				d.tagError = true
+			case "tag mismatch":
+				d.tagWrong = "sha256:" + strings.Repeat("9", 64)
+				d.images[d.tagWrong] = map[string]string{}
+			case "source missing":
+				delete(d.images, d.root)
+			case "cancelled":
+				cancel()
+			}
+			if ref, err := m.prepareLocalBuildImageReference(ctx, d.root, io.Discard); err == nil || ref != "" {
+				t.Fatal("unverified local FROM reference accepted", ref, err)
+			}
+			for _, command := range d.commands {
+				if command[0] != "image" || command[1] != "tag" {
+					t.Fatal("failure attempted build or acquisition", command)
+				}
+			}
+		})
+	}
+}
+
+func TestToolBaseMissingBareRootIDNeverAttemptsRegistryPull(t *testing.T) {
+	m := quietRecipeManager(t)
+	d := newBaseFixtureDocker()
+	m.docker = d
+	files := baseFixtureFiles("system")
+	files["Dockerfile"] = strings.Replace(files["Dockerfile"], "node:22-bookworm-slim", d.root, 1)
+	v, err := m.createBuildWithRecipe(DefaultInstance, "local ID fixture", "Dockerfile", 2, false, bytes.NewReader(buildZip(t, files)), nil, &ImageBuild{Scope: "recipe", Source: "build"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	delete(d.images, d.root)
+	if _, err := m.prepareBuildBases(context.Background(), v, io.Discard); err == nil {
+		t.Fatal("missing local image ID accepted")
+	}
+	if len(d.commands) != 0 {
+		t.Fatal("missing content ID attempted registry acquisition", d.commands)
 	}
 }
 func TestToolBaseKeysUseStageInputsAndAPTOnly(t *testing.T) {
@@ -270,7 +397,7 @@ func TestToolBaseFrozenRebuildIgnoresMovingTagsAndNoCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if d.baseCommands() != 4 || !strings.Contains(strings.Join(args, " "), oldID) || rebuilt.ContextSHA256 != first.ContextSHA256 {
+	if d.baseCommands() != 4 || !strings.Contains(strings.Join(args, " "), localBuildImageReference(oldID)) || rebuilt.ContextSHA256 != first.ContextSHA256 {
 		t.Fatal("historical base identity drifted", args, rebuilt)
 	}
 	delete(d.images, oldID)
@@ -430,7 +557,7 @@ func TestToolBaseJobUsesFrozenFinalImageAndRetainsProvenance(t *testing.T) {
 			joined := strings.Join(command, " ")
 			if strings.Contains(joined, "--tag rundesk-build/") {
 				found = true
-				if !strings.Contains(joined, "RD_BASE_IMAGE="+final) || !strings.Contains(joined, "RD_TOOL_BASE_READY=1") {
+				if !strings.Contains(joined, "RD_BASE_IMAGE="+localBuildImageReference(final)) || !strings.Contains(joined, "RD_TOOL_BASE_READY=1") {
 					t.Fatal(command)
 				}
 			}

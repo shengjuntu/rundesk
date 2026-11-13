@@ -24,6 +24,8 @@ class DockerFixture:
         self.labels = {}
         self.calls = []
         self.fail_build = False
+        self.fail_tag = False
+        self.tag_different_id = None
         self.build_generation = 0
 
     def __call__(self, argv, timeout, capture):
@@ -32,7 +34,18 @@ class DockerFixture:
         if args[:2] == ["image", "inspect"]:
             iid = self.images.get(args[-1])
             return SimpleNamespace(returncode=0 if iid else 1, stdout=(iid + "|linux|amd64|" + self.labels.get(iid, "") + "\n") if iid else "Error: No such image")
+        if args[:2] == ["image", "tag"]:
+            if self.fail_tag or args[2] not in self.images:
+                return SimpleNamespace(returncode=1, stdout="fixture local tag failure")
+            self.images[args[3]] = self.tag_different_id or self.images[args[2]]
+            return SimpleNamespace(returncode=0, stdout="")
         if args[0] == "build":
+            # Reproduce the BuildKit contract: FROM takes a resolvable local
+            # reference, while a bare image content ID is not a valid offline
+            # inheritance path. Do not let this fixture accept the old bug.
+            parent = next(a.split("=", 1)[1] for a in args if a.startswith("RD_BASE_IMAGE="))
+            assert not parent.startswith("sha256:"), parent
+            assert parent in self.images and self.images[parent] in self.images, parent
             if self.fail_build:
                 return SimpleNamespace(returncode=1, stdout="fixture build failure")
             key = args[args.index("--label") + 1].split("=", 1)[1]
@@ -69,11 +82,21 @@ class BaseImagesTest(unittest.TestCase):
         with contextlib.redirect_stderr(io.StringIO()):
             return base_images.prepare(context, ["docker-fixture"], 30, self.cache, self.docker)
 
+    def assert_local_parent(self, args, expected_id):
+        reference = next(a.split("=", 1)[1] for a in args if a.startswith("RD_BASE_IMAGE="))
+        self.assertRegex(reference, r"^rundesk-base/image:sha256-[0-9a-f]{64}$")
+        self.assertEqual(self.docker.images[reference], expected_id)
+        return reference
+
     def test_browser_chain_and_cross_profile_reuse_ignore_codex_and_npm(self):
         first = self.context("video-build")
         snapshots, args = self.prepare(first)
         self.assertEqual([s["stage"] for s in snapshots], ["system", "media", "browser"])
-        self.assertEqual(args, ["--build-arg", "RD_BASE_IMAGE=" + snapshots[-1]["imageId"], "--build-arg", "RD_TOOL_BASE_READY=1"])
+        reference = self.assert_local_parent(args, snapshots[-1]["imageId"])
+        self.assertEqual(args, ["--build-arg", "RD_BASE_IMAGE=" + reference, "--build-arg", "RD_TOOL_BASE_READY=1"])
+        for command, snapshot in zip(self.docker.builds(), snapshots):
+            self.assert_local_parent(command, snapshot["parentImageId"])
+        self.assertFalse(any(command[1] == "pull" for command in self.docker.calls))
         self.assertEqual(len(self.docker.builds()), 3)
         second = self.context("hyperframes", "0.158.0")
         file = second / "Dockerfile"
@@ -109,8 +132,63 @@ class BaseImagesTest(unittest.TestCase):
         self.assertEqual(rebuilt[:-1], snapshots[:-1])
         self.assertNotEqual(rebuilt[-1]["imageId"], snapshots[-1]["imageId"])
         self.assertEqual(rebuilt[-1]["parentImageId"], snapshots[-1]["parentImageId"])
-        self.assertIn("RD_BASE_IMAGE=" + rebuilt[-1]["imageId"], args)
+        self.assert_local_parent(args, rebuilt[-1]["imageId"])
         self.assertEqual(len(self.docker.builds()), 4)
+
+    def test_existing_image_id_root_uses_local_reference_without_pull(self):
+        context = self.context("people-search")
+        file = context / "Dockerfile"
+        file.write_text(file.read_text().replace("ARG RD_BASE_IMAGE=node:22-bookworm-slim", "ARG RD_BASE_IMAGE=" + self.docker.root_id))
+        snapshots, args = self.prepare(context)
+        self.assertEqual(snapshots[0]["parentImageId"], self.docker.root_id)
+        self.assert_local_parent(self.docker.builds()[0], self.docker.root_id)
+        self.assert_local_parent(args, snapshots[-1]["imageId"])
+        self.assertFalse(any(command[1] == "pull" for command in self.docker.calls))
+
+    def test_missing_fixed_root_fails_without_registry_fallback(self):
+        context = self.context("people-search")
+        file = context / "Dockerfile"
+        file.write_text(file.read_text().replace("ARG RD_BASE_IMAGE=node:22-bookworm-slim", "ARG RD_BASE_IMAGE=" + self.docker.root_id))
+        del self.docker.images[self.docker.root_id]
+        with self.assertRaisesRegex(base_images.BaseImageError, "root image is missing locally"):
+            self.prepare(context)
+        self.assertFalse(any(command[1] in {"pull", "build"} for command in self.docker.calls))
+
+    def test_cached_leaf_reference_is_repaired_from_frozen_id_after_tag_drift(self):
+        context = self.context("video-build")
+        snapshots, args = self.prepare(context)
+        reference = self.assert_local_parent(args, snapshots[-1]["imageId"])
+        self.docker.images[reference] = self.docker.root_id
+        again, args = self.prepare(context)
+        self.assertEqual(again, snapshots)
+        self.assert_local_parent(args, snapshots[-1]["imageId"])
+        self.assertEqual(len(self.docker.builds()), 3)
+
+    def test_local_reference_failure_or_wrong_identity_prevents_base_and_leaf(self):
+        for mode in ("tag failed", "wrong identity"):
+            with self.subTest(mode=mode):
+                self.docker = DockerFixture()
+                context = self.context("people-search", suffix="-" + mode.replace(" ", "-"))
+                if mode == "tag failed":
+                    self.docker.fail_tag = True
+                else:
+                    self.docker.tag_different_id = "sha256:" + "2" * 64
+                with self.assertRaisesRegex(base_images.BaseImageError, "tag failure|changed identity/platform"):
+                    self.prepare(context)
+                self.assertEqual(self.docker.builds(), [])
+                self.assertFalse((context / "build-bases.lock.json").exists())
+
+    def test_original_root_tag_drift_does_not_change_the_frozen_parent(self):
+        context = self.context("people-search")
+        docker = self.docker
+        def moving_root(argv, timeout, capture):
+            if argv[1:3] == ["image", "tag"]:
+                docker.images["node:22-bookworm-slim"] = "sha256:" + "9" * 64
+            return docker(argv, timeout, capture)
+        with contextlib.redirect_stderr(io.StringIO()):
+            snapshots, _ = base_images.prepare(context, ["docker-fixture"], 30, self.cache, moving_root)
+        self.assertEqual(snapshots[0]["parentImageId"], docker.root_id)
+        self.assert_local_parent(docker.builds()[0], docker.root_id)
 
     def test_cache_label_tampering_and_daemon_errors_fail_closed(self):
         context = self.context("video-build")

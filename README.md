@@ -46,7 +46,9 @@ Administrators can use the [Skill center](docs/SKILL-CENTER.md) to search ClawHu
 
 ## Current source version
 
-**RunDesk 0.75.0 source · external Kun 0.17.0 · worker protocol 16**
+**RunDesk 0.75.1 source · external Kun 0.17.0 · worker protocol 16**
+
+Version 0.75.1 fixes local Docker base references for BuildKit: verified content-named local tags are passed to `FROM`, while frozen records and cache identities keep the actual image IDs. Upgrade the host and retry failed builds; see [upgrading](docs/UPGRADING.md).
 
 Version 0.75.0 adds local ZIP/directory acquisition and independent snapshots from installed Skills. Explicit environment self-diagnostics check known tool versions and controlled canaries, while preserving unknown model/authentication status. See [Skill Center](docs/SKILL-CENTER.md).
 

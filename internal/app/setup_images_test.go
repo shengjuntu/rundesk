@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -18,22 +19,34 @@ import (
 
 type runtimeImageDocker struct {
 	*fakeDocker
-	failProbe  bool
-	baseImages map[string]map[string]string
-	probeGate  <-chan struct{}
+	failProbe   bool
+	baseImages  map[string]map[string]string
+	baseAliases map[string]string
+	probeGate   <-chan struct{}
 }
 
 func (d *runtimeImageDocker) Run(ctx context.Context, args ...string) ([]byte, error) {
 	if len(args) >= 3 && args[0] == "image" && args[1] == "inspect" {
 		d.mu.Lock()
-		labels, ok := d.baseImages[args[2]]
+		id := args[2]
+		resolved, alias := d.baseAliases[id]
+		if alias {
+			id = resolved
+		}
+		labels, ok := d.baseImages[id]
+		if alias && id == d.image {
+			labels, ok = d.imageLabels, true
+		}
 		if ok {
 			d.calls = append(d.calls, append([]string{}, args...))
-			body, err := json.Marshal([]map[string]any{{"Id": args[2], "Os": "linux", "Architecture": runtime.GOARCH, "Config": map[string]any{"Labels": labels}}})
+			body, err := json.Marshal([]map[string]any{{"Id": id, "Os": "linux", "Architecture": runtime.GOARCH, "Config": map[string]any{"Labels": labels}}})
 			d.mu.Unlock()
 			return body, err
 		}
 		d.mu.Unlock()
+		if alias {
+			return nil, errors.New("No such image: " + id)
+		}
 	}
 	return d.fakeDocker.Run(ctx, args...)
 }
@@ -44,6 +57,18 @@ func (d *runtimeImageDocker) Command(args ...string) *exec.Cmd {
 	}
 	d.mu.Lock()
 	d.calls = append(d.calls, append([]string{}, args...))
+	tagError := false
+	if len(args) == 4 && args[0] == "image" && args[1] == "tag" {
+		_, knownBase := d.baseImages[args[2]]
+		if args[2] != d.image && !knownBase {
+			tagError = true
+		} else {
+			if d.baseAliases == nil {
+				d.baseAliases = map[string]string{}
+			}
+			d.baseAliases[args[3]] = args[2]
+		}
+	}
 	if args[0] == "pull" {
 		d.missingImage = ""
 	}
@@ -64,7 +89,7 @@ func (d *runtimeImageDocker) Command(args ...string) *exec.Cmd {
 	d.mu.Unlock()
 	exe, _ := os.Executable()
 	cmd := exec.Command(exe, append([]string{"-test.run=^TestRuntimeImageProcess$", "--"}, args...)...)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("RUNDESK_RUNTIME_IMAGE_HELPER=%t", d.failProbe), "RUNDESK_RUNTIME_IMAGE_ID="+imageID)
+	cmd.Env = append(os.Environ(), fmt.Sprintf("RUNDESK_RUNTIME_IMAGE_HELPER=%t", d.failProbe), "RUNDESK_RUNTIME_IMAGE_ID="+imageID, fmt.Sprintf("RUNDESK_RUNTIME_IMAGE_TAG_ERROR=%t", tagError))
 	return cmd
 }
 
@@ -72,6 +97,9 @@ func TestRuntimeImageProcess(t *testing.T) {
 	mode := os.Getenv("RUNDESK_RUNTIME_IMAGE_HELPER")
 	if mode == "" {
 		return
+	}
+	if os.Getenv("RUNDESK_RUNTIME_IMAGE_TAG_ERROR") == "true" {
+		os.Exit(2)
 	}
 	args := os.Args
 	for n, arg := range args {
@@ -226,7 +254,13 @@ func TestRuntimeImageQueueBeforeApplicationRegistration(t *testing.T) {
 				builds, bases := 0, 0
 				for _, args := range d.calls {
 					if args[0] == "build" {
-						if strings.Contains(strings.Join(args, " "), "rundesk-base/") {
+						base := false
+						for i, arg := range args {
+							if arg == "--tag" && i+1 < len(args) && strings.HasPrefix(args[i+1], "rundesk-base/") {
+								base = true
+							}
+						}
+						if base {
 							bases++
 						} else {
 							builds++

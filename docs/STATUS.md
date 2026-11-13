@@ -1,6 +1,8 @@
 # 当前能力与后续工作
 
-**RunDesk 0.75.0 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。三个使命的产品定位见[中文 README](../README.zh-CN.md)。
+**RunDesk 0.75.1 / 独立 Kun 0.17.0 / worker 协议 16**。RunDesk 通过轻量 SDK 连接独立 Kun，不包含其执行内核；本版不改变 Kun、SDK 或 worker 协议版本。三个使命的产品定位见[中文 README](../README.zh-CN.md)。
+
+0.75.1 修复公共工具层和显式 Codex 基础镜像的 BuildKit 本地引用：`FROM` 使用已核验的本地专用标签，冻结记录、缓存键及历史重建仍以实际镜像 ID 为准。真实 Docker 与六套配方的部署机复验见[验证边界](VALIDATION.md)。
 
 0.75.0 增加本地完整目录获取、已安装 Skill 独立快照和显式环境诊断。获取只保存固定内容与内置检查；安装和效果执行仍需单独操作。诊断区分命令缺失、版本不兼容、受控自检失败与尚未验证的模型／认证状态。
 

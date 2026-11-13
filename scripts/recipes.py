@@ -493,8 +493,8 @@ def main(argv=None, default_profile=None):
             if not command(prefix + ["info"], 15)["ok"]:
                 raise ProfileError("Docker Engine is unavailable")
             # Build/reuse isolated common layers before the preset in this same invocation.
-            # The leaf inherits an immutable ID; standalone `docker build` still has
-            # the shared installer fallback when these build arguments are absent.
+            # The leaf inherits a local reference verified against the frozen ID;
+            # standalone `docker build` retains the installer fallback without it.
             base_started = time.monotonic()
             bases, base_args = base_images.prepare(context, prefix, args.timeout)
             remaining = args.timeout - (time.monotonic() - base_started)
